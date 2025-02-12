@@ -4,7 +4,7 @@
 #include "db_record.hpp"
 #include "db_shortcuts.hpp"
 
-namespace common::database {
+namespace demiplane::database {
     class utility_factory {
     public:
         template <typename T>
@@ -83,4 +83,4 @@ namespace common::database {
             return std::make_unique<Field<std::chrono::system_clock::time_point>>(std::move(name), std::move(time));
         }
     };
-} // namespace common::database
+} // namespace demiplane::database

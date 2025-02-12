@@ -7,7 +7,7 @@
 #include "stats.hpp"
 
 
-namespace common::monitor {
+namespace demiplane::monitor {
     template <typename T>
     class Collector {
     public:

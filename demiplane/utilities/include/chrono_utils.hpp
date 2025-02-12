@@ -2,7 +2,7 @@
 #include <random>
 #include <chrono>
 #include <stdexcept>
-namespace common::utilities::chrono {
+namespace demiplane::utilities::chrono {
     class RandomTimeGenerator {
     public:
         RandomTimeGenerator() =default;

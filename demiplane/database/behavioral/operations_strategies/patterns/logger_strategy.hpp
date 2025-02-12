@@ -2,7 +2,7 @@
 
 #include "strategy_base.hpp"
 
-namespace common::database::behavioral::strategies
+namespace demiplane::database::behavioral::strategies
 {
     template <typename... Args>
     class LoggerStrategy final : public StrategyBase<Args...>

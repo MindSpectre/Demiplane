@@ -10,7 +10,7 @@
 #include <vector>
 
 
-namespace common::multithread {
+namespace demiplane::multithread {
     /// Possible enhancements:
     /// Overload of threads causes skipping Low priority tasks: suggested Round Robin
     /// Thread Affinity(latest)
@@ -176,4 +176,4 @@ namespace common::multithread {
     }
 
 
-} // namespace common::multithread
+} // namespace demiplane::multithread

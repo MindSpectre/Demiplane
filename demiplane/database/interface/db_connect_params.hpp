@@ -1,7 +1,7 @@
 #pragma once
 #include <utility>
 
-namespace common::database {
+namespace demiplane::database {
     class ConnectParams {
     public:
         ConnectParams(
@@ -64,4 +64,4 @@ namespace common::database {
         std::string login_{};
         std::string password_{};
     };
-} // namespace common::database
+} // namespace demiplane::database

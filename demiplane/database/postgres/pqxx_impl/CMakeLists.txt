@@ -4,7 +4,6 @@
 add_library(${PROJECT_NAME}_Database_PqxxClient
         source/pqxx_client.cpp
         include/pqxx_utilities.hpp
-        include/pqxx_view_record.hpp
         include/pqxx_controller.hpp
         include/pqxx_client.hpp
 )

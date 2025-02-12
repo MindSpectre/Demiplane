@@ -3,7 +3,7 @@
 #include <json/json.h>
 #include <string>
 #include <utility>
-namespace common::monitor {
+namespace demiplane::monitor {
     //TODO: template supposed to be json
     class Stats {
     public:

@@ -9,8 +9,8 @@
 #include "db_field.hpp"
 #include "db_record.hpp"
 #include "db_shortcuts.hpp"
-namespace common::database::interfaces {
-    using namespace common::database;
+namespace demiplane::database::interfaces {
+    using namespace demiplane::database;
     template <typename T>
     concept RecordContainer = std::is_same_v<std::remove_cvref_t<T>, Records>;
     template <typename T>
@@ -82,10 +82,6 @@ namespace common::database::interfaces {
         // Data Retrieval
         [[nodiscard]] virtual Records select(std::string_view table_name, const Conditions& conditions) const = 0;
 
-        [[nodiscard]] virtual ViewRecords view(std::string_view table_name, const Conditions& conditions) const = 0;
-
-        [[nodiscard]] virtual ViewRecords view(std::string_view table_name) const = 0;
-
         // Remove Data
         virtual void remove(std::string_view table_name, const Conditions& conditions) = 0;
 
@@ -123,4 +119,4 @@ namespace common::database::interfaces {
         [[nodiscard]] virtual Records upsert_with_returning_implementation(std::string_view table_name, Records&& rows,
             const FieldCollection& replace_fields, const FieldCollection& returning_fields) = 0;
     };
-} // namespace common::database::interfaces
+} // namespace demiplane::database::interfaces

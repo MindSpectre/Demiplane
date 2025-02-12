@@ -2,7 +2,7 @@
 #include <functional>
 #include <iostream>
 
-namespace common::database::behavioral::strategies
+namespace demiplane::database::behavioral::strategies
 {
     template <typename... Args>
     class StrategyBase

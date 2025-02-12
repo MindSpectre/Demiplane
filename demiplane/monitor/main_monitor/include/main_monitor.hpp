@@ -1,9 +1,9 @@
 #pragma once
 #include <functional>
 
-namespace common::monitor {
+namespace demiplane::monitor {
     class MainMonitor {
     public:
     private:
     };
-} // namespace common::monitor
+} // namespace demiplane::monitor

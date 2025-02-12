@@ -8,7 +8,7 @@
 #include "pqxx_client.hpp"
 #include "silent_mock_db_client.hpp"
 
-namespace common::database::creational {
+namespace demiplane::database::creational {
     template <typename FactoryFunc, typename... Args>
     concept DbInterfaceFactoryFunction =
         std::invocable<FactoryFunc, Args...>
@@ -48,4 +48,4 @@ namespace common::database::creational {
     };
 
 
-} // namespace common::database::creational
+} // namespace demiplane::database::creational

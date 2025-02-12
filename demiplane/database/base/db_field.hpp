@@ -1,20 +1,21 @@
 #pragma once
 
 #include <chrono>
-#include <iomanip>
+#include <format> // C++23: for std::chrono::format
 #include <json/json.h>
 #include <memory>
 #include <ostream>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
-namespace common::database {
-    template <typename T>
-    class Field;
-    /// @brief Base class representing a field in the database
+namespace demiplane::database {
+
+    // The SQL type enumeration.
     enum class SqlType {
         INT,
         ARRAY_INT,
@@ -33,45 +34,57 @@ namespace common::database {
         JSONB,
         UNSUPPORTED
     };
-
-    /**
-     * @brief On default created PRIMARY uuid generated on database(default type)
-     * @details Null means this field can be empty. Default means generation on database side.
-            If field is not null or default it forces to set value on server side because of field created as [UUID NOT
-     NULL]
-     */
+    template <typename T>
+    class Field;
+    // A class representing a UUID field.
     class Uuid {
     public:
-        static constexpr auto default_value = "default";
-        static constexpr auto null_value    = "null";
+        static constexpr std::string_view default_value = "default";
+        static constexpr std::string_view null_value    = "null";
 
+        Uuid() = default;
+        explicit Uuid(std::string value, const bool is_primary = true) : primary_{is_primary}, uuid_(std::move(value)) {
+            is_null_    = (uuid_ == null_value);
+            is_default_ = (!is_null_ && uuid_ == default_value);
+        }
 
-        [[nodiscard]] bool is_null() const {
+        Uuid& operator=(std::string other) {
+            uuid_       = std::move(other);
+            is_null_    = (uuid_ == null_value);
+            is_default_ = (uuid_ == default_value);
+            return *this;
+        }
+
+        [[nodiscard]] bool is_null() const noexcept {
             return is_null_;
         }
-
-        [[nodiscard]] bool is_default() const {
+        [[nodiscard]] bool is_default() const noexcept {
             return is_default_;
         }
-        Uuid& set_default() {
+        [[nodiscard]] bool is_primary() const noexcept {
+            return primary_;
+        }
+
+        Uuid& set_default() noexcept {
             is_default_ = true;
             is_null_    = false;
             return *this;
         }
-        Uuid& set_null() {
-            uuid_       = null_value;
+        Uuid& set_null() noexcept {
+            uuid_       = std::string(null_value);
             is_null_    = true;
             is_default_ = false;
             primary_    = false;
             return *this;
         }
 
-        [[nodiscard]] const std::string& get_id() const {
+        [[nodiscard]] const std::string& get_id() const noexcept {
             return uuid_;
         }
         [[nodiscard]] std::string pull_id() {
             return std::move(uuid_);
         }
+
         void set_id(const std::string_view uuid) {
             if (uuid.empty()) {
                 throw std::invalid_argument("Uuid cannot be empty");
@@ -80,61 +93,30 @@ namespace common::database {
                 throw std::invalid_argument("Uuid is not valid");
             }
             uuid_       = uuid;
-            is_null_    = uuid_ == null_value;
-            is_default_ = uuid_ == default_value;
-        }
-        [[nodiscard]] bool is_primary() const {
-            return primary_;
-        }
-
-        Uuid& set_primary(const bool is_primary) {
-            primary_ = is_primary;
-            return *this;
-        }
-
-        // Equality operators
-        bool operator==(const Uuid& other) const {
-            return uuid_ == other.uuid_;
-        }
-
-        bool operator!=(const Uuid& other) const {
-            return uuid_ != other.uuid_;
+            is_null_    = (uuid_ == null_value);
+            is_default_ = (uuid_ == default_value);
         }
 
         explicit operator std::string() const {
             return uuid_;
         }
 
-        explicit operator std::string() {
-            return uuid_;
+        bool operator==(const Uuid& other) const noexcept {
+            return uuid_ == other.uuid_;
         }
-
-        // Default value, primary, value will be generated on DB server
-        Uuid() = default;
-
-        // Constructor from std::string
-        explicit Uuid(std::string value, const bool is_primary) : primary_(is_primary), uuid_(std::move(value)) {
-            is_null_    = uuid_ == null_value;
-            is_default_ = !is_null_ && uuid_ == default_value;
+        bool operator!=(const Uuid& other) const noexcept {
+            return !(*this == other);
         }
-        Uuid& operator=(std::string other) {
-            uuid_ = std::move(other);
-            return *this;
-        }
-
-        friend bool operator<(const Uuid& lhs, const Uuid& rhs) {
+        friend bool operator<(const Uuid& lhs, const Uuid& rhs) noexcept {
             return lhs.uuid_ < rhs.uuid_;
         }
-
-        friend bool operator<=(const Uuid& lhs, const Uuid& rhs) {
+        friend bool operator<=(const Uuid& lhs, const Uuid& rhs) noexcept {
             return rhs >= lhs;
         }
-
-        friend bool operator>(const Uuid& lhs, const Uuid& rhs) {
+        friend bool operator>(const Uuid& lhs, const Uuid& rhs) noexcept {
             return rhs < lhs;
         }
-
-        friend bool operator>=(const Uuid& lhs, const Uuid& rhs) {
+        friend bool operator>=(const Uuid& lhs, const Uuid& rhs) noexcept {
             return !(lhs < rhs);
         }
 
@@ -142,68 +124,68 @@ namespace common::database {
             return os << obj.uuid_;
         }
 
+        // Validate UUID format (a basic check – can be extended).
+        static bool is_valid_uuid(const std::string_view value) {
+            if (value == default_value || value == null_value) {
+                return true;
+            }
+            static const std::regex uuid_regex{
+                R"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"};
+            // (Constructing a std::string here is one simple way to feed regex_match.)
+            return std::regex_match(std::string(value).c_str(), uuid_regex);
+        }
+
     private:
         bool primary_     = true;
         bool is_default_  = true;
         bool is_null_     = false;
-        std::string uuid_ = default_value;
-
-        // Validate UUID format (basic example, can be extended)
-        static bool is_valid_uuid(const std::string_view value) {
-            const std::regex uuid_regex(
-                R"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
-            return value == default_value || value == null_value || std::regex_match(value.data(), uuid_regex);
-        }
+        std::string uuid_ = std::string(default_value);
     };
 
+    // Base class for all fields.
     class FieldBase {
     public:
         virtual ~FieldBase() = default;
+
         explicit FieldBase(const std::string_view name) : name_(name) {}
-        explicit FieldBase(std::string&& name) : name_(std::move(name)) {}
-        /// @return Column name of the field
-        [[nodiscard]] const std::string& get_name() const {
+        explicit FieldBase(std::string name) : name_(std::move(name)) {}
+
+        [[nodiscard]] const std::string& get_name() const noexcept {
             return name_;
         }
-
         void set_name(const std::string_view name) {
             name_ = name;
         }
-
-        void set_name(std::string&& name) {
+        void set_name(std::string name) {
             name_ = std::move(name);
         }
         void set_name(const char* name) {
             name_ = name;
         }
-        /// @brief Converts the field value to a string for SQL queries
+
+        // Convert the field value to a string for SQL queries.
         [[nodiscard]] virtual std::string to_string() const& = 0;
+        [[nodiscard]] virtual std::string to_string() &&     = 0;
 
-        /// @brief Converts the field value to a string for SQL queries
-        /// @return moveable
-        [[nodiscard]] virtual std::string to_string() && = 0;
-
-        /// @brief Gets the SQL data type of the field
+        // Return the SQL type (as determined in the constructor).
         [[nodiscard]] virtual SqlType get_sql_type() const {
             return type_;
         }
 
-        /// @brief Gets the SQL data type of the field for creating
-        [[nodiscard]] virtual constexpr const char* get_sql_type_initialization() const = 0;
+        // Return the SQL type for use in CREATE TABLE statements.
+        [[nodiscard]] virtual std::string get_sql_type_initialization() const = 0;
 
+        // Helper to cast to the derived field type.
         template <typename T>
         T as() const {
-            // Ensure that T is a valid type, for example, int, std::string, etc.
             static_assert(std::is_default_constructible_v<T>, "T must be default constructible");
-
-            // Attempt to dynamic cast this object to a Field<T> type
-
-            if (const auto* derived_field = dynamic_cast<const Field<T>*>(this)) {
-                return derived_field->value();
+            if (const auto* derived = dynamic_cast<const Field<T>*>(this)) {
+                return derived->value();
             }
             throw std::runtime_error("FieldBase::as(): Incorrect type requested for field " + get_name());
         }
 
+        // For cloning a field.
         [[nodiscard]] virtual std::unique_ptr<FieldBase> clone() const = 0;
 
     protected:
@@ -211,161 +193,142 @@ namespace common::database {
         std::string name_;
     };
 
-    /// @brief Represents a field of a specific type in the database
-    /// @tparam T Type of the value in the database
-    template <typename T>
-    class Field final : public FieldBase {
-    public:
-        Field(std::string name, T value) : FieldBase(std::move(name)), value_(std::move(value)) {
-            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int32_t>) {
-                type_ = SqlType::INT;
-            } else if constexpr (std::is_same_v<T, Uuid>) {
-                type_ = SqlType::UUID;
-            } else if constexpr (std::is_same_v<T, int64_t>) {
-                type_ = SqlType::BIGINT;
-            } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
-                type_ = SqlType::DOUBLE_PRECISION;
-            } else if constexpr (std::is_same_v<T, std::string>) {
-                type_ = SqlType::TEXT;
-            } else if constexpr (std::is_same_v<T, Json::Value>) {
-                type_ = SqlType::JSONB;
-            } else if constexpr (std::is_same_v<T, bool>) {
-                type_ = SqlType::BOOLEAN;
-            } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
-                type_ = SqlType::TIMESTAMP;
-            } else if constexpr (std::is_same_v<T, std::vector<int>> || std::is_same_v<T, std::vector<int32_t>>) {
-                type_ = SqlType::ARRAY_INT;
-            } else if constexpr (std::is_same_v<T, std::vector<Uuid>>) {
-                type_ = SqlType::ARRAY_UUID;
-            } else if constexpr (std::is_same_v<T, std::vector<int64_t>>) {
-                type_ = SqlType::ARRAY_BIGINT;
-            } else if constexpr (std::is_same_v<T, std::vector<double>> || std::is_same_v<T, std::vector<float>>) {
-                type_ = SqlType::ARRAY_DOUBLE;
-            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
-                type_ = SqlType::ARRAY_TEXT;
-            } else if constexpr (std::is_same_v<T, std::vector<bool>>) {
-                type_ = SqlType::ARRAY_BOOLEAN;
-            } else if constexpr (std::is_same_v<T, std::vector<std::chrono::system_clock::time_point>>) {
-                type_ = SqlType::ARRAY_TIMESTAMP;
-            } else {
-                static_assert(sizeof(T) == 0, "Unsupported field type for get_sql_type()");
-                type_ = SqlType::UNSUPPORTED; // Fallback for unsupported types
-            }
-        }
+    // --- Helpers for converting field values to SQL string representations ---
+    namespace detail {
 
-        /// @return Value of the field
-        const T& value() const {
-            return value_;
-        }
+        // A helper that always fails in a constexpr context.
+        template <typename>
+        struct always_false : std::false_type {};
 
-        void set_value(const T& value) {
-            value_ = value;
-        }
+        template <typename T>
+        inline constexpr bool always_false_v = always_false<T>::value;
 
-        void set_value(T&& value) {
-            value_ = std::move(value);
-        }
+        // A simple trait to detect std::vector.
+        template <typename>
+        struct is_vector : std::false_type {};
 
-        /// @brief Converts the field value to a string for SQL queries
-        [[nodiscard]] std::string to_string() const& override {
+        template <typename T, typename Alloc>
+        struct is_vector<std::vector<T, Alloc>> : std::true_type {};
+
+        template <typename T>
+        inline constexpr bool is_vector_v = is_vector<T>::value;
+
+        // convert_value: converts any supported type to its SQL string representation.
+        // This single function template uses perfect forwarding so that if the argument
+        // is a rvalue (e.g. from a moved Field), it may “pull” the value.
+        template <typename U>
+        std::string convert_value(U&& value) {
+            using T = std::remove_cvref_t<U>;
             if constexpr (std::is_same_v<T, std::string>) {
-                return value_;
-            } else if constexpr (std::is_same_v<T, bool>) {
-                return value_ ? "TRUE" : "FALSE";
-            } else if constexpr (std::is_arithmetic_v<T>) {
-                return std::to_string(value_);
-            } else if constexpr (std::is_same_v<T, Uuid>) {
-                return value_.get_id();
-            } else if constexpr (std::is_same_v<T, Json::Value>) {
-                return value_.toStyledString();
-            } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
-                // Convert time_point to string in ISO 8601 format
-                const std::time_t time = std::chrono::system_clock::to_time_t(value_);
-                const std::tm* tm_ptr  = std::localtime(&time);
-                std::ostringstream oss;
-                oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
-                return oss.str();
-            } else if constexpr (std::is_same_v<T, std::vector<int>> || std::is_same_v<T, std::vector<int32_t>>) {
-                return array_to_string<int>();
-            } else if constexpr (std::is_same_v<T, std::vector<Uuid>>) {
-                return array_to_string<Uuid>();
-            } else if constexpr (std::is_same_v<T, std::vector<int64_t>>) {
-                return array_to_string<int64_t>();
-            } else if constexpr (std::is_same_v<T, std::vector<double>>) {
-                return array_to_string<double>();
-            } else if constexpr (std::is_same_v<T, std::vector<float>>) {
-                return array_to_string<float>();
-            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
-                return array_to_string<std::string>();
-            } else if constexpr (std::is_same_v<T, std::vector<bool>>) {
-                return array_to_string<bool>();
-            } else if constexpr (std::is_same_v<T, std::vector<std::chrono::system_clock::time_point>>) {
-                return array_to_string<std::chrono::system_clock::time_point>();
-            } else {
-                static_assert(sizeof(T) == 0, "Unsupported field type for to_string()");
-            }
-            return {};
-        }
-
-        /// @brief Converts the field value to a string for SQL queries
-        [[nodiscard]] std::string to_string() && override {
-
-
-            switch (type_) {
-
-            }
-                if constexpr (std::is_same_v<T, std::string>) {
-                    return std::move(value_); // Move the string instead of copying
-                } else if constexpr (std::is_same_v<T, bool>) {
-                    return value_ ? "TRUE" : "FALSE";
-                } else if constexpr (std::is_arithmetic_v<T>) {
-                    return std::to_string(value_); // No need to move arithmetic types
-                } else if constexpr (std::is_same_v<T, Uuid>) {
-                    return value_.pull_id();
-                } else if constexpr (std::is_same_v<T, Json::Value>) {
-                    return value_.toStyledString(); // Move the JSON string representation
-                } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
-                    // Convert time_point to string in ISO 8601 format
-                    const std::time_t time = std::chrono::system_clock::to_time_t(value_);
-                    const std::tm* tm_ptr  = std::localtime(&time);
-                    std::ostringstream oss;
-                    oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
-                    return oss.str(); // No need to move, it's a local object
-                } else if constexpr (std::is_same_v<T, std::vector<int>> || std::is_same_v<T, std::vector<int32_t>>) {
-                    return array_move_to_string<int>();
-                } else if constexpr (std::is_same_v<T, std::vector<Uuid>>) {
-                    return array_move_to_string<Uuid>();
-                } else if constexpr (std::is_same_v<T, std::vector<int64_t>>) {
-                    return array_move_to_string<int64_t>();
-                } else if constexpr (std::is_same_v<T, std::vector<double>>) {
-                    return array_move_to_string<double>();
-                } else if constexpr (std::is_same_v<T, std::vector<float>>) {
-                    return array_move_to_string<float>();
-                } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
-                    return array_move_to_string<std::string>();
-                } else if constexpr (std::is_same_v<T, std::vector<bool>>) {
-                    return array_move_to_string<bool>();
-                } else if constexpr (std::is_same_v<T, std::vector<std::chrono::system_clock::time_point>>) {
-                    return array_move_to_string<std::chrono::system_clock::time_point>();
+                if constexpr (std::is_lvalue_reference_v<U>) {
+                    return value;
                 } else {
-                    static_assert(sizeof(T) == 0, "Unsupported field type for to_string()");
+                    return std::forward<U>(value);
                 }
+            } else if constexpr (std::is_same_v<T, bool>) {
+                return value ? "TRUE" : "FALSE";
+            } else if constexpr (std::is_arithmetic_v<T>) {
+                return std::to_string(value);
+            } else if constexpr (std::is_same_v<T, Uuid>) {
+                if constexpr (std::is_lvalue_reference_v<U>) {
+                    return value.get_id();
+                } else {
+                    return value.pull_id();
+                }
+            } else if constexpr (std::is_same_v<T, Json::Value>) {
+                return value.toStyledString();
+            } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+                // Use C++23’s chrono formatting for ISO 8601 format.
+                return std::format("%F %T", value);
+            } else if constexpr (is_vector_v<T>) {
+                using V = typename T::value_type;
+                std::ostringstream oss;
+                oss << "ARRAY[";
+                bool first = true;
+                for (auto&& elem : value) {
+                    if (!first) {
+                        oss << ", ";
+                    }
+                    first = false;
+                    if constexpr (std::is_same_v<V, Uuid>) {
+                        // In an array of UUIDs, throw if any element is “default/primary”
+                        if (elem.is_primary() || elem.is_null() || elem.is_default()) {
+                            throw std::runtime_error("For array field received uuid without value");
+                        }
+                        if constexpr (std::is_lvalue_reference_v<decltype(elem)>) {
+                            oss << elem.get_id();
+                        } else {
+                            oss << elem.pull_id();
+                        }
+                    } else {
+                        oss << convert_value(elem);
+                    }
+                }
+                oss << "]";
+                return oss.str();
+            } else {
+                static_assert(always_false_v<U>, "Unsupported field type for SQL conversion");
+            }
             return {};
         }
 
+        // Map a type T to its SqlType.
+        template <typename T>
+        constexpr SqlType deduce_sql_type() {
+            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int32_t>) {
+                return SqlType::INT;
+            } else if constexpr (std::is_same_v<T, Uuid>) {
+                return SqlType::UUID;
+            } else if constexpr (std::is_same_v<T, int64_t>) {
+                return SqlType::BIGINT;
+            } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
+                return SqlType::DOUBLE_PRECISION;
+            } else if constexpr (std::is_same_v<T, std::string> ) {
+                return SqlType::TEXT;
+            } else if constexpr (std::is_same_v<T, Json::Value>) {
+                return SqlType::JSONB;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                return SqlType::BOOLEAN;
+            } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
+                return SqlType::TIMESTAMP;
+            } else if constexpr (is_vector_v<T>) {
+                using V = typename T::value_type;
+                if constexpr (std::is_same_v<V, int> || std::is_same_v<V, int32_t>) {
+                    return SqlType::ARRAY_INT;
+                } else if constexpr (std::is_same_v<V, Uuid>) {
+                    return SqlType::ARRAY_UUID;
+                } else if constexpr (std::is_same_v<V, int64_t>) {
+                    return SqlType::ARRAY_BIGINT;
+                } else if constexpr (std::is_same_v<V, double> || std::is_same_v<V, float>) {
+                    return SqlType::ARRAY_DOUBLE;
+                } else if constexpr (std::is_same_v<V, std::string>) {
+                    return SqlType::ARRAY_TEXT;
+                } else if constexpr (std::is_same_v<V, bool>) {
+                    return SqlType::ARRAY_BOOLEAN;
+                } else if constexpr (std::is_same_v<V, std::chrono::system_clock::time_point>) {
+                    return SqlType::ARRAY_TIMESTAMP;
+                } else {
+                    static_assert(always_false_v<T>, "Unsupported vector field type");
+                }
+            } else {
+                static_assert(always_false_v<T>, "Unsupported field type");
+            }
+            return {};
+        }
 
-        /// @brief Gets the SQL data type of the field
-        [[nodiscard]] constexpr const char* get_sql_type_initialization() const override {
+        // Get a string for the SQL initialization (e.g. in a CREATE TABLE statement).
+        template <typename T>
+        std::string get_sql_init_type(const T& value) {
             if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int32_t>) {
                 return "INT";
             } else if constexpr (std::is_same_v<T, Uuid>) {
-                if (this->value().is_primary()) {
+                if (value.is_primary()) {
                     return "UUID DEFAULT gen_random_uuid() PRIMARY KEY";
-                }
-                if (this->value().is_null()) {
+                } else if (value.is_null()) {
                     return "UUID NULL";
+                } else {
+                    return "UUID NOT NULL";
                 }
-                return "UUID NOT NULL";
             } else if constexpr (std::is_same_v<T, int64_t>) {
                 return "BIGINT";
             } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
@@ -378,24 +341,62 @@ namespace common::database {
                 return "BOOLEAN";
             } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
                 return "TIMESTAMP";
-            } else if constexpr (std::is_same_v<T, std::vector<int>> || std::is_same_v<T, std::vector<int32_t>>) {
-                return "INT[]";
-            } else if constexpr (std::is_same_v<T, std::vector<Uuid>>) {
-                return "UUID[] NULL";
-            } else if constexpr (std::is_same_v<T, std::vector<int64_t>>) {
-                return "BIGINT[]";
-            } else if constexpr (std::is_same_v<T, std::vector<double>> || std::is_same_v<T, std::vector<float>>) {
-                return "DOUBLE PRECISION[]";
-            } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
-                return "TEXT[]";
-            } else if constexpr (std::is_same_v<T, std::vector<bool>>) {
-                return "BOOLEAN[]";
-            } else if constexpr (std::is_same_v<T, std::vector<std::chrono::system_clock::time_point>>) {
-                return "TIMESTAMP[]";
+            } else if constexpr (is_vector_v<T>) {
+                using V = typename T::value_type;
+                if constexpr (std::is_same_v<V, int> || std::is_same_v<V, int32_t>) {
+                    return "INT[]";
+                } else if constexpr (std::is_same_v<V, Uuid>) {
+                    return "UUID[] NULL";
+                } else if constexpr (std::is_same_v<V, int64_t>) {
+                    return "BIGINT[]";
+                } else if constexpr (std::is_same_v<V, double> || std::is_same_v<V, float>) {
+                    return "DOUBLE PRECISION[]";
+                } else if constexpr (std::is_same_v<V, std::string>) {
+                    return "TEXT[]";
+                } else if constexpr (std::is_same_v<V, bool>) {
+                    return "BOOLEAN[]";
+                } else if constexpr (std::is_same_v<V, std::chrono::system_clock::time_point>) {
+                    return "TIMESTAMP[]";
+                } else {
+                    static_assert(always_false_v<T>, "Unsupported vector field type");
+                }
             } else {
-                static_assert(sizeof(T) == 0, "Unsupported field type for get_sql_type()");
+                static_assert(always_false_v<T>, "Unsupported field type");
             }
             return {};
+        }
+
+    } // namespace detail
+
+    // Field is a template representing a concrete field with a value.
+    template <typename T>
+    class Field final : public FieldBase {
+    public:
+        Field(std::string name, T value) : FieldBase(std::move(name)), value_(std::move(value)) {
+            type_ = detail::deduce_sql_type<T>();
+        }
+        [[nodiscard]] const T& value() const noexcept {
+            return value_;
+        }
+        [[nodiscard]] T& value() noexcept {
+            return value_;
+        }
+        void set_value(const T& value) {
+            value_ = value;
+        }
+        void set_value(T&& value) {
+            value_ = std::move(value);
+        }
+
+        [[nodiscard]] std::string to_string() const& override {
+            return detail::convert_value(value_);
+        }
+        [[nodiscard]] std::string to_string() && override {
+            return detail::convert_value(std::move(value_));
+        }
+
+        [[nodiscard]] std::string get_sql_type_initialization() const override {
+            return detail::get_sql_init_type(value_);
         }
 
         [[nodiscard]] std::unique_ptr<FieldBase> clone() const override {
@@ -403,116 +404,7 @@ namespace common::database {
         }
 
     private:
-        template <typename S>
-        [[nodiscard]] std::string array_to_string() const {
-            std::ostringstream oss;
-            oss << "ARRAY[ ";
-            for (size_t i = 0; i < value_.size(); i++) {
-                if constexpr (std::is_same_v<S, bool>) {
-                    oss << (value_[i] ? "TRUE" : "FALSE");
-                } else if constexpr (std::is_same_v<S, std::string> || std::is_arithmetic_v<S>) {
-                    oss << value_[i]; // Move the string instead of copying
-                } else if constexpr (std::is_same_v<S, Uuid>) {
-                    if (value_[i].is_primary() || value_[i].is_null() || value_[i].is_default()) {
-                        throw std::runtime_error("For array field received uuid without value");
-                    }
-                    oss << value_[i].get_id();
-                } else if constexpr (std::is_same_v<S, std::chrono::system_clock::time_point>) {
-                    // Convert time_point to string in ISO 8601 format
-                    const std::time_t time = std::chrono::system_clock::to_time_t(value_[i]);
-                    const std::tm* tm_ptr  = std::localtime(&time);
-                    oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
-                } else {
-                    static_assert(sizeof(T) == 0, "Unsupported field type for to_string()");
-                }
-                if (i < value_.size() - 1) {
-                    oss << ", ";
-                }
-            }
-
-            oss << "]";
-            return oss.str();
-        }
-        template <typename S>
-        [[nodiscard]] std::string array_move_to_string() {
-            std::ostringstream oss;
-            oss << "ARRAY[";
-            for (size_t i = 0; i < value_.size(); i++) {
-                if constexpr (std::is_same_v<S, std::string>) {
-                    oss << std::move(value_[i]); // Move the string instead of copying
-                } else if constexpr (std::is_same_v<S, bool>) {
-                    oss << (value_[i] ? "TRUE" : "FALSE");
-                } else if constexpr (std::is_arithmetic_v<S>) {
-                    oss << value_[i]; // No need to move arithmetic types
-                } else if constexpr (std::is_same_v<S, Uuid>) {
-                    if (value_[i].is_primary() || value_[i].is_null() || value_[i].is_default()) {
-                        throw std::runtime_error("For array field received uuid without value");
-                    }
-                    oss << value_[i].pull_id();
-                } else if constexpr (std::is_same_v<S, std::chrono::system_clock::time_point>) {
-                    // Convert time_point to string in ISO 8601 format
-                    const std::time_t time = std::chrono::system_clock::to_time_t(value_[i]);
-                    const std::tm* tm_ptr  = std::localtime(&time);
-                    oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
-                } else {
-                    static_assert(sizeof(S) == 0, "Unsupported field type for to_string()");
-                }
-                if (i < value_.size() - 1) {
-                    oss << ", ";
-                }
-            }
-
-            oss << "]";
-            return oss.str();
-        }
         T value_;
     };
 
-
-    class ViewingField final : public FieldBase {
-    public:
-        ViewingField(std::string&& name, const std::string_view value) : FieldBase(std::move(name)), value_(value) {}
-
-
-        /// @return Value of the field
-        [[nodiscard]] std::string_view value() const {
-            return value_;
-        }
-
-        void set_value(const std::string_view& value) {
-            value_ = value;
-        }
-
-        void set_value(std::string_view&& value) {
-            value_ = value;
-        }
-
-        /// @brief Converts the field value to a string for SQL queries
-        [[nodiscard]] std::string to_string() const& override {
-            return std::string(value_);
-        }
-
-        /// @brief Converts the field value to a string for SQL queries
-        [[nodiscard]] std::string to_string() && override {
-            return std::string(value_);
-        }
-
-        /// @brief Gets the SQL data type of the field
-        [[nodiscard]] SqlType get_sql_type() const override {
-            throw std::runtime_error("get_sql_type() called in VIEWING field");
-        }
-
-        [[nodiscard]] constexpr const char* get_sql_type_initialization() const override {
-            throw std::runtime_error("get_sql_type_initialization() called in VIEWING field");
-        }
-
-        [[nodiscard]] std::unique_ptr<FieldBase> clone() const override {
-            return std::make_unique<ViewingField>(*this);
-        }
-
-    private:
-        std::string_view value_;
-    };
-
-
-} // namespace common::database
+} // namespace demiplane::database

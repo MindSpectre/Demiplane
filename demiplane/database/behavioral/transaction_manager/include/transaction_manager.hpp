@@ -8,7 +8,7 @@
 #include "db_interface.hpp"
 #include <boost/algorithm/string.hpp>
 
-namespace common::db::interfaces {
+namespace demiplane::db::interfaces {
     class TransactionManager {
     public:
         // Default Constructor
@@ -143,4 +143,4 @@ namespace common::db::interfaces {
             }
         }
     };
-} // namespace common::db::interfaces
+} // namespace demiplane::db::interfaces

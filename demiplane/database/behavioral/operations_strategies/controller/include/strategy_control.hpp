@@ -5,9 +5,9 @@
 #include "logger_strategy.hpp"
 #include "db_interface.hpp"
 
-namespace common::database::behavioral::strategies
+namespace demiplane::database::behavioral::strategies
 {
-    using namespace common::database::interfaces;
+    using namespace demiplane::database::interfaces;
 
     template <typename... Args>
     class StrategyControl

@@ -7,7 +7,7 @@
 
 #include "db_interface.hpp"
 #include "db_interface_factory.hpp"
-namespace common::database::pool {
+namespace demiplane::database::pool {
     // Thread safety is on
     class DbInterfacePool final {
     public:
@@ -183,4 +183,4 @@ namespace common::database::pool {
         std::deque<DbConnection> pool_;
     };
 
-} // namespace common::database::pool
+} // namespace demiplane::database::pool

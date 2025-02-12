@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace common::crypto {
+namespace demiplane::crypto {
     class SaltGenerator {
     public:
         /// Generate a cryptographically secure random salt of the specified size.
@@ -107,4 +107,4 @@ namespace common::crypto {
             return encoded;
         }
     };
-}
+} // namespace demiplane::crypto

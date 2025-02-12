@@ -14,7 +14,7 @@
 #include "db_interface.hpp"
 
 
-namespace common::database {
+namespace demiplane::database {
     class PqxxClient final : public interfaces::DbInterface {
     public:
         /// @brief Creating a database with given params using template db
@@ -28,7 +28,7 @@ namespace common::database {
 
 
         /// @brief Trying to connect to the database, if connection isn't open will throw exception
-        /// @throws common::database::exceptions::ConnectionException
+        /// @throws demiplane::database::exceptions::ConnectionException
         PqxxClient(std::string_view host, uint32_t port, std::string_view db_name, std::string_view login,
             std::string_view password);
 
@@ -39,15 +39,15 @@ namespace common::database {
         // Transaction Methods
         /// @brief Start a transaction. All queries before commiting/roll backing a transaction will use common
         /// transaction
-        /// @throws  common::database::exceptions::TransactionException
+        /// @throws  demiplane::database::exceptions::TransactionException
         void start_transaction() override;
 
         /// @brief Commit a transaction. If throws an exception, all transactions will be reverted
-        /// @throws  common::database::exceptions::TransactionException
+        /// @throws  demiplane::database::exceptions::TransactionException
         void commit_transaction() override;
 
         /// @brief Instantly cancel a transaction
-        /// @throws  common::database::exceptions::TransactionException
+        /// @throws  demiplane::database::exceptions::TransactionException
         void rollback_transaction() override;
 
         /// @brief Create unique index for the table
@@ -94,15 +94,6 @@ namespace common::database {
         /// @warning Slow, because of copying all fields
         [[nodiscard]] Records select(std::string_view table_name) const override;
 
-        /// @brief Faster than select, but doesn't transform and allows only one operation view field
-        /// @return Vector of view records. Each element of vector - one row in a table
-        /// @warning If u needn't only view data, use select.
-        [[nodiscard]] ViewRecords view(std::string_view table_name, const Conditions& conditions) const override;
-
-        /// @brief Faster than select, but doesn't transform and allows only one operation view field
-        /// @return Vector of view records. Each element of vector - one row in a table
-        /// @warning If u needn't only view data, use select.
-        [[nodiscard]] ViewRecords view(std::string_view table_name) const override;
 
         // Remove Data
         ///@brief remove data following conditions
@@ -236,4 +227,4 @@ namespace common::database {
 
         void install_trgm_extension() const;
     };
-} // namespace common::database
+} // namespace demiplane::database

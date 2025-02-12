@@ -7,7 +7,7 @@
 
 #include "hash_creator_interface.hpp"
 
-namespace common::crypto {
+namespace demiplane::crypto {
     class SHA256Function final : public HashCreator {
     public:
         SHA256Function()           = default;
@@ -36,4 +36,4 @@ namespace common::crypto {
             return oss.str();
         }
     };
-} // namespace common::crypto
+} // namespace demiplane::crypto

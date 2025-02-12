@@ -2,7 +2,7 @@
 #include "strategy_base.hpp"
 #include <queue>
 
-namespace common::database::behavioral::strategies
+namespace demiplane::database::behavioral::strategies
 {
     template <typename... Args>
     class BatcherStrategy final : public StrategyBase<Args...>

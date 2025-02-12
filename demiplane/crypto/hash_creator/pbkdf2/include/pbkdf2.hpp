@@ -6,7 +6,7 @@
 
 #include "hash_creator_interface.hpp"
 
-namespace common::crypto {
+namespace demiplane::crypto {
     class PBKDF2Hash final : public HashCreator {
     public:
         PBKDF2Hash()           = default;
@@ -35,4 +35,4 @@ namespace common::crypto {
             return oss.str();
         }
     };
-} // namespace common::crypto
+} // namespace demiplane::crypto

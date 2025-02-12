@@ -13,7 +13,7 @@
 #include "db_connect_params.hpp"
 #include "db_interface.hpp"
 
-namespace common::database {
+namespace demiplane::database {
     class SilentMockDbClient final : public interfaces::DbInterface {
     public:
         /// @brief Creating database with given params using template db
@@ -28,7 +28,7 @@ namespace common::database {
 
 
         /// @brief Trying to connect to the database, if connection is not open will throw exception
-        /// @throws common::database::exceptions::ConnectionException
+        /// @throws demiplane::database::exceptions::ConnectionException
         explicit SilentMockDbClient(const ConnectParams& params) {
             std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate(10));
         }
@@ -41,19 +41,19 @@ namespace common::database {
         // Transaction Methods
         /// @brief Start a transaction. All queries before commiting/roll backing a transaction will use common
         /// transaction
-        /// @throws  common::database::exceptions::TransactionException
+        /// @throws  demiplane::database::exceptions::TransactionException
         void start_transaction() override {
             std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate(10));
         }
 
         /// @brief Commit a transaction. If throws an exception, all transaction will be reverted
-        /// @throws  common::database::exceptions::TransactionException
+        /// @throws  demiplane::database::exceptions::TransactionException
         void commit_transaction() override {
             std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate(10));
         }
 
         /// @brief Instantly cancel a transaction
-        /// @throws  common::database::exceptions::TransactionException
+        /// @throws  demiplane::database::exceptions::TransactionException
         void rollback_transaction() override {
             std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate(10));
         }
@@ -129,23 +129,6 @@ namespace common::database {
             return {};
         }
 
-        /// @brief Faster than select, but doesn't transform and allows only one operation view field
-        /// @return Vector of view records. Each element of vector - one row in a table
-        /// @warning If u need not only view data, use select.
-        [[nodiscard]] std::vector<std::unique_ptr<ViewRecord>> view(
-            std::string_view table_name, const Conditions& conditions) const override {
-            std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate(40, 70));
-            return {};
-        }
-
-        /// @brief Faster than select, but doesn't transform and allows only one operation view field
-        /// @return Vector of view records. Each element of vector - one row in a table
-        /// @warning If u need not only view data, use select.
-        [[nodiscard]] std::vector<std::unique_ptr<ViewRecord>> view(std::string_view table_name) const override {
-            std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate(120, 40));
-            return {};
-        }
-
         // Remove Data
         ///@brief remove data following conditions
         void remove(std::string_view table_name, const Conditions& conditions) override {
@@ -210,4 +193,4 @@ namespace common::database {
     private:
         static constexpr char label[] = "[SILENT MOCK DATABASE LOG]:\t";
     };
-} // namespace common::database
+} // namespace demiplane::database

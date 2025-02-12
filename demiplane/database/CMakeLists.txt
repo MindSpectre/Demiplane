@@ -4,9 +4,9 @@
 add_library(${PROJECT_NAME}_Database INTERFACE)
 target_link_libraries(${PROJECT_NAME}_Database
         INTERFACE
-        Database::Factory
-        Database::Pool
-        Database::Transactions
+        Demiplane::Database::Factory
+        Demiplane::Database::Pool
+        Demiplane::Database::Transactions
 )
 add_library(Demiplane::Database::Database ALIAS ${PROJECT_NAME}_Database)
 ##############################################################################
@@ -17,11 +17,11 @@ add_library(Demiplane::Database::Database ALIAS ${PROJECT_NAME}_Database)
 # Database main classes NECESSARY UTILITY
 ##############################################################################
 add_library(${PROJECT_NAME}_Database_Base INTERFACE
-        base/db_conditions.hpp
         base/db_field.hpp
         base/db_record.hpp
         base/db_factory.hpp
         base/db_shortcuts.hpp
+        base/db_query.hpp
 )
 
 target_include_directories(${PROJECT_NAME}_Database_Base
@@ -71,13 +71,13 @@ add_library(Demiplane::Database::Exceptions ALIAS ${PROJECT_NAME}_Database_Excep
 ##############################################################################
 
 
-add_subdirectory(creational)
+#add_subdirectory(creational)
 
-add_subdirectory(behavioral)
+#add_subdirectory(behavioral)
 
-add_subdirectory(postgres/pqxx_impl)
+#add_subdirectory(postgres/pqxx_impl)
 
-add_subdirectory(mock/basic_mock)
+#add_subdirectory(mock/basic_mock)
 
-add_subdirectory(mock/silent_mock)
+#add_subdirectory(mock/silent_mock)
 

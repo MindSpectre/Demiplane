@@ -4,7 +4,7 @@
 
 #include "db_pool_manager.hpp"
 
-namespace common::database::pool {
+namespace demiplane::database::pool {
     class DbPoolObserver final {
     public:
         void add(DbPoolManager &pool_manager) {

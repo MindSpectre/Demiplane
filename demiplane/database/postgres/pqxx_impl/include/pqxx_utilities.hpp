@@ -3,7 +3,7 @@
 
 #include <pqxx_client.hpp>
 
-namespace common::database::utilities {
+namespace demiplane::database::utilities {
     inline void multi_thread_insertion(const std::shared_ptr<PqxxClient>& client, const std::string_view table_name,
         std::vector<Record>&& records, const uint32_t flush = 1 << 10, const int8_t thread_count = 4) {
         auto poster_worker = [&](const int start_index) {
@@ -65,4 +65,4 @@ namespace common::database::utilities {
         client->restore_search_index(table_name);
         client->commit_transaction();
     }
-} // namespace common::database::utilities
+} // namespace demiplane::database::utilities

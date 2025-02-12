@@ -3,7 +3,7 @@
 #include <string>
 
 
-namespace common::utilities::security {
+namespace demiplane::utilities::security {
     [[nodiscard]] inline bool constant_time_compare(const std::string& a, const std::string& b) {
         if (a.size() != b.size()) {
             return false;
@@ -14,4 +14,4 @@ namespace common::utilities::security {
         }
         return result;
     }
-} // namespace common::utilities::security
+} // namespace demiplane::utilities::security

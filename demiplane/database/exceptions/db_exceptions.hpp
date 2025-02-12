@@ -5,7 +5,7 @@
 
 #include "db_error_codes.hpp"
 
-namespace common::database::exceptions {
+namespace demiplane::database::exceptions {
     class DatabaseException : public std::runtime_error {
     protected:
         errors::db_error_code m_error_code = errors::db_error_code::UNKNOWN_ERROR;
@@ -44,4 +44,4 @@ namespace common::database::exceptions {
     };
 
     // Additional exceptions can be added here
-} // namespace common::database::exceptions
+} // namespace demiplane::database::exceptions

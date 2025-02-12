@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace common::crypto {
+namespace demiplane::crypto {
     class HashCreator {
     protected:
         /// @brief Secret key for HMAC
@@ -46,4 +46,4 @@ namespace common::crypto {
             key = newKey;
         }
     };
-} // namespace common::crypto
+} // namespace demiplane::crypto

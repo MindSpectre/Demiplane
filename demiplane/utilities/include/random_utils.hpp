@@ -6,7 +6,7 @@
 #include <random>
 
 
-namespace common::utilities::math::random {
+namespace demiplane::utilities::math::random {
     [[nodiscard]] inline uint32_t generate_random_number(const uint32_t min, const uint32_t max) {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -181,4 +181,4 @@ namespace common::utilities::math::random {
 
         return ss.str();
     }
-} // namespace common::utilities::math::random
+} // namespace demiplane::utilities::math::random

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace common::database::errors {
+namespace demiplane::database::errors {
     enum class db_error_code {
         // Success Codes (2xx)
         SUCCESS = 200, // No error, operation succeeded
@@ -74,4 +74,4 @@ namespace common::database::errors {
             return "Unrecognized error code.";
         }
     }
-} // namespace common::database::errors
+} // namespace demiplane::database::errors

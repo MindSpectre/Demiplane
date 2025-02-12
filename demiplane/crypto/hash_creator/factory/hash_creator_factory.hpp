@@ -7,7 +7,7 @@
 #include "pbkdf2.hpp"
 
 
-namespace common::crypto {
+namespace demiplane::crypto {
     class HashCreatorFactory {
     public:
         static std::unique_ptr<HashCreator> CreateSHA256Coder() {
@@ -18,4 +18,4 @@ namespace common::crypto {
             return std::make_unique<PBKDF2Hash>();
         }
     };
-} // namespace common::crypto
+} // namespace demiplane::crypto

@@ -2,7 +2,7 @@
 #include <array>
 #include <cstddef>
 
-namespace common::utilities::compile_time {
+namespace demiplane::utilities::compile_time {
     template <std::size_t N>
     static constexpr std::size_t strlen_constexpr(const char (&w)[N]) {
         return N - 1; // Exclude the null terminator
@@ -35,4 +35,4 @@ namespace common::utilities::compile_time {
         return result;
     }
     // Overload + operator for compile-time string concatenation
-} // namespace common::utilities::compile_time
+} // namespace demiplane::utilities::compile_time

@@ -1,134 +1,160 @@
-// db_record.hpp
-
 #pragma once
-#include <memory>
-#include <string>
 
+#include <algorithm>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
+
+// Include your FieldBase definition (and related Field<> classes) here.
 #include "db_field.hpp"
 
-namespace common::database {
+namespace demiplane::database {
 
-    class Record final {
-    public:
-        ~Record() = default;
+class Record final {
+public:
+    Record() = default;
+    ~Record() = default;
 
-        void push_back(std::unique_ptr<FieldBase>&& field) {
-            fields_.push_back(std::move(field));
-        }
+    // Allow moves but disable copying. (Use clone() for deep copying.)
+    Record(Record&& other) noexcept : fields_(std::move(other.fields_)) {}
+    Record& operator=(Record&& other) noexcept {
+        if (this != &other)
+            fields_ = std::move(other.fields_);
+        return *this;
+    }
+    Record(const Record&) = delete;
+    Record& operator=(const Record&) = delete;
 
-        template <typename FieldType, typename... Args>
-        void emplace_back(Args&&... args) {
-            static_assert(std::is_base_of_v<FieldBase, FieldType>, "FieldType must derive from FieldBase");
-            fields_.emplace_back(std::make_unique<FieldType>(std::forward<Args>(args)...));
-        }
-
-        void pop_back() {
-            fields_.pop_back();
-        }
-
-        void clear() {
-            fields_.clear();
-        }
-
-        Record(Record&& other) noexcept : fields_(std::move(other.fields_)) {}
-
-        // Explicitly define the move assignment operator
-        Record& operator=(Record&& other) noexcept {
-            if (this != &other) {
-                fields_ = std::move(other.fields_);
+    /// @brief Produce a deep copy of this record.
+    [[nodiscard]] Record clone() const {
+        Record copy;
+        copy.fields_.reserve(fields_.size());
+        for (const auto& field : fields_) {
+            if (field) {
+                copy.fields_.push_back(field->clone());
             }
-            return *this;
         }
+        return copy;
+    }
 
-        // Disable the copy constructor and assignment operator to avoid accidental copying
-        Record(const Record&)            = delete;
-        Record& operator=(const Record&) = delete;
-        /*explicit*/
-        Record() = default;
+    /// @brief Append a field to the record.
+    void push_back(std::unique_ptr<FieldBase>&& field) {
+        fields_.push_back(std::move(field));
+    }
 
-        [[nodiscard]] std::unique_ptr<FieldBase> pull_back() {
-            auto tmp = std::move(fields_.back());
-            fields_.pop_back();
-            return std::move(tmp);
-        }
+    /// @brief Emplace a new field at the end of the record.
+    template <typename FieldType, typename... Args>
+    void emplace_back(Args&&... args) {
+        static_assert(std::is_base_of_v<FieldBase, FieldType>,
+                      "FieldType must derive from FieldBase");
+        fields_.emplace_back(std::make_unique<FieldType>(
+            std::forward<Args>(args)...));
+    }
 
-        [[nodiscard]] std::size_t size() const {
-            return fields_.size();
-        }
+    /// @brief Remove the last field.
+    void pop_back() {
+        if (fields_.empty())
+            throw std::runtime_error("Record is empty, cannot pop_back");
+        fields_.pop_back();
+    }
 
-        const std::unique_ptr<FieldBase>& operator[](const std::size_t idx) const& {
-            return fields_[idx];
-        }
+    /// @brief Remove and return the last field.
+    [[nodiscard]] std::unique_ptr<FieldBase> pull_back() {
+        if (fields_.empty())
+            throw std::runtime_error("Record is empty, cannot pull_back");
+        auto tmp = std::move(fields_.back());
+        fields_.pop_back();
+        return tmp;
+    }
 
-        void reserve(const std::size_t sz) {
-            fields_.reserve(sz);
-        }
+    /// @brief Remove all fields.
+    void clear() noexcept {
+        fields_.clear();
+    }
 
-        [[nodiscard]] bool empty() const {
-            return fields_.empty();
-        }
+    /// @brief Number of fields in this record.
+    [[nodiscard]] std::size_t size() const noexcept {
+        return fields_.size();
+    }
 
-        [[nodiscard]] const std::vector<std::unique_ptr<FieldBase>>& fields() const& {
-            return fields_;
-        }
+    /// @brief Whether this record has no fields.
+    [[nodiscard]] bool empty() const noexcept {
+        return fields_.empty();
+    }
 
-        [[nodiscard]] std::vector<std::unique_ptr<FieldBase>> fields() && {
-            return std::move(fields_);
-        }
+    /// @brief Reserve capacity for fields.
+    void reserve(const std::size_t sz) {
+        fields_.reserve(sz);
+    }
 
+    /// @brief Access a field by index (with bounds checking).
+    const std::unique_ptr<FieldBase>& operator[](const std::size_t idx) const {
+        if (idx >= fields_.size())
+            throw std::out_of_range("Index out of range in Record");
+        return fields_[idx];
+    }
+    std::unique_ptr<FieldBase>& operator[](const std::size_t idx) {
+        if (idx >= fields_.size())
+            throw std::out_of_range("Index out of range in Record");
+        return fields_[idx];
+    }
 
-        // Implement begin() and end() methods
-        auto begin() {
-            return fields_.begin();
-        }
-        auto end() {
-            return fields_.end();
-        }
-        [[nodiscard]] auto begin() const {
-            return fields_.cbegin();
-        }
-        [[nodiscard]] auto end() const {
-            return fields_.cend();
-        }
+    // --- Range-based iteration support ---
+    auto begin() noexcept { return fields_.begin(); }
+    auto end() noexcept { return fields_.end(); }
+    [[nodiscard]] auto begin() const noexcept { return fields_.begin(); }
+    [[nodiscard]] auto end() const noexcept { return fields_.end(); }
+    [[nodiscard]] auto cbegin() const noexcept { return fields_.cbegin(); }
+    [[nodiscard]] auto cend() const noexcept { return fields_.cend(); }
 
-    private:
-        std::vector<std::unique_ptr<FieldBase>> fields_;
-    };
+    // --- Lookup by field name ---
 
+    /// @brief Find the first field with a matching name.
+    /// @returns A pointer to the field (or nullptr if not found).
+    [[nodiscard]] FieldBase* find(std::string_view name) {
+        const auto it = std::ranges::find_if(
+            fields_,
+            [name](const std::unique_ptr<FieldBase>& field) {
+                return field && field->get_name() == name;
+            });
+        return it != fields_.end() ? it->get() : nullptr;
+    }
 
-    class ViewRecord {
-    public:
-        virtual ~ViewRecord()                                               = default;
-        [[nodiscard]] virtual std::string_view view(std::size_t idx) const& = 0;
-        [[nodiscard]] virtual std::string extract(std::size_t idx) const&   = 0;
-        [[nodiscard]] virtual std::size_t size() const&                     = 0;
-        [[nodiscard]] virtual std::string name(std::size_t idx) const&      = 0;
-    };
+    /// @brief Const overload of find().
+    [[nodiscard]] const FieldBase* find(std::string_view name) const {
+        const auto it = std::ranges::find_if(
+            fields_,
+            [name](const std::unique_ptr<FieldBase>& field) {
+                return field && field->get_name() == name;
+            });
+        return it != fields_.end() ? it->get() : nullptr;
+    }
 
-    class BaseViewRecord final : public ViewRecord {
-    public:
-        [[nodiscard]] std::string_view view(const std::size_t idx) const& override {
-            return views_[idx].value();
-        }
+    /// @brief Convenience operator to access a field by name.
+    /// @returns A pointer to the field (or nullptr if not found).
+    [[nodiscard]] FieldBase* operator[](const std::string_view name) {
+        return find(name);
+    }
+    [[nodiscard]] const FieldBase* operator[](const std::string_view name) const {
+        return find(name);
+    }
 
-        void add_field(ViewingField&& field) {
-            views_.emplace_back(std::move(field));
-        }
+    // --- Typed value extraction ---
 
-        [[nodiscard]] std::string extract(const std::size_t idx) const& override {
-            return std::string{views_[idx].value()};
-        }
+    /// @brief Retrieve the value of the field with the given name, cast to type T.
+    /// @throws std::runtime_error if the field is not found.
+    template <typename T>
+    [[nodiscard]] T get_value(const std::string_view name) const {
+        const FieldBase* field = find(name);
+        if (!field)
+            throw std::runtime_error("Field not found: " + std::string(name));
+        return field->as<T>();
+    }
 
-        [[nodiscard]] std::size_t size() const& override {
-            return views_.size();
-        }
+private:
+    std::vector<std::unique_ptr<FieldBase>> fields_;
+};
 
-        [[nodiscard]] std::string name(const std::size_t idx) const& override {
-            return views_[idx].get_name();
-        }
-
-    private:
-        std::vector<ViewingField> views_;
-    };
-
-} // namespace common::database
+} // namespace demiplane::database

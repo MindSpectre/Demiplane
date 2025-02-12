@@ -12,7 +12,7 @@
 #include "pqxx_view_record.hpp"
 #include "stopwatch.hpp"
 
-namespace common::database {
+namespace demiplane::database {
     using namespace exceptions;
     using db_err = errors::db_error_code;
     // Constructors
@@ -1026,4 +1026,4 @@ namespace common::database {
         setup_extensions << "CREATE EXTENSION IF NOT EXISTS pg_trgm;";
         this->execute_query(setup_extensions.str());
     }
-} // namespace common::database
+} // namespace demiplane::database

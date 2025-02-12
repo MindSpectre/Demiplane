@@ -4,7 +4,7 @@
 
 #include "db_interface.hpp"
 #include "db_interface_pool.hpp"
-namespace common::database::pool {
+namespace demiplane::database::pool {
 
     class DbPoolManager final {
     public:
@@ -176,4 +176,4 @@ namespace common::database::pool {
 
         mutable std::atomic<bool> high_load_flag_; // High load indicator
     };
-} // namespace common::database::pool
+} // namespace demiplane::database::pool

@@ -9,5 +9,5 @@ target_include_directories(${PROJECT_NAME}_Stopwatch
         PUBLIC
         include/
 )
-add_library(Demiplane::Stopwatch::Stopwatch ALIAS ${PROJECT_NAME}_Stopwatch)
+add_library(Demiplane::Stopwatch ALIAS ${PROJECT_NAME}_Stopwatch)
 ##############################################################################

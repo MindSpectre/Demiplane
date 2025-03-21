@@ -12,5 +12,6 @@ target_include_directories(${PROJECT_NAME}_Utilities
         INTERFACE
         include/
 )
-add_library(Demiplane::Utilities::Utilities ALIAS ${PROJECT_NAME}_Utilities)
+add_library(Demiplane::Utilities ALIAS ${PROJECT_NAME}_Utilities)
+
 ##############################################################################

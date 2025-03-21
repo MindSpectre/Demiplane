@@ -1,18 +1,20 @@
-#include "db_query.hpp"
+#define ENABLE_TRACING
 
+#include "tracer_factory.hpp"
 
-using namespace demiplane::database::query;
-using namespace demiplane::database;
+using namespace demiplane;
+class ServiceX : public HasName<ServiceX> {
+    public:
+    static constexpr std::string_view name() { return "ServiceX"; }
+};
 int main() {
-    SelectQuery query;
-    query.select({utility_factory::shared_field<int>({"stuff", {}}), utility_factory::shared_field<int>("stuff1", {})})
-        .limit(5)
-        .offset(2)
-        .where("123", WhereClause::Operator::EQUAL, std::string("12"));
-    query.select(Field<int>({"stuff1", {}}), Field<std::string>({"stuff2", {}}))
-        .limit(5)
-        .offset(2)
-        .where("123", WhereClause::Operator::EQUAL, std::string("12")).similar("123");
-
+    auto cfg = demiplane::scroll::ScrollConfigFactory::create_file_tracer_config({});
+    auto tracer = scroll::TracerFactory::create_console_tracer<ServiceX>(
+        scroll::ScrollConfigFactory::create_default_console_tracer_config());
+    TRACE_DEBUG(tracer, "1234");
+    TRACE_INFO(tracer, "1234");
+    TRACE_WARN(tracer, "1234");
+    TRACE_ERROR(tracer, "1234");
+    TRACE_FATAL(tracer, "1234");
     return 0;
 }

@@ -12,7 +12,6 @@ set(CMAKE_HAVE_THREADS_LIBRARY 1)
 set(CMAKE_USE_WIN32_THREADS_INIT 0)
 set(CMAKE_USE_PTHREADS_INIT 1)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
-
 # Add options to enable or disable Boost and Qt5
 option(USE_BOOST "Enable Boost library" ON)
 option(USE_QT5 "Enable Qt5 library" OFF)
@@ -62,4 +61,4 @@ if (USE_TESTS)
 endif ()
 ##############################################################################
 
-add_subdirectory(demiplane)
+add_subdirectory(core)

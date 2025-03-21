@@ -20,17 +20,6 @@ namespace demiplane {
 
         ~Immovable() = default;
     };
-    class Singleton {
-    protected:
-        Singleton()  = default;
-        virtual ~Singleton() = default;
-
-    public:
-        Singleton(const Singleton&)            = delete;
-        Singleton& operator=(const Singleton&) = delete;
-        Singleton(Singleton&&)                 = delete;
-        Singleton& operator=(Singleton&&)      = delete;
-    };
     class Immutable {
     public:
         Immutable()                            = default;

@@ -97,7 +97,25 @@ TEST(ArrayFieldTest, Clone) {
     EXPECT_EQ(clonedField->get_name(), "intArray");
     EXPECT_EQ(clonedField->as<std::vector<int>>(), (std::vector{1, 2, 3}));
 }
-
+TEST(ArrayFieldTest, SpecificUuid) {
+    Uuid id1, id2;
+    id1.set_null();
+    id2.set_null();
+    ArrayField<Uuid> null_arr{"uuidArray", {id1, id2}};
+    EXPECT_THROW({auto rs = null_arr.to_string();}, std::invalid_argument);
+    id1.set_generated();
+    id2.set_generated();
+    ArrayField<Uuid> generated_arr{"uuidArray", {id1, id2}};
+    EXPECT_THROW({auto rs = generated_arr.to_string();}, std::invalid_argument);
+    id1.set_primary();
+    id2.set_primary();
+    ArrayField<Uuid> primary_arr{"uuidArray", {id1, id2}};
+    EXPECT_THROW({auto rs = primary_arr.to_string();}, std::invalid_argument);
+    id1.unset_primary().set_id("123e4567-e89b-12d3-a456-426614174000");
+    id2.unset_primary().set_id("123e4567-e89b-12d3-a456-426614174000");
+    ArrayField<Uuid> correct_arr{"uuidArray", {id1, id2}};
+    EXPECT_NO_THROW({auto rs = correct_arr.to_string();});
+}
 // Unsupported Type Handling
 struct UnsupportedType {};
 

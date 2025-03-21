@@ -102,7 +102,7 @@ TEST(FieldTest, GetSqlTypeInitialization) {
     EXPECT_EQ(primaryUuidField.get_sql_type_initialization(), "UUID DEFAULT gen_random_uuid() PRIMARY KEY");
 
     Uuid nullableUuid("null", false);
-    nullableUuid.make_null();
+    nullableUuid.set_null();
     Field nullableUuidField("id", nullableUuid);
     EXPECT_EQ(nullableUuidField.get_sql_type_initialization(), "UUID NULL");
 }

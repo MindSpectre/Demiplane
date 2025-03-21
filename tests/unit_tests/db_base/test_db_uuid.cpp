@@ -13,7 +13,7 @@ TEST(UuidTest, DefaultConstructor) {
 
 TEST(UuidTest, SetNull) {
     Uuid uuid;
-    uuid.make_null();
+    uuid.set_null();
     EXPECT_EQ(uuid.get_id(), Uuid::null_value);
     EXPECT_TRUE(uuid.is_null());
     EXPECT_FALSE(uuid.is_primary());
@@ -22,7 +22,7 @@ TEST(UuidTest, SetNull) {
 
 TEST(UuidTest, SetDefault) {
     Uuid uuid;
-    uuid.make_generated();
+    uuid.set_generated();
     EXPECT_EQ(uuid.get_id(), Uuid::use_generated);
     EXPECT_TRUE(uuid.is_generated());
     EXPECT_FALSE(uuid.is_null());
@@ -51,7 +51,7 @@ TEST(UuidTest, EqualityOperators) {
 TEST(UuidTest, SetPrimary) {
     Uuid uuid("123e4567-e89b-12d3-a456-426614174000", false);
     EXPECT_FALSE(uuid.is_primary());
-    uuid.make_primary();
+    uuid.set_primary();
     EXPECT_TRUE(uuid.is_primary());
 }
 

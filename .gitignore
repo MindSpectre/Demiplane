@@ -55,9 +55,6 @@
 out/
 bin/
 lib/
-/build-upstream-vcpkg/
-/build-upstream-vcpkg-dbg/
-/cmake-build-ninja--vcpkg-dbg-rel-coverage/
 # ===========================
 # CMake Generated Files
 # ===========================
@@ -96,6 +93,4 @@ Testing/
 *.pdb
 *.opendb
 
-/build-coverage/
-/build-debug-gcc/
-/cmake-build-debug-coverage/
+

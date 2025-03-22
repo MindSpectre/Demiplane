@@ -105,19 +105,7 @@ TEST_F(StopwatchTest, TestFinishAndPrint)
     EXPECT_NO_THROW(sw.finish()); // Should be empty before adding another flag
 }
 
-// Test the destructor calls print() automatically
-TEST(StopwatchDestructorTest, TestDestructorCallsPrint)
-{
-    {
-        Stopwatch<> temp_stopwatch;
-        temp_stopwatch.start();
-        temp_stopwatch.flag("Start Flag");
-        StopwatchTest::delay_ms(10);
-        temp_stopwatch.flag("End Flag");
 
-        // When temp_stopwatch goes out of scope, print() should be called automatically
-    } // Destructor should be called here
-}
 
 // Test flags capacity reservation and handling large number of flags
 TEST_F(StopwatchTest, TestFlagCapacityHandling)
@@ -148,4 +136,17 @@ TEST(StopwatchTimeUnitTest, TestDifferentTimeUnits)
     // Ensure there are no issues with different time units
     EXPECT_NO_THROW(micro_sw.finish());
     EXPECT_NO_THROW(nano_sw.finish());
+}
+// Test the destructor calls print() automatically
+TEST(StopwatchDestructorTest, TestDestructorCallsPrint)
+{
+    {
+        Stopwatch<> temp_stopwatch;
+        temp_stopwatch.start();
+        temp_stopwatch.flag("Start Flag");
+        StopwatchTest::delay_ms(10);
+        temp_stopwatch.flag("End Flag");
+
+        // When temp_stopwatch goes out of scope, print() should be called automatically
+    } // Destructor should be called here
 }

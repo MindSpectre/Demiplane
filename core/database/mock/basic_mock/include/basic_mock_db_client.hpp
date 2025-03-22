@@ -23,7 +23,7 @@ namespace demiplane::database {
         BasicMockDbClient(const ConnectParams& params, std::shared_ptr<scroll::TracerInterface> tracer)
             : DbInterface(params), tracer_(std::move(tracer)) {}
 
-        static void create_database(std::string_view host, uint32_t port, std::string_view db_name,
+        void create_database(std::string_view host, uint32_t port, std::string_view db_name,
             std::string_view login, std::string_view password);
 
         static void create_database(const ConnectParams& pr);

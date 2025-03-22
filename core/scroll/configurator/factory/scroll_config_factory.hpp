@@ -13,9 +13,13 @@ namespace demiplane::scroll {
         static ConsoleTracerConfig create_default_console_tracer_config() {
             return ConsoleTracerConfig{{}};
         }
+        static std::unique_ptr<ScrollConfigInterface> create_console_tracer_config(const EntryConfig& entry_config) {
+            return std::make_unique<ConsoleTracerConfig>(entry_config);
+        }
         static FileTracerConfig create_default_file_tracer_config() {
             return FileTracerConfig{{}};
         }
+
         static std::unique_ptr<ScrollConfigInterface> create_file_tracer_config(const EntryConfig& entry_config) {
             return std::make_unique<FileTracerConfig>(entry_config);
         }

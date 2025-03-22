@@ -9,16 +9,16 @@ namespace demiplane::scroll {
     class TracerFactory final {
     public:
         template <class Service>
-        static std::shared_ptr<TracerInterface> create_console_tracer(ConsoleTracerConfig cfg) {
-            return std::make_shared<ConsoleTracer<Service>>(std::make_shared<ConsoleTracerConfig>(std::move(cfg)));
+        static std::unique_ptr<TracerInterface> create_console_tracer(ConsoleTracerConfig cfg) {
+            return std::make_unique<ConsoleTracer<Service>>(std::make_shared<ConsoleTracerConfig>(std::move(cfg)));
         }
-        static std::shared_ptr<TracerInterface> create_default_console_tracer() {
-            return std::make_shared<ConsoleTracer<NoName>>(
+        static std::unique_ptr<TracerInterface> create_default_console_tracer() {
+            return std::make_unique<ConsoleTracer<NoName>>(
                 std::make_shared<ConsoleTracerConfig>(ScrollConfigFactory::create_default_console_tracer_config()));
         }
         template <class Service>
-        static std::shared_ptr<TracerInterface> create_file_tracer(FileTracerConfig cfg) {
-            return std::make_shared<FileTracer<Service>>(std::make_shared<FileTracerConfig>(std::move(cfg)));
+        static std::unique_ptr<TracerInterface> create_file_tracer(FileTracerConfig cfg) {
+            return std::make_unique<FileTracer<Service>>(std::make_shared<FileTracerConfig>(std::move(cfg)));
         }
     };
 } // namespace demiplane::scroll

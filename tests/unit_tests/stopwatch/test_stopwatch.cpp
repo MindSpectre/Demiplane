@@ -3,7 +3,6 @@
 
 #include "stopwatch.hpp"
 
-
 using namespace demiplane;
 
 class StopwatchTest : public testing::Test
@@ -83,7 +82,6 @@ TEST_F(StopwatchTest, TestAccurateFlagging)
     sw.flag("Initial Flag");
     delay_ms(10); // Simulate a delay
     sw.flag("Second Flag");
-
     const auto end_time = std::chrono::high_resolution_clock::now();
 
     const auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
@@ -131,7 +129,6 @@ TEST_F(StopwatchTest, TestFlagCapacityHandling)
         large_sw.flag("Flag " + std::to_string(i));
         delay_ms(1); // Delay to ensure flag timestamps are distinct
     }
-
     EXPECT_NO_THROW(large_sw.finish()); // Ensure that handling a large number of flags works smoothly
 }
 

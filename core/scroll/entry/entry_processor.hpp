@@ -4,7 +4,7 @@
 #include "entry_config.hpp"
 
 namespace demiplane::scroll {
-    class EntryProcessor : Immutable{
+    class EntryProcessor : Immutable {
     public:
         [[nodiscard]] std::string make_header() const {
             std::ostringstream header_stream;
@@ -55,7 +55,11 @@ namespace demiplane::scroll {
             }
             if (config_.add_location) {
                 fill_until_pos(log_entry, config_.custom_alignment.location_pos);
-                log_entry << "[" << file << ":" << line << " " << function << "] ";
+                log_entry << "[" << file << ":" << line;
+                if (config_.add_pretty_function) {
+                    log_entry << " " << function;
+                }
+                log_entry << "] ";
             }
 
             if (config_.add_message) {
@@ -93,7 +97,7 @@ namespace demiplane::scroll {
             }
             return uncolored_entry.data();
         }
-        explicit EntryProcessor(const EntryConfig&  config) : config_(config) {}
+        explicit EntryProcessor(const EntryConfig& config) : config_(config) {}
         [[nodiscard]] EntryConfig& config() {
             return config_;
         }
@@ -112,4 +116,4 @@ namespace demiplane::scroll {
 
         static constexpr char filler = ' ';
     };
-} // namespace demiplane::tracing
+} // namespace demiplane::scroll

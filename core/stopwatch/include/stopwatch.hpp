@@ -1,19 +1,19 @@
 #pragma once
 
 #include <chrono>
-#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
 
+#include "tracer_factory.hpp"
+#include "traits_classes.hpp"
 namespace demiplane {
     /**
      * @brief Stopwatch class used for measuring time intervals.
-     *
      * @tparam T The time unit used for measuring intervals (milliseconds by default).
      */
     template <typename T = std::chrono::milliseconds>
-    class Stopwatch {
+    class Stopwatch : HasName<Stopwatch<T>> {
     public:
         /**
          * @brief Checks if time is counted from the previous flag.
@@ -61,8 +61,25 @@ namespace demiplane {
         explicit Stopwatch(std::string name = "", const std::size_t flags_cnt_reserve = 30)
             : running_name_(std::move(name)) {
             flags_.reserve(flags_cnt_reserve);
+            scroll::EntryConfig entry_cfg_;
+            entry_cfg_.add_time     = false;
+            entry_cfg_.add_location = false;
+            entry_cfg_.enable_header = false;
+            scroll::EntryConfig::Alignment alg;
+            alg.level_pos = 0;
+            alg.service_pos = 20;
+            alg.thread_pos = 40;
+            alg.message_pos = 65;
+            entry_cfg_.custom_alignment = alg;
+            const scroll::ConsoleTracerConfig cfg{entry_cfg_};
+            tracer_ = scroll::TracerFactory::create_console_tracer<Stopwatch>(cfg);
         }
-
+        static constexpr const char* name() {
+            return "Stopwatch";
+        }
+        void redefine_tracer(std::unique_ptr<scroll::TracerInterface> tracer) {
+            tracer_ = std::move(tracer);
+        }
         /**
          * @brief Destructor that automatically prints the times.
          */
@@ -101,26 +118,29 @@ namespace demiplane {
             if (flags_.empty()) {
                 return;
             }
-            std::cout << "Running: " << running_name_ << '\n' << "Stopwatch times (in " << time_unit_name() << "):\n";
+
+            std::ostringstream stream;
+            stream << "\nRunning: " << running_name_ << '\n' << "Stopwatch times (in " << time_unit_name() << "):\n";
             auto previous = start_time_;
             for (size_t i = 0; i < flags_.size(); ++i) {
                 if (flags_[i].name_.empty()) {
-                    std::cout << "Flag " << i + 1;
+                    stream << "Flag " << i + 1;
                 } else {
-                    std::cout << flags_[i].name_;
+                    stream << flags_[i].name_;
                 }
                 if (countdown_from_prev_) {
-                    std::cout << "  |  " << std::chrono::duration_cast<T>(flags_[i].point_ - previous).count()
-                              << time_unit_name_short();
+                    stream << "  |  " << std::chrono::duration_cast<T>(flags_[i].point_ - previous).count()
+                           << time_unit_name_short();
                 }
                 if (countdown_from_start_) {
-                    std::cout << "  |  " << std::chrono::duration_cast<T>(flags_[i].point_ - start_time_).count()
-                              << time_unit_name_short();
+                    stream << "  |  " << std::chrono::duration_cast<T>(flags_[i].point_ - start_time_).count()
+                           << time_unit_name_short();
                 }
-                std::cout << "\n";
+                stream << "\n";
                 previous = flags_[i].point_;
             }
-            std::cout << std::endl;
+            stream << std::endl;
+            TRACE_INFO(tracer_, stream.str());
             flags_.clear();
         }
 
@@ -258,5 +278,6 @@ namespace demiplane {
 
         std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
         std::vector<Flag> flags_;
+        std::unique_ptr<scroll::TracerInterface> tracer_;
     };
-} // namespace common
+} // namespace demiplane

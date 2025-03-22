@@ -1,17 +1,14 @@
 #pragma once
-#include <chrono>
 #include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <json/json.h>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
-#include <vector>
 
-#include "scroll_config_factory.hpp"
 #include "entry_processor.hpp"
+#include "scroll_config_factory.hpp"
+
+#define ENABLE_TRACING
 namespace demiplane::scroll {
 
 

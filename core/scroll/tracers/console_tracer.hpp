@@ -1,4 +1,7 @@
 #pragma once
+
+#include <iostream>
+
 #include "../tracer_interface.hpp"
 
 namespace demiplane::scroll {

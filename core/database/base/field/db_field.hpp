@@ -371,8 +371,8 @@ namespace demiplane::database {
         }
 
         // Convert the field value to a string for SQL queries.
-        [[nodiscard]] virtual std::string to_string() const& = 0;
-        [[nodiscard]] virtual std::string to_string() &&     = 0;
+        [[nodiscard]] virtual std::string to_string() const&  = 0;
+        [[nodiscard]] virtual std::string pull_to_string() = 0;
 
         // Return the SQL type (as determined in the constructor).
         [[nodiscard]] virtual SqlType get_sql_type() const {
@@ -426,7 +426,7 @@ namespace demiplane::database {
         [[nodiscard]] std::string to_string() const& override {
             return detail::convert_value(value_);
         }
-        [[nodiscard]] std::string to_string() && override {
+        [[nodiscard]] std::string pull_to_string() override {
             return detail::convert_value(std::move(value_));
         }
 
@@ -447,6 +447,12 @@ namespace demiplane::database {
         }
         explicit Column(std::string name, const SqlType sqt) : column_name_(std::move(name)) {
             sql_type_ = sqt;
+        }
+        [[nodiscard]] std::string_view get_column_name() const {
+            return column_name_;
+        }
+        void set_column_name(std::string column_name) {
+            column_name_ = std::move(column_name);
         }
         [[nodiscard]] SqlType get_sql_type() const {
             return sql_type_;

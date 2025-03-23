@@ -8,9 +8,7 @@
 #include <vector>
 
 #include "db_interface.hpp"
-#include "tracer_factory.hpp"
-
-
+#include "scroll_tracer.hpp"
 
 
 namespace demiplane::database {
@@ -24,49 +22,49 @@ namespace demiplane::database {
         BasicMockDbClient(const ConnectParams& params, std::shared_ptr<scroll::TracerInterface> tracer)
             : DbInterface(params), tracer_(std::move(tracer)) {}
 
-        void create_database(const std::shared_ptr<DatabaseConfig>& config, ConnectParams& pr) override;
+        IRes<> create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
 
-        void start_transaction() override;
+        IRes<> start_transaction() override;
 
-        void commit_transaction() override;
+        IRes<> commit_transaction() override;
 
-        void rollback_transaction() override;
+        IRes<> rollback_transaction() override;
 
-        void connect(const ConnectParams& params) override;
+        IRes<> connect(const ConnectParams& params) override;
 
-        void drop_connect() override;
+        IRes<> drop_connect() override;
 
-        void create_table(const query::CreateQuery& proposal) override;
+        IRes<> create_table(const query::CreateQuery& proposal) override;
 
-        void delete_table(std::string_view table_name) override;
+        IRes<> delete_table(std::string_view table_name) override;
 
-        void truncate_table(std::string_view table_name) override;
+        IRes<> truncate_table(std::string_view table_name) override;
 
-        [[nodiscard]] bool check_table(std::string_view table_name) override;
+        [[nodiscard]] IRes<bool> check_table(std::string_view table_name) override;
 
-        void make_unique_constraint(std::string_view table_name, FieldCollection key_fields) override;
+        IRes<> make_unique_constraint(std::string_view table_name, FieldCollection key_fields) override;
 
-        void setup_search_index(std::string_view table_name, FieldCollection fields) override;
+        IRes<> setup_search_index(std::string_view table_name, FieldCollection fields) override;
 
-        void drop_search_index(std::string_view table_name) const override;
+        IRes<> drop_search_index(std::string_view table_name) const override;
 
-        void remove_search_index(std::string_view table_name) override;
+        IRes<> remove_search_index(std::string_view table_name) override;
 
-        void restore_search_index(std::string_view table_name) const override;
+        IRes<> restore_search_index(std::string_view table_name) const override;
 
-        void insert(query::InsertQuery&& query) override;
+        IRes<> insert(query::InsertQuery&& query) override;
 
-        void upsert(query::UpsertQuery&& query) override;
+        IRes<> upsert(query::UpsertQuery&& query) override;
 
-        Records insert_with_returning(query::InsertQuery&& query) override;
+        IRes<Records> insert_with_returning(query::InsertQuery&& query) override;
 
-        Records upsert_with_returning(query::UpsertQuery&& query) override;
+        IRes<Records> upsert_with_returning(query::UpsertQuery&& query) override;
 
-        [[nodiscard]] Records select(const query::SelectQuery& conditions) const override;
+        [[nodiscard]] IRes<Records> select(const query::SelectQuery& conditions) const override;
 
-        void remove(const query::DeleteQuery& conditions) override;
+        IRes<> remove(const query::DeleteQuery& conditions) override;
 
-        [[nodiscard]] uint32_t count(const query::CountQuery& conditions) const override;
+        [[nodiscard]] IRes<uint32_t> count(const query::CountQuery& conditions) const override;
 
         void set_search_fields(std::string_view table_name, FieldCollection fields) noexcept override;
 

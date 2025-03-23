@@ -61,8 +61,8 @@ add_library(${PROJECT_NAME}.${SCROLL}.Tracer STATIC
         tracers/tracer_interface.hpp
         tracers/file_tracer.hpp
         tracers/console_tracer.hpp
-        tracers/factory/tracer_factory.cpp
-        tracers/factory/tracer_factory.hpp
+        tracers/factory/scroll_tracer.cpp
+        tracers/factory/scroll_tracer.hpp
 )
 target_include_directories(${PROJECT_NAME}.${SCROLL}.Tracer PUBLIC
         tracers/factory
@@ -83,7 +83,7 @@ add_library(${PROJECT_NAME}.${SCROLL}.Logger STATIC
         loggers/file_logger.hpp
         loggers/console_logger.hpp
         loggers/factory/logger_factory.cpp
-        loggers/factory/logger_factory.hpp
+        loggers/factory/scroll_logger.hpp
 )
 target_include_directories(${PROJECT_NAME}.${SCROLL}.Logger PUBLIC
         loggers/factory

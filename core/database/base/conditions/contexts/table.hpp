@@ -26,7 +26,7 @@ namespace demiplane::database::query {
         Derived& to(const std::string_view table_name) {
             return from(table_name);
         }
-        [[nodiscard]] const std::string& table() const noexcept {
+        [[nodiscard]] std::string_view table() const noexcept {
             return table_name_;
         }
 

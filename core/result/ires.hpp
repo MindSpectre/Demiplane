@@ -10,6 +10,7 @@ namespace demiplane {
         NonCriticalError, // Operation failed but can be retried
         CriticalError // Irrecoverable failure
     };
+    template <typename ResultResp = void>
     class IRes {
     public:
         void capture(const std::function<void()>& func) {
@@ -56,12 +57,48 @@ namespace demiplane {
         void set_status(const Status status) {
             status_ = status;
         }
+        // Only available if ResultResp is not void
+        template <typename R>
+            requires (!std::same_as<ResultResp, void>)
+        void set(R&& resp) {
+            response_ = std::forward<R>(resp);
+        }
+
+        ResultResp response()
+            requires (!std::same_as<ResultResp, void>)
+        {
+            return std::move(response_);
+        }
+        template <typename R = ResultResp>
+        requires (!std::same_as<R, void>)
+        explicit IRes(R &&response)
+            : response_(std::forward<R>(response)) {}
+        IRes() = default;
+
+
+        template <typename X>
+        explicit IRes(const IRes<X>& other)
+            : message_{other.message_}, status_{other.status_},
+              exception_{other.exception_} {}
+        template <typename X>
+        IRes& operator=(const IRes<X>& other) {
+            if (this == &other) {
+                return *this;
+            }
+            message_   = other.message_;
+            status_    = other.status_;
+            exception_ = other.exception_;
+            return *this;
+        }
+        static IRes sOk() {
+            return IRes{};
+        }
 
     private:
+        std::conditional_t<std::same_as<ResultResp, void>, char, ResultResp> response_;
         std::string message_;
         Status status_{Status::Success};
         std::exception_ptr exception_;
     };
 
-    extern IRes sOk;
 } // namespace demiplane

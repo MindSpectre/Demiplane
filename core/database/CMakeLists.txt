@@ -59,6 +59,7 @@ add_library(${PROJECT_NAME}.${DATABASE}.Interface
 target_link_libraries(${PROJECT_NAME}.${DATABASE}.Interface
         INTERFACE
         Demiplane::Database::Base
+        Demiplane::Scroll
         Demiplane::Traits
 )
 target_include_directories(${PROJECT_NAME}.${DATABASE}.Interface
@@ -88,6 +89,6 @@ add_subdirectory(creational)
 
 add_subdirectory(behavioral)
 
-#add_subdirectory(postgres/pqxx_impl)
-
 add_subdirectory(mock)
+
+#add_subdirectory(postgres) TEMPORARY DISABLE

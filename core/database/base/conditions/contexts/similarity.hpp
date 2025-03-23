@@ -16,10 +16,13 @@ namespace demiplane::database::query {
             pattern_ = std::move(pattern);
             return static_cast<Derived&>(*this);
         }
-        [[nodiscard]] const std::optional<std::string>& pattern() const {
+        [[nodiscard]] std::string_view pattern() const {
             return pattern_;
         }
+        [[nodiscard]] bool has_pattern() const {
+            return !pattern_.empty();
+        }
     protected:
-        std::optional<std::string> pattern_;
+        std::string pattern_;
     };
 } // namespace demiplane::database::query

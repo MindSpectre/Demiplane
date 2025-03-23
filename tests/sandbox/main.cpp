@@ -1,6 +1,6 @@
 #define ENABLE_TRACING
 
-#include "tracer_factory.hpp"
+#include "scroll_tracer.hpp"
 
 using namespace demiplane;
 class ServiceX : public HasName<ServiceX> {

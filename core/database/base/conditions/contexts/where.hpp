@@ -19,10 +19,10 @@ namespace demiplane::database::query {
         WhereClause(std::string name, const Operator op, FieldType value) : operator_{op} {
             value_ = utility_factory::shared_field<FieldType>(std::move(name), value);
         }
-        [[nodiscard]] std::string name() const& {
+        [[nodiscard]] const std::string& name() const& {
             return value_->get_name();
         }
-        [[nodiscard]] std::string op() const& {
+        [[nodiscard]] std::string_view op() const& {
             switch (operator_) {
             case Operator::EQUAL:
                 return "=";

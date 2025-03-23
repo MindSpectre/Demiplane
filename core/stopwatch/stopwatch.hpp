@@ -1,11 +1,10 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
 #include <string>
 #include <vector>
 
-#include "tracer_factory.hpp"
+#include "scroll_tracer.hpp"
 #include "traits_classes.hpp"
 namespace demiplane {
     /**

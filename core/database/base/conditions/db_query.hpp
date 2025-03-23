@@ -11,8 +11,8 @@ namespace demiplane::database::query {
     template <typename FinalQuery>
     class QueryUtilities {
     public:
-        virtual ~QueryUtilities()        = default;
-        virtual FinalQuery clone() const = 0;
+        virtual ~QueryUtilities()                      = default;
+        [[nodiscard]] virtual FinalQuery clone() const = 0;
     };
     // ------------------ SELECT ------------------
     class SelectQuery final : public TableContext<SelectQuery>,
@@ -68,7 +68,7 @@ namespace demiplane::database::query {
             return *this;
         }
         // Enforce move out
-        [[nodiscard]] Records&& get_records() && noexcept {
+        [[nodiscard]] Records get_records()  noexcept {
             return std::move(records_);
         }
 
@@ -123,7 +123,7 @@ namespace demiplane::database::query {
             return update_columns_;
         }
         // Enforce move out
-        [[nodiscard]] Records&& get_records() noexcept {
+        [[nodiscard]] Records get_records() noexcept {
             return std::move(records_);
         }
 
@@ -146,13 +146,15 @@ namespace demiplane::database::query {
         [[nodiscard]] const Columns& get_columns() const noexcept {
             return columns_;
         }
-
+        [[nodiscard]] std::string_view get_table_name() const noexcept {
+            return table_name_;
+        }
     private:
         std::string table_name_;
         Columns columns_;
     };
 
-    class CountQuery final : public TableContext<CountQuery>, WhereContext<CountQuery> {};
+    class CountQuery final : public TableContext<CountQuery>, public WhereContext<CountQuery> {};
 
     class TruncateQuery final : public TableContext<TruncateQuery> {};
 } // namespace demiplane::database::query

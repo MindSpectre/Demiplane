@@ -7,6 +7,7 @@
 
 #include "db_base.hpp"
 #include "db_connect_params.hpp"
+#include "db_config_interface.hpp"
 #include "traits_classes.hpp"
 namespace demiplane::database {
     using namespace demiplane::database;
@@ -16,12 +17,15 @@ namespace demiplane::database {
     concept FieldBaseVector = std::is_same_v<std::remove_cvref_t<T>, std::vector<std::unique_ptr<FieldBase>>>;
 
 
+
     class DbInterface : NonCopyable {
     public:
         virtual ~DbInterface() = default;
 
         explicit DbInterface(const ConnectParams& params) : connect_params_(params) {}
         DbInterface() = default;
+
+        virtual void create_database(const std::shared_ptr<DatabaseConfig> &config, ConnectParams &pr) = 0;
         // Transaction Methods
         virtual void start_transaction() = 0;
 
@@ -76,9 +80,9 @@ namespace demiplane::database {
 
         [[nodiscard]] virtual uint32_t count(const query::CountQuery& conditions) const = 0;
 
-        virtual void set_search_fields(std::string_view table_name, FieldCollection fields) = 0;
+        virtual void set_search_fields(std::string_view table_name, FieldCollection fields) noexcept = 0;
 
-        virtual void set_conflict_fields(std::string_view table_name, FieldCollection fields) = 0;
+        virtual void set_conflict_fields(std::string_view table_name, FieldCollection fields) noexcept = 0;
     protected:
         ConnectParams connect_params_;
     };

@@ -1,46 +1,44 @@
+
+
 ##############################################################################
 # Test Stopwatch benchmark
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_StopWatch
-        stopwatch/test_stopwatch.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Stopwatch
+    stopwatch/test_stopwatch.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_StopWatch
+target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
         PRIVATE
         Demiplane::Stopwatch
         ${TEST_NECESSARY_LIBS}
-
 )
-add_test(UnitTest_StopWatch ${UNIT_TESTING_TARGET}_StopWatch)
 ##############################################################################
 
 ##############################################################################
 # Test Transaction Manager
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_TransactionManager
+add_unit_test(${UNIT_TESTING_TARGET}.TransactionManager
         transaction_manager/test_transaction_manager.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_TransactionManager
+target_link_libraries(${UNIT_TESTING_TARGET}.TransactionManager
         PRIVATE
         Demiplane::Database
         ${TEST_NECESSARY_LIBS}
 
 )
-add_test(UnitTest_TransactionManager ${UNIT_TESTING_TARGET}_TransactionManager)
 ##############################################################################
 
 ##############################################################################
 # Test DbInterface Pool
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_DbInterfacePool
+add_unit_test(${UNIT_TESTING_TARGET}.DbInterfacePool
         db_interface_pool/test_db_interface_pool.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_DbInterfacePool
+target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfacePool
         PRIVATE
         Demiplane::Database
         ${TEST_NECESSARY_LIBS}
 
 )
-add_test(UnitTest_DbInterfacePool ${UNIT_TESTING_TARGET}_DbInterfacePool)
 ##############################################################################
 
 
@@ -48,16 +46,15 @@ add_test(UnitTest_DbInterfacePool ${UNIT_TESTING_TARGET}_DbInterfacePool)
 ##############################################################################
 # Test Thread Pool
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_ThreadPool
+add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
         thread_pool/test_thread_pool.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_ThreadPool
+target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
         Demiplane::Multithread::ThreadPool
         ${TEST_NECESSARY_LIBS}
 
 )
-add_test(UnitTest_ThreadPool ${UNIT_TESTING_TARGET}_ThreadPool)
 ##############################################################################
 
 
@@ -67,9 +64,31 @@ add_test(UnitTest_ThreadPool ${UNIT_TESTING_TARGET}_ThreadPool)
 add_subdirectory(db_base)
 ##############################################################################
 
-set_tests_properties(
-        UnitTest_StopWatch
-        UnitTest_TransactionManager
-        UnitTest_DbInterfacePool
-        UnitTest_ThreadPool
-        PROPERTIES LABELS "unit")
+##############################################################################
+# Test Basic DB interface Mock
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.DbInterfaceBasicMock
+        db_mocks/test_db_basic_mock.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfaceBasicMock
+        PRIVATE
+        Demiplane::Database::Mock::Basic
+        ${TEST_NECESSARY_LIBS}
+
+)
+##############################################################################
+
+
+##############################################################################
+# Test Silent DB interface Mock
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.DbInterfaceSilentMock
+        db_mocks/test_db_silent_mock.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfaceSilentMock
+        PRIVATE
+        Demiplane::Database::Mock::Silent
+        ${TEST_NECESSARY_LIBS}
+
+)
+##############################################################################

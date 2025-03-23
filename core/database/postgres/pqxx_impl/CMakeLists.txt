@@ -1,14 +1,14 @@
 ##############################################################################
 # Postgres Database client implementation used on PQXX lib ONLY FOR C++
 ##############################################################################
-add_library(${PROJECT_NAME}_Database_PqxxClient
+add_library(${PROJECT_NAME}.${DATABASE}.PqxxClient
         source/pqxx_client.cpp
         include/pqxx_utilities.hpp
         include/pqxx_controller.hpp
         include/pqxx_client.hpp
 )
 
-target_link_libraries(${PROJECT_NAME}_Database_PqxxClient
+target_link_libraries(${PROJECT_NAME}.${DATABASE}.PqxxClient
         PUBLIC
         Demiplane::Database::Interface
         Demiplane::Database::Exceptions
@@ -17,9 +17,9 @@ target_link_libraries(${PROJECT_NAME}_Database_PqxxClient
         Boost::container
 )
 
-target_include_directories(${PROJECT_NAME}_Database_PqxxClient
+target_include_directories(${PROJECT_NAME}.${DATABASE}.PqxxClient
         PUBLIC
         include/
 )
-add_library(Demiplane::Database::Postgres ALIAS ${PROJECT_NAME}_Database_PqxxClient)
+add_library(Demiplane::Database::Postgres ALIAS ${PROJECT_NAME}.${DATABASE}.PqxxClient)
 ##############################################################################

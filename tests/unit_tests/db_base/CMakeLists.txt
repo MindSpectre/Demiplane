@@ -1,39 +1,36 @@
-
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_DbBase_Field
+add_unit_test(${UNIT_TESTING_TARGET}.DbBase.Field
         test_db_field.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_DbBase_Field
+target_link_libraries(${UNIT_TESTING_TARGET}.DbBase.Field
         PRIVATE
         Demiplane::Database::Base
         ${TEST_NECESSARY_LIBS}
 
 )
-add_test(UnitTest_DbBase_Field ${UNIT_TESTING_TARGET}_DbBase_Field)
 ##############################################################################
 
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_DbBase_ArrayField
+add_unit_test(${UNIT_TESTING_TARGET}.DbBase.ArrayField
         test_db_array_field.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_DbBase_ArrayField
+target_link_libraries(${UNIT_TESTING_TARGET}.DbBase.ArrayField
         PRIVATE
         Demiplane::Database::Base
         ${TEST_NECESSARY_LIBS}
 
 )
-add_test(UnitTest_DbBase_ArrayField ${UNIT_TESTING_TARGET}_DbBase_ArrayField)
 ##############################################################################
 
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}_DbBase_Uuid
+add_unit_test(${UNIT_TESTING_TARGET}.DbBase.Uuid
         test_db_uuid.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}_DbBase_Uuid
+
+target_link_libraries(${UNIT_TESTING_TARGET}.DbBase.Uuid
         PRIVATE
         Demiplane::Database::Base
         ${TEST_NECESSARY_LIBS}
 
 )
-add_test(UnitTest_DbBase_Uuid ${UNIT_TESTING_TARGET}_DbBase_Uuid)
 ##############################################################################

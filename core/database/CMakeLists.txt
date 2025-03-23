@@ -1,14 +1,16 @@
+set(DATABASE Database)
+
 ##############################################################################
 # Database General
 ##############################################################################
-add_library(${PROJECT_NAME}_Database INTERFACE)
-target_link_libraries(${PROJECT_NAME}_Database
+add_library(${PROJECT_NAME}.${DATABASE} INTERFACE)
+target_link_libraries(${PROJECT_NAME}.${DATABASE}
         INTERFACE
         Demiplane::Database::Pool
         Demiplane::Database::Factory
         Demiplane::Database::Transactions
 )
-add_library(Demiplane::Database ALIAS ${PROJECT_NAME}_Database)
+add_library(Demiplane::Database ALIAS ${PROJECT_NAME}.${DATABASE})
 ##############################################################################
 
 
@@ -16,7 +18,7 @@ add_library(Demiplane::Database ALIAS ${PROJECT_NAME}_Database)
 ##############################################################################
 # Database main classes NECESSARY UTILITY
 ##############################################################################
-add_library(${PROJECT_NAME}_Database_Base STATIC
+add_library(${PROJECT_NAME}.${DATABASE}.Base STATIC
         base/field/db_field.hpp
         base/field/db_record.hpp
         base/field/db_factory.hpp
@@ -33,49 +35,50 @@ add_library(${PROJECT_NAME}_Database_Base STATIC
         base/conditions/contexts/returning.hpp
 )
 
-target_include_directories(${PROJECT_NAME}_Database_Base
+target_include_directories(${PROJECT_NAME}.${DATABASE}.Base
         PUBLIC
         base/include/
 )
-target_link_libraries(${PROJECT_NAME}_Database_Base
+target_link_libraries(${PROJECT_NAME}.${DATABASE}.Base
         PUBLIC
         JsonCpp::JsonCpp
 )
-add_library(Demiplane::Database::Base ALIAS ${PROJECT_NAME}_Database_Base)
+add_library(Demiplane::Database::Base ALIAS ${PROJECT_NAME}.${DATABASE}.Base)
 ##############################################################################
 
 ##############################################################################
 # Database Client Interface
 ##############################################################################
-add_library(${PROJECT_NAME}_Database_Interface
+add_library(${PROJECT_NAME}.${DATABASE}.Interface
         INTERFACE
         interface/db_interface.hpp
         interface/db_connect_params.hpp
+        interface/db_config_interface.hpp
 )
 
-target_link_libraries(${PROJECT_NAME}_Database_Interface
+target_link_libraries(${PROJECT_NAME}.${DATABASE}.Interface
         INTERFACE
         Demiplane::Database::Base
         Demiplane::Traits
 )
-target_include_directories(${PROJECT_NAME}_Database_Interface
+target_include_directories(${PROJECT_NAME}.${DATABASE}.Interface
         INTERFACE
         interface/
 )
-add_library(Demiplane::Database::Interface ALIAS ${PROJECT_NAME}_Database_Interface)
+add_library(Demiplane::Database::Interface ALIAS ${PROJECT_NAME}.${DATABASE}.Interface)
 ##############################################################################
 
 ##############################################################################
 # Error handling
 ##############################################################################
-add_library(${PROJECT_NAME}_Database_Exceptions INTERFACE
+add_library(${PROJECT_NAME}.${DATABASE}.Exceptions INTERFACE
         exceptions/db_exceptions.hpp
         exceptions/db_error_codes.hpp
 )
-target_include_directories(${PROJECT_NAME}_Database_Exceptions INTERFACE
+target_include_directories(${PROJECT_NAME}.${DATABASE}.Exceptions INTERFACE
         exceptions
 )
-add_library(Demiplane::Database::Exceptions ALIAS ${PROJECT_NAME}_Database_Exceptions)
+add_library(Demiplane::Database::Exceptions ALIAS ${PROJECT_NAME}.${DATABASE}.Exceptions)
 ##############################################################################
 
 ##############################################################################
@@ -87,7 +90,4 @@ add_subdirectory(behavioral)
 
 #add_subdirectory(postgres/pqxx_impl)
 
-add_subdirectory(mock/basic_mock)
-
-add_subdirectory(mock/silent_mock)
-
+add_subdirectory(mock)

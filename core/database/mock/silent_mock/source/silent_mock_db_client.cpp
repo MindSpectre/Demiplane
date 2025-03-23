@@ -2,6 +2,13 @@
 demiplane::database::SilentMockDbClient::~SilentMockDbClient() {
     std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(30));
 }
+void demiplane::database::SilentMockDbClient::create_database(
+    const std::shared_ptr<DatabaseConfig>& config, ConnectParams& pr) {
+    std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(200, 20));
+}
+void demiplane::database::SilentMockDbClient::connect(const ConnectParams& params) {
+    DbInterface::connect(params);
+}
 void demiplane::database::SilentMockDbClient::start_transaction() {
     std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(5));
 }
@@ -71,9 +78,9 @@ uint32_t demiplane::database::SilentMockDbClient::count(const query::CountQuery&
     std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(40));
     return 0;
 }
-void demiplane::database::SilentMockDbClient::set_search_fields(std::string_view table_name, FieldCollection fields) {
+void demiplane::database::SilentMockDbClient::set_search_fields(std::string_view table_name, [[maybe_unused]] FieldCollection fields) noexcept {
     std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(5));
 }
-void demiplane::database::SilentMockDbClient::set_conflict_fields(std::string_view table_name, FieldCollection fields) {
+void demiplane::database::SilentMockDbClient::set_conflict_fields(std::string_view table_name, [[maybe_unused]] FieldCollection fields) noexcept{
     std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(5));
 }

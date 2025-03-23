@@ -46,9 +46,9 @@ namespace demiplane::scroll {
             std::size_t time_pos     = 0;
             std::size_t level_pos    = 30;
             std::size_t service_pos  = 40;
-            std::size_t thread_pos   = 55;
-            std::size_t location_pos = 95;
-            std::size_t message_pos  = 185;
+            std::size_t thread_pos   = 70;
+            std::size_t location_pos = 100;
+            std::size_t message_pos  = 200;
             [[nodiscard]] bool ok() const {
                 return message_pos > location_pos && location_pos > thread_pos && thread_pos > service_pos
                     && service_pos > level_pos && level_pos > time_pos;

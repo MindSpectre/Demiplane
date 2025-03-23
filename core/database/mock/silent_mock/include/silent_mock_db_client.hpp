@@ -1,4 +1,3 @@
-// pqxx_client.hpp
 #pragma once
 
 #include <chrono>
@@ -13,9 +12,11 @@
 #include "db_interface.hpp"
 
 namespace demiplane::database {
-    class SilentMockDbClient final : public DbInterface {
+    class SilentMockDbClient final : public DbInterface, HasName<SilentMockDbClient> {
     public:
         ~SilentMockDbClient() override;
+        void create_database(const std::shared_ptr<DatabaseConfig>& config, ConnectParams& pr) override;
+        void connect(const ConnectParams& params) override;
         void start_transaction() override;
         void commit_transaction() override;
         void rollback_transaction() override;
@@ -36,7 +37,11 @@ namespace demiplane::database {
         [[nodiscard]] Records select(const query::SelectQuery& conditions) const override;
         void remove(const query::DeleteQuery& conditions) override;
         [[nodiscard]] uint32_t count(const query::CountQuery& conditions) const override;
-        void set_search_fields(std::string_view table_name, FieldCollection fields) override;
-        void set_conflict_fields(std::string_view table_name, FieldCollection fields) override;
+        void set_search_fields(std::string_view table_name, FieldCollection fields) noexcept override;
+        void set_conflict_fields(std::string_view table_name, FieldCollection fields) noexcept override;
+
+        static constexpr const char * name () {
+            return "SilentMockDbClient";
+        }
     };
 } // namespace demiplane::database

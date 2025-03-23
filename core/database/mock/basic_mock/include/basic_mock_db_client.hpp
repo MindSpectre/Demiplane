@@ -16,6 +16,7 @@
 namespace demiplane::database {
     class BasicMockDbClient final : public DbInterface, HasName<BasicMockDbClient> {
     public:
+        BasicMockDbClient();
         ~BasicMockDbClient() override;
 
         explicit BasicMockDbClient(std::shared_ptr<scroll::TracerInterface> tracer) : tracer_(std::move(tracer)) {}
@@ -23,10 +24,7 @@ namespace demiplane::database {
         BasicMockDbClient(const ConnectParams& params, std::shared_ptr<scroll::TracerInterface> tracer)
             : DbInterface(params), tracer_(std::move(tracer)) {}
 
-        void create_database(std::string_view host, uint32_t port, std::string_view db_name,
-            std::string_view login, std::string_view password);
-
-        static void create_database(const ConnectParams& pr);
+        void create_database(const std::shared_ptr<DatabaseConfig>& config, ConnectParams& pr) override;
 
         void start_transaction() override;
 
@@ -70,9 +68,9 @@ namespace demiplane::database {
 
         [[nodiscard]] uint32_t count(const query::CountQuery& conditions) const override;
 
-        void set_search_fields(std::string_view table_name, FieldCollection fields) override;
+        void set_search_fields(std::string_view table_name, FieldCollection fields) noexcept override;
 
-        void set_conflict_fields(std::string_view table_name, FieldCollection fields) override;
+        void set_conflict_fields(std::string_view table_name, FieldCollection fields) noexcept override;
 
         static constexpr const char* name() {
             return "BASIC_MOCK_DB_CLIENT";

@@ -1,11 +1,17 @@
 #include "basic_mock_db_client.hpp"
 #define ENABLE_TRACING
-demiplane::database::BasicMockDbClient::~BasicMockDbClient() {}
-void demiplane::database::BasicMockDbClient::create_database(std::string_view host, uint32_t port,
-    std::string_view db_name, std::string_view login, std::string_view password) {
-    TRACE_INFO(tracer_, "create_database()");
+demiplane::database::BasicMockDbClient::BasicMockDbClient() {
+    tracer_ = scroll::TracerFactory::create_default_console_tracer<BasicMockDbClient>();
+    TRACE_INFO(tracer_, "BasicMockDbClient has been created.");
 }
-void demiplane::database::BasicMockDbClient::create_database(const ConnectParams& pr) {}
+demiplane::database::BasicMockDbClient::~BasicMockDbClient() {
+    TRACE_INFO(tracer_, "BasicMockDbClient has been destructed.");
+}
+void demiplane::database::BasicMockDbClient::create_database(
+    const std::shared_ptr<DatabaseConfig>& config, ConnectParams& pr) {
+    TRACE_INFO(tracer_, "BasicMockDbClient::create_database()");
+}
+
 void demiplane::database::BasicMockDbClient::start_transaction() {
     TRACE_INFO(tracer_, "BasicMockDbClient::start_transaction()");
 }
@@ -76,9 +82,9 @@ uint32_t demiplane::database::BasicMockDbClient::count(const query::CountQuery& 
     TRACE_INFO(tracer_, "BasicMockDbClient::count()");
     return 0;
 }
-void demiplane::database::BasicMockDbClient::set_search_fields(std::string_view table_name, FieldCollection fields) {
+void demiplane::database::BasicMockDbClient::set_search_fields(std::string_view table_name, [[maybe_unused]] FieldCollection fields) noexcept {
     TRACE_INFO(tracer_, "BasicMockDbClient::set_search_fields()");
 }
-void demiplane::database::BasicMockDbClient::set_conflict_fields(std::string_view table_name, FieldCollection fields) {
+void demiplane::database::BasicMockDbClient::set_conflict_fields(std::string_view table_name, [[maybe_unused]] FieldCollection fields) noexcept {
     TRACE_INFO(tracer_, "BasicMockDbClient::set_conflict_fields()");
 }

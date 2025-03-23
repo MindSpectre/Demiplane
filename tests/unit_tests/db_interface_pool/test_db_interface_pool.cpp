@@ -16,7 +16,7 @@ protected:
     // Custom factory function for testing
     static std::unique_ptr<DbInterface> create_mock_database()
     {
-        return std::make_unique<BasicMockDbClient>(demiplane::scroll::TracerFactory::create_default_console_tracer());
+        return std::make_unique<BasicMockDbClient>();
     }
 
     void SetUp() override

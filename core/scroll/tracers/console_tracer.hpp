@@ -27,4 +27,4 @@ namespace demiplane::scroll {
     private:
         std::shared_ptr<ConsoleTracerConfig> config_;
     };
-} // namespace demiplane::scrolld
+} // namespace demiplane::scroll

@@ -25,8 +25,8 @@ namespace demiplane::database {
         }
 
         // Adds a new table with its associated database connection and mutex
-        void add_table(const std::string& tableName, std::shared_ptr<DbInterface> dbConnection,
-            std::shared_ptr<std::recursive_mutex> tableMutex) {
+        void add_table(const std::string& tableName, std::unique_ptr<TransactionTrait> dbConnection,
+            std::unique_ptr<std::recursive_mutex> tableMutex) {
             std::lock_guard lock(internalMutex);
             TableStatus nw_table_status;
             nw_table_status.connection = std::move(dbConnection);
@@ -63,8 +63,8 @@ namespace demiplane::database {
 
     private:
         struct TableStatus {
-            std::shared_ptr<database::DbInterface> connection;
-            std::shared_ptr<std::recursive_mutex> mutex;
+            std::unique_ptr<TransactionTrait> connection;
+            std::unique_ptr<std::recursive_mutex> mutex;
             bool transaction_started{};
         };
 
@@ -98,23 +98,27 @@ namespace demiplane::database {
         // Locks the table-specific mutex
         void lock_table(const std::string& tableName) {
             if (const auto tableMutex = get_table_mutex(tableName)) {
-                tableMutex->lock();
+                if (const auto& mutexPtr = tableMutex->get()) {
+                    mutexPtr->lock();
+                }
             }
         }
 
         // Unlocks the table-specific mutex
         void unlock_table(const std::string& tableName) {
             if (const auto tableMutex = get_table_mutex(tableName)) {
-                tableMutex->unlock();
+                if (const auto& mutexPtr = tableMutex->get()) {
+                    mutexPtr->unlock();
+                }
             }
         }
 
-        // Gets the mutex for a specific table
-        std::shared_ptr<std::recursive_mutex> get_table_mutex(const std::string& tableName) {
-            if (const auto it = tables_.find(tableName); it != tables_.end()) {
+        std::optional<std::reference_wrapper<std::unique_ptr<std::recursive_mutex>>> get_table_mutex(
+            const std::string& tableName) {
+            if (auto it = tables_.find(tableName); it != tables_.end()) {
                 return it->second.mutex;
             }
-            return nullptr;
+            return std::nullopt;
         }
 
         // Starts a transaction for a specific table, checking if already in progress
@@ -142,4 +146,4 @@ namespace demiplane::database {
             }
         }
     };
-} // namespace demiplane::db::interfaces
+} // namespace demiplane::database

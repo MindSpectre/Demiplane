@@ -1,4 +1,4 @@
-#include "pqxx_client.hpp"
+//#include "pqxx_client.hpp"
 
 #include <chrono>
 #include <exception>
@@ -9,7 +9,7 @@
 
 #include "db_interface.hpp"
 #include "stopwatch.hpp"
-
+#include "../pqv2/pqxx_client.hpp"
 namespace demiplane::database {
     using namespace exceptions;
     using db_err = errors::db_error_code;

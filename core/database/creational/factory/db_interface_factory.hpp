@@ -36,14 +36,14 @@ namespace demiplane::database::creational {
         //     return connect;
         // }
 
-        static std::unique_ptr<DbInterface> create_basic_mock_database_prm(const ConnectParams& _params) {
+        static std::unique_ptr<BasicMockDbClient> create_basic_mock_database_prm(const ConnectParams& _params) {
 
             return std::make_unique<BasicMockDbClient>(_params, scroll::TracerFactory::create_default_console_tracer());
         }
-        static std::unique_ptr<DbInterface> create_basic_mock_database() {
+        static std::unique_ptr<BasicMockDbClient> create_basic_mock_database() {
             return std::make_unique<BasicMockDbClient>(scroll::TracerFactory::create_default_console_tracer());
         }
-        static std::unique_ptr<DbInterface> create_silent_mock_database() {
+        static std::unique_ptr<SilentMockDbClient> create_silent_mock_database() {
             return std::make_unique<SilentMockDbClient>();
         }
     };

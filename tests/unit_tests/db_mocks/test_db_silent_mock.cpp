@@ -64,20 +64,11 @@ TEST_F(SilentMockDbClientTest, CallAllMethods) {
 
     EXPECT_NO_THROW({
         [[maybe_unused]] auto x = client.check_table("dummy_table");
-        client.make_unique_constraint("dummy_table", make_fields());
-        client.setup_search_index("dummy_table", make_fields());
-        client.drop_search_index("dummy_table");
-        client.remove_search_index("dummy_table");
-        client.restore_search_index("dummy_table");
         client.insert(make_insert_query());
         client.upsert(make_upsert_query());
-        auto inserted = client.insert_with_returning(make_insert_query());
-        auto upserted = client.upsert_with_returning(make_upsert_query());
         auto selected = client.select(make_select_query());
         client.remove(make_delete_query());
         [[maybe_unused]] auto count = client.count(make_count_query());
-        client.set_search_fields("dummy_table", make_fields());
-        client.set_conflict_fields("dummy_table", make_fields());
     });
     sw.finish();
 }

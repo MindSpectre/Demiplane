@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <pqxx/pqxx>
 #include <sstream>
 #include <stdexcept>
@@ -16,6 +15,7 @@ namespace demiplane::database {
 struct QueryAndParams {
     std::string query;
     pqxx::params params;
+    uint32_t param_counter{0};
 };
 
 /// \brief A processor that converts query::XXX objects to SQL strings + parameters.
@@ -23,10 +23,10 @@ struct QueryAndParams {
 /// This class does not execute queries. It is solely responsible for translating
 /// the CRTP-based query objects into a valid SQL string with numbered placeholders
 /// and gathering the corresponding values.
-class PqxxQueryProcessor {
+class PqxxQueryEngine {
 public:
     // A very basic escape: wrap the identifier in double quotes.
-    static std::string escape_identifier(std::string_view identifier) {
+    static std::string escape_identifier(const std::string_view identifier) {
         return std::string("\"") + std::string(identifier) + "\"";
     }
 
@@ -84,17 +84,17 @@ public:
         oss << ";";
 
         // //COMMENTS_TRACE + MESSAGE "Select Query Generated: " << oss.str();
-        return {oss.str(), params};
+        return {oss.str(), std::move(params), param_counter};
     }
 
     // Process an INSERT query.
-    static QueryAndParams process_insert(query::InsertQuery q, bool with_returning = false) {
+    static QueryAndParams process_insert(query::InsertQuery q) {
         std::ostringstream oss;
         pqxx::params params;
         uint32_t param_counter = 1;
 
         oss << "INSERT INTO " << escape_identifier(q.table()) << " ";
-        auto records = q.get_records();
+        auto records = std::move(q).extract_records();
         if (records.empty()) {
             throw std::runtime_error("No records provided for insert");
         }
@@ -112,7 +112,7 @@ public:
 
         // Process each record.
         bool first_record = true;
-        for (const auto& rec : records) {
+        for (auto& rec : records) {
             if (!first_record)
                 oss << ", ";
             first_record = false;
@@ -124,7 +124,7 @@ public:
                 first_field = false;
                 // Special handling for UUID fields.
                 if (field->get_sql_type() == SqlType::UUID) {
-                    const std::string val = field->pull_to_string();
+                    const std::string val = field->to_string();
                     if (val == Uuid::use_generated) {
                         oss << "DEFAULT";
                         continue;
@@ -134,12 +134,17 @@ public:
                         continue;
                     }
                 }
-                oss << "$" << param_counter++;
-                params.append(field->to_string());
+                if (q.use_params) {
+                    oss << "$" << param_counter++;
+                    params.append(field->pull_to_string());
+                }
+                else {
+                    oss << field->to_string();
+                }
             }
             oss << ")";
         }
-        if (with_returning && q.has_returning_fields()) {
+        if (q.has_returning_fields()) {
             oss << " RETURNING ";
             bool first_ret = true;
             for (const auto& col : q.returning_fields()) {
@@ -152,7 +157,7 @@ public:
         oss << ";";
 
         // //COMMENTS_TRACE + MESSAGE "Insert Query Generated: " << oss.str();
-        return {oss.str(), params};
+        return {oss.str(), std::move(params), param_counter};
     }
 
     // Process an UPSERT query.
@@ -162,7 +167,7 @@ public:
         uint32_t param_counter = 1;
 
         oss << "INSERT INTO " << escape_identifier(q.table()) << " ";
-        auto records = q.get_records();
+        auto records = std::move(q).extract_records();
         if (records.empty()) {
             throw std::runtime_error("No records provided for upsert");
         }
@@ -177,13 +182,13 @@ public:
         }
         oss << ") VALUES ";
         bool first_record = true;
-        for (const auto& rec : records) {
+        for (auto& rec : records) {
             if (!first_record)
                 oss << ", ";
             first_record = false;
             oss << "(";
             bool first_field = true;
-            for (const auto& field : rec) {
+            for (auto& field : rec) {
                 if (!first_field)
                     oss << ", ";
                 first_field = false;
@@ -199,7 +204,7 @@ public:
                     }
                 }
                 oss << "$" << param_counter++;
-                params.append(field->to_string());
+                params.append(field->pull_to_string());
             }
             oss << ")";
         }
@@ -240,7 +245,7 @@ public:
         oss << ";";
 
         // //COMMENTS_TRACE + MESSAGE "Upsert Query Generated: " << oss.str();
-        return {oss.str(), params};
+        return {oss.str(), std::move(params), param_counter};
     }
 
     // Process a DELETE query.
@@ -265,7 +270,7 @@ public:
         oss << ";";
 
         // //COMMENTS_TRACE + MESSAGE "Delete Query Generated: " << oss.str();
-        return {oss.str(), params};
+        return {oss.str(), std::move(params), param_counter};
     }
 
     // Process a COUNT query.
@@ -290,7 +295,7 @@ public:
         oss << ";";
 
         // //COMMENTS_TRACE + MESSAGE "Count Query Generated: " << oss.str();
-        return {oss.str(), params};
+        return {oss.str(), std::move(params), param_counter};
     }
 
     // Process a CREATE TABLE query.
@@ -310,33 +315,28 @@ public:
         oss << ");";
 
         // No parameters for a CREATE TABLE statement.
-        pqxx::params params;
         // //COMMENTS_TRACE + MESSAGE "Create Table Query Generated: " << oss.str();
-        return {oss.str(), params};
+        return {oss.str(), {}};
     }
 
     // A templated helper to process any supported query type.
     template <typename QueryType>
-    static IRes<QueryAndParams> process(const QueryType& query) {
-        IRes<QueryAndParams> result;
-        result.capture([&]() {
-            if constexpr (std::is_same_v<QueryType, query::SelectQuery>) {
-                result.set(process_select(query));
-            } else if constexpr (std::is_same_v<QueryType, query::InsertQuery>) {
-                result.set( process_insert(query));
-            } else if constexpr (std::is_same_v<QueryType, query::UpsertQuery>) {
-                result.set( process_upsert(query));
-            } else if constexpr (std::is_same_v<QueryType, query::DeleteQuery>) {
-                result.set( process_delete(query));
-            } else if constexpr (std::is_same_v<QueryType, query::CountQuery>) {
-                result.set( process_count(query));
-            } else if constexpr (std::is_same_v<QueryType, query::CreateQuery>) {
-                result.set( process_create(query));
-            } else {
-                throw std::invalid_argument("Unsupported query type");
-            }
-        });
-        return result;
+    static QueryAndParams process(const QueryType& query) {
+        if constexpr (std::is_same_v<QueryType, query::SelectQuery>) {
+            return process_select(query);
+        } else if constexpr (std::is_same_v<QueryType, query::InsertQuery>) {
+            return process_insert(query);
+        } else if constexpr (std::is_same_v<QueryType, query::UpsertQuery>) {
+            return process_upsert(query);
+        } else if constexpr (std::is_same_v<QueryType, query::DeleteQuery>) {
+            return process_delete(query);
+        } else if constexpr (std::is_same_v<QueryType, query::CountQuery>) {
+            return process_count(query);
+        } else if constexpr (std::is_same_v<QueryType, query::CreateQuery>) {
+            return process_create(query);
+        }
+        throw std::invalid_argument("Unsupported query type");
+
     }
 };
 

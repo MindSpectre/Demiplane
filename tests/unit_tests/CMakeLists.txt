@@ -92,3 +92,17 @@ target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfaceSilentMock
 
 )
 ##############################################################################
+
+##############################################################################
+# Test Silent DB interface Mock
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.PqxxQueryEngine
+        pqxx_query_engine/pqxx_query_engine.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.PqxxQueryEngine
+        PRIVATE
+        Demiplane::Database::Postgres
+        ${TEST_NECESSARY_LIBS}
+
+)
+##############################################################################

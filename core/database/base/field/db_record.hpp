@@ -16,7 +16,6 @@ namespace demiplane::database {
         Record()  = default;
         ~Record() = default;
 
-        // Allow moves but disable copying. (Use clone() for deep copying.)
         Record(Record&& other) noexcept : fields_(std::move(other.fields_)) {}
         Record& operator=(Record&& other) noexcept {
             if (this != &other) {
@@ -24,8 +23,23 @@ namespace demiplane::database {
             }
             return *this;
         }
-        Record(const Record&)            = delete;
-        Record& operator=(const Record&) = delete;
+        Record(const Record& other) {
+            fields_.reserve(other.fields_.size());
+            for (const auto& field : other.fields_) {
+                if (field) {
+                    fields_.push_back(field->clone());
+                }
+            }
+        }
+        Record& operator=(const Record& other) {
+            fields_.reserve(other.fields_.size());
+            for (const auto& field : other.fields_) {
+                if (field) {
+                    fields_.push_back(field->clone());
+                }
+            }
+            return *this;
+        }
 
         /// @brief Produce a deep copy of this record.
         [[nodiscard]] Record clone() const {

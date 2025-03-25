@@ -8,25 +8,40 @@ namespace demiplane {
     enum class Status {
         Success,
         NonCriticalError, // Operation failed but can be retried
-        CriticalError // Irrecoverable failure
+        CriticalError, // Irrecoverable failure
+        UndefinedNonCriticalError, // Operation failed but can be retried
+        UndefinedCriticalError // Irrecoverable failure
     };
     template <typename ResultResp = void>
     class IRes {
     public:
-        void capture(const std::function<void()>& func) {
+        void capture(const std::function<void()>& func, const std::function<void()>& if_fall = {}) {
             try {
                 func();
+            } catch (const std::exception& e) {
+                exception_ = std::make_exception_ptr(e);
+                status_    = Status::NonCriticalError;
+                message_   = e.what();
+                if_fall();
             } catch (...) {
                 exception_ = std::current_exception();
-                status_    = Status::NonCriticalError;
+                status_    = Status::UndefinedNonCriticalError;
+                if_fall();
             }
         }
-        void critical_zone(const std::function<void()>& func) {
+        void critical_zone(const std::function<void()>& func, const std::function<void()>& if_fall = {}) {
             try {
                 func();
-            } catch (...) {
-                exception_ = std::current_exception();
+            } catch (const std::exception& e) {
+                exception_ = std::make_exception_ptr(e);
                 status_    = Status::CriticalError;
+                message_   = e.what();
+                if_fall();
+            }
+            catch (...) {
+                exception_ = std::current_exception();
+                status_    = Status::UndefinedCriticalError;
+                if_fall();
             }
         }
         void rethrow() const {
@@ -70,16 +85,14 @@ namespace demiplane {
             return std::move(response_);
         }
         template <typename R = ResultResp>
-        requires (!std::same_as<R, void>)
-        explicit IRes(R &&response)
-            : response_(std::forward<R>(response)) {}
+            requires (!std::same_as<R, void>)
+        explicit IRes(R&& response) : response_(std::forward<R>(response)) {}
         IRes() = default;
 
 
         template <typename X>
         explicit IRes(const IRes<X>& other)
-            : message_{other.message_}, status_{other.status_},
-              exception_{other.exception_} {}
+            : message_{other.message_}, status_{other.status_}, exception_{other.exception_} {}
         template <typename X>
         IRes& operator=(const IRes<X>& other) {
             if (this == &other) {

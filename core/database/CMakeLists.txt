@@ -3,7 +3,9 @@ set(DATABASE Database)
 ##############################################################################
 # Database General
 ##############################################################################
-add_library(${PROJECT_NAME}.${DATABASE} INTERFACE)
+add_library(${PROJECT_NAME}.${DATABASE} INTERFACE
+        interface/traits/transaction_trait.hpp
+        interface/traits/table_management_trait.hpp)
 target_link_libraries(${PROJECT_NAME}.${DATABASE}
         INTERFACE
         Demiplane::Database::Pool
@@ -50,21 +52,27 @@ add_library(Demiplane::Database::Base ALIAS ${PROJECT_NAME}.${DATABASE}.Base)
 # Database Client Interface
 ##############################################################################
 add_library(${PROJECT_NAME}.${DATABASE}.Interface
-        INTERFACE
-        interface/db_interface.hpp
+        STATIC
+        interface/export/db_interface.hpp
         interface/db_connect_params.hpp
         interface/db_config_interface.hpp
+        interface/traits/search_trait.hpp
+        interface/db_client.cpp
+        interface/traits/unique_constraint_trait.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}.${DATABASE}.Interface
-        INTERFACE
+        PUBLIC
         Demiplane::Database::Base
+        Demiplane::Database::Exceptions
         Demiplane::Scroll
         Demiplane::Traits
+        Demiplane::Result
+        Boost::container
 )
 target_include_directories(${PROJECT_NAME}.${DATABASE}.Interface
-        INTERFACE
-        interface/
+        PUBLIC
+        interface/export
 )
 add_library(Demiplane::Database::Interface ALIAS ${PROJECT_NAME}.${DATABASE}.Interface)
 ##############################################################################
@@ -91,4 +99,4 @@ add_subdirectory(behavioral)
 
 add_subdirectory(mock)
 
-#add_subdirectory(postgres) TEMPORARY DISABLE
+add_subdirectory(postgres)

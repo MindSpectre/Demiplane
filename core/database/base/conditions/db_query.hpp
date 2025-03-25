@@ -12,7 +12,7 @@ namespace demiplane::database::query {
     class QueryUtilities {
     public:
         virtual ~QueryUtilities()                      = default;
-        [[nodiscard]] virtual FinalQuery clone() const = 0;
+        bool use_params = true;
     };
     // ------------------ SELECT ------------------
     class SelectQuery final : public TableContext<SelectQuery>,
@@ -53,25 +53,17 @@ namespace demiplane::database::query {
                               public QueryUtilities<InsertQuery>,
                               public Returning<InsertQuery> {
     public:
-        [[nodiscard]] InsertQuery clone() const override {
-            Records cloned_records;
-            cloned_records.reserve(records_.size());
-            for (const Record& record : records_) {
-                cloned_records.push_back(record.clone());
-            }
-            InsertQuery cloned_insert_query;
-            cloned_insert_query.insert(std::move(cloned_records)).from(this->table_name_);
-            return cloned_insert_query;
-        }
         InsertQuery& insert(Records&& fields) {
             records_ = std::move(fields);
             return *this;
         }
         // Enforce move out
-        [[nodiscard]] Records get_records()  noexcept {
+        [[nodiscard]] Records extract_records() && noexcept {
             return std::move(records_);
         }
-
+        [[nodiscard]] const Records& view_records() const & noexcept {
+            return records_;
+        }
     private:
         Records records_;
     };
@@ -86,7 +78,7 @@ namespace demiplane::database::query {
             return *this;
         }
 
-        [[nodiscard]] FieldCollection new_values() noexcept {
+        [[nodiscard]] FieldCollection extract_new_values() noexcept {
             return std::move(update_fields_);
         }
 
@@ -123,8 +115,11 @@ namespace demiplane::database::query {
             return update_columns_;
         }
         // Enforce move out
-        [[nodiscard]] Records get_records() noexcept {
+        [[nodiscard]] Records extract_records() && noexcept {
             return std::move(records_);
+        }
+        [[nodiscard]]const Records& view_records() const & noexcept {
+            return records_;
         }
 
     private:

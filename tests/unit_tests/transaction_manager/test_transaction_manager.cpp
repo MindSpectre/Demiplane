@@ -15,10 +15,10 @@ protected:
     std::string table2 = "table2";
     demiplane::database::ConnectParams connect_params;
     // Shared pointers for mock database connections and mutexes
-    std::shared_ptr<demiplane::database::DbInterface> mock_db1;
-    std::shared_ptr<demiplane::database::DbInterface> mock_db2;
-    std::shared_ptr<std::recursive_mutex> mutex1;
-    std::shared_ptr<std::recursive_mutex> mutex2;
+    std::unique_ptr<demiplane::database::BasicMockDbClient> mock_db1;
+    std::unique_ptr<demiplane::database::BasicMockDbClient> mock_db2;
+    std::unique_ptr<std::recursive_mutex> mutex1;
+    std::unique_ptr<std::recursive_mutex> mutex2;
 
     void SetUp() override
     {
@@ -26,12 +26,11 @@ protected:
         // Initialize mocks and mutexes
         mock_db1 = demiplane::database::creational::DbInterfaceFactory::create_basic_mock_database();
         mock_db2 = demiplane::database::creational::DbInterfaceFactory::create_basic_mock_database_prm(connect_params);
-        mutex1 = std::make_shared<std::recursive_mutex>();
-        mutex2 = std::make_shared<std::recursive_mutex>();
-
+        mutex1 = std::make_unique<std::recursive_mutex>();
+        mutex2 = std::make_unique<std::recursive_mutex>();
         // Add tables to TransactionManager
-        transaction_manager.add_table(table1, mock_db1, mutex1);
-        transaction_manager.add_table(table2, mock_db2, mutex2);
+        transaction_manager.add_table(table1, std::move(mock_db1), std::move(mutex1));
+        transaction_manager.add_table(table2, std::move(mock_db2), std::move(mutex2));
     }
 };
 

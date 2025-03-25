@@ -1,7 +1,6 @@
 #pragma once
 #include <thread>
 
-#include <pqxx_client.hpp>
 
 namespace demiplane::database::utilities {
     inline void multi_thread_insertion(const std::shared_ptr<PqxxClient>& client, const std::string_view table_name,

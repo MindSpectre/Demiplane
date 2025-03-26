@@ -11,8 +11,8 @@ namespace demiplane::database::query {
     template <typename FinalQuery>
     class QueryUtilities {
     public:
-        virtual ~QueryUtilities()                      = default;
-        bool use_params = true;
+        virtual ~QueryUtilities() = default;
+        bool use_params           = true;
     };
     // ------------------ SELECT ------------------
     class SelectQuery final : public TableContext<SelectQuery>,
@@ -61,9 +61,10 @@ namespace demiplane::database::query {
         [[nodiscard]] Records extract_records() && noexcept {
             return std::move(records_);
         }
-        [[nodiscard]] const Records& view_records() const & noexcept {
+        [[nodiscard]] const Records& view_records() const& noexcept {
             return records_;
         }
+
     private:
         Records records_;
     };
@@ -92,6 +93,7 @@ namespace demiplane::database::query {
     // ------------------ UPSERT ------------------
     class UpsertQuery final : public TableContext<UpsertQuery>,
                               public WhereContext<UpsertQuery>,
+                              public QueryUtilities<UpsertQuery>,
                               public Returning<UpsertQuery> {
     public:
         UpsertQuery& new_values(Records&& fields) {
@@ -118,7 +120,7 @@ namespace demiplane::database::query {
         [[nodiscard]] Records extract_records() && noexcept {
             return std::move(records_);
         }
-        [[nodiscard]]const Records& view_records() const & noexcept {
+        [[nodiscard]] const Records& view_records() const& noexcept {
             return records_;
         }
 
@@ -144,12 +146,15 @@ namespace demiplane::database::query {
         [[nodiscard]] std::string_view get_table_name() const noexcept {
             return table_name_;
         }
+
     private:
         std::string table_name_;
         Columns columns_;
     };
 
-    class CountQuery final : public TableContext<CountQuery>, public WhereContext<CountQuery> {};
+    class CountQuery final : public TableContext<CountQuery>,
+                             public WhereContext<CountQuery>,
+                             public QueryUtilities<CountQuery> {};
 
     class TruncateQuery final : public TableContext<TruncateQuery> {};
 } // namespace demiplane::database::query

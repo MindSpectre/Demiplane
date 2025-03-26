@@ -1,14 +1,15 @@
 #pragma once
 #include <list>
+#include <utility>
 
 #include "../../field/db_factory.hpp"
 #include "../../field/db_field.hpp"
 namespace demiplane::database::query {
     struct OrderClause {
-        std::shared_ptr<FieldBase> field;
+        Column column;
         bool ascending;
 
-        OrderClause(const std::shared_ptr<FieldBase>& f, const bool asc) : field(f), ascending(asc) {}
+        OrderClause(Column column_, const bool asc) : column(std::move(column_)), ascending(asc) {}
     };
     // Миксин для добавления ORDER BY.
     template <typename Derived>
@@ -20,7 +21,7 @@ namespace demiplane::database::query {
          * @param column     By column
          * @param ascending Если true, сортировка по возрастанию; иначе – по убыванию.
          */
-        Derived& order_by(SharedFieldPtr column, const bool ascending = true) {
+        Derived& order_by(Column column, const bool ascending = true) {
             order_by_clauses_.emplace_back(std::move(column), ascending);
             return static_cast<Derived&>(*this);
         }

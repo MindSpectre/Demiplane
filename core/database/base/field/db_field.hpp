@@ -192,7 +192,7 @@ namespace demiplane::database {
         template <typename U>
         std::string convert_value(U&& value) {
             using T = std::remove_cvref_t<U>;
-            if constexpr (std::is_same_v<T, std::string>) {
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> || std::is_same_v<T, const char*>) {
                 if constexpr (std::is_lvalue_reference_v<U>) {
                     return value;
                 } else {
@@ -271,7 +271,7 @@ namespace demiplane::database {
                 return SqlType::BIGINT;
             } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
                 return SqlType::DOUBLE_PRECISION;
-            } else if constexpr (std::is_same_v<T, std::string>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> || std::is_same_v<T, const char*>) {
                 return SqlType::TEXT;
             } else if constexpr (std::is_same_v<T, Json::Value>) {
                 return SqlType::JSONB;
@@ -289,7 +289,7 @@ namespace demiplane::database {
                     return SqlType::ARRAY_BIGINT;
                 } else if constexpr (std::is_same_v<V, double> || std::is_same_v<V, float>) {
                     return SqlType::ARRAY_DOUBLE;
-                } else if constexpr (std::is_same_v<V, std::string>) {
+                } else if constexpr (std::is_same_v<V, std::string> || std::is_same_v<V, std::string_view> || std::is_same_v<V, const char*>) {
                     return SqlType::ARRAY_TEXT;
                 } else if constexpr (std::is_same_v<V, bool>) {
                     return SqlType::ARRAY_BOOLEAN;

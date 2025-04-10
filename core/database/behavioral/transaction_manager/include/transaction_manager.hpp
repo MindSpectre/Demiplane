@@ -1,11 +1,10 @@
 #pragma once
 #include <functional>
-#include <json/json.h>
 #include <memory>
 #include <mutex>
 #include <utility>
 
-#include "db_interface.hpp"
+#include "traits/transaction_trait.hpp"
 
 namespace demiplane::database {
     class TransactionManager {

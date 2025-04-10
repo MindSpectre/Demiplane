@@ -6,10 +6,9 @@ using namespace demiplane::database;
 
 class BasicMockDbClientTest : public ::testing::Test {
 protected:
-    std::shared_ptr<demiplane::scroll::TracerInterface> dummy_tracer = demiplane::scroll::TracerFactory::create_default_console_tracer<BasicMockDbClient>(); // use mock if needed
     BasicMockDbClient client;
 
-    BasicMockDbClientTest() : client(dummy_tracer) {}
+    BasicMockDbClientTest() = default;
 
     static query::InsertQuery make_insert_query() {
         query::InsertQuery q{};
@@ -23,13 +22,13 @@ protected:
         return q;
     }
 
-    static query::DeleteQuery make_delete_query() {
-        query::DeleteQuery q{};
+    static query::RemoveQuery make_remove_query() {
+        query::RemoveQuery q{};
         return q;
     }
 
-    static query::CreateQuery make_create_query() {
-        query::CreateQuery q{};
+    static query::CreateTableQuery make_create_query() {
+        query::CreateTableQuery q{};
         return q;
     }
 
@@ -59,15 +58,15 @@ TEST_F(BasicMockDbClientTest, CallAllMethods) {
     client.connect(params);
     client.drop_connect();
     client.create_table(make_create_query());
-    client.delete_table("dummy_table");
-    client.truncate_table("dummy_table");
+    client.drop_table(query::DropTableQuery{"dummy_table"});
+    client.truncate_table(query::TruncateTableQuery{"dummy_table"});
 
     EXPECT_NO_THROW({
-        [[maybe_unused]] auto x = client.check_table("dummy_table");
+        [[maybe_unused]] auto x = client.check_table(query::CheckTableQuery{"dummy_table"});
         client.insert(make_insert_query());
         client.upsert(make_upsert_query());
         auto selected = client.select(make_select_query());
-        client.remove(make_delete_query());
+        client.remove(make_remove_query());
         [[maybe_unused]] auto count = client.count(make_count_query());
     });
 }

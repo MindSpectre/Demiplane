@@ -5,9 +5,8 @@
 #include "../tracer_interface.hpp"
 
 namespace demiplane::scroll {
-    template <class Service = NoName>
-    requires std::is_base_of_v<HasName<Service>, Service>
-    class FileTracer final : public TracerInterface {
+    template <class Service>
+    class FileTracer final : public TracerInterface<Service> {
     public:
         ~FileTracer() override {
             std::lock_guard lock(mutex_);
@@ -27,18 +26,18 @@ namespace demiplane::scroll {
                 return;
             }
 
-            std::lock_guard<std::mutex> lock(mutex_);
+            std::lock_guard lock(mutex_);
 
             // If header is enabled and not yet written for this thread, write it.
-            if (thread_local bool header_written = false; processor_.config().enable_header && !header_written) {
+            if (thread_local bool header_written = false; this->processor_.config().enable_header && !header_written) {
                 if (log_file_.is_open()) {
-                    log_file_ << processor_.make_header() << "\n";
+                    log_file_ << this->processor_.make_header() << "\n";
                     header_written = true;
                 }
             }
 
             // Create the log entry.
-            const std::string entry = processor_.create_entry(level, message, file, line, function, Service::name());
+            const std::string entry = this->processor_.create_entry(level, message, file, line, function, Service::name());
 
             // If no file is open, create a default one.
             if (!log_file_.is_open()) {
@@ -74,7 +73,7 @@ namespace demiplane::scroll {
         void new_file() {
             set_file(create_log_file_name(directory_path_));
         }
-        explicit FileTracer(std::shared_ptr<FileTracerConfig> config) : TracerInterface(config), config_(std::move(config)) {}
+        explicit FileTracer(std::shared_ptr<FileTracerConfig> config) : TracerInterface<Service>(config), config_(std::move(config)) {}
 
     private:
         std::shared_ptr<FileTracerConfig> config_;

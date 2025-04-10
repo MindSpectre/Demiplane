@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../db_shortcuts.hpp"
+
 namespace demiplane::database::query {
 
     template <typename Derived>

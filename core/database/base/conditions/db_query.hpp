@@ -53,7 +53,7 @@ namespace demiplane::database::query {
                               public QueryUtilities<InsertQuery>,
                               public Returning<InsertQuery> {
     public:
-        InsertQuery& insert(Records&& fields) {
+        InsertQuery& insert(Records fields) {
             records_ = std::move(fields);
             return *this;
         }
@@ -74,7 +74,7 @@ namespace demiplane::database::query {
                               public WhereContext<UpdateQuery>,
                               public Returning<UpdateQuery> {
     public:
-        UpdateQuery& set(FieldCollection&& fields) {
+        UpdateQuery& set(FieldCollection fields) {
             update_fields_ = std::move(fields);
             return *this;
         }
@@ -88,7 +88,10 @@ namespace demiplane::database::query {
     };
 
     // ------------------ DELETE ------------------
-    class DeleteQuery final : public TableContext<DeleteQuery>, public WhereContext<DeleteQuery> {};
+    class RemoveQuery final : public TableContext<RemoveQuery>,
+                                   public WhereContext<RemoveQuery>,
+                                   public Returning<RemoveQuery>,
+                                   public QueryUtilities<RemoveQuery> {};
 
     // ------------------ UPSERT ------------------
     class UpsertQuery final : public TableContext<UpsertQuery>,
@@ -106,6 +109,7 @@ namespace demiplane::database::query {
             conflict_columns_ = std::move(columns);
             return *this;
         }
+        // TODO: Figure out with storing fields in client
         UpsertQuery& replace_these_columns(Columns columns) {
             update_columns_ = std::move(columns);
             return *this;
@@ -130,31 +134,14 @@ namespace demiplane::database::query {
         Records records_;
     };
 
-    class CreateQuery final {
-    public:
-        CreateQuery& columns(Columns columns) {
-            columns_ = std::move(columns);
-            return *this;
-        }
-        CreateQuery& table(const std::string_view table_name) {
-            table_name_ = table_name.data();
-            return *this;
-        }
-        [[nodiscard]] const Columns& get_columns() const noexcept {
-            return columns_;
-        }
-        [[nodiscard]] std::string_view get_table_name() const noexcept {
-            return table_name_;
-        }
 
-    private:
-        std::string table_name_;
-        Columns columns_;
-    };
 
     class CountQuery final : public TableContext<CountQuery>,
                              public WhereContext<CountQuery>,
                              public QueryUtilities<CountQuery> {};
 
-    class TruncateQuery final : public TableContext<TruncateQuery> {};
+
+
+
+
 } // namespace demiplane::database::query

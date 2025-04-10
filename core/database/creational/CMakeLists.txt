@@ -10,7 +10,7 @@ target_link_libraries(${PROJECT_NAME}.${DATABASE}.Factory
         PUBLIC
         Demiplane::Database::Mock::Basic
         Demiplane::Database::Mock::Silent
-#        Demiplane::Database::Postgres
+        Demiplane::Database::Postgres
 )
 target_include_directories(${PROJECT_NAME}.${DATABASE}.Factory
         PUBLIC

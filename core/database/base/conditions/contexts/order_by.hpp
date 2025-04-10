@@ -2,8 +2,7 @@
 #include <list>
 #include <utility>
 
-#include "../../field/db_factory.hpp"
-#include "../../field/db_field.hpp"
+#include "../../db_shortcuts.hpp"
 namespace demiplane::database::query {
     struct OrderClause {
         Column column;

@@ -4,8 +4,8 @@ set(DATABASE Database)
 # Database General
 ##############################################################################
 add_library(${PROJECT_NAME}.${DATABASE} INTERFACE
-        interface/traits/transaction_trait.hpp
-        interface/traits/table_management_trait.hpp)
+
+)
 target_link_libraries(${PROJECT_NAME}.${DATABASE}
         INTERFACE
         Demiplane::Database::Pool
@@ -53,12 +53,14 @@ add_library(Demiplane::Database::Base ALIAS ${PROJECT_NAME}.${DATABASE}.Base)
 ##############################################################################
 add_library(${PROJECT_NAME}.${DATABASE}.Interface
         STATIC
-        interface/export/db_interface.hpp
+        interface/db_client.cpp
         interface/db_connect_params.hpp
         interface/db_config_interface.hpp
-        interface/traits/search_trait.hpp
-        interface/db_client.cpp
-        interface/traits/unique_constraint_trait.hpp
+        interface/export/db_interface.hpp
+        interface/export/traits/transaction_trait.hpp
+        interface/export/traits/table_management_trait.hpp
+        interface/export/traits/unique_constraint_trait.hpp
+        interface/export/traits/search_trait.hpp
 )
 
 target_link_libraries(${PROJECT_NAME}.${DATABASE}.Interface

@@ -1,67 +1,71 @@
 // pqxx_client.hpp
 #pragma once
 
-#include <iostream>
 #include <memory>
-#include <regex>
 #include <string_view>
 #include <vector>
 
 #include "db_interface.hpp"
 #include "scroll_tracer.hpp"
+#include "traits/table_management_trait.hpp"
+#include "traits/transaction_trait.hpp"
+#include "traits/unique_constraint_trait.hpp"
 
 
 namespace demiplane::database {
-    class BasicMockDbClient final : public DbInterface,
+    class BasicMockDbClient final : public DbInterface<BasicMockDbClient>,
                                     public TransactionTrait,
                                     public TableTrait,
+                                    public UniqueConstraintTrait,
                                     HasName<BasicMockDbClient> {
     public:
         BasicMockDbClient();
         ~BasicMockDbClient() override;
 
-        explicit BasicMockDbClient(std::shared_ptr<scroll::TracerInterface> tracer) : tracer_(std::move(tracer)) {}
+        BasicMockDbClient(
+            const ConnectParams& params, std::shared_ptr<scroll::TracerInterface<BasicMockDbClient>> tracer)
+            : DbInterface(params, std::move(tracer)) {}
+        explicit BasicMockDbClient(const ConnectParams& params) : DbInterface(params) {}
+        Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
 
-        BasicMockDbClient(const ConnectParams& params, std::shared_ptr<scroll::TracerInterface> tracer)
-            : DbInterface(params), tracer_(std::move(tracer)) {}
+        Result start_transaction() override;
 
-        IRes<> create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
+        Result commit_transaction() override;
 
-        IRes<> start_transaction() override;
+        Result rollback_transaction() override;
 
-        IRes<> commit_transaction() override;
+        Result connect(const ConnectParams& params) override;
 
-        IRes<> rollback_transaction() override;
+        Result drop_connect() override;
 
-        IRes<> connect(const ConnectParams& params) override;
+        Result create_table(const query::CreateTableQuery& proposal) override;
 
-        IRes<> drop_connect() override;
+        Result drop_table(const query::DropTableQuery& table_name) override;
 
-        IRes<> create_table(const query::CreateQuery& proposal) override;
+        Result truncate_table(const query::TruncateTableQuery& table_name) override;
 
-        IRes<> delete_table(std::string_view table_name) override;
+        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& table_name) override;
 
-        IRes<> truncate_table(std::string_view table_name) override;
+        Interceptor<std::optional<Records>> insert(query::InsertQuery&& query) override;
 
-        [[nodiscard]] IRes<bool> check_table(std::string_view table_name) override;
-
-        IRes<std::optional<Records>> insert(query::InsertQuery&& query) override;
-
-        IRes<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
+        Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
 
 
-        [[nodiscard]] IRes<Records> select(const query::SelectQuery& conditions) const override;
+        [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& conditions) const override;
 
-        IRes<std::optional<Records>> remove(const query::DeleteQuery& conditions) override;
+        Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;
 
-        [[nodiscard]] IRes<uint32_t> count(const query::CountQuery& conditions) const override;
+        [[nodiscard]] Interceptor<uint32_t> count(const query::CountQuery& conditions) const override;
 
 
         static constexpr const char* name() {
             return "BASIC_MOCK_DB_CLIENT";
         }
+        Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
+        Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
 
-    private:
-        std::shared_ptr<scroll::TracerInterface> tracer_;
+    protected:
+        [[nodiscard]] std::exception_ptr analyze_exception(const std::exception& caught_exception) const override;
+
     };
 } // namespace demiplane::database

@@ -23,13 +23,13 @@ protected:
         return q;
     }
 
-    static query::DeleteQuery make_delete_query() {
-        query::DeleteQuery q{};
+    static query::RemoveQuery make_delete_query() {
+        query::RemoveQuery q{};
         return q;
     }
 
-    static query::CreateQuery make_create_query() {
-        query::CreateQuery q{};
+    static query::CreateTableQuery make_create_query() {
+        query::CreateTableQuery q{};
         return q;
     }
 
@@ -59,11 +59,11 @@ TEST_F(SilentMockDbClientTest, CallAllMethods) {
     client.connect(params);
     client.drop_connect();
     client.create_table(make_create_query());
-    client.delete_table("dummy_table");
-    client.truncate_table("dummy_table");
+    client.drop_table(query::DropTableQuery{"dummy_table"});
+    client.truncate_table(query::TruncateTableQuery{"dummy_table"});
 
     EXPECT_NO_THROW({
-        [[maybe_unused]] auto x = client.check_table("dummy_table");
+        [[maybe_unused]] auto x = client.check_table(query::CheckTableQuery{"dummy_table"});
         client.insert(make_insert_query());
         client.upsert(make_upsert_query());
         auto selected = client.select(make_select_query());

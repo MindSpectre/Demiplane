@@ -21,3 +21,4 @@ target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
 )
 
 add_subdirectory(unit_tests)
+add_subdirectory(integration_tests)

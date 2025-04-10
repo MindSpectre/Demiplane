@@ -13,8 +13,9 @@ namespace demiplane::scroll {
 
 
     /**
-     * @brief Main purpose is logging all in time
+     * @brief Main purpose is logging all online
      */
+    template <class Service>
     class TracerInterface : Immutable {
     public:
         virtual ~TracerInterface() = default;
@@ -69,22 +70,21 @@ namespace demiplane::scroll {
 // otherwise, they are no-ops.
 #ifdef ENABLE_TRACING
 
-#define TRACE_LOG(trace, level, message) (trace)->log((level), (message), __FILE__, __LINE__, __PRETTY_FUNCTION__)
+#define TRACE_LOG(tracer, level, message) (tracer)->log((level), (message), __FILE__, __LINE__, __PRETTY_FUNCTION__)
 
-#define TRACE_DEBUG(trace, message) TRACE_LOG(trace, demiplane::scroll::LogLevel::Debug, message)
-#define TRACE_INFO(trace, message)  TRACE_LOG(trace, demiplane::scroll::LogLevel::Info, message)
-#define TRACE_WARN(trace, message)  TRACE_LOG(trace, demiplane::scroll::LogLevel::Warning, message)
-#define TRACE_ERROR(trace, message) TRACE_LOG(trace, demiplane::scroll::LogLevel::Error, message)
-#define TRACE_FATAL(trace, message) TRACE_LOG(trace, demiplane::scroll::LogLevel::Fatal, message)
+#define TRACE_DEBUG(tracer, message) TRACE_LOG(tracer, demiplane::scroll::LogLevel::Debug, message)
+#define TRACE_INFO(tracer, message)  TRACE_LOG(tracer, demiplane::scroll::LogLevel::Info, message)
+#define TRACE_WARN(tracer, message)  TRACE_LOG(tracer, demiplane::scroll::LogLevel::Warning, message)
+#define TRACE_ERROR(tracer, message) TRACE_LOG(tracer, demiplane::scroll::LogLevel::Error, message)
+#define TRACE_FATAL(tracer, message) TRACE_LOG(tracer, demiplane::scroll::LogLevel::Fatal, message)
 
-#define TRACER_STREAM_LOG(tracer, level) \
-(tracer)->force_stream(level, __FILE__, __LINE__, __PRETTY_FUNCTION__)
+#define TRACER_STREAM_LOG(tracer, level) (tracer)->force_stream(level, __FILE__, __LINE__, __PRETTY_FUNCTION__)
 
-#define TRACER_STREAM_DEBUG(tracer) TRACER_STREAM_LOG(tracer, demiplane::scroll::LogLevel::Debug)
-#define TRACER_STREAM_INFO(tracer)  TRACER_STREAM_LOG(tracer, demiplane::scroll::LogLevel::Info)
-#define TRACER_STREAM_WARN(tracer)  TRACER_STREAM_LOG(tracer, demiplane::scroll::LogLevel::Warning)
-#define TRACER_STREAM_ERROR(tracer) TRACER_STREAM_LOG(tracer, demiplane::scroll::LogLevel::Error)
-#define TRACER_STREAM_FATAL(tracer) TRACER_STREAM_LOG(tracer, demiplane::scroll::LogLevel::Fatal)
+#define TRACER_STREAM_DEBUG() TRACER_STREAM_LOG(i_tracer, demiplane::scroll::LogLevel::Debug)
+#define TRACER_STREAM_INFO()  TRACER_STREAM_LOG(i_tracer, demiplane::scroll::LogLevel::Info)
+#define TRACER_STREAM_WARN()  TRACER_STREAM_LOG(i_tracer, demiplane::scroll::LogLevel::Warning)
+#define TRACER_STREAM_ERROR() TRACER_STREAM_LOG(i_tracer, demiplane::scroll::LogLevel::Error)
+#define TRACER_STREAM_FATAL() TRACER_STREAM_LOG(i_tracer, demiplane::scroll::LogLevel::Fatal)
 
 #else
 
@@ -95,9 +95,9 @@ namespace demiplane::scroll {
 #define TRACE_WARN(tracer, message)       ((void) 0)
 #define TRACE_ERROR(tracer, message)      ((void) 0)
 #define TRACE_FATAL(tracer, message)      ((void) 0)
-#define TRACER_S_DEBUG(tracer) (void)0
-#define TRACER_S_INFO(tracer)  (void)0
-#define TRACER_S_WARN(tracer)  (void)0
-#define TRACER_S_ERROR(tracer) (void)0
-#define TRACER_S_FATAL(tracer) (void)0
+#define TRACER_S_DEBUG(tracer)            (void) 0
+#define TRACER_S_INFO(tracer)             (void) 0
+#define TRACER_S_WARN(tracer)             (void) 0
+#define TRACER_S_ERROR(tracer)            (void) 0
+#define TRACER_S_FATAL(tracer)            (void) 0
 #endif

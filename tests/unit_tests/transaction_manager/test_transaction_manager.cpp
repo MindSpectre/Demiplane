@@ -24,8 +24,8 @@ protected:
     {
         connect_params = demiplane::database::ConnectParams("123.123.123.123", 23, "mock_db1.db", "0.0.0.0", "123133");
         // Initialize mocks and mutexes
-        mock_db1 = demiplane::database::creational::DbInterfaceFactory::create_basic_mock_database();
-        mock_db2 = demiplane::database::creational::DbInterfaceFactory::create_basic_mock_database_prm(connect_params);
+        mock_db1 = demiplane::database::creational::DatabaseFactory::create_basic_mock_database();
+        mock_db2 = demiplane::database::creational::DatabaseFactory::create_basic_mock_database_prm(connect_params);
         mutex1 = std::make_unique<std::recursive_mutex>();
         mutex2 = std::make_unique<std::recursive_mutex>();
         // Add tables to TransactionManager

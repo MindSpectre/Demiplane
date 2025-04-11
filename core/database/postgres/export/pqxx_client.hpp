@@ -27,9 +27,8 @@ namespace demiplane::database {
                              public HasName<PqxxClient> {
     public:
         ~PqxxClient() override = default;
-        explicit PqxxClient(const ConnectParams& pr);
-        PqxxClient(const ConnectParams& connect_params, std::unique_ptr<scroll::TracerInterface<PqxxClient>> tracer)
-            : DbInterface(connect_params, std::move(tracer)), in_transaction_(false) {}
+        explicit PqxxClient(const ConnectParams& connect_params);
+        PqxxClient(const ConnectParams& connect_params, std::shared_ptr<scroll::TracerInterface<PqxxClient>> tracer);
 
         Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
         Result start_transaction() override;
@@ -43,7 +42,7 @@ namespace demiplane::database {
         [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery &query) override;
         Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
         Result delete_unique_constraint(const query::DeleteUniqueConstraint &table_name) override;
-        Interceptor<std::optional<Records>> insert(query::InsertQuery&& query) override;
+        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
         Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
         [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& query) const override;
         Interceptor<std::optional<Records>> remove(const query::RemoveQuery& query) override;

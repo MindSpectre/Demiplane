@@ -23,18 +23,25 @@ protected:
 
     // Pointer to the PqxxClient
     std::shared_ptr<PqxxClient> db_client_;
-
+    std::shared_ptr<demiplane::scroll::TracerInterface<PqxxClient>> tracer;
     // Test table name
     std::string test_table_ = "test_table";
     CheckTableQuery check_q{test_table_};
     DropTableQuery drop_q{test_table_};
+    ConnectParams connect_params{host, port, db_name, username, password};
     // SetUp and TearDown methods
     void SetUp() override {
+        demiplane::scroll::EntryConfig entry_config_;
+        entry_config_.add_thread          = false;
+        entry_config_.enable_service_name = false;
+        entry_config_.custom_alignment.disable_alignment();
+        const demiplane::scroll::ConsoleTracerConfig console_tracer_config_{entry_config_};
         // Initialize the database client
-        db_client_ = creational::DatabaseFactory::create_pqxx_client({host, port, db_name, username, password});
+        tracer     = demiplane::scroll::TracerFactory::create_console_tracer<PqxxClient>(console_tracer_config_);
+        db_client_ = std::make_unique<PqxxClient>(connect_params, tracer);
 
         // Ensure the test table does not exist before starting
-        if (db_client_->check_table(check_q).response()) {
+        if (*db_client_->check_table(check_q)) {
             db_client_->drop_table(drop_q);
         }
 
@@ -116,7 +123,7 @@ TEST_F(PqxxClientTest, InsertTest) {
     // Retrieve data and verify
     auto results = db_client_->select(SelectQuery{}.table(test_table_));
 
-    EXPECT_EQ((*results).size(), 2);
+    EXPECT_EQ(results->size(), 2);
 
     // Check content
     for (auto& rec : results.response()) {
@@ -132,72 +139,89 @@ TEST_F(PqxxClientTest, InsertTest) {
         }
     }
 }
-// TEST_F(PqxxClientTest, EmptyInsertTest) {
-//     // Create sample data
-//     std::vector<Record> records;
-//
-//     // Add data to the table
-//     EXPECT_THROW(db_client_->insert(test_table_, records), exceptions::QueryException);
-// }
-//
-// TEST_F(PqxxClientTest, InsertTestWithReturn) {
-//     // Create sample data
-//     std::vector<Record> records;
-//
-//     Record record1;
-//     record1.push_back(std::make_unique<Field<int>>("id", 1));
-//     record1.push_back(std::make_unique<Field<std::string>>("name", "Alice"));
-//     record1.push_back(std::make_unique<Field<std::string>>("description", "P"));
-//     records.push_back(std::move(record1));
-//
-//     Record record2;
-//     record2.push_back(std::make_unique<Field<int>>("id", 2));
-//     record2.push_back(std::make_unique<Field<std::string>>("name", "Bob"));
-//     record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
-//     records.push_back(std::move(record2));
-//
-//     const std::vector<std::shared_ptr<FieldBase>> return_fields = {std::make_shared<Field<int>>("id", 0)};
-//     // Add data to the table
-//     std::vector<Record> results;
-//     EXPECT_NO_THROW(results = db_client_->insert_with_returning(test_table_, records, return_fields));
-//
-//     // Retrieve data and verify
-//     EXPECT_EQ(results.size(), 2);
-//     EXPECT_TRUE(results[0].size() == 1);
-//     EXPECT_TRUE(results[1].size() == 1);
-//     EXPECT_TRUE(results[0][0]->as<int>() == 1);
-//     EXPECT_TRUE(results[1][0]->as<int>() == 2);
-// }
-// TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
-//     std::vector<Record> records;
-//
-//     Record record1;
-//     record1.push_back(std::make_unique<Field<Uuid>>("id", Uuid(Uuid::null_value, false)));
-//     record1.push_back(std::make_unique<Field<std::string>>("name", "Alice"));
-//     record1.push_back(std::make_unique<Field<std::string>>("description", "P"));
-//     // Create sample data
-//     db_client_->remove_table(test_table_);
-//     db_client_->create_table(test_table_, record1);
-//     records.push_back(std::move(record1));
-//     Record record2;
-//     record2.push_back(std::make_unique<Field<Uuid>>("id", Uuid("550e8400-e29b-41d4-a716-446655440001", false)));
-//     record2.push_back(std::make_unique<Field<std::string>>("name", "Bob"));
-//     record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
-//     records.push_back(std::move(record2));
-//
-//     const std::vector<std::shared_ptr<FieldBase>> return_fields = {std::make_shared<Field<Uuid>>("id", Uuid())};
-//     // Add data to the table
-//     std::vector<Record> results;
-//     EXPECT_NO_THROW(results = db_client_->insert_with_returning(test_table_, records, return_fields));
-//
-//     // Retrieve data and verify
-//
-//     EXPECT_EQ(results.size(), 2);
-//     EXPECT_TRUE(results[0].size() == 1);
-//     EXPECT_TRUE(results[1].size() == 1);
-//     EXPECT_TRUE(results[0][0]->as<Uuid>().is_null());
-//     EXPECT_TRUE(results[1][0]->as<Uuid>().get_id() == "550e8400-e29b-41d4-a716-446655440001");
-// }
+TEST_F(PqxxClientTest, EmptyInsertTest) {
+    // Create sample data
+    std::vector<Record> records;
+    InsertQuery query;
+    query.table(test_table_).insert(std::move(records));
+    // Add data to the table
+    demiplane::Interceptor<std::optional<Records>> result;
+    EXPECT_THROW(result = db_client_->insert(std::move(query)), std::runtime_error);
+}
+
+TEST_F(PqxxClientTest, InsertTestWithReturn) {
+    // Create sample data
+    std::vector<Record> records;
+
+    Record record1;
+    record1.push_back(std::make_unique<Field<int>>("id", 1));
+    record1.push_back(std::make_unique<Field<std::string>>("name", "Alice"));
+    record1.push_back(std::make_unique<Field<std::string>>("description", "P"));
+    records.push_back(std::move(record1));
+
+    Record record2;
+    record2.push_back(std::make_unique<Field<int>>("id", 2));
+    record2.push_back(std::make_unique<Field<std::string>>("name", "Bob"));
+    record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
+    records.push_back(std::move(record2));
+
+    const Columns return_fields = {Column{"id", SqlType::INT}};
+    // Add data to the table
+    demiplane::Interceptor<std::optional<Records>> result;
+    InsertQuery query;
+    query.table(test_table_).insert(std::move(records)).return_with(return_fields);
+    query.use_params = false;
+    EXPECT_NO_THROW(result = db_client_->insert(std::move(query)));
+
+    // Retrieve data and verify
+    EXPECT_TRUE(result);
+    auto results = result->value();
+    EXPECT_EQ(results.size(), 2);
+    EXPECT_TRUE(results[0].size() == 1);
+    EXPECT_TRUE(results[1].size() == 1);
+    EXPECT_TRUE(results[0][0]->as<int>() == 1);
+    EXPECT_TRUE(results[1][0]->as<int>() == 2);
+}
+TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
+    std::vector<Record> records;
+
+
+    // Create sample data
+    db_client_->drop_table(drop_q);
+    CreateTableQuery create_table_query;
+    create_table_query.table(test_table_);
+    create_table_query.columns(
+        Columns{Column{"id", SqlType::NULL_UUID}, Column{"name", SqlType::TEXT}, Column{"description", SqlType::TEXT}});
+    db_client_->create_table(create_table_query);
+    Record record1;
+    record1.push_back(std::make_unique<Field<Uuid>>("id", Uuid(Uuid::null_value, false)));
+    record1.push_back(std::make_unique<Field<std::string>>("name", "Alice"));
+    record1.push_back(std::make_unique<Field<std::string>>("description", "P"));
+    records.push_back(std::move(record1));
+    Record record2;
+    record2.push_back(std::make_unique<Field<Uuid>>("id", Uuid("550e8400-e29b-41d4-a716-446655440001", false)));
+    record2.push_back(std::make_unique<Field<std::string>>("name", "Bob"));
+    record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
+    records.push_back(std::move(record2));
+
+    const Columns return_fields = {Column{"id", SqlType::UUID}};
+    InsertQuery query;
+    query.table(test_table_).insert(std::move(records)).return_with(return_fields);
+    query.use_params = false;
+    // Add data to the table
+    std::vector<Record> results;
+    demiplane::Interceptor<std::optional<Records>> result;
+    EXPECT_NO_THROW(result = db_client_->insert(std::move(query)));
+    EXPECT_TRUE(result);
+    results = result->value();
+    // Retrieve data and verify
+
+    EXPECT_EQ(results.size(), 2);
+    EXPECT_TRUE(results[0].size() == 1);
+    EXPECT_TRUE(results[1].size() == 1);
+    EXPECT_TRUE(results[0][0]->as<Uuid>().is_null());
+    EXPECT_TRUE(results[1][0]->as<Uuid>().get_id() == "550e8400-e29b-41d4-a716-446655440001");
+}
 // TEST_F(PqxxClientTest, InsertTestWithUuidGenerate) {
 //     std::vector<Record> records;
 //
@@ -638,7 +662,8 @@ TEST_F(PqxxClientTest, InsertTest) {
 //             cv.wait(lock, [&] { return ready_to_listen.load(); });
 //         }
 //         while (inserting2.load()) {
-//             EXPECT_THROW(db_client_->start_transaction(), drug_lib::common::database::exceptions::TransactionException);
+//             EXPECT_THROW(db_client_->start_transaction(),
+//             drug_lib::common::database::exceptions::TransactionException);
 //         }
 //         barrier.arrive_and_wait(); // Wait for all threads to reach the barrier
 //

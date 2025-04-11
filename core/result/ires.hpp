@@ -88,6 +88,13 @@ namespace demiplane {
         const T& operator *() const {
             return response_;
         }
+        const T* operator->() const {
+            return &response_;
+        }
+
+        T* operator->() {
+            return &response_;
+        }
         void set(T&& value) {
             response_ = std::forward<T>(value);
         }

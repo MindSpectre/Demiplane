@@ -9,13 +9,34 @@ using namespace demiplane::database;
 using namespace demiplane::database::exceptions;
 using db_err = errors::db_error_code;
 namespace demiplane::database {
-    PqxxClient::PqxxClient(const ConnectParams& pr) : DbInterface(pr), in_transaction_(false) {
+    PqxxClient::PqxxClient(const ConnectParams& connect_params) : DbInterface(connect_params), in_transaction_(false) {
         try {
-            conn_ = std::make_shared<pqxx::connection>(pr.make_connect_string());
+            conn_ = std::make_shared<pqxx::connection>(connect_params.make_connect_string());
             if (!conn_->is_open()) {
                 TRACER_STREAM_ERROR() << "Failed to open database connection.";
                 throw ConnectionException("Failed to open database connection.", db_err::CONNECTION_FAILED);
             }
+            TRACE_INFO(i_tracer, "Connected to database.");
+            oid_preprocess();
+        } catch (const pqxx::too_many_connections& e) {
+            throw ConnectionException(e.what(), db_err::CONNECTION_POOL_EXHAUSTED);
+        } catch (const pqxx::sql_error& e) {
+            throw ConnectionException(e.what(), db_err::INVALID_QUERY);
+        } catch (const std::exception& e) {
+            throw ConnectionException(e.what(), db_err::PERMISSION_DENIED);
+        }
+    }
+    PqxxClient::PqxxClient(
+        const ConnectParams& connect_params, std::shared_ptr<scroll::TracerInterface<PqxxClient>> tracer)
+        : DbInterface(connect_params, std::move(tracer)), in_transaction_(false) {
+        //TODO: move to setup func
+        try {
+            conn_ = std::make_shared<pqxx::connection>(connect_params.make_connect_string());
+            if (!conn_->is_open()) {
+                TRACER_STREAM_ERROR() << "Failed to open database connection.";
+                throw ConnectionException("Failed to open database connection.", db_err::CONNECTION_FAILED);
+            }
+            TRACE_INFO(i_tracer, "Connected to database.");
             oid_preprocess();
         } catch (const pqxx::too_many_connections& e) {
             throw ConnectionException(e.what(), db_err::CONNECTION_POOL_EXHAUSTED);
@@ -110,6 +131,9 @@ namespace demiplane::database {
             for (const auto& row : r) {
                 type_oids_.insert({row["oid"].as<uint32_t>(), row["typname"].c_str()});
             }
+        }, [this](const std::exception& e) {
+            TRACER_STREAM_ERROR() << "Oids process failed.";
+            return analyze_exception(e);
         });
         return result;
     }
@@ -349,7 +373,7 @@ namespace demiplane::database {
         auto qp = query::engine::postgres::process_delete_unique_constraint(table_name);
         return result;
     }
-    inline Interceptor<std::optional<Records>> PqxxClient::insert(query::InsertQuery&& query) {
+    inline Interceptor<std::optional<Records>> PqxxClient::insert(query::InsertQuery query) {
 
         const bool is_returning = query.has_returning_fields();
         auto qp                 = query::engine::postgres::process_insert(std::move(query));
@@ -362,15 +386,17 @@ namespace demiplane::database {
             },
             [this](const std::exception& e) { return analyze_exception(e); });
         if (result && is_returning) {
-            auto& records = result.ref();
-            records->reserve(execute_res.size());
+            Records records;
+            records.reserve(execute_res.size());
             for (const auto& row : execute_res) {
                 Record record;
+                record.reserve(row.size());
                 for (const auto& field : row) {
                     record.push_back(process_field(field));
                 }
-                records->push_back(std::move(record));
+                records.push_back(std::move(record));
             }
+            result.set(std::move(records));
         }
         return result;
     }
@@ -464,7 +490,8 @@ namespace demiplane::database {
     }
     Result PqxxClient::drop_search_index(const query::DropIndexQuery& query) {
         Result result;
-        std::queue<PostgresRequest> queue_qp = query::engine::postgres::process_drop_search_index(query, configuration_);
+        std::queue<PostgresRequest> queue_qp =
+            query::engine::postgres::process_drop_search_index(query, configuration_);
         result.capture(
             [&] {
                 start_transaction();
@@ -483,7 +510,7 @@ namespace demiplane::database {
     }
 
     std::exception_ptr PqxxClient::analyze_exception(const std::exception& caught_exception) const {
-        TRACER_STREAM_ERROR() << "ERROR" << caught_exception.what();
+        TRACER_STREAM_ERROR() << "\nERROR msg: " << caught_exception.what();
         return std::make_exception_ptr(caught_exception);
     }
 

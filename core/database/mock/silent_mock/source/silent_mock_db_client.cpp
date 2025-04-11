@@ -46,7 +46,7 @@ demiplane::Interceptor<bool> SilentMockDbClient::check_table(const query::CheckT
     return Interceptor{true};
 }
 
-demiplane::Interceptor<std::optional<Records>> SilentMockDbClient::insert(query::InsertQuery&& query) {
+demiplane::Interceptor<std::optional<Records>> SilentMockDbClient::insert(query::InsertQuery query) {
     std::this_thread::sleep_for(utilities::chrono::RandomTimeGenerator::generate_milliseconds(100, 70));
     return Interceptor<std::optional<Records>>::sOk();
 }

@@ -58,7 +58,7 @@ namespace demiplane::database::query {
             return *this;
         }
         // Enforce move out
-        [[nodiscard]] Records extract_records() && noexcept {
+        [[nodiscard]] Records extract_records() noexcept {
             return std::move(records_);
         }
         [[nodiscard]] const Records& view_records() const& noexcept {
@@ -99,7 +99,7 @@ namespace demiplane::database::query {
                               public QueryUtilities<UpsertQuery>,
                               public Returning<UpsertQuery> {
     public:
-        UpsertQuery& new_values(Records&& fields) {
+        UpsertQuery& new_values(Records fields) {
             records_ = std::move(fields);
             return *this;
         }
@@ -121,7 +121,7 @@ namespace demiplane::database::query {
             return update_columns_;
         }
         // Enforce move out
-        [[nodiscard]] Records extract_records() && noexcept {
+        [[nodiscard]] Records extract_records() noexcept {
             return std::move(records_);
         }
         [[nodiscard]] const Records& view_records() const& noexcept {

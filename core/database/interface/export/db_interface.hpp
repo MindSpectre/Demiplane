@@ -43,7 +43,7 @@ namespace demiplane::database {
 
         // Data Manipulation using Perfect Forwarding
 
-        virtual Interceptor<std::optional<Records>> insert(query::InsertQuery&& query) = 0;
+        virtual Interceptor<std::optional<Records>> insert(query::InsertQuery query) = 0;
 
         virtual Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) = 0;
 

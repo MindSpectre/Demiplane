@@ -46,7 +46,7 @@ namespace demiplane::database {
 
         [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& table_name) override;
 
-        Interceptor<std::optional<Records>> insert(query::InsertQuery&& query) override;
+        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
 
         Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
 

@@ -28,7 +28,7 @@ namespace demiplane::database {
         Result drop_table(const query::DropTableQuery& query) override;
         Result truncate_table(const query::TruncateTableQuery& query) override;
         [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& query) override;
-        Interceptor<std::optional<Records>> insert(query::InsertQuery&& query) override;
+        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
         Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
         [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& conditions) const override;
         Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;

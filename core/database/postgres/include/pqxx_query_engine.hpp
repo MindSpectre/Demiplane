@@ -97,7 +97,7 @@ namespace demiplane::database {
         inline PostgresRequest process_select(const SelectQuery& q) {
             std::ostringstream oss;
             pqxx::params params;
-            uint32_t param_counter = 1;
+            uint32_t param_counter = 0;
 
             oss << "SELECT ";
             if (q.get_select_columns().empty()) {
@@ -124,7 +124,7 @@ namespace demiplane::database {
                     }
                     first = false;
                     oss << util::escape_identifier(clause.name()) << " " << clause.op() << " ";
-                    oss << "$" << param_counter++;
+                    oss << "$" << ++param_counter;
                     // Append the clause’s value as string.
                     params.append(clause.value());
                 }
@@ -157,9 +157,10 @@ namespace demiplane::database {
         inline PostgresRequest process_insert(InsertQuery q) {
             std::ostringstream oss;
             pqxx::params params;
-            uint32_t param_counter = 1;
+            uint32_t param_counter = 0;
 
             oss << "INSERT INTO " << util::escape_identifier(q.table()) << " ";
+
             auto records = std::move(q).extract_records();
             if (records.empty()) {
                 throw std::runtime_error("No records provided for insert");
@@ -191,23 +192,20 @@ namespace demiplane::database {
                         oss << ", ";
                     }
                     first_field = false;
-                    // Special handling for UUID fields.
-                    if (field->get_sql_type() == SqlType::UUID) {
-                        const std::string val = field->to_string();
-                        if (val == Uuid::use_generated) {
-                            oss << "DEFAULT";
-                            continue;
-                        }
-                        if (val == Uuid::null_value) {
-                            oss << "NULL";
-                            continue;
-                        }
+                    if (field->get_sql_type() == SqlType::UUID && field->as<Uuid>().is_generated()) {
+                        oss << "DEFAULT";
+                        continue;
+                    }
+
+                    if (field->get_sql_type() == SqlType::NULL_UUID) {
+                        oss << "NULL";
+                        continue;
                     }
                     if (q.use_params) {
-                        oss << "$" << param_counter++;
+                        oss << "$" << ++param_counter;
                         params.append(field->pull_to_string());
                     } else {
-                        oss << field->to_string();
+                        oss << util::escape_string(field->to_string());
                     }
                 }
                 oss << ")";
@@ -233,10 +231,10 @@ namespace demiplane::database {
         inline PostgresRequest process_upsert(UpsertQuery q) {
             std::ostringstream oss;
             pqxx::params params;
-            uint32_t param_counter = 1;
+            uint32_t param_counter = 0;
 
             oss << "INSERT INTO " << util::escape_identifier(q.table()) << " ";
-            auto records = std::move(q).extract_records();
+            auto records = q.extract_records();
             if (records.empty()) {
                 throw std::runtime_error("No records provided for upsert");
             }
@@ -259,27 +257,25 @@ namespace demiplane::database {
                 first_record = false;
                 oss << "(";
                 bool first_field = true;
-                for (auto& field : rec) {
+                for (const auto& field : rec) {
                     if (!first_field) {
                         oss << ", ";
                     }
                     first_field = false;
-                    if (field->get_sql_type() == SqlType::UUID) {
-                        const std::string val = field->to_string();
-                        if (val == Uuid::use_generated) {
-                            oss << "DEFAULT";
-                            continue;
-                        }
-                        if (val == Uuid::null_value) {
-                            oss << "NULL";
-                            continue;
-                        }
+                    if (field->get_sql_type() == SqlType::UUID && field->as<Uuid>().is_generated()) {
+                        oss << "DEFAULT";
+                        continue;
+                    }
+
+                    if (field->get_sql_type() == SqlType::NULL_UUID) {
+                        oss << "NULL";
+                        continue;
                     }
                     if (q.use_params) {
-                        oss << "$" << param_counter++;
+                        oss << "$" << ++param_counter;
                         params.append(field->pull_to_string());
                     } else {
-                        oss << field->to_string();
+                        oss << util::escape_string(field->to_string());
                     }
                 }
                 oss << ")";
@@ -331,7 +327,7 @@ namespace demiplane::database {
         inline PostgresRequest process_remove(const RemoveQuery& q) {
             std::ostringstream oss;
             pqxx::params params;
-            uint32_t param_counter = 1;
+            uint32_t param_counter = 0;
 
             oss << "DELETE FROM " << util::escape_identifier(q.table());
             if (q.has_where()) {
@@ -343,7 +339,7 @@ namespace demiplane::database {
                     }
                     first = false;
                     oss << util::escape_identifier(clause.name()) << " " << clause.op() << " ";
-                    oss << "$" << param_counter++;
+                    oss << "$" << ++param_counter;
                     params.append(clause.value());
                 }
             }
@@ -356,7 +352,7 @@ namespace demiplane::database {
         inline PostgresRequest process_count(const CountQuery& q) {
             std::ostringstream oss;
             pqxx::params params;
-            uint32_t param_counter = 1;
+            uint32_t param_counter = 0;
 
             oss << "SELECT COUNT(*) FROM " << util::escape_identifier(q.table());
             if (q.has_where()) {
@@ -369,7 +365,7 @@ namespace demiplane::database {
                     first = false;
                     oss << util::escape_identifier(clause.name()) << " " << clause.op() << " ";
                     if (q.use_params) {
-                        oss << "$" << param_counter++;
+                        oss << "$" << ++param_counter;
                         params.append(clause.value());
                     } else {
                         oss << clause.value();
@@ -469,7 +465,7 @@ namespace demiplane::database {
 
         inline PostgresRequest process_check_table(const CheckTableQuery& q) {
             std::ostringstream oss;
-            oss << "SELECT to_regclass(" << util::escape_identifier(q.table()) << ");";
+            oss << "SELECT to_regclass(" << util::escape_string(q.table()) << ");";
             return {oss.str()};
         }
 

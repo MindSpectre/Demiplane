@@ -53,7 +53,7 @@ demiplane::Interceptor<bool> BasicMockDbClient::check_table(const query::CheckTa
     TRACE_INFO(i_tracer, "BasicMockDbClient::check_table()");
     return Interceptor<bool>{true};
 }
-demiplane::Interceptor<std::optional<Records>> BasicMockDbClient::insert(query::InsertQuery&& query) {
+demiplane::Interceptor<std::optional<Records>> BasicMockDbClient::insert(query::InsertQuery query) {
     TRACE_INFO(i_tracer, "BasicMockDbClient::insert()");
     return Interceptor<std::optional<Records>>::sOk();
 }

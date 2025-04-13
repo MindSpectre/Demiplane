@@ -25,7 +25,6 @@ namespace demiplane::database {
         BasicMockDbClient(
             const ConnectParams& params, std::shared_ptr<scroll::TracerInterface<BasicMockDbClient>> tracer)
             : DbInterface(params, std::move(tracer)) {}
-        explicit BasicMockDbClient(const ConnectParams& params) : DbInterface(params) {}
         Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
 
         Result start_transaction() override;

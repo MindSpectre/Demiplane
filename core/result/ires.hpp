@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <functional>
+#include <iostream>
 namespace demiplane {
 
     enum class Status { Success, NonCriticalError, CriticalError };
@@ -28,6 +29,7 @@ namespace demiplane {
             try {
                 func();
             } catch (const std::exception& e) {
+                std::cerr << e.what() << std::endl;
                 status_    = Status::CriticalError;
                 exception_ = fallback(e);
             }

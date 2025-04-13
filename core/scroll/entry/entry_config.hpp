@@ -35,20 +35,20 @@ namespace demiplane::scroll {
         bool add_level           = true;
         bool add_location        = true;
         bool add_pretty_function = false;
-        bool add_thread          = true;
+        bool add_thread          = false;
         bool add_message         = true;
-        bool enable_header       = true;
+        bool enable_header       = false;
         bool enable_colors       = true;
         bool enable_service_name = true;
 
         std::string time_fmt = "%d-%m-%Y %X";
         struct Alignment {
             std::size_t time_pos     = 0;
-            std::size_t level_pos    = 30;
-            std::size_t service_pos  = 40;
-            std::size_t thread_pos   = 70;
-            std::size_t location_pos = 100;
-            std::size_t message_pos  = 200;
+            std::size_t level_pos    = 0;
+            std::size_t service_pos  = 0;
+            std::size_t thread_pos   = 0;
+            std::size_t location_pos = 0;
+            std::size_t message_pos  = 0;
             [[nodiscard]] bool ok() const {
                 return message_pos > location_pos && location_pos > thread_pos && thread_pos > service_pos
                     && service_pos > level_pos && level_pos > time_pos;
@@ -60,6 +60,14 @@ namespace demiplane::scroll {
                 service_pos  = 0;
                 level_pos    = 0;
                 message_pos  = 0;
+            }
+            void set_default() {
+                time_pos     = 0;
+                thread_pos   = 70;
+                service_pos  = 40;
+                level_pos    = 30;
+                location_pos = 100;
+                message_pos  = 200;
             }
         };
         Alignment custom_alignment;

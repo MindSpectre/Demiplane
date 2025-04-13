@@ -24,10 +24,6 @@ namespace demiplane::database {
 
         DbInterface(const ConnectParams& connect_params, std::shared_ptr<scroll::TracerInterface<Client>> tracer)
             : scroll::TracerProvider<Client>(std::move(tracer)), connect_params_(connect_params) {}
-        explicit DbInterface(const ConnectParams& params) : connect_params_(params) {
-            // TODO: change to file or come up with good def tracer
-            this->i_tracer = scroll::TracerFactory::create_default_console_tracer<Client>();
-        }
         DbInterface() = default;
 
         virtual Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) = 0;

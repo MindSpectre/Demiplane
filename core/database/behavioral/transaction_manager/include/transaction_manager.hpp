@@ -3,7 +3,7 @@
 #include <memory>
 #include <mutex>
 #include <utility>
-
+#include <optional>
 #include "traits/transaction_trait.hpp"
 
 namespace demiplane::database {

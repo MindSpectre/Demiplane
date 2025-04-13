@@ -192,7 +192,7 @@ namespace demiplane::database {
                         oss << ", ";
                     }
                     first_field = false;
-                    if (field->get_sql_type() == SqlType::UUID && field->as<Uuid>().is_generated()) {
+                    if ((field->get_sql_type() == SqlType::UUID  || field->get_sql_type() == SqlType::PRIMARY_UUID) && field->as<Uuid>().is_generated()) {
                         oss << "DEFAULT";
                         continue;
                     }
@@ -370,7 +370,6 @@ namespace demiplane::database {
                     } else {
                         oss << clause.value();
                     }
-                    params.append();
                 }
             }
             oss << ";";

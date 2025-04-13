@@ -27,7 +27,6 @@ namespace demiplane::database {
                              public HasName<PqxxClient> {
     public:
         ~PqxxClient() override = default;
-        explicit PqxxClient(const ConnectParams& connect_params);
         PqxxClient(const ConnectParams& connect_params, std::shared_ptr<scroll::TracerInterface<PqxxClient>> tracer);
 
         Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;

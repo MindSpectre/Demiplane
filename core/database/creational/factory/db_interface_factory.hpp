@@ -17,17 +17,19 @@ namespace demiplane::database::creational {
 
     class DatabaseFactory {
     public:
-        static std::unique_ptr<PqxxClient> create_pqxx_client(const ConnectParams& _params) {
+        static std::unique_ptr<PqxxClient> create_pqxx_client(const ConnectParams& _params,  const std::shared_ptr<scroll::TracerInterface<PqxxClient>>& tracer) {
             std::unique_ptr<PqxxClient> connect;
             try {
-                connect = std::make_unique<PqxxClient>(_params);
+                connect = std::make_unique<PqxxClient>(_params, tracer);
             } catch (const exceptions::ConnectionException& e) {
                 std::cerr << "Cannot connect to database. Trying to resolve problem and create DB...." << std::endl;
                 std::cerr << e.what() << std::endl;
 
                 try {
-                    connect->create_database({}, _params);
-                    connect = std::make_unique<PqxxClient>(_params);
+                    if (const auto res = connect->create_database({}, _params); !res) {
+                        res.rethrow();
+                    }
+                    connect = std::make_unique<PqxxClient>(_params, tracer);
                 } catch (const std::exception& inner_e) {
                     std::string msg = "Failed to open database connection. Cascade of fails.";
                     msg.append(inner_e.what());
@@ -37,9 +39,9 @@ namespace demiplane::database::creational {
             return connect;
         }
 
-        static std::unique_ptr<BasicMockDbClient> create_basic_mock_database_prm(const ConnectParams& _params) {
+        static std::unique_ptr<BasicMockDbClient> create_basic_mock_database(const ConnectParams& _params) {
 
-            return std::make_unique<BasicMockDbClient>(_params);
+            return std::make_unique<BasicMockDbClient>();
         }
         static std::unique_ptr<BasicMockDbClient> create_basic_mock_database() {
             return std::make_unique<BasicMockDbClient>();

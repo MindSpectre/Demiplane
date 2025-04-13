@@ -9,23 +9,6 @@ using namespace demiplane::database;
 using namespace demiplane::database::exceptions;
 using db_err = errors::db_error_code;
 namespace demiplane::database {
-    PqxxClient::PqxxClient(const ConnectParams& connect_params) : DbInterface(connect_params), in_transaction_(false) {
-        try {
-            conn_ = std::make_shared<pqxx::connection>(connect_params.make_connect_string());
-            if (!conn_->is_open()) {
-                TRACER_STREAM_ERROR() << "Failed to open database connection.";
-                throw ConnectionException("Failed to open database connection.", db_err::CONNECTION_FAILED);
-            }
-            TRACE_INFO(i_tracer, "Connected to database.");
-            oid_preprocess();
-        } catch (const pqxx::too_many_connections& e) {
-            throw ConnectionException(e.what(), db_err::CONNECTION_POOL_EXHAUSTED);
-        } catch (const pqxx::sql_error& e) {
-            throw ConnectionException(e.what(), db_err::INVALID_QUERY);
-        } catch (const std::exception& e) {
-            throw ConnectionException(e.what(), db_err::PERMISSION_DENIED);
-        }
-    }
     PqxxClient::PqxxClient(
         const ConnectParams& connect_params, std::shared_ptr<scroll::TracerInterface<PqxxClient>> tracer)
         : DbInterface(connect_params, std::move(tracer)), in_transaction_(false) {
@@ -90,7 +73,7 @@ namespace demiplane::database {
     void PqxxClient::execute_query(const std::string_view query_string, pqxx::params&& params) const {
         std::lock_guard lock(this->conn_mutex_);
         std::unique_ptr<pqxx::work> txn = initialize_transaction();
-        txn->exec_params(pqxx::zview{query_string}, std::move(params));
+        txn->exec(pqxx::zview{query_string}, std::move(params));
         finish_transaction(std::move(txn));
     }
 
@@ -105,7 +88,7 @@ namespace demiplane::database {
         const std::string_view query_string, pqxx::params&& params) const {
         std::lock_guard lock(this->conn_mutex_);
         std::unique_ptr<pqxx::work> txn = initialize_transaction();
-        const pqxx::result response     = txn->exec_params(pqxx::zview{query_string}, std::move(params));
+        const pqxx::result response     = txn->exec(pqxx::zview{query_string}, std::move(params));
         finish_transaction(std::move(txn));
         return response;
     }
@@ -194,7 +177,9 @@ namespace demiplane::database {
     Result PqxxClient::create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) {
         Result result;
         result.critical_zone([&] {
-            if (pqxx::connection trivial(pr.make_connect_string()); trivial.is_open()) {
+            ConnectParams tmp_params = pr;
+            tmp_params.set_db_name("template1");
+            if (pqxx::connection trivial(tmp_params.make_connect_string()); trivial.is_open()) {
                 pqxx::nontransaction nt(trivial);
                 std::ostringstream query;
                 query << "CREATE DATABASE " << pr.get_db_name() << " WITH OWNER = " << pr.get_login()

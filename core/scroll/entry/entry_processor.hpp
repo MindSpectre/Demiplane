@@ -45,7 +45,7 @@ namespace demiplane::scroll {
                 fill_until_pos(log_entry, config_.custom_alignment.level_pos);
                 log_entry << "[" << to_string(level) << "] ";
             }
-            if (config_.add_level) {
+            if (config_.enable_service_name) {
                 fill_until_pos(log_entry, config_.custom_alignment.service_pos);
                 log_entry << "[" << service << "] ";
             }

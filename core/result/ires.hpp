@@ -13,7 +13,7 @@ namespace demiplane {
         explicit Result(const Status status) : status_(status) {}
 
         void capture(const std::function<void()>& func,
-            const std::function<std::exception_ptr(const std::exception& e)>& fallback = DefaultFallback()) {
+            const std::function<std::exception_ptr(const std::exception& e)>& fallback = default_fallback()) {
             try {
                 func();
             } catch (const std::exception& e) {
@@ -25,7 +25,7 @@ namespace demiplane {
             return is_ok();
         }
         void critical_zone(const std::function<void()>& func,
-            const std::function<std::exception_ptr(const std::exception& e)>& fallback= DefaultFallback()) {
+            const std::function<std::exception_ptr(const std::exception& e)>& fallback = default_fallback()) {
             try {
                 func();
             } catch (const std::exception& e) {
@@ -59,8 +59,11 @@ namespace demiplane {
         static Result sOk() {
             return Result{Status::Success};
         }
-        static std::function<std::exception_ptr(const std::exception& e)> DefaultFallback() {
-            return [](const std::exception& e) { return std::make_exception_ptr(e); };
+        static std::function<std::exception_ptr(const std::exception& e)> default_fallback() {
+            return [](const std::exception& e) {
+                std::cerr << e.what() << std::endl;
+                return std::make_exception_ptr(e);
+            };
         }
 
     protected:
@@ -87,7 +90,7 @@ namespace demiplane {
             }
             return *this;
         }
-        const T& operator *() const {
+        const T& operator*() const {
             return response_;
         }
         const T* operator->() const {

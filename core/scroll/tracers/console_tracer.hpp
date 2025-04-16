@@ -2,14 +2,14 @@
 
 #include <iostream>
 
-#include "../tracer_interface.hpp"
+#include "tracer_base.hpp"
 
 namespace demiplane::scroll {
     template <class Service>
-    class ConsoleTracer final : public TracerInterface<Service> {
+    class ConsoleTracer final : public Tracer<Service> {
     public:
         explicit ConsoleTracer(std::shared_ptr<ConsoleTracerConfig> config)
-            : TracerInterface<Service>(config), config_(std::move(config)) {}
+            : Tracer<Service>(config), config_(std::move(config)) {}
         void log(LogLevel level, const std::string_view message, const char* file, const int line,
             const char* function) override {
             if (static_cast<int>(level) < static_cast<int>(config_->get_threshold())) {

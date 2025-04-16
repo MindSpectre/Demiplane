@@ -1,4 +1,4 @@
-#include "../include/pqxx_query_engine.hpp"
+#include "../../../components/database/postgres/pqxx_query_engine.hpp"
 
 #include <chrono>
 #include <gtest/gtest.h>

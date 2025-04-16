@@ -16,6 +16,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 option(USE_BOOST "Enable Boost library" ON)
 option(USE_QT5 "Enable Qt5 library" OFF)
 option(USE_PROTOBUF "Enable Protobuf" OFF)
+option(BUILD_COMPONENTS "Build components" ON)
 option(USE_TESTS "Tests activated" ON)
 # Global compiler options (if necessary)
 # It's better to set these per-target
@@ -34,10 +35,12 @@ find_package(Drogon CONFIG REQUIRED)
 
 #custom directives
 include(cmake/tests.cmake)
+include(cmake/combined_library.cmake)
 
 
-
-
+##############################################################################
+# Lib includes
+##############################################################################
 if (USE_BOOST)
     # Boost settings (adjust as needed)
 
@@ -53,6 +56,17 @@ if (USE_BOOST)
     endif ()
 
 endif ()
+##############################################################################
+add_subdirectory(core)
+
+##############################################################################
+# Components
+##############################################################################
+if (BUILD_COMPONENTS)
+    message("Components will be builded")
+    add_subdirectory(components)
+endif ()
+##############################################################################
 
 ##############################################################################
 # TESTS
@@ -68,4 +82,3 @@ if (USE_TESTS)
 endif ()
 ##############################################################################
 
-add_subdirectory(core)

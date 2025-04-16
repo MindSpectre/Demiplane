@@ -1,103 +1,99 @@
-set(SCROLL Scroll)
+set(DMP_SCROLL ${DMP_CORE}.Scroll)
 
 ##############################################################################
 # Scroll Colors
 ##############################################################################
-add_library(${PROJECT_NAME}.${SCROLL}.Colors INTERFACE
+add_library(${DMP_SCROLL}.Colors INTERFACE
         colors/colors.hpp
 )
-target_include_directories(${PROJECT_NAME}.${SCROLL}.Colors INTERFACE colors)
-
-add_library(Demiplane::Scroll::Colors ALIAS ${PROJECT_NAME}.${SCROLL}.Colors)
+target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
 
 ##############################################################################
 
 ##############################################################################
 # Scroll Entry creator
 ##############################################################################
-add_library(${PROJECT_NAME}.${SCROLL}.Entry STATIC
+add_library(${DMP_SCROLL}.Entry STATIC
         entry/entry_config.hpp
         entry/entry_config.cpp
         entry/entry_processor.hpp
 )
-target_include_directories(${PROJECT_NAME}.${SCROLL}.Entry PUBLIC
+target_include_directories(${DMP_SCROLL}.Entry PUBLIC
         entry/
 )
-target_link_libraries(${PROJECT_NAME}.${SCROLL}.Entry PUBLIC
+target_link_libraries(${DMP_SCROLL}.Entry PUBLIC
         JsonCpp::JsonCpp
-        Demiplane::Utilities
-        Demiplane::Result
-        Demiplane::Scroll::Colors
-        Demiplane::Traits
+        Demiplane::Chrono
+        Demiplane::Gears
+
+        ${DMP_SCROLL}.Colors
 )
-add_library(Demiplane::Scroll::Entry ALIAS ${PROJECT_NAME}.${SCROLL}.Entry)
 
 ##############################################################################
 
 ##############################################################################
 # Scroll Configs
 ##############################################################################
-add_library(${PROJECT_NAME}.${SCROLL}.Config STATIC
+add_library(${DMP_SCROLL}.Config STATIC
         configurator/factory/scroll_config_factory.hpp
         configurator/factory/scroll_config_factory.cpp
         configurator/config_interface.hpp
         configurator/configs/file_tracer_config.hpp
         configurator/configs/console_tracer_config.hpp
 )
-target_include_directories(${PROJECT_NAME}.${SCROLL}.Config PUBLIC
+target_include_directories(${DMP_SCROLL}.Config PUBLIC
         configurator/factory
 )
-target_link_libraries(${PROJECT_NAME}.${SCROLL}.Config PUBLIC
-        Demiplane::Scroll::Entry
+target_link_libraries(${DMP_SCROLL}.Config PUBLIC
+        ${DMP_SCROLL}.Entry
 )
-add_library(Demiplane::Scroll::Config ALIAS ${PROJECT_NAME}.${SCROLL}.Config)
 
 ##############################################################################
 
 ##############################################################################
 # Scroll Tracers
 ##############################################################################
-add_library(${PROJECT_NAME}.${SCROLL}.Tracer STATIC
-        tracers/tracer_interface.hpp
+add_library(${DMP_SCROLL}.Tracer STATIC
+        tracers/tracer_base.hpp
         tracers/file_tracer.hpp
         tracers/console_tracer.hpp
-        tracers/factory/scroll_tracer.cpp
-        tracers/factory/scroll_tracer.hpp
+        tracers/tracer_factory.hpp
 )
-target_include_directories(${PROJECT_NAME}.${SCROLL}.Tracer PUBLIC
-        tracers/factory
+target_include_directories(${DMP_SCROLL}.Tracer PUBLIC
+        tracers/include
 )
-target_link_libraries(${PROJECT_NAME}.${SCROLL}.Tracer PUBLIC
-        Demiplane::Scroll::Config
+target_link_libraries(${DMP_SCROLL}.Tracer PUBLIC
+        ${DMP_SCROLL}.Config
 )
-add_library(Demiplane::Scroll::Tracer ALIAS ${PROJECT_NAME}.${SCROLL}.Tracer)
+add_library(Demiplane::Scroll::Tracer ALIAS ${DMP_SCROLL}.Tracer)
 
 ##############################################################################
 
 
-##############################################################################
-# Scroll Loggers
-##############################################################################
-add_library(${PROJECT_NAME}.${SCROLL}.Logger STATIC
-        loggers/logger_interface.hpp
-        loggers/file_logger.hpp
-        loggers/console_logger.hpp
-        loggers/factory/logger_factory.cpp
-        loggers/factory/scroll_logger.hpp
-)
-target_include_directories(${PROJECT_NAME}.${SCROLL}.Logger PUBLIC
-        loggers/factory
-)
-target_link_libraries(${PROJECT_NAME}.${SCROLL}.Logger PUBLIC
-        Demiplane::Scroll::Config
-)
-add_library(Demiplane::Scroll::Logger ALIAS ${PROJECT_NAME}.${SCROLL}.Logger)
-
-##############################################################################
-
-add_library(${PROJECT_NAME}.${SCROLL} INTERFACE)
-target_link_libraries(${PROJECT_NAME}.${SCROLL} INTERFACE
-        Demiplane::Scroll::Logger
+###############################################################################
+## Scroll Loggers
+###############################################################################
+#add_library(${DMP_SCROLL}.Logger STATIC
+#        loggers/logger_interface.hpp
+#        loggers/file_logger.hpp
+#        loggers/console_logger.hpp
+#        loggers/factory/scroll_logger.hpp
+#)
+#target_include_directories(${DMP_SCROLL}.Logger PUBLIC
+#        loggers/factory
+#)
+#target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
+#        Demiplane::Scroll::Config
+#)
+#add_library(Demiplane::Scroll::Logger ALIAS ${DMP_SCROLL}.Logger)
+#
+###############################################################################
+add_combined_library(${DMP_SCROLL}
+        DIRECTORIES
+        export
+        LIBRARIES
+#        Demiplane::Scroll::Logger
         Demiplane::Scroll::Tracer
+        ALIAS
+        Demiplane::Scroll
 )
-add_library(Demiplane::Scroll ALIAS ${PROJECT_NAME}.${SCROLL})

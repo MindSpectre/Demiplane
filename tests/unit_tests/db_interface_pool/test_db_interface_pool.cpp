@@ -3,14 +3,13 @@
 #include <thread>
 
 #include "basic_mock_db_client.hpp"
-#include "db_interface.hpp"
 #include "db_interface_pool.hpp"
 
 using namespace demiplane::database;
 
 constexpr uint32_t pool_size = 5;
 const static std::function<std::unique_ptr<BasicMockDbClient>()> create_mock =  []{
-    return creational::DatabaseFactory::create_basic_mock_database();
+    return std::make_unique<BasicMockDbClient>();
 };
 class DatabasePoolTest : public testing::Test {
 protected:

@@ -3,7 +3,7 @@
 #include <string>
 
 #include "chrono_utils.hpp"
-#include "traits_classes.hpp"
+#include <demiplane/gears>
 namespace demiplane::scroll {
     enum class LogLevel {
         Debug = 0,

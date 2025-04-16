@@ -2,13 +2,9 @@
 // pqxx_client_test.cpp
 
 #include <chrono>
+#include <demiplane/db4>
 #include <gtest/gtest.h>
 #include <trantor/utils/Logger.h>
-
-#include "pqxx_client.hpp"
-// #include "pqxx_utilities.hpp"
-#include "db_interface_factory.hpp"
-#include "stopwatch.hpp"
 using namespace demiplane::database;
 using namespace query;
 class PqxxClientTest : public testing::Test {
@@ -23,7 +19,7 @@ protected:
 
     // Pointer to the PqxxClient
     std::shared_ptr<PqxxClient> db_client_;
-    std::shared_ptr<demiplane::scroll::TracerInterface<PqxxClient>> tracer;
+    std::shared_ptr<demiplane::scroll::Tracer<PqxxClient>> tracer;
     // Test table name
     std::string test_table_ = "test_table";
     CheckTableQuery check_q{test_table_};

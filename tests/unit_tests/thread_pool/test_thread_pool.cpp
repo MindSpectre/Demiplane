@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#include "thread_pool.hpp"
+#include <demiplane/multithread>
 
 using namespace demiplane::multithread;
 
@@ -40,22 +40,20 @@ TEST(ThreadPoolTest, PriorityExecution) {
             std::this_thread::sleep_for(std::chrono::milliseconds(400));
             std::lock_guard lock(result_mutex);
             results.push_back(1);
-        },
-        ThreadPool::TaskPriority::Low);
+        },0);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     pool.enqueue(
         [&] {
             std::lock_guard lock(result_mutex);
             results.push_back(2);
         },
-        ThreadPool::TaskPriority::High);
+        2);
 
     pool.enqueue(
         [&] {
             std::lock_guard lock(result_mutex);
             results.push_back(3);
-        },
-        ThreadPool::TaskPriority::Extreme);
+        },100);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 

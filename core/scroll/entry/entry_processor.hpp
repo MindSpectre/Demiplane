@@ -39,7 +39,7 @@ namespace demiplane::scroll {
             const char* function, const std::string_view service) const {
             std::ostringstream log_entry;
             if (config_.add_time) {
-                log_entry << "[" << utilities::chrono::LocalClock::current_time_custom_fmt(config_.time_fmt) << "] ";
+                log_entry << "[" << chrono::utilities::LocalClock::current_time_custom_fmt(config_.time_fmt) << "] ";
             }
             if (config_.add_level) {
                 fill_until_pos(log_entry, config_.custom_alignment.level_pos);

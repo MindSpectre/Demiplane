@@ -137,7 +137,7 @@ namespace demiplane::database {
                         oss << ", ";
                     }
                     first = false;
-                    oss << pqxx::connection().quote(order.column.get_column_name())
+                    oss << util::escape_identifier(order.column.get_column_name())
                         << (order.ascending ? " ASC" : " DESC");
                 }
             }

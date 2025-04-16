@@ -1,4 +1,4 @@
-#include "../../../components/database/postgres/pqxx_query_engine.hpp"
+#include "../pqxx_query_engine.hpp"
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -27,7 +27,7 @@ TEST(QueryEngine, TestInsertQuery) {
     insert_query.insert(std::move(records)).table("test-table").return_with({clm});
     insert_query.use_params = false;
     EXPECT_EQ(query::engine::postgres::process_insert(insert_query).query,
-        "INSERT INTO \"test-table\" (\"Name\", \"Age\") VALUES (Alice, 18), (Bob, 21) RETURNING \"Name\";");
+        "INSERT INTO \"test-table\" (\"Name\", \"Age\") VALUES ('Alice', '18'), ('Bob', '21') RETURNING \"Name\";");
     insert_query.use_params = true;
     EXPECT_EQ(query::engine::postgres::process_insert(insert_query).query,
         "INSERT INTO \"test-table\" (\"Name\", \"Age\") VALUES ($1, $2), ($3, $4) RETURNING \"Name\";");
@@ -67,7 +67,7 @@ TEST(QueryEngine, TestUpsertQuery) {
         .replace_these_columns({clm});
     upsert_query.use_params = false;
     EXPECT_EQ(query::engine::postgres::process_upsert(upsert_query).query,
-        "INSERT INTO \"test-table\" (\"Name\", \"Age\") VALUES (Alice, 18), (Bob, 21) ON CONFLICT (\"Name\") DO UPDATE "
+        "INSERT INTO \"test-table\" (\"Name\", \"Age\") VALUES ('Alice', '18'), ('Bob', '21') ON CONFLICT (\"Name\") DO UPDATE "
         "SET \"Name\" = EXCLUDED.\"Name\" RETURNING \"Name\";");
     upsert_query.use_params = true;
     EXPECT_EQ(query::engine::postgres::process_upsert(upsert_query).query,

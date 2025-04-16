@@ -3,11 +3,13 @@
 #include <exception>
 #include <functional>
 #include <iostream>
+
+#include "class_traits.hpp"
 namespace demiplane {
 
-    enum class Status { Success, NonCriticalError, CriticalError };
+    enum class Status { Success, Error};
 
-    class Result {
+    class Result : NonCopyable {
     public:
         Result() = default;
         explicit Result(const Status status) : status_(status) {}
@@ -17,22 +19,12 @@ namespace demiplane {
             try {
                 func();
             } catch (const std::exception& e) {
-                status_    = Status::NonCriticalError;
+                status_    = Status::Error;
                 exception_ = fallback(e);
             }
         }
         explicit operator bool() const {
             return is_ok();
-        }
-        void critical_zone(const std::function<void()>& func,
-            const std::function<std::exception_ptr(const std::exception& e)>& fallback = default_fallback()) {
-            try {
-                func();
-            } catch (const std::exception& e) {
-                std::cerr << e.what() << std::endl;
-                status_    = Status::CriticalError;
-                exception_ = fallback(e);
-            }
         }
 
         void rethrow() const {
@@ -50,7 +42,7 @@ namespace demiplane {
         }
 
         [[nodiscard]] bool is_err() const {
-            return status_ == Status::NonCriticalError || status_ == Status::CriticalError;
+            return status_ == Status::Error;
         }
 
         [[nodiscard]] Status status() const {
@@ -111,7 +103,7 @@ namespace demiplane {
             return response_;
         }
 
-        T&& response() {
+        T response() && {
             return std::move(response_);
         }
 

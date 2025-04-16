@@ -34,8 +34,7 @@ namespace demiplane::database {
             explicit CheckTableQuery(const std::string_view table_name) : TableContext(table_name) {}
         };
     } // namespace query
-    class TableTrait {
-    public:
+    struct TableTrait {
         virtual ~TableTrait() = default;
         // Table Management
         virtual Result create_table(const query::CreateTableQuery& query) = 0;

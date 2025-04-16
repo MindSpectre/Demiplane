@@ -106,7 +106,7 @@ namespace demiplane::database {
     // --- OID Preprocessing and Field Processing ---
     Result PqxxClient::oid_preprocess() {
         Result result;
-        result.critical_zone(
+        result.capture(
             [&] {
                 std::unique_lock lock(type_oid_mutex_);
                 pqxx::nontransaction txn(*conn_);
@@ -180,7 +180,7 @@ namespace demiplane::database {
     }
     Result PqxxClient::create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) {
         Result result;
-        result.critical_zone([&] {
+        result.capture([&] {
             ConnectParams tmp_params = pr;
             tmp_params.set_db_name("template1");
             if (pqxx::connection trivial(tmp_params.make_connect_string()); trivial.is_open()) {
@@ -208,7 +208,7 @@ namespace demiplane::database {
     Result PqxxClient::drop_connect() {
         std::lock_guard lock(conn_mutex_);
         Result result;
-        result.critical_zone(
+        result.capture(
             [&] {
                 conn_->close();
                 TRACE_INFO(get_tracer(), "Connection closed.");

@@ -16,7 +16,6 @@
 #include "traits/unique_constraint_trait.hpp"
 #include <boost/container/flat_map.hpp>
 
-#define ENABLE_TRACING
 namespace demiplane::database {
 
     class PqxxClient final : public DbBase<PqxxClient>,
@@ -35,11 +34,11 @@ namespace demiplane::database {
         Result connect(const ConnectParams& params) override;
         Result drop_connect() override;
         Result create_table(const query::CreateTableQuery& query) override;
-        Result drop_table(const query::DropTableQuery&  query) override;
-        Result truncate_table(const query::TruncateTableQuery&  query) override;
-        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery &query) override;
+        Result drop_table(const query::DropTableQuery& query) override;
+        Result truncate_table(const query::TruncateTableQuery& query) override;
+        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& query) override;
         Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
-        Result delete_unique_constraint(const query::DeleteUniqueConstraint &table_name) override;
+        Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
         Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
         Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
         [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& query) const override;
@@ -48,8 +47,8 @@ namespace demiplane::database {
         static constexpr const char* name() {
             return "Postgres client";
         }
-        [[nodiscard]] Result setup_search_index(const query::SetIndexQuery& query)  override;
-        [[nodiscard]] Result drop_search_index(const query::DropIndexQuery &query) override;
+        [[nodiscard]] Result setup_search_index(const query::SetIndexQuery& query) override;
+        [[nodiscard]] Result drop_search_index(const query::DropIndexQuery& query) override;
 
     private:
         PostgresConfig configuration_;
@@ -57,7 +56,7 @@ namespace demiplane::database {
         boost::container::flat_map<uint32_t, std::string> type_oids_; // id -> type name
 
         std::shared_ptr<pqxx::connection> conn_;
-        mutable std::mutex conn_mutex_ ;
+        mutable std::mutex conn_mutex_;
         mutable std::shared_mutex type_oid_mutex_;
         mutable std::unique_ptr<pqxx::work> open_transaction_;
         bool in_transaction_;

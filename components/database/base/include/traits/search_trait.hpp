@@ -25,8 +25,7 @@ namespace demiplane::database {
             SILENT_TABLE_CONSTRUCTOR(DropIndexQuery);
         };
     } // namespace query
-    class SearchTrait {
-    public:
+    struct SearchTrait {
         virtual ~SearchTrait()                                                             = default;
         [[nodiscard]] virtual Result setup_search_index(const query::SetIndexQuery& query) = 0;
         [[nodiscard]] virtual Result drop_search_index(const query::DropIndexQuery& query) = 0;

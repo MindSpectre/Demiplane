@@ -2,8 +2,7 @@
 
 #include "result.hpp"
 namespace demiplane::database {
-    class TransactionTrait {
-    public:
+    struct TransactionTrait {
         virtual ~TransactionTrait()           = default;
         virtual Result start_transaction()    = 0;
         virtual Result commit_transaction()   = 0;

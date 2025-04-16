@@ -7,7 +7,7 @@
 #include "class_traits.hpp"
 
 namespace demiplane::database {
-    class ConnectParams : Immovable {
+    class ConnectParams : gears::Immovable {
     public:
         ConnectParams(
             std::string host, const uint32_t port, std::string db_name, std::string login, std::string password)

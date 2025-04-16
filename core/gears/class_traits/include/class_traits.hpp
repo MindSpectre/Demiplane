@@ -1,6 +1,8 @@
 #pragma once
 
-namespace demiplane {
+#include "concepts.hpp"
+
+namespace demiplane::gears {
     struct NonCopyable {
         NonCopyable()                                        = default;
         NonCopyable& operator=(NonCopyable&& other) noexcept = default;
@@ -26,6 +28,19 @@ namespace demiplane {
         Immutable& operator=(Immutable&&)      = delete;
     };
 
+
+    template <PureInterface... Interfaces>
+    struct InterfaceBundle : Interfaces... {
+        using Interfaces::Interfaces...;
+        InterfaceBundle() = default;
+        ~InterfaceBundle() override = default; // optional if Traits have virtual dtors
+    };
+
+    template <typename T>
+    struct InterfaceBundleFor {
+        template <template <typename> class... Interfaces>
+        using From = InterfaceBundle<Interfaces<T>...>;
+    };
 
     template <typename T>
     concept HasStaticName = requires {

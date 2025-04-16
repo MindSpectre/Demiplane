@@ -27,28 +27,28 @@ namespace demiplane::database {
         ~PqxxClient() override = default;
         PqxxClient(const ConnectParams& connect_params, std::shared_ptr<scroll::Tracer<PqxxClient>> tracer);
 
-        Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
-        Result start_transaction() override;
-        Result commit_transaction() override;
-        Result rollback_transaction() override;
-        Result connect(const ConnectParams& params) override;
-        Result drop_connect() override;
-        Result create_table(const query::CreateTableQuery& query) override;
-        Result drop_table(const query::DropTableQuery& query) override;
-        Result truncate_table(const query::TruncateTableQuery& query) override;
-        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& query) override;
-        Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
-        Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
-        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
-        Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
-        [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& query) const override;
-        Interceptor<std::optional<Records>> remove(const query::RemoveQuery& query) override;
-        [[nodiscard]] Interceptor<uint32_t> count(const query::CountQuery& query) const override;
+        gears::Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
+        gears::Result start_transaction() override;
+        gears::Result commit_transaction() override;
+        gears::Result rollback_transaction() override;
+        gears::Result connect(const ConnectParams& params) override;
+        gears::Result drop_connect() override;
+        gears::Result create_table(const query::CreateTableQuery& query) override;
+        gears::Result drop_table(const query::DropTableQuery& query) override;
+        gears::Result truncate_table(const query::TruncateTableQuery& query) override;
+        [[nodiscard]] gears::Interceptor<bool> check_table(const query::CheckTableQuery& query) override;
+        gears::Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
+        gears::Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
+        gears::Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
+        gears::Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
+        [[nodiscard]] gears::Interceptor<Records> select(const query::SelectQuery& query) const override;
+        gears::Interceptor<std::optional<Records>> remove(const query::RemoveQuery& query) override;
+        [[nodiscard]] gears::Interceptor<uint32_t> count(const query::CountQuery& query) const override;
         static constexpr const char* name() {
             return "Postgres client";
         }
-        [[nodiscard]] Result setup_search_index(const query::SetIndexQuery& query) override;
-        [[nodiscard]] Result drop_search_index(const query::DropIndexQuery& query) override;
+        [[nodiscard]] gears::Result setup_search_index(const query::SetIndexQuery& query) override;
+        [[nodiscard]] gears::Result drop_search_index(const query::DropIndexQuery& query) override;
 
     private:
         PostgresConfig configuration_;
@@ -62,7 +62,7 @@ namespace demiplane::database {
         bool in_transaction_;
 
         // Helper functions:
-        Result oid_preprocess();
+        gears::Result oid_preprocess();
         [[nodiscard]] std::unique_ptr<FieldBase> process_field(const pqxx::field& field) const;
 
         // Execution helpers (for non-parameterized queries and with parameters)

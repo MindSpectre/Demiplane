@@ -104,8 +104,8 @@ namespace demiplane::database {
     }
 
     // --- OID Preprocessing and Field Processing ---
-    Result PqxxClient::oid_preprocess() {
-        Result result;
+    gears::Result PqxxClient::oid_preprocess() {
+        gears::Result result;
         result.capture(
             [&] {
                 std::unique_lock lock(type_oid_mutex_);
@@ -178,8 +178,8 @@ namespace demiplane::database {
         }
         return nullptr;
     }
-    Result PqxxClient::create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) {
-        Result result;
+    gears::Result PqxxClient::create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) {
+        gears::Result result;
         result.capture([&] {
             ConnectParams tmp_params = pr;
             tmp_params.set_db_name("template1");
@@ -197,17 +197,17 @@ namespace demiplane::database {
         return result;
     }
 
-    Result PqxxClient::connect(const ConnectParams& params) {
+    gears::Result PqxxClient::connect(const ConnectParams& params) {
         std::lock_guard lock(conn_mutex_);
         // In this design the connection is persistent so we simply update parameters.
         // (Assuming a connection pool is managing reconnections if necessary.)
         // This is a placeholder if you want to support reconnects.
-        return Result{};
+        return gears::Result{};
     }
 
-    Result PqxxClient::drop_connect() {
+    gears::Result PqxxClient::drop_connect() {
         std::lock_guard lock(conn_mutex_);
-        Result result;
+        gears::Result result;
         result.capture(
             [&] {
                 conn_->close();
@@ -221,8 +221,8 @@ namespace demiplane::database {
     }
 
     // --- Transaction Methods ---
-    Result PqxxClient::start_transaction() {
-        Result result;
+    gears::Result PqxxClient::start_transaction() {
+        gears::Result result;
         result.capture(
             [&] {
                 std::lock_guard lock(conn_mutex_);
@@ -241,8 +241,8 @@ namespace demiplane::database {
         return result;
     }
 
-    Result PqxxClient::commit_transaction() {
-        Result result;
+    gears::Result PqxxClient::commit_transaction() {
+        gears::Result result;
         result.capture(
             [&] {
                 std::lock_guard lock(conn_mutex_);
@@ -263,8 +263,8 @@ namespace demiplane::database {
         return result;
     }
 
-    Result PqxxClient::rollback_transaction() {
-        Result result;
+    gears::Result PqxxClient::rollback_transaction() {
+        gears::Result result;
         result.capture(
             [&] {
                 std::lock_guard lock(conn_mutex_);
@@ -286,10 +286,10 @@ namespace demiplane::database {
     }
 
     // --- Table Management ---
-    Result PqxxClient::create_table(const query::CreateTableQuery& query) {
+    gears::Result PqxxClient::create_table(const query::CreateTableQuery& query) {
         // Use the processor to generate the CREATE TABLE query.
         const auto qp = query::engine::postgres::process_create(query);
-        Result result;
+        gears::Result result;
         result.capture(
             [&] {
                 execute_query(qp.query);
@@ -302,8 +302,8 @@ namespace demiplane::database {
         return result;
     }
 
-    Result PqxxClient::drop_table(const query::DropTableQuery& query) {
-        Result result;
+    gears::Result PqxxClient::drop_table(const query::DropTableQuery& query) {
+        gears::Result result;
         const auto qp = query::engine::postgres::process_drop_table(query);
         result.capture(
             [&] {
@@ -317,8 +317,8 @@ namespace demiplane::database {
         return result;
     }
 
-    Result PqxxClient::truncate_table(const query::TruncateTableQuery& query) {
-        Result result;
+    gears::Result PqxxClient::truncate_table(const query::TruncateTableQuery& query) {
+        gears::Result result;
         const auto qp = query::engine::postgres::process_truncate_table(query);
         result.capture(
             [&] {
@@ -333,8 +333,8 @@ namespace demiplane::database {
         return result;
     }
 
-    Interceptor<bool> PqxxClient::check_table(const query::CheckTableQuery& query) {
-        Interceptor<bool> result;
+    gears::Interceptor<bool> PqxxClient::check_table(const query::CheckTableQuery& query) {
+        gears::Interceptor<bool> result;
         const auto qp = query::engine::postgres::process_check_table(query);
         pqxx::result execute_res;
         result.capture([&] { execute_res = execute_query_with_result(qp.query); },
@@ -348,8 +348,8 @@ namespace demiplane::database {
 
         return result;
     }
-    Result PqxxClient::set_unique_constraint(const query::SetUniqueConstraint& query) {
-        Result result;
+    gears::Result PqxxClient::set_unique_constraint(const query::SetUniqueConstraint& query) {
+        gears::Result result;
         const auto qp = query::engine::postgres::process_set_unique_constraint(query);
         result.capture([&] {
             execute_query(qp.query);
@@ -357,16 +357,16 @@ namespace demiplane::database {
         });
         return result;
     }
-    Result PqxxClient::delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) {
-        Result result;
+    gears::Result PqxxClient::delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) {
+        gears::Result result;
         auto qp = query::engine::postgres::process_delete_unique_constraint(table_name);
         return result;
     }
-    inline Interceptor<std::optional<Records>> PqxxClient::insert(query::InsertQuery query) {
+    inline gears::Interceptor<std::optional<Records>> PqxxClient::insert(query::InsertQuery query) {
 
         const bool is_returning = query.has_returning_fields();
         auto qp                 = query::engine::postgres::process_insert(std::move(query));
-        Interceptor<std::optional<Records>> result;
+        gears::Interceptor<std::optional<Records>> result;
         pqxx::result execute_res;
         result.capture(
             [&] {
@@ -389,10 +389,10 @@ namespace demiplane::database {
         }
         return result;
     }
-    inline Interceptor<std::optional<Records>> PqxxClient::upsert(query::UpsertQuery&& query) {
+    inline gears::Interceptor<std::optional<Records>> PqxxClient::upsert(query::UpsertQuery&& query) {
         const bool is_returning = query.has_returning_fields();
         auto qp                 = query::engine::postgres::process_upsert(std::move(query));
-        Interceptor<std::optional<Records>> result;
+        gears::Interceptor<std::optional<Records>> result;
         pqxx::result execute_res;
         result.capture([&] { execute_res = execute_query_with_result(qp.query, std::move(qp.params)); });
         if (result && is_returning) {
@@ -408,9 +408,9 @@ namespace demiplane::database {
         }
         return result;
     }
-    inline Interceptor<Records> PqxxClient::select(const query::SelectQuery& query) const {
+    inline gears::Interceptor<Records> PqxxClient::select(const query::SelectQuery& query) const {
         auto qp = query::engine::postgres::process_select(query);
-        Interceptor<Records> result;
+        gears::Interceptor<Records> result;
         pqxx::result execute_res;
         result.capture(
             [&] {
@@ -431,10 +431,10 @@ namespace demiplane::database {
         }
         return result;
     }
-    inline Interceptor<std::optional<Records>> PqxxClient::remove(const query::RemoveQuery& query) {
+    inline gears::Interceptor<std::optional<Records>> PqxxClient::remove(const query::RemoveQuery& query) {
         const bool is_returning = query.has_returning_fields();
         auto qp                 = query::engine::postgres::process_remove(query);
-        Interceptor<std::optional<Records>> result;
+        gears::Interceptor<std::optional<Records>> result;
         pqxx::result execute_res;
         result.capture([&] { execute_res = execute_query_with_result(qp.query, std::move(qp.params)); });
         if (result && is_returning) {
@@ -450,9 +450,9 @@ namespace demiplane::database {
         }
         return result;
     }
-    Interceptor<uint32_t> PqxxClient::count(const query::CountQuery& query) const {
+    gears::Interceptor<uint32_t> PqxxClient::count(const query::CountQuery& query) const {
         auto qp = query::engine::postgres::process_count(query);
-        Interceptor<uint32_t> result;
+        gears::Interceptor<uint32_t> result;
         pqxx::result execute_res;
         result.capture([&] { execute_res = execute_query_with_result(qp.query, std::move(qp.params)); },
             [&](const std::exception& e) { return analyze_exception(e); });
@@ -461,8 +461,8 @@ namespace demiplane::database {
         }
         return result;
     }
-    Result PqxxClient::setup_search_index(const query::SetIndexQuery& query) {
-        Result result;
+    gears::Result PqxxClient::setup_search_index(const query::SetIndexQuery& query) {
+        gears::Result result;
         std::queue<PostgresRequest> queue_qp = query::engine::postgres::process_set_search_index(query, configuration_);
         result.capture(
             [&] {
@@ -477,8 +477,8 @@ namespace demiplane::database {
             [&](const std::exception& e) { return analyze_exception(e); });
         return result;
     }
-    Result PqxxClient::drop_search_index(const query::DropIndexQuery& query) {
-        Result result;
+    gears::Result PqxxClient::drop_search_index(const query::DropIndexQuery& query) {
+        gears::Result result;
         std::queue<PostgresRequest> queue_qp =
             query::engine::postgres::process_drop_search_index(query, configuration_);
         result.capture(

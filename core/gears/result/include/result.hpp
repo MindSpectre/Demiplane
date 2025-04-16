@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "class_traits.hpp"
-namespace demiplane {
+namespace demiplane::gears {
 
     enum class Status { Success, Error};
 

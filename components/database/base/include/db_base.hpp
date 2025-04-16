@@ -17,7 +17,7 @@ namespace demiplane::database {
     concept FieldBaseVector = std::is_same_v<std::remove_cvref_t<T>, std::vector<std::unique_ptr<FieldBase>>>;
 
     template <class Client>
-    class DbBase : public scroll::TracerProvider<Client>, NonCopyable {
+    class DbBase : public scroll::TracerProvider<Client>, gears::NonCopyable {
     public:
         virtual ~DbBase() = default;
 
@@ -25,30 +25,30 @@ namespace demiplane::database {
             : scroll::TracerProvider<Client>(std::move(tracer)), connect_params_(connect_params) {}
         DbBase() = default;
 
-        virtual Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) = 0;
+        virtual gears::Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) = 0;
         // Transaction Methods
 
 
-        virtual Result connect(const ConnectParams& params) {
+        virtual gears::Result connect(const ConnectParams& params) {
             connect_params_ = params;
-            return Result::sOk();
+            return gears::Result::sOk();
         }
-        virtual Result drop_connect() = 0;
+        virtual gears::Result drop_connect() = 0;
 
 
         // Data Manipulation using Perfect Forwarding
 
-        virtual Interceptor<std::optional<Records>> insert(query::InsertQuery query) = 0;
+        virtual gears::Interceptor<std::optional<Records>> insert(query::InsertQuery query) = 0;
 
-        virtual Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) = 0;
+        virtual gears::Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) = 0;
 
         // Data Retrieval
-        [[nodiscard]] virtual Interceptor<Records> select(const query::SelectQuery& conditions) const = 0;
+        [[nodiscard]] virtual gears::Interceptor<Records> select(const query::SelectQuery& conditions) const = 0;
 
         // Remove Data
-        virtual Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) = 0;
+        virtual gears::Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) = 0;
 
-        [[nodiscard]] virtual Interceptor<uint32_t> count(const query::CountQuery& conditions) const = 0;
+        [[nodiscard]] virtual gears::Interceptor<uint32_t> count(const query::CountQuery& conditions) const = 0;
 
     protected:
         [[nodiscard]] virtual std::exception_ptr analyze_exception(const std::exception& caught_exception) const = 0;

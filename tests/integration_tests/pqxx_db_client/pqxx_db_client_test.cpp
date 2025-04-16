@@ -144,7 +144,7 @@ TEST_F(PqxxClientTest, EmptyInsertTest) {
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
     // Add data to the table
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     EXPECT_THROW(result = db_client_->insert(std::move(query)), std::runtime_error);
 }
 
@@ -166,7 +166,7 @@ TEST_F(PqxxClientTest, InsertTestWithReturn) {
 
     const Columns return_fields = {Column{"id", SqlType::INT}};
     // Add data to the table
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     InsertQuery query;
     query.table(test_table_).insert(std::move(records)).return_with(return_fields);
     query.use_params = false;
@@ -209,7 +209,7 @@ TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
     query.use_params = false;
     // Add data to the table
     Records results;
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     EXPECT_NO_THROW(result = db_client_->insert(std::move(query)));
     EXPECT_TRUE(result);
     results = result->value();
@@ -248,7 +248,7 @@ TEST_F(PqxxClientTest, InsertTestWithUuidGenerate) {
     query.use_params = false;
     // Add data to the table
     Records results;
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     EXPECT_NO_THROW(result = db_client_->insert(std::move(query)));
     EXPECT_TRUE(result);
     results = result->value();
@@ -269,7 +269,7 @@ TEST_F(PqxxClientTest, UpsertTestFullRecord) {
     record1.push_back(std::make_unique<Field<std::string>>("name", "Alice"));
     record1.push_back(std::make_unique<Field<std::string>>("description", ""));
     records.push_back(std::move(record1));
-    demiplane::Interceptor<std::optional<Records>> result1;
+    demiplane::gears::Interceptor<std::optional<Records>> result1;
     // Add initial data
     EXPECT_NO_THROW(result1 = db_client_->insert(InsertQuery{}.table(test_table_).insert(std::move(records))));
     EXPECT_TRUE(result1);
@@ -289,7 +289,7 @@ TEST_F(PqxxClientTest, UpsertTestFullRecord) {
     EXPECT_NO_THROW(db_client_->upsert(std::move(upsert_query)));
     EXPECT_TRUE(result1);
     // Retrieve data and verify
-    demiplane::Interceptor<Records> result = db_client_->select(select_all_q);
+    demiplane::gears::Interceptor<Records> result = db_client_->select(select_all_q);
     EXPECT_TRUE(result);
     const auto& results = result.ref();
     EXPECT_EQ(results.size(), 1);
@@ -627,7 +627,7 @@ TEST_F(PqxxClientTest, TransactionSimpleTest) {
 
 TEST_F(PqxxClientTest, TransactionConquerenteTest) {
     EXPECT_NO_THROW(db_client_->start_transaction());
-    demiplane::Result result;
+    demiplane::gears::Result result;
     EXPECT_NO_THROW(result = db_client_->start_transaction());
     EXPECT_TRUE(result.is_err());
     EXPECT_NO_THROW(db_client_->commit_transaction());

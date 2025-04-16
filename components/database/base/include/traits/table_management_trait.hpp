@@ -37,13 +37,13 @@ namespace demiplane::database {
     struct TableTrait {
         virtual ~TableTrait() = default;
         // Table Management
-        virtual Result create_table(const query::CreateTableQuery& query) = 0;
+        virtual gears::Result create_table(const query::CreateTableQuery& query) = 0;
 
-        virtual Result drop_table(const query::DropTableQuery& query) = 0;
+        virtual gears::Result drop_table(const query::DropTableQuery& query) = 0;
 
         // todo: queries for cascade delete
-        virtual Result truncate_table(const query::TruncateTableQuery& query) = 0;
+        virtual gears::Result truncate_table(const query::TruncateTableQuery& query) = 0;
 
-        [[nodiscard]] virtual Interceptor<bool> check_table(const query::CheckTableQuery& query) = 0;
+        [[nodiscard]] virtual gears::Interceptor<bool> check_table(const query::CheckTableQuery& query) = 0;
     };
 } // namespace demiplane::database

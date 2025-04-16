@@ -17,28 +17,28 @@ namespace demiplane::database {
                                      public UniqueConstraintTrait {
     public:
         ~SilentMockDbClient() override;
-        Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
-        Result connect(const ConnectParams& params) override;
-        Result start_transaction() override;
-        Result commit_transaction() override;
-        Result rollback_transaction() override;
-        Result drop_connect() override;
-        Result create_table(const query::CreateTableQuery& query) override;
-        Result drop_table(const query::DropTableQuery& query) override;
-        Result truncate_table(const query::TruncateTableQuery& query) override;
-        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& query) override;
-        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
-        Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
-        [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& conditions) const override;
-        Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;
-        [[nodiscard]] Interceptor<uint32_t> count(const query::CountQuery& conditions) const override;
+        gears::Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
+        gears::Result connect(const ConnectParams& params) override;
+        gears::Result start_transaction() override;
+        gears::Result commit_transaction() override;
+        gears::Result rollback_transaction() override;
+        gears::Result drop_connect() override;
+        gears::Result create_table(const query::CreateTableQuery& query) override;
+        gears::Result drop_table(const query::DropTableQuery& query) override;
+        gears::Result truncate_table(const query::TruncateTableQuery& query) override;
+        [[nodiscard]] gears::Interceptor<bool> check_table(const query::CheckTableQuery& query) override;
+        gears::Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
+        gears::Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
+        [[nodiscard]] gears::Interceptor<Records> select(const query::SelectQuery& conditions) const override;
+        gears::Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;
+        [[nodiscard]] gears::Interceptor<uint32_t> count(const query::CountQuery& conditions) const override;
 
         static constexpr const char* name() {
             return "SilentMockDbClient";
         }
 
-        Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
-        Result delete_unique_constraint(const query::DeleteUniqueConstraint& query) override;
+        gears::Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
+        gears::Result delete_unique_constraint(const query::DeleteUniqueConstraint& query) override;
 
     protected:
         [[nodiscard]] std::exception_ptr analyze_exception(const std::exception& caught_exception) const override;

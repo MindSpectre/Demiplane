@@ -14,7 +14,7 @@ namespace demiplane::scroll {
      * @brief Main purpose is logging all online
      */
     template <class>
-    class Tracer : Immutable {
+    class Tracer : gears::Immutable {
     public:
         virtual ~Tracer() = default;
         explicit Tracer(const std::shared_ptr<TracerConfigInterface>& config)

@@ -28,7 +28,7 @@ namespace demiplane::database {
     } // namespace query
     struct UniqueConstraintTrait {
         virtual ~UniqueConstraintTrait()                                                    = default;
-        virtual Result set_unique_constraint(const query::SetUniqueConstraint& query)       = 0;
-        virtual Result delete_unique_constraint(const query::DeleteUniqueConstraint& query) = 0;
+        virtual gears::Result set_unique_constraint(const query::SetUniqueConstraint& query)       = 0;
+        virtual gears::Result delete_unique_constraint(const query::DeleteUniqueConstraint& query) = 0;
     };
 } // namespace demiplane::database

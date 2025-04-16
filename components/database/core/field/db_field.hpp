@@ -195,7 +195,7 @@ namespace demiplane::database {
                 return value.toStyledString();
             } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
                 return std::format("{:%Y-%m-%d %X}", value);
-            } else if constexpr (is_vector_v<T>) {
+            } else if constexpr (gears::is_vector_v<T>) {
                 using V = typename T::value_type;
                 std::ostringstream oss;
                 oss << "ARRAY[";
@@ -232,7 +232,7 @@ namespace demiplane::database {
                 oss << "]";
                 return oss.str();
             } else {
-                static_assert(always_false_v<U>, "Unsupported field type for SQL conversion");
+                static_assert(gears::always_false_v<U>, "Unsupported field type for SQL conversion");
             }
             return {};
         }
@@ -262,7 +262,7 @@ namespace demiplane::database {
                 return SqlType::BOOLEAN;
             } else if constexpr (std::is_same_v<T, std::chrono::system_clock::time_point>) {
                 return SqlType::TIMESTAMP;
-            } else if constexpr (is_vector_v<T>) {
+            } else if constexpr (gears::is_vector_v<T>) {
                 using V = typename T::value_type;
                 if constexpr (std::is_same_v<V, int> || std::is_same_v<V, int32_t>) {
                     return SqlType::ARRAY_INT;
@@ -279,10 +279,10 @@ namespace demiplane::database {
                 } else if constexpr (std::is_same_v<V, std::chrono::system_clock::time_point>) {
                     return SqlType::ARRAY_TIMESTAMP;
                 } else {
-                    static_assert(always_false_v<T>, "Unsupported vector field type");
+                    static_assert(gears::always_false_v<T>, "Unsupported vector field type");
                 }
             } else {
-                static_assert(always_false_v<T>, "Unsupported field type");
+                static_assert(gears::always_false_v<T>, "Unsupported field type");
             }
             return {};
         }

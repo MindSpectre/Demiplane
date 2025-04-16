@@ -29,7 +29,7 @@ namespace demiplane::scroll {
         }
         return "UNKNOWN";
     }
-    class EntryConfig : Immovable {
+    class EntryConfig : gears::Immovable {
     public:
         bool add_time            = true;
         bool add_level           = true;

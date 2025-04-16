@@ -27,7 +27,7 @@ namespace demiplane::database {
     } // namespace query
     struct SearchTrait {
         virtual ~SearchTrait()                                                             = default;
-        [[nodiscard]] virtual Result setup_search_index(const query::SetIndexQuery& query) = 0;
-        [[nodiscard]] virtual Result drop_search_index(const query::DropIndexQuery& query) = 0;
+        [[nodiscard]] virtual gears::Result setup_search_index(const query::SetIndexQuery& query) = 0;
+        [[nodiscard]] virtual gears::Result drop_search_index(const query::DropIndexQuery& query) = 0;
     };
 } // namespace demiplane::database

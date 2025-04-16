@@ -4,7 +4,7 @@
 #include "entry_config.hpp"
 
 namespace demiplane::scroll {
-    class EntryProcessor : Immutable {
+    class EntryProcessor : gears::Immutable {
     public:
         [[nodiscard]] std::string make_header() const {
             std::ostringstream header_stream;

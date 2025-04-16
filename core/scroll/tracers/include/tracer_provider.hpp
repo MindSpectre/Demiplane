@@ -5,7 +5,7 @@
 
 
 namespace demiplane::scroll {
-    template <class Service = AnonymousClass>
+    template <class Service = gears::AnonymousClass>
     class TracerProvider {
     public:
         void set_tracer(const std::function<std::shared_ptr<Tracer<Service>>()>& tracer_setter) {
@@ -18,7 +18,7 @@ namespace demiplane::scroll {
         explicit TracerProvider(std::shared_ptr<Tracer<Service>> tracer) : tracer_(std::move(tracer)) {}
 
         TracerProvider() {
-            static_assert(HasStaticName<Service>, "Service must have static name()");
+            static_assert(gears::HasStaticName<Service>, "Service must have static name()");
             tracer_ = TracerFactory::create_default_console_tracer<Service>();
         }
         void set_tracer(const std::shared_ptr<Tracer<Service>>& tracer) {

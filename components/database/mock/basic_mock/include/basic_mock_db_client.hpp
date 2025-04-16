@@ -13,52 +13,50 @@
 
 namespace demiplane::database {
     class BasicMockDbClient final : public DbBase<BasicMockDbClient>,
-                                    public TransactionTrait,
-                                    public TableTrait,
-                                    public UniqueConstraintTrait {
+                                    public gears::InterfaceBundle<TransactionTrait, TableTrait, UniqueConstraintTrait> {
     public:
         BasicMockDbClient();
         ~BasicMockDbClient() override;
 
         BasicMockDbClient(const ConnectParams& params, std::shared_ptr<scroll::Tracer<BasicMockDbClient>> tracer)
             : DbBase(params, std::move(tracer)) {}
-        Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
+        gears::Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
 
-        Result start_transaction() override;
+        gears::Result start_transaction() override;
 
-        Result commit_transaction() override;
+        gears::Result commit_transaction() override;
 
-        Result rollback_transaction() override;
+        gears::Result rollback_transaction() override;
 
-        Result connect(const ConnectParams& params) override;
+        gears::Result connect(const ConnectParams& params) override;
 
-        Result drop_connect() override;
+        gears::Result drop_connect() override;
 
-        Result create_table(const query::CreateTableQuery& proposal) override;
+        gears::Result create_table(const query::CreateTableQuery& proposal) override;
 
-        Result drop_table(const query::DropTableQuery& table_name) override;
+        gears::Result drop_table(const query::DropTableQuery& table_name) override;
 
-        Result truncate_table(const query::TruncateTableQuery& table_name) override;
+        gears::Result truncate_table(const query::TruncateTableQuery& table_name) override;
 
-        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& table_name) override;
+        [[nodiscard]] gears::Interceptor<bool> check_table(const query::CheckTableQuery& table_name) override;
 
-        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
+        gears::Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
 
-        Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
+        gears::Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
 
 
-        [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& conditions) const override;
+        [[nodiscard]] gears::Interceptor<Records> select(const query::SelectQuery& conditions) const override;
 
-        Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;
+        gears::Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;
 
-        [[nodiscard]] Interceptor<uint32_t> count(const query::CountQuery& conditions) const override;
+        [[nodiscard]] gears::Interceptor<uint32_t> count(const query::CountQuery& conditions) const override;
 
 
         static constexpr const char* name() {
             return "BASIC_MOCK_DB_CLIENT";
         }
-        Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
-        Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
+        gears::Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
+        gears::Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
 
     protected:
         [[nodiscard]] std::exception_ptr analyze_exception(const std::exception& caught_exception) const override;

@@ -1,7 +1,5 @@
 #pragma once
 #include <string>
-#define SILENT_TABLE_CONSTRUCTOR(ClassName)                                             \
-    explicit ClassName(const std::string_view table_name) : TableContext(table_name) {}
 namespace demiplane::database::query {
     template <typename Derived>
     class TableContext {

@@ -23,7 +23,7 @@ namespace demiplane::database {
                                              public QueryUtilities<DeleteUniqueConstraint> {
         public:
             DeleteUniqueConstraint() = default;
-            SILENT_TABLE_CONSTRUCTOR(DeleteUniqueConstraint);
+            explicit DeleteUniqueConstraint(const std::string_view table_name) : TableContext(table_name) {};
         };
     } // namespace query
     struct UniqueConstraintTrait {

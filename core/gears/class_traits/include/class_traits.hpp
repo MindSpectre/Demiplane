@@ -29,7 +29,7 @@ namespace demiplane::gears {
     };
 
 
-    template <PureInterface... Interfaces>
+    template <Interface... Interfaces>
     struct InterfaceBundle : Interfaces... {
         using Interfaces::Interfaces...;
         InterfaceBundle() = default;

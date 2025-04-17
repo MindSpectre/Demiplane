@@ -21,7 +21,7 @@ namespace demiplane::gears {
 
 
     template <typename T>
-    concept PureInterface = std::is_abstract_v<T>;
+    concept Interface = std::is_abstract_v<T>;
 
 
 }

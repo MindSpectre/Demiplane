@@ -8,13 +8,13 @@ namespace demiplane::database {
     public:
         template <typename T>
             requires std::default_initializable<T>
-        static SharedFieldPtr shared_field(std::string name, T value = T()) {
+        static SharedFieldPtr shared_field(std::string name, T value = T{}) {
             return std::make_shared<Field<T>>(std::move(name), std::move(value));
         }
 
         template <typename T>
             requires std::default_initializable<T>
-        static UniqueFieldPtr unique_field(std::string name, T value = T()) {
+        static UniqueFieldPtr unique_field(std::string name, T value = T{}) {
             return std::make_unique<Field<T>>(std::move(name), std::move(value));
         }
     };

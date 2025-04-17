@@ -4,7 +4,7 @@
 #include <string>
 
 #include "db_error_codes.hpp"
-
+//TODO: rework
 namespace demiplane::database::exceptions {
     class DatabaseException : public std::runtime_error {
     protected:

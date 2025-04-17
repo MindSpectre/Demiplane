@@ -1,5 +1,5 @@
 #pragma once
-
+// TODO: move to RIME
 namespace demiplane {
     class NonCopyable {
     public:
@@ -19,17 +19,6 @@ namespace demiplane {
         Immovable& operator=(Immovable&& other) noexcept = delete;
 
         ~Immovable() = default;
-    };
-    class Singleton {
-    protected:
-        Singleton()  = default;
-        virtual ~Singleton() = default;
-
-    public:
-        Singleton(const Singleton&)            = delete;
-        Singleton& operator=(const Singleton&) = delete;
-        Singleton(Singleton&&)                 = delete;
-        Singleton& operator=(Singleton&&)      = delete;
     };
     class Immutable {
     public:

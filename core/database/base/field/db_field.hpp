@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
 #include <format> // C++23: for std::chrono::format
 #include <json/json.h>
 #include <memory>
@@ -42,13 +41,16 @@ namespace demiplane::database {
     // A class representing a UUID field.
     class Uuid {
     public:
-        static constexpr std::string_view use_generated = "use_generated";
-        static constexpr std::string_view null_value    = "null";
+        static constexpr auto use_generated = "use_generated";
+        static constexpr auto null_value    = "null";
 
         Uuid() = default;
         explicit Uuid(std::string value, const bool is_primary = true) : primary_{is_primary}, uuid_(std::move(value)) {
             is_null_   = (uuid_ == null_value);
             generated_ = (!is_null_ && uuid_ == use_generated);
+            if (!is_valid_uuid(uuid_)) {
+                throw std::invalid_argument("Uuid is not valid.");
+            }
         }
 
         Uuid& operator=(std::string other) {
@@ -68,23 +70,39 @@ namespace demiplane::database {
             return primary_;
         }
 
-        Uuid& make_generated() noexcept {
+        Uuid& set_generated() noexcept {
             generated_ = true;
             is_null_   = false;
             return *this;
         }
-        Uuid& make_null() noexcept {
-            uuid_      = std::string(null_value);
+        Uuid& set_null() noexcept {
+            uuid_      = null_value;
             is_null_   = true;
             generated_ = false;
             primary_   = false;
             return *this;
         }
-        Uuid& make_primary() noexcept {
+        Uuid& set_primary() noexcept {
             primary_ = true;
             is_null_ = false;
             return *this;
         }
+
+        Uuid& unset_generated() noexcept {
+            generated_ = false;
+            return *this;
+        }
+        Uuid& unset_null() noexcept {
+            uuid_      = use_generated;
+            is_null_   = false;
+            generated_ = true;
+            return *this;
+        }
+        Uuid& unset_primary() noexcept {
+            primary_ = false;
+            return *this;
+        }
+
         [[nodiscard]] const std::string& get_id() const noexcept {
             return uuid_;
         }
@@ -94,10 +112,10 @@ namespace demiplane::database {
 
         void set_id(const std::string_view uuid) {
             if (uuid.empty()) {
-                throw std::invalid_argument("Uuid cannot be empty");
+                throw std::invalid_argument("Uuid cannot be empty.");
             }
             if (!is_valid_uuid(uuid)) {
-                throw std::invalid_argument("Uuid is not valid");
+                throw std::invalid_argument("Uuid is not valid.");
             }
             uuid_      = uuid;
             is_null_   = (uuid_ == null_value);
@@ -143,10 +161,10 @@ namespace demiplane::database {
         }
 
     private:
-        bool primary_     = true;
-        bool generated_   = true;
-        bool is_null_     = false;
-        std::string uuid_ = std::string(use_generated);
+        bool primary_   = true;
+        bool generated_ = true;
+        bool is_null_   = false;
+        std::string uuid_{use_generated};
     };
     // --- Helpers for converting field values to SQL string representations ---
     namespace detail {
@@ -174,7 +192,7 @@ namespace demiplane::database {
         template <typename U>
         std::string convert_value(U&& value) {
             using T = std::remove_cvref_t<U>;
-            if constexpr (std::is_same_v<T, std::string>) {
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> || std::is_same_v<T, const char*>) {
                 if constexpr (std::is_lvalue_reference_v<U>) {
                     return value;
                 } else {
@@ -206,11 +224,18 @@ namespace demiplane::database {
                     first = false;
                     if constexpr (std::is_same_v<V, bool>) {
                         oss << convert_value(static_cast<bool>(elem));
-                    }
-                    else if constexpr (std::is_same_v<V, Uuid>) {
+                    } else if constexpr (std::is_same_v<V, Uuid>) {
                         // In an array of UUIDs, throw if any element is “default/primary”
-                        if (elem.is_primary() || elem.is_null() || elem.is_generated()) {
-                            throw std::runtime_error("For array field received uuid without value");
+                        if (elem.is_primary()) {
+                            throw std::invalid_argument("Arrays cannot contain primary keys.");
+                        }
+                        if (elem.is_null()) {
+                            throw std::invalid_argument(
+                                "Arrays cannot contain null ids. Null key element could be removed.");
+                        }
+                        if (elem.is_generated()) {
+                            throw std::invalid_argument("For array field received uuid without value. Array does not "
+                                                        "support db generation elements.");
                         }
                         if constexpr (std::is_lvalue_reference_v<decltype(elem)>) {
                             oss << elem.get_id();
@@ -246,7 +271,7 @@ namespace demiplane::database {
                 return SqlType::BIGINT;
             } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
                 return SqlType::DOUBLE_PRECISION;
-            } else if constexpr (std::is_same_v<T, std::string>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> || std::is_same_v<T, const char*>) {
                 return SqlType::TEXT;
             } else if constexpr (std::is_same_v<T, Json::Value>) {
                 return SqlType::JSONB;
@@ -264,7 +289,7 @@ namespace demiplane::database {
                     return SqlType::ARRAY_BIGINT;
                 } else if constexpr (std::is_same_v<V, double> || std::is_same_v<V, float>) {
                     return SqlType::ARRAY_DOUBLE;
-                } else if constexpr (std::is_same_v<V, std::string>) {
+                } else if constexpr (std::is_same_v<V, std::string> || std::is_same_v<V, std::string_view> || std::is_same_v<V, const char*>) {
                     return SqlType::ARRAY_TEXT;
                 } else if constexpr (std::is_same_v<V, bool>) {
                     return SqlType::ARRAY_BOOLEAN;
@@ -346,8 +371,8 @@ namespace demiplane::database {
         }
 
         // Convert the field value to a string for SQL queries.
-        [[nodiscard]] virtual std::string to_string() const& = 0;
-        [[nodiscard]] virtual std::string to_string() &&     = 0;
+        [[nodiscard]] virtual std::string to_string() const&  = 0;
+        [[nodiscard]] virtual std::string pull_to_string() = 0;
 
         // Return the SQL type (as determined in the constructor).
         [[nodiscard]] virtual SqlType get_sql_type() const {
@@ -401,7 +426,8 @@ namespace demiplane::database {
         [[nodiscard]] std::string to_string() const& override {
             return detail::convert_value(value_);
         }
-        [[nodiscard]] std::string to_string() && override {
+
+        [[nodiscard]] std::string pull_to_string() override {
             return detail::convert_value(std::move(value_));
         }
 
@@ -422,6 +448,12 @@ namespace demiplane::database {
         }
         explicit Column(std::string name, const SqlType sqt) : column_name_(std::move(name)) {
             sql_type_ = sqt;
+        }
+        [[nodiscard]] const std::string& get_column_name() const {
+            return column_name_;
+        }
+        void set_column_name(std::string column_name) {
+            column_name_ = std::move(column_name);
         }
         [[nodiscard]] SqlType get_sql_type() const {
             return sql_type_;

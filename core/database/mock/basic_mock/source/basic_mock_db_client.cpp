@@ -1,84 +1,88 @@
 #include "basic_mock_db_client.hpp"
+#include "ires.hpp"
+using namespace demiplane::database;
 #define ENABLE_TRACING
-demiplane::database::BasicMockDbClient::~BasicMockDbClient() {}
-void demiplane::database::BasicMockDbClient::create_database(std::string_view host, uint32_t port,
-    std::string_view db_name, std::string_view login, std::string_view password) {
-    TRACE_INFO(tracer_, "create_database()");
+
+BasicMockDbClient::BasicMockDbClient() {
+    i_tracer = scroll::TracerFactory::create_default_console_tracer<BasicMockDbClient>();
+    TRACE_INFO(i_tracer, "BasicMockDbClient has been created.");
 }
-void demiplane::database::BasicMockDbClient::create_database(const ConnectParams& pr) {}
-void demiplane::database::BasicMockDbClient::start_transaction() {
-    TRACE_INFO(tracer_, "BasicMockDbClient::start_transaction()");
+BasicMockDbClient::~BasicMockDbClient() {
+    TRACE_INFO(i_tracer, "BasicMockDbClient has been destructed.");
 }
-void demiplane::database::BasicMockDbClient::commit_transaction() {
-    TRACE_INFO(tracer_, "BasicMockDbClient::commit_transaction()");
+demiplane::Result BasicMockDbClient::create_database(
+    const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::create_database()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::rollback_transaction() {
-    TRACE_INFO(tracer_, "BasicMockDbClient::rollback_transaction()");
+
+demiplane::Result BasicMockDbClient::start_transaction() {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::start_transaction()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::connect(const ConnectParams& params) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::connect()");
+demiplane::Result BasicMockDbClient::commit_transaction() {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::commit_transaction()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::drop_connect() {
-    TRACE_INFO(tracer_, "BasicMockDbClient::drop_connect()");
+demiplane::Result BasicMockDbClient::rollback_transaction() {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::rollback_transaction()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::create_table(const query::CreateQuery& proposal) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::create_table()");
+demiplane::Result BasicMockDbClient::connect(const ConnectParams& params) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::connect()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::delete_table(std::string_view table_name) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::delete_table()");
+demiplane::Result BasicMockDbClient::drop_connect() {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::drop_connect()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::truncate_table(std::string_view table_name) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::truncate_table()");
+demiplane::Result BasicMockDbClient::create_table(const query::CreateTableQuery& proposal) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::create_table()");
+    return Result::sOk();
 }
-bool demiplane::database::BasicMockDbClient::check_table(std::string_view table_name) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::check_table()");
-    return true;
+demiplane::Result BasicMockDbClient::drop_table(const query::DropTableQuery& table_name) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::delete_table()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::make_unique_constraint(
-    std::string_view table_name, FieldCollection key_fields) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::make_unique_constraint()");
+demiplane::Result BasicMockDbClient::truncate_table(const query::TruncateTableQuery& table_name) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::truncate_table()");
+    return Result::sOk();
+
 }
-void demiplane::database::BasicMockDbClient::setup_search_index(std::string_view table_name, FieldCollection fields) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::setup_search_index()");
+demiplane::Interceptor<bool> BasicMockDbClient::check_table(const query::CheckTableQuery& table_name) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::check_table()");
+    return Interceptor<bool>{true};
 }
-void demiplane::database::BasicMockDbClient::drop_search_index(std::string_view table_name) const {
-    TRACE_INFO(tracer_, "BasicMockDbClient::drop_search_index()");
+demiplane::Interceptor<std::optional<Records>> BasicMockDbClient::insert(query::InsertQuery query) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::insert()");
+    return Interceptor<std::optional<Records>>::sOk();
 }
-void demiplane::database::BasicMockDbClient::remove_search_index(std::string_view table_name) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::remove_search_index()");
+demiplane::Interceptor<std::optional<Records>> BasicMockDbClient::upsert(query::UpsertQuery&& query) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::upsert()");
+    return Interceptor<std::optional<Records>>::sOk();
 }
-void demiplane::database::BasicMockDbClient::restore_search_index(std::string_view table_name) const {
-    TRACE_INFO(tracer_, "BasicMockDbClient::restore_search_index()");
-}
-void demiplane::database::BasicMockDbClient::insert(query::InsertQuery&& query) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::insert()");
-}
-void demiplane::database::BasicMockDbClient::upsert(query::UpsertQuery&& query) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::upsert()");
-}
-demiplane::database::Records demiplane::database::BasicMockDbClient::insert_with_returning(query::InsertQuery&& query) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::insert_with_returning()");
-    return {};
-}
-demiplane::database::Records demiplane::database::BasicMockDbClient::upsert_with_returning(query::UpsertQuery&& query) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::upsert_with_returning()");
-    return {};
-}
-demiplane::database::Records demiplane::database::BasicMockDbClient::select(
+
+demiplane::Interceptor<Records> BasicMockDbClient::select(
     const query::SelectQuery& conditions) const {
-    TRACE_INFO(tracer_, "BasicMockDbClient::select()");
-    return {};
+    TRACE_INFO(i_tracer, "BasicMockDbClient::select()");
+    return demiplane::Interceptor<Records>{};
 }
-void demiplane::database::BasicMockDbClient::remove(const query::DeleteQuery& conditions) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::remove()");
+demiplane::Interceptor<std::optional<Records>> BasicMockDbClient::remove(const query::RemoveQuery& conditions) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::remove()");
+    return Interceptor<std::optional<Records>>::sOk();
 }
-uint32_t demiplane::database::BasicMockDbClient::count(const query::CountQuery& conditions) const {
-    TRACE_INFO(tracer_, "BasicMockDbClient::count()");
-    return 0;
+demiplane::Interceptor<uint32_t> BasicMockDbClient::count(const query::CountQuery& conditions) const {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::count()");
+    return Interceptor<uint32_t>{0};
 }
-void demiplane::database::BasicMockDbClient::set_search_fields(std::string_view table_name, FieldCollection fields) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::set_search_fields()");
+demiplane::Result BasicMockDbClient::set_unique_constraint(const query::SetUniqueConstraint& query) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::make_unique_constraint()");
+    return Result::sOk();
 }
-void demiplane::database::BasicMockDbClient::set_conflict_fields(std::string_view table_name, FieldCollection fields) {
-    TRACE_INFO(tracer_, "BasicMockDbClient::set_conflict_fields()");
+demiplane::Result BasicMockDbClient::delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) {
+    TRACE_INFO(i_tracer, "BasicMockDbClient::delete_unique_constraint()");
+    return Result::sOk();
+}
+std::exception_ptr BasicMockDbClient::analyze_exception(const std::exception& caught_exception) const {
+    return std::make_exception_ptr(caught_exception);
 }

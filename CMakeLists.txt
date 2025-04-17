@@ -31,6 +31,13 @@ find_package(libpqxx REQUIRED)
 #find_package(Libevent CONFIG REQUIRED)
 find_package(Drogon CONFIG REQUIRED)
 # Conditionally find Boost if enabled
+
+#custom directives
+include(cmake/tests.cmake)
+
+
+
+
 if (USE_BOOST)
     # Boost settings (adjust as needed)
 

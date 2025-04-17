@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../db_shortcuts.hpp"
+
 namespace demiplane::database::query {
 
     template <typename Derived>
@@ -9,10 +11,10 @@ namespace demiplane::database::query {
             returning_fields_ = std::move(returning_fields);
             return static_cast<Derived&>(*this);
         }
-        const Columns& returning_fields() const {
+        [[nodiscard]] const Columns& returning_fields() const {
             return returning_fields_;
         }
-        bool has_returning_fields() const {
+        [[nodiscard]] bool has_returning_fields() const {
             return !returning_fields_.empty();
         }
     protected:

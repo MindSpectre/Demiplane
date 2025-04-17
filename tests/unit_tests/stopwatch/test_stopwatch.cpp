@@ -3,7 +3,6 @@
 
 #include "stopwatch.hpp"
 
-
 using namespace demiplane;
 
 class StopwatchTest : public testing::Test
@@ -83,7 +82,6 @@ TEST_F(StopwatchTest, TestAccurateFlagging)
     sw.flag("Initial Flag");
     delay_ms(10); // Simulate a delay
     sw.flag("Second Flag");
-
     const auto end_time = std::chrono::high_resolution_clock::now();
 
     const auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
@@ -107,19 +105,7 @@ TEST_F(StopwatchTest, TestFinishAndPrint)
     EXPECT_NO_THROW(sw.finish()); // Should be empty before adding another flag
 }
 
-// Test the destructor calls print() automatically
-TEST(StopwatchDestructorTest, TestDestructorCallsPrint)
-{
-    {
-        Stopwatch<> temp_stopwatch;
-        temp_stopwatch.start();
-        temp_stopwatch.flag("Start Flag");
-        StopwatchTest::delay_ms(10);
-        temp_stopwatch.flag("End Flag");
 
-        // When temp_stopwatch goes out of scope, print() should be called automatically
-    } // Destructor should be called here
-}
 
 // Test flags capacity reservation and handling large number of flags
 TEST_F(StopwatchTest, TestFlagCapacityHandling)
@@ -131,7 +117,6 @@ TEST_F(StopwatchTest, TestFlagCapacityHandling)
         large_sw.flag("Flag " + std::to_string(i));
         delay_ms(1); // Delay to ensure flag timestamps are distinct
     }
-
     EXPECT_NO_THROW(large_sw.finish()); // Ensure that handling a large number of flags works smoothly
 }
 
@@ -151,4 +136,17 @@ TEST(StopwatchTimeUnitTest, TestDifferentTimeUnits)
     // Ensure there are no issues with different time units
     EXPECT_NO_THROW(micro_sw.finish());
     EXPECT_NO_THROW(nano_sw.finish());
+}
+// Test the destructor calls print() automatically
+TEST(StopwatchDestructorTest, TestDestructorCallsPrint)
+{
+    {
+        Stopwatch<> temp_stopwatch;
+        temp_stopwatch.start();
+        temp_stopwatch.flag("Start Flag");
+        StopwatchTest::delay_ms(10);
+        temp_stopwatch.flag("End Flag");
+
+        // When temp_stopwatch goes out of scope, print() should be called automatically
+    } // Destructor should be called here
 }

@@ -1,84 +1,70 @@
 // pqxx_client.hpp
 #pragma once
 
-#include <iostream>
 #include <memory>
-#include <regex>
 #include <string_view>
 #include <vector>
 
 #include "db_interface.hpp"
-#include "tracer_factory.hpp"
-
-
+#include "scroll_tracer.hpp"
+#include "traits/table_management_trait.hpp"
+#include "traits/transaction_trait.hpp"
+#include "traits/unique_constraint_trait.hpp"
 
 
 namespace demiplane::database {
-    class BasicMockDbClient final : public DbInterface, HasName<BasicMockDbClient> {
+    class BasicMockDbClient final : public DbInterface<BasicMockDbClient>,
+                                    public TransactionTrait,
+                                    public TableTrait,
+                                    public UniqueConstraintTrait,
+                                    HasName<BasicMockDbClient> {
     public:
+        BasicMockDbClient();
         ~BasicMockDbClient() override;
 
-        explicit BasicMockDbClient(std::shared_ptr<scroll::TracerInterface> tracer) : tracer_(std::move(tracer)) {}
+        BasicMockDbClient(
+            const ConnectParams& params, std::shared_ptr<scroll::TracerInterface<BasicMockDbClient>> tracer)
+            : DbInterface(params, std::move(tracer)) {}
+        Result create_database(const std::shared_ptr<DatabaseConfig>& config, const ConnectParams& pr) override;
 
-        BasicMockDbClient(const ConnectParams& params, std::shared_ptr<scroll::TracerInterface> tracer)
-            : DbInterface(params), tracer_(std::move(tracer)) {}
+        Result start_transaction() override;
 
-        static void create_database(std::string_view host, uint32_t port, std::string_view db_name,
-            std::string_view login, std::string_view password);
+        Result commit_transaction() override;
 
-        static void create_database(const ConnectParams& pr);
+        Result rollback_transaction() override;
 
-        void start_transaction() override;
+        Result connect(const ConnectParams& params) override;
 
-        void commit_transaction() override;
+        Result drop_connect() override;
 
-        void rollback_transaction() override;
+        Result create_table(const query::CreateTableQuery& proposal) override;
 
-        void connect(const ConnectParams& params) override;
+        Result drop_table(const query::DropTableQuery& table_name) override;
 
-        void drop_connect() override;
+        Result truncate_table(const query::TruncateTableQuery& table_name) override;
 
-        void create_table(const query::CreateQuery& proposal) override;
+        [[nodiscard]] Interceptor<bool> check_table(const query::CheckTableQuery& table_name) override;
 
-        void delete_table(std::string_view table_name) override;
+        Interceptor<std::optional<Records>> insert(query::InsertQuery query) override;
 
-        void truncate_table(std::string_view table_name) override;
+        Interceptor<std::optional<Records>> upsert(query::UpsertQuery&& query) override;
 
-        [[nodiscard]] bool check_table(std::string_view table_name) override;
 
-        void make_unique_constraint(std::string_view table_name, FieldCollection key_fields) override;
+        [[nodiscard]] Interceptor<Records> select(const query::SelectQuery& conditions) const override;
 
-        void setup_search_index(std::string_view table_name, FieldCollection fields) override;
+        Interceptor<std::optional<Records>> remove(const query::RemoveQuery& conditions) override;
 
-        void drop_search_index(std::string_view table_name) const override;
+        [[nodiscard]] Interceptor<uint32_t> count(const query::CountQuery& conditions) const override;
 
-        void remove_search_index(std::string_view table_name) override;
-
-        void restore_search_index(std::string_view table_name) const override;
-
-        void insert(query::InsertQuery&& query) override;
-
-        void upsert(query::UpsertQuery&& query) override;
-
-        Records insert_with_returning(query::InsertQuery&& query) override;
-
-        Records upsert_with_returning(query::UpsertQuery&& query) override;
-
-        [[nodiscard]] Records select(const query::SelectQuery& conditions) const override;
-
-        void remove(const query::DeleteQuery& conditions) override;
-
-        [[nodiscard]] uint32_t count(const query::CountQuery& conditions) const override;
-
-        void set_search_fields(std::string_view table_name, FieldCollection fields) override;
-
-        void set_conflict_fields(std::string_view table_name, FieldCollection fields) override;
 
         static constexpr const char* name() {
             return "BASIC_MOCK_DB_CLIENT";
         }
+        Result set_unique_constraint(const query::SetUniqueConstraint& query) override;
+        Result delete_unique_constraint(const query::DeleteUniqueConstraint& table_name) override;
 
-    private:
-        std::shared_ptr<scroll::TracerInterface> tracer_;
+    protected:
+        [[nodiscard]] std::exception_ptr analyze_exception(const std::exception& caught_exception) const override;
+
     };
 } // namespace demiplane::database

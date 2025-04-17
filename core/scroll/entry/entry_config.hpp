@@ -3,7 +3,7 @@
 #include <string>
 
 #include "chrono_utils.hpp"
-#include "traits_classes.hpp"
+#include <demiplane/gears>
 namespace demiplane::scroll {
     enum class LogLevel {
         Debug = 0,
@@ -29,7 +29,7 @@ namespace demiplane::scroll {
         }
         return "UNKNOWN";
     }
-    class EntryConfig : Immovable {
+    class EntryConfig : gears::Immovable {
     public:
         bool add_time            = true;
         bool add_level           = true;

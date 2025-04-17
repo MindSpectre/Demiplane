@@ -2,13 +2,9 @@
 // pqxx_client_test.cpp
 
 #include <chrono>
+#include <demiplane/db4>
 #include <gtest/gtest.h>
 #include <trantor/utils/Logger.h>
-
-#include "pqxx_client.hpp"
-// #include "pqxx_utilities.hpp"
-#include "db_interface_factory.hpp"
-#include "stopwatch.hpp"
 using namespace demiplane::database;
 using namespace query;
 class PqxxClientTest : public testing::Test {
@@ -23,7 +19,7 @@ protected:
 
     // Pointer to the PqxxClient
     std::shared_ptr<PqxxClient> db_client_;
-    std::shared_ptr<demiplane::scroll::TracerInterface<PqxxClient>> tracer;
+    std::shared_ptr<demiplane::scroll::Tracer<PqxxClient>> tracer;
     // Test table name
     std::string test_table_ = "test_table";
     CheckTableQuery check_q{test_table_};
@@ -129,7 +125,7 @@ TEST_F(PqxxClientTest, InsertTest) {
     EXPECT_EQ(results->size(), 2);
 
     // Check content
-    for (auto& rec : results.response()) {
+    for (auto& rec : results.ref()) {
         const auto id   = rec[0]->as<int32_t>();
         const auto name = rec[1]->as<std::string>();
 
@@ -148,7 +144,7 @@ TEST_F(PqxxClientTest, EmptyInsertTest) {
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
     // Add data to the table
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     EXPECT_THROW(result = db_client_->insert(std::move(query)), std::runtime_error);
 }
 
@@ -170,7 +166,7 @@ TEST_F(PqxxClientTest, InsertTestWithReturn) {
 
     const Columns return_fields = {Column{"id", SqlType::INT}};
     // Add data to the table
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     InsertQuery query;
     query.table(test_table_).insert(std::move(records)).return_with(return_fields);
     query.use_params = false;
@@ -213,7 +209,7 @@ TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
     query.use_params = false;
     // Add data to the table
     Records results;
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     EXPECT_NO_THROW(result = db_client_->insert(std::move(query)));
     EXPECT_TRUE(result);
     results = result->value();
@@ -252,7 +248,7 @@ TEST_F(PqxxClientTest, InsertTestWithUuidGenerate) {
     query.use_params = false;
     // Add data to the table
     Records results;
-    demiplane::Interceptor<std::optional<Records>> result;
+    demiplane::gears::Interceptor<std::optional<Records>> result;
     EXPECT_NO_THROW(result = db_client_->insert(std::move(query)));
     EXPECT_TRUE(result);
     results = result->value();
@@ -273,7 +269,7 @@ TEST_F(PqxxClientTest, UpsertTestFullRecord) {
     record1.push_back(std::make_unique<Field<std::string>>("name", "Alice"));
     record1.push_back(std::make_unique<Field<std::string>>("description", ""));
     records.push_back(std::move(record1));
-    demiplane::Interceptor<std::optional<Records>> result1;
+    demiplane::gears::Interceptor<std::optional<Records>> result1;
     // Add initial data
     EXPECT_NO_THROW(result1 = db_client_->insert(InsertQuery{}.table(test_table_).insert(std::move(records))));
     EXPECT_TRUE(result1);
@@ -293,7 +289,7 @@ TEST_F(PqxxClientTest, UpsertTestFullRecord) {
     EXPECT_NO_THROW(db_client_->upsert(std::move(upsert_query)));
     EXPECT_TRUE(result1);
     // Retrieve data and verify
-    demiplane::Interceptor<Records> result = db_client_->select(select_all_q);
+    demiplane::gears::Interceptor<Records> result = db_client_->select(select_all_q);
     EXPECT_TRUE(result);
     const auto& results = result.ref();
     EXPECT_EQ(results.size(), 1);
@@ -319,7 +315,7 @@ TEST_F(PqxxClientTest, UpsertTestWithReturn) {
 
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok());
 
     // Upsert data
     Records upsert_records;
@@ -334,7 +330,7 @@ TEST_F(PqxxClientTest, UpsertTestWithReturn) {
         .new_values(std::move(upsert_records))
         .when_conflict_in_these_columns(Columns{Column{"id", SqlType::INT}})
         .replace_these_columns(Columns{Column{"description", SqlType::TEXT}});
-    EXPECT_NO_THROW(db_client_->upsert(std::move(upsert_query)));
+    EXPECT_TRUE(db_client_->upsert(std::move(upsert_query)));
 
     // Retrieve data and verify
     const auto results = db_client_->select(select_all_q);
@@ -363,7 +359,7 @@ TEST_F(PqxxClientTest, UpsertTestPartial) {
     // Add initial data
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok());
 
     // Upsert data
     Records upsert_records;
@@ -380,7 +376,7 @@ TEST_F(PqxxClientTest, UpsertTestPartial) {
         .new_values(std::move(upsert_records))
         .when_conflict_in_these_columns(Columns{Column{"id", SqlType::INT}})
         .replace_these_columns(Columns{Column{"description", SqlType::TEXT}});
-    EXPECT_NO_THROW(db_client_->upsert(std::move(upsert_query)));
+    EXPECT_TRUE(db_client_->upsert(std::move(upsert_query)));
 
     const auto results = db_client_->select(select_all_q);
 
@@ -407,7 +403,7 @@ TEST_F(PqxxClientTest, RemoveTest) {
 
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok());
 
     // Remove data
     RemoveQuery remove_query;
@@ -434,7 +430,7 @@ TEST_F(PqxxClientTest, CountTest) {
 
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok() == true);
     CountQuery count_query;
     count_query.table(test_table_).where(WhereClause{"id", WhereClause::Operator::EQUAL, 1});
     const uint32_t count = *db_client_->count(count_query);
@@ -455,7 +451,7 @@ TEST_F(PqxxClientTest, CountAllTest) {
 
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok());
     const uint32_t count_all = *db_client_->count(CountQuery{}.table(test_table_));
     EXPECT_EQ(count_all, 5);
 }
@@ -581,7 +577,7 @@ TEST_F(PqxxClientTest, TruncateTableTest) {
     records.push_back(std::move(record2));
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok());
 
 
     EXPECT_NO_THROW(db_client_->truncate_table(TruncateTableQuery{test_table_}));
@@ -612,7 +608,7 @@ TEST_F(PqxxClientTest, TransactionSimpleTest) {
     // Add data to the table
     InsertQuery query;
     query.table(test_table_).insert(std::move(records));
-    EXPECT_NO_THROW(db_client_->insert(query).is_ok() == true);
+    EXPECT_NO_THROW({ EXPECT_TRUE(db_client_->insert(query).is_ok() == true); });
     EXPECT_NO_THROW(db_client_->commit_transaction());
     auto results = *db_client_->select(select_all_q);
     EXPECT_EQ(results.size(), 2);
@@ -623,7 +619,7 @@ TEST_F(PqxxClientTest, TransactionSimpleTest) {
     // Test rollback
     EXPECT_NO_THROW(db_client_->start_transaction());
 
-    EXPECT_NO_THROW(db_client_->insert(std::move(query)).is_ok() == true);
+    EXPECT_NO_THROW(EXPECT_TRUE(db_client_->insert(std::move(query)).is_ok()));
 
     EXPECT_NO_THROW(db_client_->rollback_transaction());
     EXPECT_EQ(db_client_->select(select_all_q)->size(), 0);
@@ -631,7 +627,7 @@ TEST_F(PqxxClientTest, TransactionSimpleTest) {
 
 TEST_F(PqxxClientTest, TransactionConquerenteTest) {
     EXPECT_NO_THROW(db_client_->start_transaction());
-    demiplane::Result result;
+    demiplane::gears::Result result;
     EXPECT_NO_THROW(result = db_client_->start_transaction());
     EXPECT_TRUE(result.is_err());
     EXPECT_NO_THROW(db_client_->commit_transaction());

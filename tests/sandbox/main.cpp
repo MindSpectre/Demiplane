@@ -1,15 +1,16 @@
-#define ENABLE_TRACING
+#include <demiplane/scroll>
 
-#include "scroll_tracer.hpp"
+#define ENABLE_TRACING
+#include <demiplane/trace_macros>
 
 using namespace demiplane;
-class ServiceX : public HasName<ServiceX> {
+class ServiceX  {
     public:
     static constexpr std::string_view name() { return "ServiceX"; }
 };
 int main() {
-    auto cfg = demiplane::scroll::ScrollConfigFactory::create_file_tracer_config({});
-    auto tracer = scroll::TracerFactory::create_console_tracer<ServiceX>(
+    auto cfg          = scroll::ScrollConfigFactory::create_file_tracer_config({});
+    const auto tracer = scroll::TracerFactory::create_console_tracer<ServiceX>(
         scroll::ScrollConfigFactory::create_default_console_tracer_config());
     TRACE_DEBUG(tracer, "1234");
     TRACE_INFO(tracer, "1234");

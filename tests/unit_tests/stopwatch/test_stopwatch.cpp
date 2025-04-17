@@ -3,7 +3,7 @@
 
 #include "stopwatch.hpp"
 
-using namespace demiplane;
+using namespace demiplane::chrono;
 
 class StopwatchTest : public testing::Test
 {

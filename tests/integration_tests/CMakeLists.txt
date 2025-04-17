@@ -3,8 +3,7 @@ add_integration_test(${INTEGRATION_TESTING_TARGET}.PqxxClientTest
 )
 target_link_libraries(${INTEGRATION_TESTING_TARGET}.PqxxClientTest
         PRIVATE
-        Demiplane::Database::Postgres
-        Demiplane::Database::Factory
+        Demiplane::Database
         ${TEST_NECESSARY_LIBS}
 
 )

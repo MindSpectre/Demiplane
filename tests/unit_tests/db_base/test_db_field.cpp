@@ -61,7 +61,7 @@ TEST(FieldTest, ToString) {
     // Test chrono::system_clock::time_point
     auto now = std::chrono::system_clock::now();
     Field timeField("timestamp", now);
-    EXPECT_EQ(timeField.to_string(), demiplane::utilities::chrono::UTCClock::current_time_ymd());
+    EXPECT_EQ(timeField.to_string(), demiplane::chrono::utilities::UTCClock::current_time_ymd());
 }
 
 TEST(FieldTest, GetSqlType) {
@@ -137,7 +137,7 @@ TEST(FieldTest, ChronoTimePointToStringRvalue) {
     const auto now = std::chrono::system_clock::now();
     Field timeField("timestamp", now);
 
-    EXPECT_EQ(std::move(timeField).to_string(), demiplane::utilities::chrono::UTCClock::current_time_ymd());
+    EXPECT_EQ(std::move(timeField).to_string(), demiplane::chrono::utilities::UTCClock::current_time_ymd());
 }
 
 // Test for UUID handling in SqlType initialization (UUID NOT NULL)

@@ -8,7 +8,6 @@ add_unit_test(${UNIT_TESTING_TARGET}.Stopwatch
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
         PRIVATE
-        Demiplane::Stopwatch
         ${TEST_NECESSARY_LIBS}
 )
 ##############################################################################
@@ -51,7 +50,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
-        Demiplane::Multithread::ThreadPool
+        Demiplane::Multithread
         ${TEST_NECESSARY_LIBS}
 
 )
@@ -101,7 +100,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.PqxxQueryEngine
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.PqxxQueryEngine
         PRIVATE
-        Demiplane::Database::Postgres
+        Demiplane::Database::Pqxx
         ${TEST_NECESSARY_LIBS}
 
 )

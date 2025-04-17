@@ -1,5 +1,5 @@
 #pragma once
-#include "../tracer_interface.hpp"
+#include "../tracer_base.hpp"
 
 namespace demiplane::tracing {
 

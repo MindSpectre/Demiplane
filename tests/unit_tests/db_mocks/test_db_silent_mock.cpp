@@ -48,8 +48,8 @@ protected:
     }
 };
 TEST_F(SilentMockDbClientTest, CallAllMethods) {
-    ConnectParams params;
-    demiplane::Stopwatch<std::chrono::seconds> sw;
+    const ConnectParams params;
+    demiplane::chrono::Stopwatch<std::chrono::seconds> sw;
     const auto db_config = std::make_shared<DatabaseConfig>();
     sw.start("Silent Mock Database Test");
     client.create_database(db_config, params);

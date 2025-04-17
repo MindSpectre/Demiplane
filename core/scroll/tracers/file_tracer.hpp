@@ -2,11 +2,11 @@
 
 #include <queue>
 
-#include "../tracer_interface.hpp"
+#include "tracer_base.hpp"
 
 namespace demiplane::scroll {
     template <class Service>
-    class FileTracer final : public TracerInterface<Service> {
+    class FileTracer final : public Tracer<Service> {
     public:
         ~FileTracer() override {
             std::lock_guard lock(mutex_);
@@ -73,13 +73,13 @@ namespace demiplane::scroll {
         void new_file() {
             set_file(create_log_file_name(directory_path_));
         }
-        explicit FileTracer(std::shared_ptr<FileTracerConfig> config) : TracerInterface<Service>(config), config_(std::move(config)) {}
+        explicit FileTracer(std::shared_ptr<FileTracerConfig> config) : Tracer<Service>(config), config_(std::move(config)) {}
 
     private:
         std::shared_ptr<FileTracerConfig> config_;
         static std::string create_log_file_name(const std::string_view directory_path) {
             std::ostringstream oss;
-            oss << directory_path << "log_" << utilities::chrono::LocalClock::current_time_dmy() << ".log";
+            oss << directory_path << "log_" << chrono::utilities::LocalClock::current_time_dmy() << ".log";
             return oss.str();
         }
         std::ofstream log_file_; // The current log file.

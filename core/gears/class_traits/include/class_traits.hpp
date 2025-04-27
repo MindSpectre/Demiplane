@@ -1,7 +1,8 @@
 #pragma once
 
-#include "concepts.hpp"
+#include <string_view>
 
+#include "concepts.hpp"
 namespace demiplane::gears {
     struct NonCopyable {
         NonCopyable()                                        = default;
@@ -32,7 +33,7 @@ namespace demiplane::gears {
     template <Interface... Interfaces>
     struct InterfaceBundle : Interfaces... {
         using Interfaces::Interfaces...;
-        InterfaceBundle() = default;
+        InterfaceBundle()           = default;
         ~InterfaceBundle() override = default; // optional if Traits have virtual dtors
     };
 
@@ -53,4 +54,4 @@ namespace demiplane::gears {
             return "Anonymous class";
         }
     };
-} // namespace demiplane
+} // namespace demiplane::gears

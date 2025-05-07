@@ -49,6 +49,7 @@
 # Build Directories
 # ===========================
 /build/
+/build*
 /build-release/
 /_build/
 /.cmake/

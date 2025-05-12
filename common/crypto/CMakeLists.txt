@@ -1,4 +1,4 @@
-set(DMP_CRYPTO ${DMP_CORE}.Crypto)
+set(DMP_CRYPTO ${DMP_COMMON}.Crypto)
 
 
 

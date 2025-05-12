@@ -1,4 +1,4 @@
-set(DMP_SCROLL ${DMP_CORE}.Scroll)
+set(DMP_SCROLL ${DMP_COMMON}.Scroll)
 
 ##############################################################################
 # Scroll Colors

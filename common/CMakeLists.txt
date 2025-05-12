@@ -1,4 +1,4 @@
-set(DMP_CORE ${PROJECT_NAME}.Core)
+set(DMP_COMMON ${PROJECT_NAME}.Common)
 
 ###############################################
 

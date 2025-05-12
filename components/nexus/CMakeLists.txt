@@ -7,11 +7,12 @@ target_include_directories(${DMP_NEXUS}.Policies INTERFACE
         policies/include
 )
 add_library(${DMP_NEXUS}.Pylon INTERFACE
-        pylon/view_pylon.hpp
-        pylon/unique_pylon.hpp
-        pylon/safe_pylon.hpp
-        pylon/basic_pylon.hpp
+        pylon/include/view_pylon.hpp
+        pylon/include/unique_pylon.hpp
+        pylon/include/safe_pylon.hpp
+        pylon/include/basic_pylon.hpp
         pylon/include/pylon.hpp
+        pylon/include/copy_pylon.hpp
 )
 target_include_directories(${DMP_NEXUS}.Pylon INTERFACE
         pylon/include

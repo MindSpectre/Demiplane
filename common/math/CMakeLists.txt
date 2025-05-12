@@ -1,4 +1,4 @@
-set(DMP_MATH ${DMP_CORE}.Math)
+set(DMP_MATH ${DMP_COMMON}.Math)
 
 ##############################################################################
 # Math utilities

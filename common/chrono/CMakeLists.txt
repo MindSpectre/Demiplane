@@ -1,4 +1,4 @@
-set(DMP_CHRONO ${DMP_CORE}.Chrono)
+set(DMP_CHRONO ${DMP_COMMON}.Chrono)
 
 ##############################################################################
 # Stopwatch class with measure purposes

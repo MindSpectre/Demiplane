@@ -1,4 +1,4 @@
-set(DMP_FSM ${DMP_CORE}.FSM)
+set(DMP_FSM ${DMP_COMMON}.FSM)
 
 ##############################################################################
 # FSM Parsers

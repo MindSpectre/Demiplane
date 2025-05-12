@@ -1,4 +1,4 @@
-set(DMP_GEARS ${DMP_CORE}.Gears)
+set(DMP_GEARS ${DMP_COMMON}.Gears)
 
 
 ###############################################

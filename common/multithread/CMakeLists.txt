@@ -1,4 +1,4 @@
-set(DMP_MULTITHREAD ${DMP_CORE}.Multithread)
+set(DMP_MULTITHREAD ${DMP_COMMON}.Multithread)
 
 ##############################################################################
 # Thread pool for paralleling tasks

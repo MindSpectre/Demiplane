@@ -1,4 +1,4 @@
-set(3RD_PARTY ${DMP_CORE}.3rdParty)
+set(3RD_PARTY ${DMP_COMMON}.3rdParty)
 
 add_library(${3RD_PARTY}.CsvParser INTERFACE
         csv_parser/csv.h

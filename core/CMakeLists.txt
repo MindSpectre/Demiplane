@@ -17,4 +17,5 @@ add_subdirectory(chrono)
 
 add_subdirectory(math)
 
+add_subdirectory(fsm)
 

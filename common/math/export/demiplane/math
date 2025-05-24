@@ -1,6 +1,5 @@
 #pragma once
 
+#include "../../random/include/random_utils.hpp"
 #include "generators/number_generator.hpp"
 #include "generators/time_generator.hpp"
-
-#include "random_utils.hpp"

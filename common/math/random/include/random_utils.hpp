@@ -6,7 +6,7 @@
 #include <limits>
 #include <random>
 
-namespace demiplane::utilities::math::random {
+namespace demiplane::math::random {
 
 
     template <typename Returned, typename T, std::size_t N>

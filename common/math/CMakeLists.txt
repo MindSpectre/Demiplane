@@ -13,24 +13,11 @@ target_include_directories(${DMP_MATH}.Random
 )
 ##############################################################################
 
-##############################################################################
-# Math utilities
-##############################################################################
-add_library(${DMP_MATH}.Utilities INTERFACE)
-
-target_include_directories(${DMP_MATH}.Utilities
-        INTERFACE
-        utilities/
-)
-##############################################################################
-
-
 
 add_combined_library(${DMP_MATH}
         DIRECTORIES
         export
         LIBRARIES
-        ${DMP_MATH}.Utilities
         ${DMP_MATH}.Random
         ALIAS
         Demiplane::Math

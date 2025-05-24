@@ -5,17 +5,18 @@ set(DMP_FSM ${DMP_COMMON}.FSM)
 ##############################################################################
 add_library(${DMP_FSM}.Core INTERFACE
     core/state.hpp
-        core/transition.hpp
+    core/transition.hpp
 )
 
 target_include_directories(${DMP_FSM}.Core
         INTERFACE
         core/
 )
-#target_link_libraries(${DMP_FSM}.Core
-#        INTERFACE
-#        JsonCpp::JsonCpp
-#)
+target_link_libraries(${DMP_FSM}.Core
+        INTERFACE
+        Demiplane::Gears
+        Demiplane::Math
+)
 ##############################################################################
 
 ##############################################################################

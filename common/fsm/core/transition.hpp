@@ -1,8 +1,11 @@
-//
-// Created by grivin on 5/12/25.
-//
+#pragma once
 
-#ifndef TRANSITION_HPP
-#define TRANSITION_HPP
-
-#endif //TRANSITION_HPP
+namespace demiplane::fsm {
+    class Transition {
+    public:
+        Transition(const uint32_t from, const uint32_t to) : from_(from), to_(to) {}
+    private:
+        uint32_t from_;
+        uint32_t to_;
+    };
+} // namespace demiplane::fsm

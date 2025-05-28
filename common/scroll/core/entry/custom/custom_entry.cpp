@@ -13,6 +13,18 @@ namespace {
     }
 }
 namespace demiplane::scroll {
+    /**
+     * Loads the configuration settings from a specified JSON file.
+     *
+     * This method reads a JSON configuration file and updates internal
+     * configuration parameters based on the parsed values. It supports both
+     * Boolean and string representations for certain fields and applies
+     * custom logic to interpret them.
+     *
+     * @param config_file_path The path to the configuration file to be loaded.
+     * @return `true` if the configuration file is successfully loaded and parsed,
+     *         `false` otherwise.
+     */
     inline bool CustomEntryConfig::load_config(const std::string& config_file_path) {
         std::ifstream config_file(config_file_path);
         if (!config_file.is_open()) {

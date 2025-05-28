@@ -8,8 +8,8 @@ set(TEST_NECESSARY_LIBS
         GTest::gmock_main
         Demiplane::Math
         Demiplane::Crypto
-#        Demiplane::Chrono
-        Demiplane::Scroll::Tracer
+        Demiplane::Chrono
+        Demiplane::Scroll
 )
 
 
@@ -22,5 +22,5 @@ target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
         Demiplane::Scroll
 )
 
-#add_subdirectory(unit_tests)
+add_subdirectory(unit_tests)
 #add_subdirectory(integration_tests)

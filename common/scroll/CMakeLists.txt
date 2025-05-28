@@ -11,7 +11,7 @@ target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
 ##############################################################################
 
 ##############################################################################
-# Scroll Entry creator
+# Scroll Core
 ##############################################################################
 add_library(${DMP_SCROLL}.Core STATIC
         core/entry/entry_interface.hpp
@@ -31,46 +31,6 @@ target_link_libraries(${DMP_SCROLL}.Core PUBLIC
 )
 
 ##############################################################################
-
-
-##############################################################################
-###############################################################################
-## Scroll Configs
-###############################################################################
-#add_library(${DMP_SCROLL}.Config STATIC
-#        configurator/factory/scroll_config_factory.hpp
-#        configurator/factory/scroll_config_factory.cpp
-#        configurator/config_interface.hpp
-#        configurator/configs/file_tracer_config.hpp
-#        configurator/configs/console_tracer_config.hpp
-#)
-#target_include_directories(${DMP_SCROLL}.Config PUBLIC
-#        configurator/factory
-#)
-#target_link_libraries(${DMP_SCROLL}.Config PUBLIC
-#        ${DMP_SCROLL}.Entry
-#)
-#
-###############################################################################
-
-###############################################################################
-## Scroll Tracers
-###############################################################################
-#add_library(${DMP_SCROLL}.Tracer STATIC
-#        tracers/tracer_base.hpp
-#        tracers/file_tracer.hpp
-#        tracers/console_tracer.hpp
-#        tracers/tracer_factory.hpp
-#)
-#target_include_directories(${DMP_SCROLL}.Tracer PUBLIC
-#        tracers/include
-#)
-#target_link_libraries(${DMP_SCROLL}.Tracer PUBLIC
-#        ${DMP_SCROLL}.Config
-#)
-#add_library(Demiplane::Scroll::Tracer ALIAS ${DMP_SCROLL}.Tracer)
-#
-###############################################################################
 
 
 ##############################################################################

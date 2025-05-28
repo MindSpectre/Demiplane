@@ -5,6 +5,8 @@ set(DMP_CHRONO ${DMP_COMMON}.Chrono)
 ##############################################################################
 add_library(${DMP_CHRONO}.Stopwatch STATIC
         stopwatch/source/stopwatch.cpp
+        stopwatch/include/lw_stopwatch.hpp
+        stopwatch/include/testing_stopwatch.hpp
 )
 target_include_directories(${DMP_CHRONO}.Stopwatch
         PUBLIC

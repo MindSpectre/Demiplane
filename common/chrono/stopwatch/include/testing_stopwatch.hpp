@@ -4,7 +4,6 @@
 #include <demiplane/scroll>
 #include <string>
 #include <vector>
-#define ENABLE_TRACING
 
 namespace demiplane::chrono {
     /**
@@ -12,7 +11,7 @@ namespace demiplane::chrono {
      * @tparam T The time unit used for measuring intervals (milliseconds by default).
      */
     template <typename T = std::chrono::milliseconds>
-    class Stopwatch {
+    class TestingStopwatch {
     public:
         /**
          * @brief Checks if time is counted from the previous flag.
@@ -26,7 +25,7 @@ namespace demiplane::chrono {
         /**
          * @brief Sets countdown from the previous flag.
          *
-         * @param state Boolean value to set countdown from previous flag.
+         * @param state Boolean value to set countdown from the previous flag.
          */
         void set_countdown_from_prev(const bool state) {
             countdown_from_prev_ = state;
@@ -57,7 +56,7 @@ namespace demiplane::chrono {
          * @param flags_cnt_reserve The initial reserved size of the flags vector.
          */
         // Constructor
-        explicit Stopwatch(std::string name = "", const std::size_t flags_cnt_reserve = 30)
+        explicit TestingStopwatch(std::string name = "", const std::size_t flags_cnt_reserve = 30)
             : running_name_(std::move(name)) {
             flags_.reserve(flags_cnt_reserve);
         }
@@ -69,7 +68,7 @@ namespace demiplane::chrono {
          * @brief Destructor that automatically prints the times.
          */
         // Destructor automatically flushes the times
-        ~Stopwatch() noexcept {
+        ~TestingStopwatch() noexcept {
             print();
         }
 
@@ -125,7 +124,7 @@ namespace demiplane::chrono {
                 previous = flags_[i].point_;
             }
             stream << std::endl;
-            // TODO: Return trace
+            std::cout << stream.str();
             flags_.clear();
         }
 
@@ -141,7 +140,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        Stopwatch& operator++(int) {
+        TestingStopwatch& operator++(int) {
             flag("");
             return *this;
         }
@@ -151,7 +150,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        Stopwatch& operator++() {
+        TestingStopwatch& operator++() {
             flag("");
             return *this;
         }
@@ -161,7 +160,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        Stopwatch& operator--(int) {
+        TestingStopwatch& operator--(int) {
             if (!flags_.empty()) {
                 flags_.pop_back();
             }
@@ -173,7 +172,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        Stopwatch& operator--() {
+        TestingStopwatch& operator--() {
             if (!flags_.empty()) {
                 flags_.pop_back();
             }
@@ -265,4 +264,3 @@ namespace demiplane::chrono {
         std::vector<Flag> flags_;
     };
 } // namespace demiplane::chrono
-#undef ENABLE_TRACING

@@ -7,6 +7,19 @@
 namespace demiplane::scroll {
 
 
+    /**
+     * @class CustomEntryConfig
+     * @brief This class provides configuration settings for custom log entries.
+     * It allows for fine-grained control over the format and content of log messages.
+     *
+     * CustomEntryConfig provides various options to enable or disable specific elements in the log entry,
+     * such as timestamps, log levels, source locations, thread IDs, and messages. Additionally,
+     * it supports alignment settings, color formatting, and customization of the time format string.
+     *
+     * The configuration is applied to generate consistent log entries and headers based on the user's preferences.
+     *
+     * Inherits from the `gears::Immovable` class to restrict its copy or move semantics.
+     */
     class CustomEntryConfig : gears::Immovable {
     public:
         bool add_time            = true;
@@ -50,6 +63,7 @@ namespace demiplane::scroll {
         [[nodiscard]] std::string make_header() const;
         [[nodiscard]] Json::Value dump_config() const {
             void(this);
+            //TODO:
             return {};
         }
     };
@@ -62,8 +76,6 @@ namespace demiplane::scroll {
 
     private:
         const CustomEntryConfig& config_;
-
-        static constexpr char filler = ' ';
     };
 
 } // namespace demiplane::scroll

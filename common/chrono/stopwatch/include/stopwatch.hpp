@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #define ENABLE_TRACING
-#include <demiplane/trace_macros>
 
 namespace demiplane::chrono {
     /**
@@ -13,7 +12,7 @@ namespace demiplane::chrono {
      * @tparam T The time unit used for measuring intervals (milliseconds by default).
      */
     template <typename T = std::chrono::milliseconds>
-    class Stopwatch : public scroll::TracerProvider<Stopwatch<T>> {
+    class Stopwatch {
     public:
         /**
          * @brief Checks if time is counted from the previous flag.
@@ -61,18 +60,6 @@ namespace demiplane::chrono {
         explicit Stopwatch(std::string name = "", const std::size_t flags_cnt_reserve = 30)
             : running_name_(std::move(name)) {
             flags_.reserve(flags_cnt_reserve);
-            scroll::EntryConfig entry_cfg_;
-            entry_cfg_.add_time      = false;
-            entry_cfg_.add_location  = false;
-            entry_cfg_.enable_header = false;
-            scroll::EntryConfig::Alignment alg;
-            alg.level_pos               = 0;
-            alg.service_pos             = 20;
-            alg.thread_pos              = 40;
-            alg.message_pos             = 65;
-            entry_cfg_.custom_alignment = alg;
-            const scroll::ConsoleTracerConfig cfg{entry_cfg_};
-            this->set_tracer(scroll::TracerFactory::create_console_tracer<Stopwatch<T>>(cfg));
         }
         static constexpr const char* name() {
             return "Stopwatch";
@@ -138,7 +125,7 @@ namespace demiplane::chrono {
                 previous = flags_[i].point_;
             }
             stream << std::endl;
-            TRACE_INFO(this->get_tracer(), stream.str());
+            // TODO: Return trace
             flags_.clear();
         }
 

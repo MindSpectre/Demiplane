@@ -49,7 +49,7 @@ namespace demiplane::scroll::colors {
     constexpr std::string_view background_cyan    = "\033[46m";
     constexpr std::string_view background_white   = "\033[47m";
 
-    // High Intensity Colors
+    // High-Intensity Colors
     constexpr std::string_view hi_black   = "\033[0;90m";
     constexpr std::string_view hi_red     = "\033[0;91m";
     constexpr std::string_view hi_green   = "\033[0;92m";
@@ -59,7 +59,7 @@ namespace demiplane::scroll::colors {
     constexpr std::string_view hi_cyan    = "\033[0;96m";
     constexpr std::string_view hi_white   = "\033[0;97m";
 
-    // Bold High Intensity Colors
+    // Bold High-Intensity Colors
     constexpr std::string_view bold_hi_black   = "\033[1;90m";
     constexpr std::string_view bold_hi_red     = "\033[1;91m";
     constexpr std::string_view bold_hi_green   = "\033[1;92m";
@@ -69,7 +69,7 @@ namespace demiplane::scroll::colors {
     constexpr std::string_view bold_hi_cyan    = "\033[1;96m";
     constexpr std::string_view bold_hi_white   = "\033[1;97m";
 
-    // High Intensity Background Colors
+    // High-Intensity Background Colors
     constexpr std::string_view hi_background_black   = "\033[0;100m";
     constexpr std::string_view hi_background_red     = "\033[0;101m";
     constexpr std::string_view hi_background_green   = "\033[0;102m";
@@ -190,7 +190,7 @@ namespace demiplane::scroll::colors {
         return colorize(underline_white, text);
     }
 
-    // High intensity colors
+    // High-intensity colors
     inline std::string make_hi_black(const std::string_view text) {
         return colorize(hi_black, text);
     }
@@ -216,7 +216,7 @@ namespace demiplane::scroll::colors {
         return colorize(hi_white, text);
     }
 
-    // Bold high intensity colors
+    // Bold high-intensity colors
     inline std::string make_bold_hi_black(const std::string_view text) {
         return colorize(bold_hi_black, text);
     }
@@ -242,7 +242,7 @@ namespace demiplane::scroll::colors {
         return colorize(bold_hi_white, text);
     }
 
-    // High intensity background colors
+    // High-intensity background colors
     inline std::string make_hi_background_black(const std::string_view text) {
         return colorize(hi_background_black, text);
     }

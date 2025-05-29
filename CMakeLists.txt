@@ -13,11 +13,9 @@ set(CMAKE_USE_WIN32_THREADS_INIT 0)
 set(CMAKE_USE_PTHREADS_INIT 1)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 # Add options to enable or disable Boost and Qt5
-option(USE_BOOST "Enable Boost library" ON)
-option(USE_QT5 "Enable Qt5 library" OFF)
-option(USE_PROTOBUF "Enable Protobuf" OFF)
-option(BUILD_COMPONENTS "Build components" ON)
-option(USE_TESTS "Tests activated" ON)
+# Toggles
+include(cmake/togglers.cmake)
+
 # Global compiler options (if necessary)
 # It's better to set these per-target
 # add_compile_options(-pthread -pipe -Wall -fPIC -Werror=return-type)
@@ -50,14 +48,14 @@ if (USE_BOOST)
     set(Boost_NO_SYSTEM_PATHS ON)
     # set(BOOST_ROOT /opt/vcpkg/installed/x64-linux) # Adjust if necessary
 
-    find_package(Boost CONFIG COMPONENTS container)
+    find_package(Boost CONFIG COMPONENTS container system uuid)
     if (NOT Boost_FOUND)
         message(FATAL_ERROR "Boost libraries not found, but USE_BOOST is ON.")
     endif ()
 
 endif ()
 ##############################################################################
-add_subdirectory(core)
+add_subdirectory(common)
 
 ##############################################################################
 # Components
@@ -82,3 +80,11 @@ if (USE_TESTS)
 endif ()
 ##############################################################################
 
+##############################################################################
+# Benchmarks
+##############################################################################
+if (DO_BENCHMARKS)
+    message("Benchmarks are enabled")
+    add_subdirectory(benchmarks)
+endif ()
+##############################################################################

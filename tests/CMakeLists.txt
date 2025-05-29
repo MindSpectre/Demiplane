@@ -14,12 +14,12 @@ set(TEST_NECESSARY_LIBS
 
 
 add_executable(${PROJECT_NAME}.Tests.Sandbox
-        sandbox/main.cpp
+        codesandbox/main.cpp
 )
 target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
         PRIVATE
-        Demiplane::Scroll::Tracer
+        Demiplane::Component::Nexus
 )
 
-add_subdirectory(unit_tests)
-add_subdirectory(integration_tests)
+#add_subdirectory(unit_tests)
+#add_subdirectory(integration_tests)

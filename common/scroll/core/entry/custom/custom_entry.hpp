@@ -1,35 +1,26 @@
 #pragma once
-#include <json/json.h>
-#include <string>
-
-#include "chrono_utils.hpp"
 #include <demiplane/gears>
-namespace demiplane::scroll {
-    enum class LogLevel {
-        Debug = 0,
-        Info,
-        Warning,
-        Error,
-        Fatal
-        // Extend with additional levels if needed.
-    };
+#include <json/json.h>
 
-    constexpr const char* to_string(const LogLevel level) {
-        switch (level) {
-        case LogLevel::Debug:
-            return "DEBUG";
-        case LogLevel::Info:
-            return "INFO";
-        case LogLevel::Warning:
-            return "WARNING";
-        case LogLevel::Error:
-            return "ERROR";
-        case LogLevel::Fatal:
-            return "FATAL";
-        }
-        return "UNKNOWN";
-    }
-    class EntryConfig : gears::Immovable {
+#include "entry/entry_interface.hpp"
+
+namespace demiplane::scroll {
+
+
+    /**
+     * @class CustomEntryConfig
+     * @brief This class provides configuration settings for custom log entries.
+     * It allows for fine-grained control over the format and content of log messages.
+     *
+     * CustomEntryConfig provides various options to enable or disable specific elements in the log entry,
+     * such as timestamps, log levels, source locations, thread IDs, and messages. Additionally,
+     * it supports alignment settings, color formatting, and customization of the time format string.
+     *
+     * The configuration is applied to generate consistent log entries and headers based on the user's preferences.
+     *
+     * Inherits from the `gears::Immovable` class to restrict its copy or move semantics.
+     */
+    class CustomEntryConfig : gears::Immovable {
     public:
         bool add_time            = true;
         bool add_level           = true;
@@ -40,8 +31,8 @@ namespace demiplane::scroll {
         bool enable_header       = false;
         bool enable_colors       = true;
         bool enable_service_name = true;
+        std::string time_fmt     = "%d-%m-%Y %X";
 
-        std::string time_fmt = "%d-%m-%Y %X";
         struct Alignment {
             std::size_t time_pos     = 0;
             std::size_t level_pos    = 0;
@@ -49,10 +40,7 @@ namespace demiplane::scroll {
             std::size_t thread_pos   = 0;
             std::size_t location_pos = 0;
             std::size_t message_pos  = 0;
-            [[nodiscard]] bool ok() const {
-                return message_pos > location_pos && location_pos > thread_pos && thread_pos > service_pos
-                    && service_pos > level_pos && level_pos > time_pos;
-            }
+
             void disable_alignment() {
                 time_pos     = 0;
                 location_pos = 0;
@@ -72,11 +60,22 @@ namespace demiplane::scroll {
         };
         Alignment custom_alignment;
         bool load_config(const std::string& config_file_path);
+        [[nodiscard]] std::string make_header() const;
         [[nodiscard]] Json::Value dump_config() const {
             void(this);
+            //TODO:
             return {};
         }
     };
+    class CustomEntry final : public Entry {
+    public:
+        [[nodiscard]] std::string to_string() const override;
+        CustomEntry(const CustomEntryConfig& config, LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
+            const std::string_view& function)
+            : Entry(level, message, file, line, function), config_(config) {}
 
+    private:
+        const CustomEntryConfig& config_;
+    };
 
 } // namespace demiplane::scroll

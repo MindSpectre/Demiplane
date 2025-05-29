@@ -9,7 +9,7 @@ set(TEST_NECESSARY_LIBS
         Demiplane::Math
         Demiplane::Crypto
         Demiplane::Chrono
-        Demiplane::Scroll::Tracer
+        Demiplane::Scroll
 )
 
 
@@ -18,8 +18,9 @@ add_executable(${PROJECT_NAME}.Tests.Sandbox
 )
 target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
         PRIVATE
-        Demiplane::Component::Nexus
+#        Demiplane::Component::Nexus
+        Demiplane::Scroll
 )
 
-#add_subdirectory(unit_tests)
+add_subdirectory(unit_tests)
 #add_subdirectory(integration_tests)

@@ -38,7 +38,7 @@ target_include_directories(${DMP_NEXUS}.Core
 target_link_libraries(${DMP_NEXUS}.Core PUBLIC
         ${DMP_NEXUS}.Policies
         ${DMP_NEXUS}.Pylon
-        Demiplane::Scroll::Tracer
+#        Demiplane::Scroll::Tracer
 )
 
 ##############################################################################

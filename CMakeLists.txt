@@ -15,7 +15,10 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 # Add options to enable or disable Boost and Qt5
 # Toggles
 include(cmake/togglers.cmake)
-
+#custom directives
+include(cmake/tests.cmake)
+include(cmake/combined_library.cmake)
+include(cmake/add_resources.cmake)
 # Global compiler options (if necessary)
 # It's better to set these per-target
 # add_compile_options(-pthread -pipe -Wall -fPIC -Werror=return-type)
@@ -31,9 +34,7 @@ find_package(libpqxx REQUIRED)
 find_package(Drogon CONFIG REQUIRED)
 # Conditionally find Boost if enabled
 
-#custom directives
-include(cmake/tests.cmake)
-include(cmake/combined_library.cmake)
+
 
 
 ##############################################################################

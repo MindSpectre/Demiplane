@@ -1,10 +1,17 @@
 #define ENABLE_LOGGING
-#include <demiplane/scroll>
+#include <demiplane/nexus>
+#include <iostream>
+using namespace demiplane::nexus;
+
+class X {
+public:
+    int a{1};
+    int b{2};
+    constexpr static std::uint32_t nx_id{3};
+};
 
 int main() {
-    demiplane::scroll::ConsoleLogger<demiplane::scroll::DetailedEntry> logger;
-    // logger.log(LIGHT_LOG_ENTRY(demiplane::scroll::DBG, "Hello, world!"));
-    // SUMMON_STREAM(LOGGER) <<
-    LOG_STREAM_ERR(&logger) << "Hello, world!";
+    Nexus nexus;
+    X x1;
     return 0;
 }

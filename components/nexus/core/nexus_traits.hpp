@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <type_traits>
-#include <typeindex>
 
 namespace demiplane::nexus {
 

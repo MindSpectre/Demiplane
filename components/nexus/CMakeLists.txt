@@ -1,32 +1,21 @@
 set(DMP_NEXUS ${DMP_COMPONENT}.Nexus)
-
+##############################################################################
+# Nexus policies classes
+##############################################################################
 add_library(${DMP_NEXUS}.Policies INTERFACE
-        policies/include/life_policy.hpp
-        policies/include/access_policy.hpp)
+        policies/policies.hpp
+)
 target_include_directories(${DMP_NEXUS}.Policies INTERFACE
-        policies/include
+        policies/
 )
-add_library(${DMP_NEXUS}.Pylon INTERFACE
-        pylon/include/view_pylon.hpp
-        pylon/include/unique_pylon.hpp
-        pylon/include/safe_pylon.hpp
-        pylon/include/basic_pylon.hpp
-        pylon/include/pylon.hpp
-        pylon/include/copy_pylon.hpp
-)
-target_include_directories(${DMP_NEXUS}.Pylon INTERFACE
-        pylon/include
-)
-target_link_libraries(${DMP_NEXUS}.Pylon INTERFACE
-        Demiplane::Gears
-)
+##############################################################################
 
+# Nexus core files and structs
+##############################################################################
 add_library(${DMP_NEXUS}.Core STATIC
         core/nexus_traits.hpp
         core/source/nexus.cpp
-        core/nexus_fwd.hpp
         core/include/nexus.hpp
-
         core/details.hpp
 )
 target_include_directories(${DMP_NEXUS}.Core
@@ -37,9 +26,24 @@ target_include_directories(${DMP_NEXUS}.Core
 )
 target_link_libraries(${DMP_NEXUS}.Core PUBLIC
         ${DMP_NEXUS}.Policies
-        ${DMP_NEXUS}.Pylon
-#        Demiplane::Scroll::Tracer
 )
+##############################################################################
+
+##############################################################################
+# Nexus provider
+##############################################################################
+add_library(${DMP_NEXUS}.Provider INTERFACE
+    provider/nexus_provider.hpp
+)
+target_include_directories(${DMP_NEXUS}.Provider INTERFACE
+    provider/
+)
+
+target_link_libraries(${DMP_NEXUS}.Provider INTERFACE
+    ${DMP_NEXUS}.Core
+)
+##############################################################################
+
 
 ##############################################################################
 # Nexus components
@@ -48,10 +52,11 @@ add_combined_library(${DMP_NEXUS}
         DIRECTORIES
         export
         LIBRARIES
-        ${DMP_NEXUS}.Core
+        ${DMP_NEXUS}.Provider
         ALIAS
         Demiplane::Component::Nexus
 )
+#add_library(Demiplane::Component::Nexus ALIAS  ${DMP_NEXUS})
 ##############################################################################
 
 

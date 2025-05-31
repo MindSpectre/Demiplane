@@ -21,7 +21,7 @@ function(add_combined_library TargetName)
                 ${ARG_LIBRARIES}
         )
     endif()
-
+    #TODO: get rid of alias to simplify navigation to declaration location
     if(ARG_ALIAS)
         add_library(${ARG_ALIAS} ALIAS ${TargetName})
     endif()

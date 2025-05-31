@@ -7,7 +7,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.DbBase.Field
 target_link_libraries(${UNIT_TESTING_TARGET}.DbBase.Field
         PRIVATE
         Demiplane::Database
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 ##############################################################################
@@ -19,7 +19,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.DbBase.ArrayField
 target_link_libraries(${UNIT_TESTING_TARGET}.DbBase.ArrayField
         PRIVATE
         Demiplane::Database
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 ##############################################################################
@@ -32,7 +32,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.DbBase.Uuid
 target_link_libraries(${UNIT_TESTING_TARGET}.DbBase.Uuid
         PRIVATE
         Demiplane::Database
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 ##############################################################################
@@ -48,7 +48,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.TransactionManager
 target_link_libraries(${UNIT_TESTING_TARGET}.TransactionManager
         PRIVATE
         Demiplane::Database
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 
@@ -63,7 +63,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.DbInterfacePool
 target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfacePool
         PRIVATE
         Demiplane::Database
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 )
 
 ##############################################################################
@@ -77,7 +77,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.DbInterfaceBasicMock
 target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfaceBasicMock
         PRIVATE
         Demiplane::Database::Mock::Basic
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 ##############################################################################
@@ -91,7 +91,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.DbInterfaceSilentMock
 target_link_libraries(${UNIT_TESTING_TARGET}.DbInterfaceSilentMock
         PRIVATE
         Demiplane::Database::Mock::Silent
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 ##############################################################################
@@ -105,7 +105,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.PqxxQueryEngine
 target_link_libraries(${UNIT_TESTING_TARGET}.PqxxQueryEngine
         PRIVATE
         Demiplane::Database::Pqxx
-        ${TEST_NECESSARY_LIBS}
+        ${TEST_LIBS}
 
 )
 ##############################################################################

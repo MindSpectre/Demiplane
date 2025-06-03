@@ -25,7 +25,9 @@ target_include_directories(${DMP_NEXUS}.Core
         core/
 )
 target_link_libraries(${DMP_NEXUS}.Core PUBLIC
+        Boost::thread
         ${DMP_NEXUS}.Policies
+
 )
 ##############################################################################
 

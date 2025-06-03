@@ -27,6 +27,16 @@ struct Counter {
         return 123;
     }
 };
+struct Counter2 {
+    int x{0};
+    static constexpr auto nx_id = 0xFFFD;
+    Counter2() {
+        std::cerr << "Counter2::Counter2\n";
+    }
+    ~Counter2() {
+        std::cerr << "Counter2::~Counter2\n";
+    }
+};
 std::atomic<int> Counter::live{0};
 
 struct MoveOnly {
@@ -73,13 +83,16 @@ TEST(Nexus, RegisterInstanceMove) {
 
 TEST(Nexus, ResetFlexOK) {
     Nexus nx;
-    nx.register_factory<Counter>([](Nexus&) { return std::make_shared<Counter>(); }, Flex{});
-
-    nx.spawn<Counter>(); // construct
-    // EXPECT_NO_THROW(nx.reset<Counter>());
-    EXPECT_EQ(Counter::live.load(), 1); // shared_ptr in test keeps alive
-    nx.clear();
-    EXPECT_EQ(Counter::live.load(), 0);
+    nx.register_factory<Counter2>([](Nexus&) { return std::make_shared<Counter2>(); }, Flex{});
+    std::weak_ptr<Counter2> w;
+    {
+        const auto x = nx.spawn<Counter2>(); // construct
+        w      = x;
+        EXPECT_EQ(x.use_count(), 2); // shared_ptr in test keeps alive
+        EXPECT_NO_THROW(nx.reset<Counter2>());
+        EXPECT_EQ(x.use_count(), 1); // shared_ptr in test keeps alive
+    }
+    EXPECT_EQ(w.expired(), true);
 }
 
 TEST(Nexus, ResetImmortalThrows) {

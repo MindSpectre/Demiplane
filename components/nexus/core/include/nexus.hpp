@@ -5,13 +5,14 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <thread>
 #include <unordered_map>
 
 #include "../details.hpp"
 #include "../nexus_traits.hpp"
 #include "policies.hpp"
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 namespace demiplane::nexus {
 
     class Nexus { //  ─── public façade ───
@@ -81,7 +82,7 @@ namespace demiplane::nexus {
 
         // state
         std::unordered_map<Key, Slot, KeyHash> map_;
-        mutable std::shared_mutex mtx_;
+        mutable boost::shared_mutex mtx_;
         std::jthread janitor_;
         std::atomic<bool> stop_{false};
     };
@@ -92,7 +93,7 @@ namespace demiplane::nexus {
 
     template <class T, class Factory>
     void Nexus::register_factory(Factory&& f, const Lifetime lt, const std::uint32_t id) {
-        std::unique_lock lk{mtx_};
+        boost::unique_lock lk{mtx_};
         Slot& s   = map_[Key{typeid(T), id}];
         s.obj     = nullptr; // lazy
         s.factory = to_void_factory(std::forward<Factory>(f));
@@ -101,7 +102,7 @@ namespace demiplane::nexus {
 
     template <class T>
     void Nexus::register_shared(std::shared_ptr<T> sp, const Lifetime lt, const std::uint32_t id) {
-        std::unique_lock lk{mtx_};
+        boost::unique_lock lk{mtx_};
         Slot& s      = map_[Key{typeid(T), id}];
         s.obj        = std::move(sp);
         s.factory    = nullptr;
@@ -121,19 +122,18 @@ namespace demiplane::nexus {
         const Key k{typeid(T), id};
 
         /* ① shared lock – fast path */
-        std::shared_lock r{mtx_};
+        boost::upgrade_lock r_lock{mtx_};
         auto it = map_.find(k);
         if (it == map_.end()) {
             throw std::runtime_error("Nexus::spawn – not registered");
         }
-        auto &sl = it->second;
+        auto& sl = it->second;
         if (sl.obj) {
             return build_handle<T>(sl); // ← NEW helper inline below
         }
 
-        // TODO: REWORK
-        r.unlock();
-        std::unique_lock w{mtx_};
+
+        boost::upgrade_to_unique_lock uniqueLock{r_lock};
         it = map_.find(k); // re-find after lock upgrade
         if (it == map_.end()) {
             throw std::runtime_error("Nexus::spawn – not registered (raced)");
@@ -150,7 +150,7 @@ namespace demiplane::nexus {
 
     template <class T>
     void Nexus::reset(const std::uint32_t id) {
-        std::unique_lock lk{mtx_};
+        boost::unique_lock lk{mtx_};
         const Key k{typeid(T), id};
         const auto it = map_.find(k);
         if (it == map_.end()) {
@@ -163,7 +163,7 @@ namespace demiplane::nexus {
     }
 
     inline std::size_t Nexus::size() const noexcept {
-        std::shared_lock lk{mtx_};
+        boost::shared_lock lk{mtx_};
         return map_.size();
     }
 

@@ -4,16 +4,16 @@
 using namespace demiplane::nexus;
 
 Nexus::Nexus() : janitor_([this]{ janitor_loop(); }) {
-    std::cerr << "[Nexus] ctor\n";
+    std::cerr << "[Nexus] ctor\n"; // Todo: replace with logger
 }
 
 Nexus::~Nexus() {
     stop_.store(true, std::memory_order_relaxed);
-    std::cerr << "[Nexus] dtor\n";
+    std::cerr << "[Nexus] dtor\n"; //Todo: replace with logger
 }
 
 void Nexus::clear() {
-    std::unique_lock lk{mtx_};
+    boost::unique_lock lk{mtx_};
     map_.clear();
 }
 
@@ -29,7 +29,7 @@ void Nexus::janitor_loop() {
 
 void Nexus::sweep() {
     const auto now = std::chrono::steady_clock::now();
-    std::unique_lock w{mtx_};
+   boost::unique_lock w{mtx_};
     for (auto it = map_.begin(); it != map_.end(); ) {
         const bool erase = std::visit(
             [&]<typename U>(U& tag){

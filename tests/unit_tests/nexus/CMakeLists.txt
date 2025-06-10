@@ -1,7 +1,7 @@
 ##############################################################################
 #  Nexus uint test
 ##############################################################################
-add_executable(${UNIT_TESTING_TARGET}.Nexus
+add_unit_test(${UNIT_TESTING_TARGET}.Nexus
         test_nexus.cpp
 )
 

@@ -1,0 +1,97 @@
+# ===========================
+# Prerequisites
+# ===========================
+*.d
+
+# ===========================
+# Compiled Object Files
+# ===========================
+*.slo
+*.lo
+*.o
+*.obj
+
+# ===========================
+# Precompiled Headers
+# ===========================
+*.gch
+*.pch
+
+# ===========================
+# Compiled Dynamic Libraries
+# ===========================
+*.so
+*.dylib
+*.dll
+
+# ===========================
+# Fortran Module Files
+# ===========================
+*.mod
+*.smod
+
+# ===========================
+# Compiled Static Libraries
+# ===========================
+*.lai
+*.la
+*.a
+*.lib
+
+# ===========================
+# Executable Files
+# ===========================
+*.exe
+*.out
+*.app
+
+# ===========================
+# Build Directories
+# ===========================
+/build/
+/build*
+/build-release/
+/_build/
+/.cmake/
+out/
+bin/
+lib/
+# ===========================
+# CMake Generated Files
+# ===========================
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+Testing/
+# ===========================
+# Project-Specific Build Files
+# ===========================
+*.vcxproj*
+*.sln
+*.xcodeproj
+
+# ===========================
+# Temporary and Log Files
+# ===========================
+*.log
+*.tmp
+*.swp
+*.bak
+*.orig
+*.user
+
+# ===========================
+# IDE and Package Manager Files
+# ===========================
+.vscode/
+
+/.idea/
+*.DS_Store
+*.iml
+*.ipch
+*.pdb
+*.opendb
+
+

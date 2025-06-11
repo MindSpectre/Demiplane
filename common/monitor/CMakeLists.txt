@@ -1,0 +1,74 @@
+##############################################################################
+#
+##############################################################################
+add_library(${PROJECT_NAME}_Monitor_Main
+        main_monitor/source/main_monitor.cpp
+        main_monitor/include/main_monitor.hpp
+)
+target_include_directories(${PROJECT_NAME}_Monitor_Main
+        PUBLIC
+        main_monitor/include/
+)
+##############################################################################
+
+##############################################################################
+#
+##############################################################################
+add_library(${PROJECT_NAME}_Monitor_Emitter
+        emitter/source/emitter.cpp
+        emitter/include/emitter.hpp
+)
+target_include_directories(${PROJECT_NAME}_Monitor_Emitter
+        PUBLIC
+        emitter/include/
+)
+##############################################################################
+
+##############################################################################
+#
+##############################################################################
+add_library(${PROJECT_NAME}_Monitor_Collector
+        collector/source/collector.cpp
+        collector/include/collector.hpp
+)
+target_include_directories(${PROJECT_NAME}_Monitor_Collector
+        PUBLIC
+        collector/include/
+)
+target_link_libraries(${PROJECT_NAME}_Monitor_Collector
+        PUBLIC
+        ${PROJECT_NAME}_Monitor_Stats
+)
+##############################################################################
+
+##############################################################################
+#
+##############################################################################
+add_library(${PROJECT_NAME}_Monitor_Volume
+        volume/source/volume.cpp
+        volume/include/volume.hpp
+)
+target_include_directories(${PROJECT_NAME}_Monitor_Volume
+        PUBLIC
+        volume/include/
+)
+##############################################################################
+
+##############################################################################
+#
+##############################################################################
+add_library(${PROJECT_NAME}_Monitor_Stats
+        stats/source/stats.cpp
+        stats/include/stats.hpp
+)
+target_include_directories(${PROJECT_NAME}_Monitor_Stats
+        PUBLIC
+        stats/include/
+)
+target_link_libraries(${PROJECT_NAME}_Monitor_Stats
+        PUBLIC
+        JsonCpp::JsonCpp
+)
+##############################################################################
+
+

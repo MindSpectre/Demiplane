@@ -14,6 +14,16 @@
         "CMAKE_TOOLCHAIN_FILE": "/opt/vcpkg/scripts/buildsystems/vcpkg.cmake"
       },
       "binaryDir": "build-opt"
+    },
+    {
+      "name": "Vcpkg Debug",
+      "hidden": false,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "/opt/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "build-debug"
     }
   ]
 }

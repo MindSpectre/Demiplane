@@ -35,8 +35,8 @@ namespace demiplane::scroll {
          * @param line The line number in the source file where the log was created.
          * @param function The name of the function where the log was generated.
          */
-        Entry(const LogLevel level, const std::string_view& message, const std::string_view& file, const uint32_t line,
-            const std::string_view& function)
+        Entry(const LogLevel level, const std::string_view message, const std::string_view file, const uint32_t line,
+            const std::string_view function)
             : level_(level), message_(message), file_(file), line_(line), function_(function) {}
         /**
          * @brief Converts the object to its string representation.
@@ -45,6 +45,7 @@ namespace demiplane::scroll {
          * to provide a string representation of the object. Implementations should
          * define the format and content of the resulting string based on the specific
          * requirements of the derived class.
+         * @attention Possibly need sanitizing of input data. TODO
          *
          * @return A string representing the object.
          */

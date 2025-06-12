@@ -11,10 +11,11 @@ namespace demiplane::scroll {
     class FileLogger final : public Logger<EntryType> {
     public:
         explicit FileLogger(const std::string& filename) {
-            file_stream_.open(filename, std::ios::out | std::ios::app);
-            if (!file_stream_.is_open()) {
-                throw std::runtime_error("Failed to open log file: " + filename);
-            }
+            init(filename);
+        }
+
+        FileLogger(const std::string& filename, LogLevel threshold) : Logger<EntryType>{threshold} {
+            init(filename);
         }
 
         ~FileLogger() override {
@@ -23,7 +24,7 @@ namespace demiplane::scroll {
             }
         }
 
-        void log(LogLevel level, const std::string_view message, const char* file, const int line,
+        void log(LogLevel level, const std::string_view message, const char* file, const uint32_t line,
             const char* function) override {
             // Skip logging if below the threshold
             if (static_cast<int>(level) < static_cast<int>(this->threshold_)) {
@@ -31,16 +32,24 @@ namespace demiplane::scroll {
             }
 
             EntryType entry(level, message, file, line, function);
-            file_stream_ << entry.to_string() << std::endl;
+            file_stream_ << entry.to_string();
         }
-        void log(EntryType entry) override {
+
+        void log(const EntryType& entry) override {
             if (static_cast<int>(entry.level()) < static_cast<int>(this->threshold_)) {
                 return;
             }
-            file_stream_ << entry.to_string() << std::endl;
+            file_stream_ << entry.to_string();
         }
 
     private:
+        void init(const std::string& filename) {
+            file_stream_.open(filename, std::ios::out | std::ios::app);
+            if (!file_stream_.is_open()) {
+                throw std::runtime_error("Failed to open log file: " + filename);
+            }
+        }
+
         std::ofstream file_stream_;
     };
 

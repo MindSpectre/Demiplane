@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sstream>
 #include <string>
 
 #include "../entry_interface.hpp"
@@ -7,13 +8,14 @@
 namespace demiplane::scroll {
     class LightEntry final : public Entry {
     public:
-        LightEntry(LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
-            const std::string_view& function)
+        LightEntry(const LogLevel level, const std::string_view message, const std::string_view file,
+            const uint32_t line, const std::string_view function)
             : Entry(level, message, file, line, function) {}
-        [[nodiscard]] std::string to_string() const override {
-            return std::string("[") + scroll::to_string(level_) + "] " + std::string(message_);
-        }
 
+        [[nodiscard]] std::string to_string() const override {
+            std::ostringstream formatter;
+            formatter << "[" << scroll::to_string(level_) << "] " << message_ << "\n";
+            return formatter.str();
+        }
     };
-#define LIGHT_LOG_ENTRY(Level, Message) demiplane::scroll::LightEntry(Level, Message, __FILE__, __LINE__, __FUNCTION__)
-}
+} // namespace demiplane::scroll

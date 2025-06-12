@@ -8,3 +8,4 @@
 #include "console_logger.hpp"
 #include "file_logger.hpp"
 #include "../stream_log.hpp"
+#include "log_macros.hpp"

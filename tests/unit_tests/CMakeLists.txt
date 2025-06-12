@@ -26,6 +26,19 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
 )
 ##############################################################################
 
+##############################################################################
+# Test scroll
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Scroll
+    scroll/logger_test.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Scroll
+    PRIVATE
+        Demiplane::Scroll
+        ${TEST_LIBS}
+)
+##############################################################################
+
 
 ##############################################################################
 # Base utilities objects for database

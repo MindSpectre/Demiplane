@@ -10,17 +10,15 @@ namespace demiplane::scroll {
     // TODO: add has static name concept
     class ServiceEntry final : public Entry {
     public:
-        ServiceEntry(LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
+        ServiceEntry(const LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
             const std::string_view& function)
             : Entry(level, message, file, line, function) {}
 
         [[nodiscard]] std::string to_string() const override {
             std::ostringstream formatter;
             formatter << "[" << scroll::to_string(level_) << "] [" << Service::name() << "] [" << file_ << ":" << line_
-                      << " " << function_ << "] " << message_;
+                      << " " << function_ << "] " << message_ << "\n";
             return formatter.str();
         }
     };
-#define SERVICE_SCROLL_ENTRY(Level, Service, Message) \
-    demiplane::scroll::ServiceEntry<Service>(Level, __FILE__, __LINE__, __FUNCTION__, Message)
 } // namespace demiplane::scroll

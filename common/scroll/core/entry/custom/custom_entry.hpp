@@ -62,18 +62,18 @@ namespace demiplane::scroll {
         bool load_config(const std::string& config_file_path);
         [[nodiscard]] std::string make_header() const;
         [[nodiscard]] Json::Value dump_config() const {
-            void(this);
-            // TODO:
+            gears::force_non_static(this);
             return {};
         }
     };
-    class CustomEntry final : public Entry {
+    class CustomEntry final : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread> {
     public:
-        [[nodiscard]] std::string to_string() const override;
-        CustomEntry(const CustomEntryConfig& config, LogLevel level, const std::string_view& message,
-            const std::string_view& file, uint32_t line, const std::string_view& function)
-            : Entry(level, message, file, line, function), config_(config) {}
+        CustomEntry(const LogLevel lvl, const std::string_view& msg, const MetaTimePoint& meta_time_point,
+            const MetaSource& meta_source, const MetaThread& meta_thread, const CustomEntryConfig& config)
+            : EntryBase(lvl, msg, meta_time_point, meta_source, meta_thread),
+              config_(config) {}
 
+        [[nodiscard]] std::string to_string() const;
     private:
         const CustomEntryConfig& config_;
     };

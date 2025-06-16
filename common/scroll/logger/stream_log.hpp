@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <source_location>
 #include <sstream>
 
@@ -9,7 +8,7 @@
 
 namespace demiplane::scroll {
 
-    template <IsEntry EntryType>
+    template <class EntryType>
     class StreamLogEntry {
     public:
         StreamLogEntry(Logger<EntryType>* logger_ptr, const LogLevel level,

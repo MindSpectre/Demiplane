@@ -15,14 +15,14 @@ target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
 ##############################################################################
 add_library(${DMP_SCROLL}.Core STATIC
         core/entry/entry_interface.hpp
-#        core/entry/custom/custom_entry.cpp
+        core/entry/custom/custom_entry.cpp
         core/log_level.hpp
         core/entry/factory/entry_factory.hpp
 )
 target_include_directories(${DMP_SCROLL}.Core PUBLIC
         core/
         core/entry/basic
-#        core/entry/custom
+        core/entry/custom
 )
 target_link_libraries(${DMP_SCROLL}.Core PUBLIC
         JsonCpp::JsonCpp
@@ -52,12 +52,12 @@ target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
 
 
 ##############################################################################
-# Scroll logger provieder
+# Scroll logger provider
 ##############################################################################
 add_library(${DMP_SCROLL}.Logger.Provider STATIC
         logger_provider/source/logger_provider.cpp
         logger_provider/include/logger_provider.hpp
-        logger_provider/include/macros2.hpp
+        logger_provider/include/log_macros_adds.hpp
 )
 target_include_directories(${DMP_SCROLL}.Logger.Provider PUBLIC
         logger_provider/include

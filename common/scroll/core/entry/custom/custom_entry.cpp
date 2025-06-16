@@ -1,9 +1,11 @@
+#include "custom_entry.hpp"
+
+#include <demiplane/chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
-#include "custom_entry.hpp"
-#include "chrono_utils.hpp"
+
 #include "colors.hpp"
 namespace {
     void fill_until_pos(std::ostringstream& log, const std::size_t position) {
@@ -11,7 +13,7 @@ namespace {
             log << std::string(padding, ' ');
         }
     }
-}
+} // namespace
 namespace demiplane::scroll {
     /**
      * Loads the configuration settings from a specified JSON file.
@@ -150,7 +152,7 @@ namespace demiplane::scroll {
     std::string CustomEntry::to_string() const {
         std::ostringstream log_entry;
         if (config_.add_time) {
-            log_entry << "[" << chrono::utilities::LocalClock::current_time_custom_fmt(config_.time_fmt) << "] ";
+            log_entry << "[" << chrono::UTCClock::format_time(time_point, config_.time_fmt) << "] ";
         }
         if (config_.add_level) {
             fill_until_pos(log_entry, config_.custom_alignment.level_pos);
@@ -166,9 +168,9 @@ namespace demiplane::scroll {
         }
         if (config_.add_location) {
             fill_until_pos(log_entry, config_.custom_alignment.location_pos);
-            log_entry << "[" << file_ << ":" << line_;
+            log_entry << "[" << loc.file_name() << ":" << loc.line();
             if (config_.add_pretty_function) {
-                log_entry << " " << function_;
+                log_entry << " " << loc.function_name();
             }
             log_entry << "] ";
         }
@@ -209,6 +211,4 @@ namespace demiplane::scroll {
         return uncolored_entry.data();
     }
 
-} // namespace demiplane::tracing
-
-
+} // namespace demiplane::scroll

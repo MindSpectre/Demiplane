@@ -11,4 +11,9 @@ namespace demiplane::gears {
     {
         static_assert(dependent_false_v<T>, "Unreachable branch reached.");
     }
+
+    consteval void force_non_static(const void* this_) {
+        static_cast<void>(this_);
+    }
+
 } // namespace demiplane

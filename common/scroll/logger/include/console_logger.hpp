@@ -4,19 +4,18 @@
 #include <iostream>
 
 #include "../logger_interface.hpp"
-#include "chrono_utils.hpp"
-
+#include "entry/factory/entry_factory.hpp"
 namespace demiplane::scroll {
 
-    template <IsEntry EntryType>
+    template <class EntryType>
     class ConsoleLogger final : public Logger<EntryType> {
     public:
         explicit ConsoleLogger(LogLevel level) : Logger<EntryType>{level} {}
 
         ConsoleLogger() = default;
 
-        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override {
-            if (static_cast<int>(lvl) < static_cast<int>(this->threshold_)) {
+        void log(LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
+            if (static_cast<int8_t>(lvl) < static_cast<int8_t>(this->threshold_)) {
                 return;
             }
             auto entry = make_entry<EntryType>(lvl, msg, loc);
@@ -24,7 +23,7 @@ namespace demiplane::scroll {
         }
 
         void log(const EntryType &entry) override {
-            if (static_cast<int>(entry.level()) < static_cast<int>(this->threshold_)) {
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(this->threshold_)) {
                 return;
             }
             std::cout << entry.to_string();

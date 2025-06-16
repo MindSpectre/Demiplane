@@ -34,10 +34,10 @@ namespace demiplane::scroll {
     };
 
 
-    template <IsEntry EntryType>
+    template <class EntryType>
     class ConsoleLoggerProvider : public LoggerProvider<ConsoleLogger<EntryType>> {};
 
-    template <IsEntry EntryType>
+    template <class EntryType>
     class FileLoggerProvider : public LoggerProvider<FileLogger<EntryType>> {};
 
     class TestLoggerProvider : public LoggerProvider<ConsoleLogger<DetailedEntry>>{

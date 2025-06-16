@@ -4,18 +4,17 @@
 #include <string>
 
 #include "../entry_interface.hpp"
-
+#include "clock.hpp"
 namespace demiplane::scroll {
     template <class Service>
-    class ServiceEntry final : public detail::EntryBase<detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
-        using Base = EntryBase;
-
+    class ServiceEntry final
+        : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
     public:
-        using Base::Base;
-
+        using EntryBase::EntryBase;
         [[nodiscard]] std::string to_string() const {
             std::ostringstream os;
-            os << "[" << scroll::to_string(level_) << "] "
+            os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::ymd_hms) << " ["
+               << scroll::to_string(level_) << "] "
                << "[" << Service::name() << "] "
                << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';

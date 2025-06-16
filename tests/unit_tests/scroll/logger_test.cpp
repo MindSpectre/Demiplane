@@ -1,7 +1,9 @@
 #define ENABLE_LOGGING
 
-#include <demiplane/scroll2>
+#include <demiplane/scroll>
 #include <gtest/gtest.h>
+
+
 using namespace demiplane::scroll;
 constexpr int pseudo_line  = 7;
 constexpr auto pseudo_file = "CURRENT_FILE";
@@ -16,28 +18,28 @@ public:
     }
 };
 TEST(TestEntries, DetailedEntry) {
-    const auto entry = demiplane::scroll::make_entry<DetailedEntry>(INF, "Hello Detailed");
+    const auto entry = demiplane::scroll::make_entry<DetailedEntry>(INF, "Hello Detailed", std::source_location::current());
     std::string dump;
     EXPECT_NO_THROW(dump = entry.to_string());
     std::cout << dump;
 }
 TEST(TestEntries, LightEntry) {
-    const auto entry = demiplane::scroll::make_entry<LightEntry>(INF, "Hello light");
+    const auto entry = demiplane::scroll::make_entry<LightEntry>(INF, "Hello light", std::source_location::current());
     std::string dump;
     EXPECT_NO_THROW(dump = entry.to_string());
     std::cout << dump;
 }
 TEST(TestEntries, ServiceEntry) {
-    const auto entry = demiplane::scroll::make_entry<ServiceEntry<ServiceX>>(INF, "Hello service" );
+    const auto entry = demiplane::scroll::make_entry<ServiceEntry<ServiceX>>(INF, "Hello service", std::source_location::current() );
     std::string dump;
     EXPECT_NO_THROW(dump = entry.to_string());
     std::cout << dump;
 }
 
 TEST(TestEntries, CustomEntry) {
-    const auto entry = demiplane::scroll::make_entry<int>(INF, "Hello custom");
+    const auto entry = demiplane::scroll::make_entry<CustomEntry>(INF, "Hello custom", std::source_location::current());
     std::string dump;
-    // EXPECT_NO_THROW(dump = entry.to_string());
+    EXPECT_NO_THROW(dump = entry.to_string());
     std::cout << dump;
 }
 

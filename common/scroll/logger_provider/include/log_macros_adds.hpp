@@ -1,7 +1,5 @@
 #pragma once
 
-#include "log_macros.hpp"
-
 #define LOG2S_DBG() LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::DBG)
 #define LOG2S_INF() LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::INF)
 #define LOG2S_WRN() LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::WRN)

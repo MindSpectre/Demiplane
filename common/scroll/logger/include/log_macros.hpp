@@ -13,8 +13,8 @@
 
 
 #ifdef ENABLE_LOGGING
-#define LOG_ENTRY(logger_ptr, level, message) logger_ptr->log(level, message, __FILE__, __LINE__, __FUNCTION__)
-#define LOG_STREAM_ENTRY(logger_ptr, level) demiplane::scroll::StreamLogEntry(logger_ptr, level, __FILE__, __LINE__, __FUNCTION__)
+#define LOG_ENTRY(logger_ptr, level, message) logger_ptr->log(level, message)
+#define LOG_STREAM_ENTRY(logger_ptr, level) demiplane::scroll::StreamLogEntry(logger_ptr, level)
 #else
 #define LOG_ENTRY(logger_ptr, level, message) (void(0))
 #define LOG_STREAM_ENTRY(logger_ptr, level) demiplane::scroll::DummyStreamLogEntry()

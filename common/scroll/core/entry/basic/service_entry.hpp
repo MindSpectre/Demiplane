@@ -7,18 +7,19 @@
 
 namespace demiplane::scroll {
     template <class Service>
-    // TODO: add has static name concept
-    class ServiceEntry final : public Entry {
-    public:
-        ServiceEntry(const LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
-            const std::string_view& function)
-            : Entry(level, message, file, line, function) {}
+    class ServiceEntry final : public detail::EntryBase<detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
+        using Base = EntryBase;
 
-        [[nodiscard]] std::string to_string() const override {
-            std::ostringstream formatter;
-            formatter << "[" << scroll::to_string(level_) << "] [" << Service::name() << "] [" << file_ << ":" << line_
-                      << " " << function_ << "] " << message_ << "\n";
-            return formatter.str();
+    public:
+        using Base::Base;
+
+        [[nodiscard]] std::string to_string() const {
+            std::ostringstream os;
+            os << "[" << scroll::to_string(level_) << "] "
+               << "[" << Service::name() << "] "
+               << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
+               << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
+            return os.str();
         }
     };
 } // namespace demiplane::scroll

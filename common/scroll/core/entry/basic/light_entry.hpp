@@ -6,13 +6,15 @@
 #include "../entry_interface.hpp"
 
 namespace demiplane::scroll {
-    class LightEntry final : public Entry {
-    public:
-        LightEntry(const LogLevel level, const std::string_view message, const std::string_view file,
-            const uint32_t line, const std::string_view function)
-            : Entry(level, message, file, line, function) {}
+    class LightEntry final : public detail::EntryBase<detail::MetaNone> // only level+msg
+    {
+        using Base = EntryBase;
 
-        [[nodiscard]] std::string to_string() const override {
+    public:
+        LightEntry(LogLevel lvl, const std::string_view& msg)
+            : EntryBase<MetaNone>(lvl, msg, MetaNone{}) {}
+
+        [[nodiscard]] std::string to_string() const {
             std::ostringstream formatter;
             formatter << "[" << scroll::to_string(level_) << "] " << message_ << "\n";
             return formatter.str();

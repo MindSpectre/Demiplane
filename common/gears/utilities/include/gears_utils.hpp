@@ -5,4 +5,10 @@ namespace demiplane::gears {
     consteval void unused_value(const V& value) {
         static_cast<void>(value);
     }
+
+    template<class T = void>
+    consteval void unreachable()
+    {
+        static_assert(dependent_false_v<T>, "Unreachable branch reached.");
+    }
 } // namespace demiplane

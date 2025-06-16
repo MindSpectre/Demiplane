@@ -1,9 +1,7 @@
 #pragma once
 
-#include "detailed_entry.hpp"
-#include "light_entry.hpp"
-#include "service_entry.hpp"
-#include "custom_entry.hpp"
+
+//#include "custom_entry.hpp"
 
 #include "console_logger.hpp"
 #include "file_logger.hpp"

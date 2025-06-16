@@ -2,29 +2,29 @@
 
 #include <string_view>
 
-#include "entry/entry_interface.hpp"
+#include "entry/factory/entry_factory.hpp"
 
 
 namespace demiplane::scroll {
 
-    template <IsEntry EntryType>
+    template <IsEntry EntryT>
     class Logger {
     public:
         virtual ~Logger() = default;
 
-        explicit Logger(const LogLevel level) : threshold_{level} {}
+        explicit Logger(LogLevel lvl = LogLevel::Debug) : threshold_{lvl} {}
 
-        Logger() : threshold_{LogLevel::Debug} {}
-
+        // ──────────────────────────────────────────────────────────────
+        // New: captures file / line / function for you
         virtual void log(
-            LogLevel level, std::string_view message, const char* file, uint32_t line, const char* function) = 0;
+            LogLevel lvl, std::string_view msg, std::source_location loc = std::source_location::current()) = 0;
+        // ──────────────────────────────────────────────────────────────
 
-        virtual void log(const EntryType &entry) = 0;
+        virtual void log(const EntryT& entry) = 0;
 
-        virtual void set_threshold(const LogLevel level) {
-            threshold_ = level;
+        void set_threshold(LogLevel lvl) {
+            threshold_ = lvl;
         }
-
         [[nodiscard]] LogLevel get_threshold() const {
             return threshold_;
         }

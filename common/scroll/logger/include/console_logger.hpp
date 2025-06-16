@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "../logger_interface.hpp"
+#include "chrono_utils.hpp"
 
 namespace demiplane::scroll {
 
@@ -14,14 +15,11 @@ namespace demiplane::scroll {
 
         ConsoleLogger() = default;
 
-        void log(LogLevel level, const std::string_view message, const char* file, const uint32_t line,
-            const char* function) override {
-            // Skip logging if below the threshold
-            if (static_cast<int>(level) < static_cast<int>(this->threshold_)) {
+        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override {
+            if (static_cast<int>(lvl) < static_cast<int>(this->threshold_)) {
                 return;
             }
-
-            EntryType entry(level, message, file, line, function);
+            auto entry = make_entry<EntryType>(lvl, msg, loc);
             std::cout << entry.to_string();
         }
 

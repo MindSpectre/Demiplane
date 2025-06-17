@@ -21,4 +21,8 @@ namespace demiplane::scroll {
             return os.str();
         }
     };
+    template <class Service>
+    struct detail::entry_traits<ServiceEntry<Service>> {
+        using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess>;
+    };
 } // namespace demiplane::scroll

@@ -6,6 +6,10 @@
 #include "log_level.hpp"
 
 namespace demiplane::scroll::detail {
+    template <class EntryT>
+    struct entry_traits;
+
+
     struct MetaNone {}; // 0-B
     struct MetaSource { // file / line / func
         std::source_location loc;

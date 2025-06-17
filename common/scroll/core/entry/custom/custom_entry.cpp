@@ -151,64 +151,64 @@ namespace demiplane::scroll {
 
     std::string CustomEntry::to_string() const {
         std::ostringstream log_entry;
-        if (config_.add_time) {
-            log_entry << "[" << chrono::UTCClock::format_time(time_point, config_.time_fmt) << "] ";
+        if (config_->add_time) {
+            log_entry  << chrono::UTCClock::format_time(time_point, config_->time_fmt) << " ";
         }
-        if (config_.add_level) {
-            fill_until_pos(log_entry, config_.custom_alignment.level_pos);
+        if (config_->add_level) {
+            fill_until_pos(log_entry, config_->custom_alignment.level_pos);
             log_entry << "[" << scroll::to_string(level_) << "] ";
         }
-        // if (config_.enable_service_name) {
-        //     fill_until_pos(log_entry, config_.custom_alignment.service_pos);
+        // if (config_->enable_service_name) {
+        //     fill_until_pos(log_entry, config_->custom_alignment.service_pos);
         //     log_entry << "[" << service_ << "] ";
         // }
-        if (config_.add_thread) {
-            fill_until_pos(log_entry, config_.custom_alignment.thread_pos);
+        if (config_->add_thread) {
+            fill_until_pos(log_entry, config_->custom_alignment.thread_pos);
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
-        if (config_.add_location) {
-            fill_until_pos(log_entry, config_.custom_alignment.location_pos);
+        if (config_->add_location) {
+            fill_until_pos(log_entry, config_->custom_alignment.location_pos);
             log_entry << "[" << loc.file_name() << ":" << loc.line();
-            if (config_.add_pretty_function) {
+            if (config_->add_pretty_function) {
                 log_entry << " " << loc.function_name();
             }
             log_entry << "] ";
         }
 
-        if (config_.add_message) {
-            fill_until_pos(log_entry, config_.custom_alignment.message_pos);
+        if (config_->add_message) {
+            fill_until_pos(log_entry, config_->custom_alignment.message_pos);
             log_entry << message_ << "\n";
         }
 
-        const std::string_view uncolored_entry = log_entry.view();
+        std::string uncolored_entry = log_entry.str();
         switch (level_) {
         case LogLevel::Debug:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_white(uncolored_entry);
             }
             break;
         case LogLevel::Info:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_green(uncolored_entry);
             }
             break;
         case LogLevel::Warning:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_yellow(uncolored_entry);
             }
             break;
         case LogLevel::Error:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_red(uncolored_entry);
             }
             break;
         case LogLevel::Fatal:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_bold_red(uncolored_entry);
             }
             break;
         }
-        return uncolored_entry.data();
+        return uncolored_entry;
     }
 
 } // namespace demiplane::scroll

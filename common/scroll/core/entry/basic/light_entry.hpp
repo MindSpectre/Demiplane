@@ -18,4 +18,7 @@ namespace demiplane::scroll {
             return formatter.str();
         }
     };
+    template<> struct detail::entry_traits<LightEntry> {
+        using wants = gears::type_list<>;
+    };
 } // namespace demiplane::scroll

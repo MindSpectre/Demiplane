@@ -4,29 +4,29 @@
 #include <iostream>
 
 #include "../logger_interface.hpp"
-
+#include "entry/factory/entry_factory.hpp"
 namespace demiplane::scroll {
 
-    template <IsEntry EntryType>
+    template <class EntryType>
     class ConsoleLogger final : public Logger<EntryType> {
     public:
+        explicit ConsoleLogger(LogLevel level) : Logger<EntryType>{level} {}
+
         ConsoleLogger() = default;
 
-        void log(LogLevel level, const std::string_view message, const char* file, const int line,
-            const char* function) override {
-            // Skip logging if below the threshold
-            if (static_cast<int>(level) < static_cast<int>(this->threshold_)) {
+        void log(LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
+            if (static_cast<int8_t>(lvl) < static_cast<int8_t>(this->threshold_)) {
                 return;
             }
-
-            EntryType entry(level, message, file, line, function);
-            std::cout << entry.to_string() << std::endl;
+            auto entry = make_entry<EntryType>(lvl, msg, loc);
+            std::cout << entry.to_string();
         }
-        void log(EntryType entry) override {
-            if (static_cast<int>(entry.level()) < static_cast<int>(this->threshold_)) {
+
+        void log(const EntryType &entry) override {
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(this->threshold_)) {
                 return;
             }
-            std::cout << entry.to_string() << std::endl;
+            std::cout << entry.to_string();
         }
     };
 

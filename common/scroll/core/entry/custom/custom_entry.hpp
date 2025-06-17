@@ -1,5 +1,6 @@
 #pragma once
 #include <demiplane/gears>
+#include <utility>
 #include <json/json.h>
 
 #include "entry/entry_interface.hpp"
@@ -20,7 +21,7 @@ namespace demiplane::scroll {
      *
      * Inherits from the `gears::Immovable` class to restrict its copy or move semantics.
      */
-    class CustomEntryConfig : gears::Immovable {
+    class CustomEntryConfig {
     public:
         bool add_time            = true;
         bool add_level           = true;
@@ -31,7 +32,7 @@ namespace demiplane::scroll {
         bool enable_header       = false;
         bool enable_colors       = true;
         bool enable_service_name = true;
-        std::string time_fmt     = "%d-%m-%Y %X";
+        const char* time_fmt     = "%d-%m-%Y %X";
 
         struct Alignment {
             std::size_t time_pos     = 0;
@@ -62,20 +63,23 @@ namespace demiplane::scroll {
         bool load_config(const std::string& config_file_path);
         [[nodiscard]] std::string make_header() const;
         [[nodiscard]] Json::Value dump_config() const {
-            void(this);
-            //TODO:
+            gears::force_non_static(this);
             return {};
         }
     };
-    class CustomEntry final : public Entry {
+    class CustomEntry final : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread> {
     public:
-        [[nodiscard]] std::string to_string() const override;
-        CustomEntry(const CustomEntryConfig& config, LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
-            const std::string_view& function)
-            : Entry(level, message, file, line, function), config_(config) {}
+        CustomEntry(const LogLevel lvl, const std::string_view& msg, const MetaTimePoint& meta_time_point,
+            const MetaSource& meta_source, const MetaThread& meta_thread, std::shared_ptr<CustomEntryConfig> config)
+            : EntryBase(lvl, msg, meta_time_point, meta_source, meta_thread), config_(std::move(config)) {}
+
+        [[nodiscard]] std::string to_string() const;
 
     private:
-        const CustomEntryConfig& config_;
+        std::shared_ptr<CustomEntryConfig> config_;
     };
-
+    template <>
+    struct detail::entry_traits<CustomEntry> {
+        using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, std::shared_ptr<CustomEntryConfig>>;
+    };
 } // namespace demiplane::scroll

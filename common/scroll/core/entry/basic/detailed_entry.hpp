@@ -4,19 +4,25 @@
 #include <string>
 
 #include "../entry_interface.hpp"
+#include <clock.hpp>
 
 namespace demiplane::scroll {
-    class DetailedEntry final : public Entry {
+    class DetailedEntry final
+        : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
     public:
-        DetailedEntry(LogLevel level, const std::string_view& message, const std::string_view& file, uint32_t line,
-            const std::string_view& function)
-            : Entry(level, message, file, line, function) {}
-        [[nodiscard]] std::string to_string() const override {
-            std::ostringstream formatter;
-            formatter << "[" << scroll::to_string(level_) << "] "
-                      << "[" << file_ << ":" << line_ << " " << function_ << "] " << message_;
-            return formatter.str();
+        using EntryBase::EntryBase;
+
+        [[nodiscard]] std::string to_string() const {
+            std::ostringstream os;
+            os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::ymd_hms) << " ["
+               << scroll::to_string(level_) << "] "
+               << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
+               << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
+            return os.str();
         }
     };
-    #define DETAILED_LOG_ENTRY(Level, Message) demiplane::scroll::DetailedEntry(Level, Message, __FILE__, __LINE__, __FUNCTION__)
+    template <>
+    struct detail::entry_traits<DetailedEntry> {
+        using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess>;
+    };
 } // namespace demiplane::scroll

@@ -13,16 +13,22 @@ target_include_directories(${DMP_GEARS}.Result INTERFACE
 ###############################################
 # Traits for classes
 ###############################################
-add_library(${DMP_GEARS}.ClassTraits INTERFACE)
-target_include_directories(${DMP_GEARS}.ClassTraits INTERFACE
-        class_traits/include
+add_library(${DMP_GEARS}.MetaProgramming INTERFACE
+        meta_programming/include/class_traits.hpp
+        meta_programming/include/templates.hpp
+)
+target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
+        meta_programming/include
 )
 ###############################################
 
 ###############################################
 # Traits for classes
 ###############################################
-add_library(${DMP_GEARS}.Utilities INTERFACE)
+add_library(${DMP_GEARS}.Utilities INTERFACE
+        utilities/include/gears_macros.hpp
+        utilities/include/gears_utils.hpp
+)
 target_include_directories(${DMP_GEARS}.Utilities INTERFACE
         utilities/include
 )
@@ -33,7 +39,7 @@ add_combined_library(${DMP_GEARS}
         export
         LIBRARIES
         ${DMP_GEARS}.Result
-        ${DMP_GEARS}.ClassTraits
+        ${DMP_GEARS}.MetaProgramming
         ${DMP_GEARS}.Utilities
         ALIAS
         Demiplane::Gears

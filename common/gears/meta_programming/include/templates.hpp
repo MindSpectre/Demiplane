@@ -40,9 +40,29 @@ namespace demiplane::gears {
     template <typename T>
     inline constexpr bool is_vector_v = is_vector<T>::value;
 
-
     template <typename T>
     concept Interface = std::is_abstract_v<T>;
+
+    // ── tiny type-list ────────────────────────────────────────────────
+    template <class... Ts>
+    struct type_list {};
+
+    // ── pick<T>() → std::get<T>(tuple) wrapper ────────────────────────
+    template <class T, class Tuple>
+    decltype(auto) pick(Tuple&& t) {
+        return std::get<T>(std::forward<Tuple>(t));
+    }
+
+    // ── turn a type_list<Ts…> into a tuple of objects from `tuple` ───
+    template <class List, class Tuple>
+    struct make_arg_tuple;
+
+    template <class... Ts, class Tuple>
+    struct make_arg_tuple<type_list<Ts...>, Tuple> {
+        static auto from(Tuple&& tup) {
+            return std::tuple<decltype(pick<Ts>(tup))...>(pick<Ts>(tup)...);
+        }
+    };
 
 
 } // namespace demiplane::gears

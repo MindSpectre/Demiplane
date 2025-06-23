@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../custom/include/custom_entry.hpp"
 #include "clock.hpp"
-#include "custom_entry.hpp"
 #include "detailed_entry.hpp"
 #include "light_entry.hpp"
 #include "service_entry.hpp"

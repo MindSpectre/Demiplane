@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <iostream>
@@ -22,7 +21,7 @@ namespace demiplane::scroll {
             std::cout << entry.to_string();
         }
 
-        void log(const EntryType &entry) override {
+        void log(const EntryType& entry) override {
             if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(this->threshold_)) {
                 return;
             }

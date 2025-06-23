@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "entry/entry_interface.hpp"
+#include "../core/entry_interface.hpp"
 
 
 namespace demiplane::scroll {

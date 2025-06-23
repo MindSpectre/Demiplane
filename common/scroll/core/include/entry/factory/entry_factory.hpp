@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../custom/include/custom_entry.hpp"
-#include "clock.hpp"
-#include "detailed_entry.hpp"
-#include "light_entry.hpp"
-#include "service_entry.hpp"
+#include "entry/custom_entry.hpp"
+#include "entry/detailed_entry.hpp"
+#include "entry/light_entry.hpp"
+#include "entry/service_entry.hpp"
+
 namespace demiplane::scroll {
 
     template <class EntryT, class... Extra>

@@ -3,8 +3,10 @@
 #include <memory>
 
 #include "console_logger.hpp"
-#include "detailed_entry.hpp"
 #include "file_logger.hpp"
+
+// For test logger provider
+#include "entry/detailed_entry.hpp"
 
 
 namespace demiplane::scroll {
@@ -13,7 +15,7 @@ namespace demiplane::scroll {
     public:
         virtual ~LoggerProvider() = default;
 
-        LoggerProvider()          = default;
+        LoggerProvider() = default;
 
         explicit LoggerProvider(const std::shared_ptr<LoggerType>& logger) : logger_(logger) {}
 
@@ -40,7 +42,7 @@ namespace demiplane::scroll {
     template <class EntryType>
     class FileLoggerProvider : public LoggerProvider<FileLogger<EntryType>> {};
 
-    class TestLoggerProvider : public LoggerProvider<ConsoleLogger<DetailedEntry>>{
+    class TestLoggerProvider : public LoggerProvider<ConsoleLogger<DetailedEntry>> {
     public:
         explicit TestLoggerProvider()
             : LoggerProvider(std::make_shared<ConsoleLogger<DetailedEntry>>(LogLevel::Debug)) {}

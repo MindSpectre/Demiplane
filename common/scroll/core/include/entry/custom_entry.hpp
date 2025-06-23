@@ -1,10 +1,10 @@
 #pragma once
-#include <demiplane/gears>
-#include <utility>
 #include <json/json.h>
+#include <utility>
 
-#include "entry/entry_interface.hpp"
-
+#include "../entry_interface.hpp"
+#include <gears_utils.hpp>
+#include <templates.hpp>
 namespace demiplane::scroll {
 
 

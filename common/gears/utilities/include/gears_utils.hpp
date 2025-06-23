@@ -1,14 +1,14 @@
 #pragma once
 
+#include "templates.hpp"
 namespace demiplane::gears {
     template <typename V>
     consteval void unused_value(const V& value) {
         static_cast<void>(value);
     }
 
-    template<class T = void>
-    consteval void unreachable()
-    {
+    template <class T = void>
+    consteval void unreachable() {
         static_assert(dependent_false_v<T>, "Unreachable branch reached.");
     }
 
@@ -16,4 +16,4 @@ namespace demiplane::gears {
         static_cast<void>(this_);
     }
 
-} // namespace demiplane
+} // namespace demiplane::gears

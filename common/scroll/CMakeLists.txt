@@ -14,15 +14,13 @@ target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
 # Scroll Core
 ##############################################################################
 add_library(${DMP_SCROLL}.Core STATIC
-        core/entry/entry_interface.hpp
-        core/entry/custom/source/custom_entry.cpp
+        core/entry_interface.hpp
+        core/source/custom_entry.cpp
         core/log_level.hpp
-        core/entry/factory/entry_factory.hpp
+        core/include/entry/factory/entry_factory.hpp
 )
 target_include_directories(${DMP_SCROLL}.Core PUBLIC
-        core/
-        core/entry/basic
-        core/entry/custom/include
+        core/include
 )
 target_link_libraries(${DMP_SCROLL}.Core PUBLIC
         JsonCpp::JsonCpp

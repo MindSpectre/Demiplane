@@ -4,7 +4,9 @@ set(DMP_GEARS ${DMP_COMMON}.Gears)
 ###############################################
 # Result class for convenient handling
 ###############################################
-add_library(${DMP_GEARS}.Result INTERFACE)
+add_library(${DMP_GEARS}.Result INTERFACE
+        result/include/result.hpp
+)
 target_include_directories(${DMP_GEARS}.Result INTERFACE
         result/include/
 )

@@ -1,4 +1,4 @@
-#include "custom_entry.hpp"
+#include "entry/custom_entry.hpp"
 
 #include <demiplane/chrono>
 #include <fstream>

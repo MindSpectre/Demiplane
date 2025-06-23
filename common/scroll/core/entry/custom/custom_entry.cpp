@@ -7,13 +7,7 @@
 #include <thread>
 
 #include "colors.hpp"
-namespace {
-    void fill_until_pos(std::ostringstream& log, const std::size_t position) {
-        if (const std::size_t padding = position - log.view().size(); log.view().size() <= position) {
-            log << std::string(padding, ' ');
-        }
-    }
-} // namespace
+// namespace
 namespace demiplane::scroll {
     /**
      * Loads the configuration settings from a specified JSON file.
@@ -88,34 +82,7 @@ namespace demiplane::scroll {
         if (root.isMember("colors")) {
             enable_colors = deduce_cond(root, "colors");
         }
-        if (root.isMember("alignment")) {
-            Alignment proposed_alignment;
-            const Json::Value& alignment = root["alignment"];
-            if (alignment.isArray()) {
-                proposed_alignment.time_pos     = alignment[0].asInt();
-                proposed_alignment.level_pos    = alignment[1].asInt();
-                proposed_alignment.thread_pos   = alignment[2].asInt();
-                proposed_alignment.location_pos = alignment[3].asInt();
-                proposed_alignment.message_pos  = alignment[4].asInt();
-            }
-            if (alignment.isObject()) {
-                if (alignment.isMember("time_pos")) {
-                    proposed_alignment.time_pos = alignment["time_pos"].asInt();
-                }
-                if (alignment.isMember("level_pos")) {
-                    proposed_alignment.level_pos = alignment["level_pos"].asInt();
-                }
-                if (alignment.isMember("thread_pos")) {
-                    proposed_alignment.time_pos = alignment["thread_pos"].asInt();
-                }
-                if (alignment.isMember("location_pos")) {
-                    proposed_alignment.time_pos = alignment["location_pos"].asInt();
-                }
-                if (alignment.isMember("message_pos")) {
-                    proposed_alignment.time_pos = alignment["message_pos"].asInt();
-                }
-            }
-        }
+
         return true;
     }
 
@@ -125,24 +92,20 @@ namespace demiplane::scroll {
             header_stream << "DATE ";
         }
         if (add_level) {
-            fill_until_pos(header_stream, custom_alignment.level_pos);
+
             header_stream << "LEVEL ";
         }
-        if (enable_service_name) {
-            fill_until_pos(header_stream, custom_alignment.service_pos);
-            header_stream << "SERVICE ";
-        }
         if (add_thread) {
-            fill_until_pos(header_stream, custom_alignment.thread_pos);
+
             header_stream << "THREAD ID ";
         }
         if (add_location) {
-            fill_until_pos(header_stream, custom_alignment.location_pos);
+
             header_stream << "LOCATION ";
         }
 
         if (add_message) {
-            fill_until_pos(header_stream, custom_alignment.message_pos);
+
             header_stream << "MESSAGE ";
         }
 
@@ -152,22 +115,18 @@ namespace demiplane::scroll {
     std::string CustomEntry::to_string() const {
         std::ostringstream log_entry;
         if (config_->add_time) {
-            log_entry  << chrono::UTCClock::format_time(time_point, config_->time_fmt) << " ";
+            log_entry << chrono::UTCClock::format_time(time_point, config_->time_fmt) << " ";
         }
         if (config_->add_level) {
-            fill_until_pos(log_entry, config_->custom_alignment.level_pos);
-            log_entry << "[" << scroll::to_string(level_) << "] ";
+
+            log_entry << "[" << scroll::log_level_to_string(level_) << "] ";
         }
-        // if (config_->enable_service_name) {
-        //     fill_until_pos(log_entry, config_->custom_alignment.service_pos);
-        //     log_entry << "[" << service_ << "] ";
-        // }
         if (config_->add_thread) {
-            fill_until_pos(log_entry, config_->custom_alignment.thread_pos);
+
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
         if (config_->add_location) {
-            fill_until_pos(log_entry, config_->custom_alignment.location_pos);
+
             log_entry << "[" << loc.file_name() << ":" << loc.line();
             if (config_->add_pretty_function) {
                 log_entry << " " << loc.function_name();
@@ -176,7 +135,7 @@ namespace demiplane::scroll {
         }
 
         if (config_->add_message) {
-            fill_until_pos(log_entry, config_->custom_alignment.message_pos);
+
             log_entry << message_ << "\n";
         }
 

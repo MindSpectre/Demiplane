@@ -30,7 +30,9 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
 # Test scroll
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Scroll
-    scroll/logger_test.cpp
+        scroll/logger_provider_test.cpp
+        scroll/entry_tests.cpp
+        scroll/main.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Scroll
     PRIVATE

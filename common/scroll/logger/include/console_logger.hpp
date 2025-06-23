@@ -10,7 +10,7 @@ namespace demiplane::scroll {
     template <class EntryType>
     class ConsoleLogger final : public Logger<EntryType> {
     public:
-        explicit ConsoleLogger(LogLevel level) : Logger<EntryType>{level} {}
+        explicit ConsoleLogger(LogLevel threshold) : Logger<EntryType>{threshold} {}
 
         ConsoleLogger() = default;
 

@@ -45,7 +45,7 @@ namespace demiplane::gears {
 
     template <typename T>
     concept HasStaticName = requires {
-        { T::name() } -> std::convertible_to<std::string_view>;
+        { T::name } -> std::convertible_to<std::string_view>;
     };
 
 
@@ -54,4 +54,5 @@ namespace demiplane::gears {
             return "Anonymous class";
         }
     };
+
 } // namespace demiplane::gears

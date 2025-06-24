@@ -12,7 +12,7 @@ namespace demiplane::scroll {
     public:
         LightEntry(const LogLevel lvl, const std::string_view msg) : EntryBase(lvl, msg, MetaNone{}) {}
 
-        [[nodiscard]] std::string to_string() const {
+        [[nodiscard]] std::string to_string() const override {
             std::ostringstream formatter;
             formatter << "[" << log_level_to_string(level_) << "] " << message_ << "\n";
             return formatter.str();

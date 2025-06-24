@@ -13,7 +13,7 @@ namespace demiplane::scroll {
     public:
         using EntryBase::EntryBase;
 
-        [[nodiscard]] std::string to_string() const {
+        [[nodiscard]] std::string to_string() const override {
             std::ostringstream os;
             os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::ymd_hms) << " ["
                << log_level_to_string(level_) << "] "

@@ -45,7 +45,7 @@ namespace demiplane::scroll {
             const MetaSource& meta_source, const MetaThread& meta_thread, std::shared_ptr<CustomEntryConfig> config)
             : EntryBase(lvl, msg, meta_time_point, meta_source, meta_thread), config_(std::move(config)) {}
 
-        [[nodiscard]] std::string to_string() const;
+        [[nodiscard]] std::string to_string() const override;
 
     private:
         std::shared_ptr<CustomEntryConfig> config_;

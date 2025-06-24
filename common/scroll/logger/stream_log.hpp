@@ -8,7 +8,7 @@
 
 namespace demiplane::scroll {
 
-    template <class EntryType>
+    template <detail::EntryConcept EntryType>
     class StreamLogEntry {
     public:
         StreamLogEntry(Logger<EntryType>* logger_ptr, const LogLevel level,

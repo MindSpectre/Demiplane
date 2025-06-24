@@ -44,4 +44,12 @@ namespace demiplane::scroll::detail {
         LogLevel level_;
         std::string message_;
     };
+
+    template <typename T>
+    concept EntryConcept = requires(const T& entry) {
+        { entry.level() } -> std::same_as<LogLevel>;
+        { entry.message() } -> std::same_as<std::string_view>;
+        { entry.to_string() } -> std::same_as<std::string>;
+    };
+
 } // namespace demiplane::scroll::detail

@@ -6,7 +6,7 @@
 #include "entry/factory/entry_factory.hpp"
 namespace demiplane::scroll {
 
-    template <class EntryType>
+    template <detail::EntryConcept EntryType>
     class ConsoleLogger final : public Logger<EntryType> {
     public:
         explicit ConsoleLogger(LogLevel threshold) : Logger<EntryType>{threshold} {}

@@ -7,7 +7,7 @@
 
 namespace demiplane::scroll {
 
-    template <class EntryT>
+    template <detail::EntryConcept EntryT>
     class Logger {
     public:
         virtual ~Logger() = default;
@@ -27,7 +27,7 @@ namespace demiplane::scroll {
         [[nodiscard]] LogLevel get_threshold() const {
             return threshold_;
         }
-
+        // TODO: add non blocking thread writer logger
     protected:
         LogLevel threshold_;
     };

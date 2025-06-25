@@ -1,11 +1,15 @@
 #pragma once
 
+#include <concepts>
 #include <string_view>
+#include <type_traits>
 
 #include "../core/entry_interface.hpp"
+#include "gears_utils.hpp"
 
 
 namespace demiplane::scroll {
+
 
     template <detail::EntryConcept EntryT>
     class Logger {
@@ -32,4 +36,7 @@ namespace demiplane::scroll {
         LogLevel threshold_;
     };
 
+    template <typename T>
+    concept LoggerConcept = demiplane::gears::derived_from_specialization_of_v<Logger, T>;
+    
 } // namespace demiplane::scroll

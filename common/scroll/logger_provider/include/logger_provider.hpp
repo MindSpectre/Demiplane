@@ -10,7 +10,7 @@
 
 
 namespace demiplane::scroll {
-    template <typename LoggerType>
+    template <LoggerConcept LoggerType>
     class LoggerProvider {
     public:
         virtual ~LoggerProvider() = default;
@@ -36,10 +36,10 @@ namespace demiplane::scroll {
     };
 
 
-    template <class EntryType>
+    template <detail::EntryConcept EntryType>
     class ConsoleLoggerProvider : public LoggerProvider<ConsoleLogger<EntryType>> {};
 
-    template <class EntryType>
+    template <detail::EntryConcept EntryType>
     class FileLoggerProvider : public LoggerProvider<FileLogger<EntryType>> {};
 
     class TestLoggerProvider : public LoggerProvider<ConsoleLogger<DetailedEntry>> {

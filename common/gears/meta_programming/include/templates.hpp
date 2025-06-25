@@ -18,13 +18,35 @@ namespace demiplane::gears {
     inline constexpr bool always_true_v = always_true<T>::value;
 
     template <template <class...> class, typename>
-    struct is_specialisation_of : std::false_type {};
+    struct is_specialization_of : std::false_type {};
 
     template <template <class...> class Template, typename... Args>
-    struct is_specialisation_of<Template, Template<Args...>> : std::true_type {};
+    struct is_specialization_of<Template, Template<Args...>> : std::true_type {};
 
     template <template <class...> class Template, typename... Args>
-    inline constexpr bool is_specialisation_of_v = is_specialisation_of<Template, Args...>::value;
+    inline constexpr bool is_specialization_of_v = is_specialization_of<Template, Args...>::value;
+
+
+    template <template <typename...> class BaseTemplate, typename Derived>
+    struct derived_from_specialization_of {
+    private:
+        // Helper to detect convertibility to BaseTemplate<Args...>
+        template <typename... Args>
+        static std::true_type test(const BaseTemplate<Args...>*) {
+            return std::true_type{};
+        }
+
+        static std::false_type test(...) {
+            return std::false_type{};
+        }
+
+    public:
+        static constexpr bool value = decltype(test(std::declval<Derived*>()))::value;
+    };
+
+    // Concept for cleaner use
+    template <template <typename...> class BaseTemplate, typename Derived>
+    inline constexpr bool derived_from_specialization_of_v = derived_from_specialization_of<BaseTemplate, Derived>::value;
 
 
     template <class...>

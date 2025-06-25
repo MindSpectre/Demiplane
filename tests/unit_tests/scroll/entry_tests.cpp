@@ -2,14 +2,18 @@
 #include <demiplane/scroll>
 #include <gtest/gtest.h>
 using namespace demiplane::scroll;
+
+
 class ServiceTest {
 public:
     void do_something() const {
         std::cout << "Doing something" << std::endl;
         demiplane::gears::force_non_static(this);
     }
+
     constexpr static std::string_view name = "ServiceTest";
 };
+
 
 void check_location_meta(const std::string& data, const std::source_location& loc) {
     if (data.contains(loc.file_name()) && data.contains(loc.function_name())
@@ -18,12 +22,14 @@ void check_location_meta(const std::string& data, const std::source_location& lo
     }
     throw std::runtime_error("Some location meta not found");
 }
+
 void check_message(const std::string& data, const std::string& message) {
     if (data.contains(message)) {
         return;
     }
     throw std::runtime_error("Message not found");
 }
+
 void check_level(const std::string& data, const LogLevel level) {
     if (data.contains(log_level_to_string(level))) {
         return;

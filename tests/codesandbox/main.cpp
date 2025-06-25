@@ -1,7 +1,5 @@
-#define ENABLE_LOGGING
-#include <demiplane/nexus>
+
 #include <iostream>
-using namespace demiplane::nexus;
 
 class X {
 public:
@@ -11,7 +9,6 @@ public:
 };
 
 int main() {
-    Nexus nexus;
     X x1;
     return 0;
 }

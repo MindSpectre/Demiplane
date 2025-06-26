@@ -6,27 +6,35 @@
 #include "entry/factory/entry_factory.hpp"
 namespace demiplane::scroll {
 
-    template <detail::EntryConcept EntryType>
-    class ConsoleLogger final : public Logger<EntryType> {
-    public:
-        explicit ConsoleLogger(LogLevel threshold) : Logger<EntryType>{threshold} {}
+    struct ConsoleLoggerConfig  {
+        LogLevel threshold{LogLevel::Debug};
+        bool flush_each_entry{false};
+    };
 
-        ConsoleLogger() = default;
+    template <detail::EntryConcept EntryType>
+    class ConsoleLogger : public Logger<EntryType> {
+    public:
+        explicit ConsoleLogger(const ConsoleLoggerConfig cfg) : config_{cfg} {}
 
         void log(LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
-            if (static_cast<int8_t>(lvl) < static_cast<int8_t>(this->threshold_)) {
-                return;
-            }
             auto entry = make_entry<EntryType>(lvl, msg, loc);
-            std::cout << entry.to_string();
+            log(entry);
         }
 
         void log(const EntryType& entry) override {
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(this->threshold_)) {
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
             std::cout << entry.to_string();
+            if (config_.flush_each_entry) {
+                std::cout << std::flush;
+            }
         }
+        ConsoleLoggerConfig& config() {
+            return config_;
+        }
+    protected:
+        ConsoleLoggerConfig config_;
     };
 
 } // namespace demiplane::scroll

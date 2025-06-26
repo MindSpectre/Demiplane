@@ -30,6 +30,7 @@ target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
 add_library(${DMP_GEARS}.Utilities INTERFACE
         utilities/include/gears_macros.hpp
         utilities/include/gears_utils.hpp
+        utilities/include/gears_types.hpp
 )
 target_include_directories(${DMP_GEARS}.Utilities INTERFACE
         utilities/include

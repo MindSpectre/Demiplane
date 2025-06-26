@@ -39,11 +39,13 @@ add_library(${DMP_SCROLL}.Logger STATIC
         logger/source/logger.cpp
         logger/include/log_macros.hpp
         logger/include/file_logger.hpp
+        logger/include/console_logger.hpp
 )
 target_include_directories(${DMP_SCROLL}.Logger PUBLIC
         logger/include
 )
 target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
+        Demiplane::3rdParty::ConcurrentQueue
         ${DMP_SCROLL}.Core
 )
 ##############################################################################

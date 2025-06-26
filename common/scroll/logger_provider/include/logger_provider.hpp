@@ -45,6 +45,7 @@ namespace demiplane::scroll {
     class TestLoggerProvider : public LoggerProvider<ConsoleLogger<DetailedEntry>> {
     public:
         explicit TestLoggerProvider()
-            : LoggerProvider(std::make_shared<ConsoleLogger<DetailedEntry>>(LogLevel::Debug)) {}
+            : LoggerProvider(
+                  std::make_shared<ConsoleLogger<DetailedEntry>>(ConsoleLoggerConfig{.flush_each_entry = true})) {}
     };
 } // namespace demiplane::scroll

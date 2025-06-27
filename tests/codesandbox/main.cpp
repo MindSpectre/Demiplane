@@ -1,14 +1,16 @@
 
+#include <atomic>
 #include <iostream>
 
 class X {
 public:
-    int a{1};
-    int b{2};
-    constexpr static std::uint32_t nx_id{3};
+
 };
 
 int main() {
+    std::atomic<int> x = 10;
+    std::cout << x.fetch_sub(5, std::memory_order::release);
+    std::cout << x << std::endl;
     X x1;
     return 0;
 }

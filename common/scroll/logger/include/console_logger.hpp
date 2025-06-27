@@ -25,15 +25,24 @@ namespace demiplane::scroll {
             if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
+            std::lock_guard lock{mutex_};
             std::cout << entry.to_string();
             if (config_.flush_each_entry) {
                 std::cout << std::flush;
             }
         }
+        void log(EntryType&& entry) override {
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+                return;
+            }
+            std::lock_guard lock{mutex_};
+            std::cout << entry.to_string();
+        }
         ConsoleLoggerConfig& config() {
             return config_;
         }
     protected:
+        std::mutex mutex_;
         ConsoleLoggerConfig config_;
     };
 

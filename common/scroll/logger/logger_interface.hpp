@@ -22,6 +22,7 @@ namespace demiplane::scroll {
         // ──────────────────────────────────────────────────────────────
 
         virtual void log(const EntryT& entry) = 0;
+        virtual void log(EntryT &&entry) = 0;
         // TODO: add non blocking thread writer logger
     };
 

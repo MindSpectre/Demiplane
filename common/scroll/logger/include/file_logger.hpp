@@ -14,204 +14,249 @@
 #include "../logger_interface.hpp"
 #include "gears_types.hpp"
 #include <concurrent_queue.hpp> // moodycamel
+
 namespace demiplane::scroll {
+
     struct FileLoggerConfig {
         LogLevel threshold{LogLevel::Debug};
         std::filesystem::path file;
         bool add_time_to_name{true};
-        bool safe_mode{false}; // extreme slow
-        uint64_t max_file_size = gears::literals::operator""_mb(100); // mb
+        bool safe_mode{false}; // extremely slow
+        uint64_t max_file_size = gears::literals::operator""_mb(100);
     };
-
 
     template <detail::EntryConcept EntryType>
     class FileLogger final : public Logger<EntryType> {
     public:
-        explicit FileLogger(FileLoggerConfig cfg) : config_(std::move(cfg)), running_(true) {
-            init(); // open first file
+        explicit FileLogger(FileLoggerConfig cfg) : config_(std::move(cfg)) {
+            init();
+            running_.store(true, std::memory_order_release); // open first file
             worker_ = std::thread(&FileLogger::writerLoop, this);
         }
 
+        /*---------------- destructor / kill ----------------------------------*/
+
         ~FileLogger() override {
+            kill();
+        }
+
+        /// Fast shutdown: no guarantee that queued entries are flushed.
+        void kill() {
+            accepting_.store(false, std::memory_order_release);
             running_.store(false, std::memory_order_release);
             cv_.notify_one();
             if (worker_.joinable()) {
-                worker_.join(); // drain & flush
+                worker_.join();
             }
             file_stream_.close();
         }
 
-        /*------------------------------------------------------------*/
+        /// Graceful shutdown: stop accepting, wait until *every* entry is written.
+        void graceful_shutdown() {
+            accepting_.store(false, std::memory_order_release);
 
-        void log(const LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
-            EntryType entry = make_entry<EntryType>(lvl, msg, loc);
-            log(entry);
+            /* Wait until pending_ becomes 0 */
+            std::unique_lock lk(shutdown_mtx_);
+            shutdown_cv_.wait(lk, [&] { return pending_entries_.load(std::memory_order_acquire) == 0; });
+
+            /* Now ask the writer to exit */
+            running_.store(false, std::memory_order_release);
+            cv_.notify_one();
+
+            if (worker_.joinable()) {
+                worker_.join();
+            }
+            file_stream_.close();
         }
 
-        void log(const EntryType& entry) override {
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+        /*---------------- logging API ----------------------------------------*/
+
+        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override {
+            if (static_cast<int8_t>(lvl) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
 
-            enqueue(entry.to_string());
+            EntryType entry = make_entry<EntryType>(lvl, msg, loc);
+            enqueue(std::move(entry));
         }
 
+        void log(const EntryType& entry) override {
+            if (!accepting_.load(std::memory_order_relaxed)) {
+                return;
+            }
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+                return;
+            }
+            enqueue(entry);
+        }
+
+        void log(EntryType &&entry) override {
+            if (!accepting_.load(std::memory_order_relaxed)) {
+                return;
+            }
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+                return;
+            }
+            enqueue(std::move(entry));
+        }
         FileLoggerConfig& config() {
             return config_;
         }
+
+        /* Reload (unchanged, still works) */
         void reload() {
-            { // mark send sentinel
+            {
                 std::unique_lock lk(reload_mtx_);
-                reload_done_ = false;
-                reload_requested_.store(true, std::memory_order_release);
+                reload_done_      = false;
+                reload_requested_ = true;
             }
-            queue_.enqueue(kReloadSentinel); // wake writer deterministically
+            cv_.notify_one();
             std::unique_lock lk(reload_mtx_);
             reload_cv_.wait(lk, [&] { return reload_done_; });
         }
 
     private:
-        /* ====  Hot-path helper  =================================== */
-        void enqueue(std::string text) noexcept {
-            queue_.enqueue(std::move(text)); // lock-free
-            cv_.notify_one(); // wake consumer
+        /*---------------- enqueue helper (lock-free) --------------------------*/
+        void enqueue(const EntryType& entry) noexcept {
+            queue_.enqueue(entry); // copy or move as needed
+            pending_entries_.fetch_add(1, std::memory_order_relaxed);
+            cv_.notify_one();
+        }
+        void enqueue(EntryType&& entry) noexcept {
+            queue_.enqueue(std::move(entry));
+            pending_entries_.fetch_add(1, std::memory_order_relaxed);
+            cv_.notify_one();
         }
 
-        /* ====  Writer thread  ===================================== */
+        /*---------------- writer thread --------------------------------------*/
         void writerLoop() {
-            std::vector<std::string> batch;
+            std::vector<EntryType> batch;
             batch.reserve(512);
 
-            while (running_.load(std::memory_order_acquire)) {
-                // 1) Pull everything that’s available
-                std::string item;
-
+            while (running_.load(std::memory_order_acquire) || pending_entries_.load(std::memory_order_acquire) > 0) {
+                EntryType item;
                 while (queue_.try_dequeue(item)) {
-                    if (item == kReloadSentinel) {
-                        break;
-                    }
                     batch.emplace_back(std::move(item));
                 }
-                if (reload_requested_.load(std::memory_order_acquire)) // old file empty
-                {
-                    file_stream_.flush();
-                    file_stream_.close();
-                    init(); // uses *updated* config_
-                    reload_requested_.store(false, std::memory_order_release);
 
-                    {
-                        std::lock_guard lg(reload_mtx_);
-                        reload_done_ = true; // handshake
-                    }
-                    reload_cv_.notify_one();
+                /* handle reload request before writing */
+                if (reload_requested_.load(std::memory_order_acquire)) {
+                    flushAndReopen();
                     continue;
                 }
-                // 2) If nothing, wait a bit (avoids busy-spin)
+
                 if (batch.empty()) {
                     std::unique_lock lk(m_);
-                    cv_.wait_for(lk, std::chrono::milliseconds(100), [&] { return !running_.load(); });
-                    continue; // nothing else to do this round
+                    cv_.wait_for(lk, std::chrono::milliseconds(100), [&] {
+                        return reload_requested_.load(std::memory_order_acquire)
+                            || !running_.load(std::memory_order_acquire);
+                    });
+                    continue;
                 }
 
-                // 3) Write batch
-                for (auto& line : batch) {
-                    file_stream_ << line;
+                /* write batch */
+                for (auto& e : batch) {
+                    file_stream_ << e.to_string();
                 }
                 if (config_.safe_mode) {
                     file_stream_.flush();
                 }
+
+                /* update counter & possible shutdown notification */
+                auto new_pending = pending_entries_.fetch_sub(batch.size(), std::memory_order_acq_rel) - batch.size();
+                if (new_pending == 0) {
+                    std::lock_guard lg(shutdown_mtx_);
+                    shutdown_cv_.notify_all();
+                }
+
                 batch.clear();
 
-                // 4) Rotation check (do it rarely, O(1))
-
-                std::uint64_t sz = 0;
-
-                /* 1. cheap & safe: how many bytes have we written? */
-                if (auto pos = file_stream_.tellp(); pos >= 0) {
-                    sz = static_cast<std::uint64_t>(pos);
-                } else {
-                    /* 2. fall back to path (may be missing) */
-                    try {
-                        sz = std::filesystem::file_size(config_.file);
-                    } catch (const std::filesystem::filesystem_error&) {
-                        sz = 0; // path vanished – treat as 0
-                    }
-                }
-
-                if (sz > config_.max_file_size) {
+                /* rotation check (unchanged) */
+                if (shouldRotate()) {
                     rotateLog();
                 }
-
-                /*---- 5) handle requested reload ---------------------*/
             }
-            // Drain done – final flush
+
             file_stream_.flush();
         }
 
-        /* ====  Rotation =========================================== */
+        /*---------------- helpers --------------------------------------------*/
+        bool shouldRotate() {
+            std::uint64_t sz = 0;
+            if (auto pos = file_stream_.tellp(); pos >= 0) {
+                sz = static_cast<std::uint64_t>(pos);
+            } else {
+                try {
+                    sz = std::filesystem::file_size(config_.file);
+                } catch (...) {
+                    sz = 0;
+                }
+            }
+            return sz > config_.max_file_size;
+        }
+
         void rotateLog() {
             file_stream_.flush();
             file_stream_.close();
-            init(); // opens a new file
+            init();
         }
 
-        /* ====  init() exactly as you already have ================= */
-        void init() try {
-            // Clone original path to work on a local mutable version
-            auto full_path = config_.file;
-
-            if (config_.add_time_to_name) {
-                // Strip directory and extension
-                const auto stem   = full_path.stem().string(); // e.g., "file"
-                const auto ext    = full_path.extension().string(); // e.g., ".log"
-                const auto parent = full_path.parent_path(); // e.g., "/path/to"
-
-                // Format time and construct final file name
-                const auto time =
-                    chrono::LocalClock::current_time(chrono::clock_formats::eu_dmy_hms); // e.g., "25_06_2025_23_40_01"
-                const std::string new_filename = stem + "_" + time + ext; // "file_25_06_2025_23_40_01.log"
-
-                // Replace only the filename — not the full path
-                full_path = parent / new_filename;
+        void flushAndReopen() {
+            file_stream_.flush();
+            file_stream_.close();
+            init();
+            {
+                std::lock_guard lg(reload_mtx_);
+                reload_done_      = true;
+                reload_requested_ = false;
             }
+            reload_cv_.notify_one();
+        }
 
-            // Ensure parent directory exists
+        /*---------------- init (unchanged) -----------------------------------*/
+        void init() {
+            auto full_path = config_.file;
+            if (config_.add_time_to_name) {
+                const auto stem   = full_path.stem().string();
+                const auto ext    = full_path.extension().string();
+                const auto parent = full_path.parent_path();
+                auto time         = chrono::LocalClock::current_time(chrono::clock_formats::eu_dmy_hms);
+                full_path         = parent / (stem + "_" + time + ext);
+            }
             if (!full_path.parent_path().empty()) {
                 create_directories(full_path.parent_path());
             }
 
-            // Open file stream
             file_stream_.open(full_path, std::ios::out | std::ios::app);
             if (!file_stream_.is_open()) {
                 throw std::runtime_error("Failed to open log file: " + full_path.string());
             }
 
-            // If successful, update internal config file path (not original one)
             config_.file = full_path;
-        } catch (const std::exception& ex) {
-            std::cerr << "[Logger Init Error] " << ex.what() << std::endl;
-            throw; // optionally rethrow or handle gracefully
         }
 
-        /* ====  Data =============================================== */
+        /*---------------- data members ---------------------------------------*/
         FileLoggerConfig config_;
         std::ofstream file_stream_;
+        moodycamel::ConcurrentQueue<EntryType> queue_;
 
-        // ---- concurrency primitives ----
-        moodycamel::ConcurrentQueue<std::string> queue_;
-        // boost::lockfree::queue<std::string> queue_{1024};
-        std::atomic<bool> reload_requested_{false};
-        std::atomic<bool> running_{false};
+        std::atomic<int> pending_entries_{0}; // entries enqueued but not yet written
+        std::atomic<bool> accepting_{true}; // producers allowed to enqueue?
+        std::atomic<bool> running_{true}; // writer loop keeps spinning?
+
         std::thread worker_;
         std::condition_variable cv_;
-        std::mutex m_; // only for cv_
+        std::mutex m_; // for cv_ sleep
 
+        /* reload handshake */
+        std::atomic<bool> reload_requested_{false};
         std::mutex reload_mtx_;
         std::condition_variable reload_cv_;
         bool reload_done_{false};
 
-        static constexpr auto kReloadSentinel = "BREAK"; // possible vuln
+        /* shutdown handshake */
+        std::mutex shutdown_mtx_;
+        std::condition_variable shutdown_cv_;
     };
-
 
 } // namespace demiplane::scroll

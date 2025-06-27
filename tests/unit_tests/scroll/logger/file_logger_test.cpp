@@ -217,7 +217,7 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
     for (auto& thread : threads) {
         thread.join();
     }
-    std::this_thread::sleep_for(process_time*100);
+    file_logger->graceful_shutdown();
     std::ifstream in(cfg.file);
     if (!in.is_open()) {
         std::cout << "File not found" << '\n';

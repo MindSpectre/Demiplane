@@ -39,6 +39,7 @@ namespace demiplane::scroll::detail {
             return message_;
         }
         virtual ~EntryBase() = default;
+        EntryBase() = default;
         [[nodiscard]] virtual std::string to_string() const = 0;
     protected:
         LogLevel level_;

@@ -7,17 +7,13 @@
 
 class FileLoggerTest : public ::testing::Test {
 protected:
-    demiplane::scroll::FileLoggerConfig cfg {
-        .threshold = demiplane::scroll::DBG,
-        .file = "test.log",
-        .add_time_to_name = false,
-        .safe_mode = true
-    };
-    std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::LightEntry>> file_logger;
+    demiplane::scroll::FileLoggerConfig cfg{
+        .threshold = demiplane::scroll::DBG, .file = "test.log", .add_time_to_name = false, .safe_mode = true};
+    std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> file_logger;
 
     void SetUp() override {
         // Ensure log file doesn't exist before test
-        file_logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::LightEntry>>(cfg);
+        file_logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
     }
 
     void TearDown() override {
@@ -36,7 +32,7 @@ protected:
 // Test basic logging functionality with entry objects
 TEST_F(FileLoggerTest, LogsEntryWhenAboveThreshold) {
     // Create a mock entry
-    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
+    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
         demiplane::scroll::INF, "Test message", std::source_location::current());
 
     // Log the entry
@@ -56,7 +52,7 @@ TEST_F(FileLoggerTest, FiltersEntriesBelowThreshold) {
     file_logger->config().threshold = (demiplane::scroll::ERR);
     file_logger->reload();
     // Create and log an INFO entry (below the threshold)
-    auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
+    auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
         demiplane::scroll::INF, "This should not appear", std::source_location::current());
 
     file_logger->log(entry);
@@ -180,4 +176,63 @@ TEST_F(FileLoggerTest, FilePathHandling) {
 
     // Clean up
     // std::filesystem::remove_all("test_dir");
+}
+inline std::chrono::milliseconds
+parse_sec_ms(std::string_view line)
+{
+    // indexes for "… HH:MM:SS.mmmZ"
+    //            012345678901234567890123
+    //            ----------^  ^   ^
+    //            pos 17      20  23 (Z)
+
+    if (line.size() < 23) return std::chrono::milliseconds{0};
+
+    int  sec = std::stoi(std::string{line.substr(17, 2)});
+    int  ms  = std::stoi(std::string{line.substr(20, 3)});
+
+    return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
+}
+TEST_F(FileLoggerTest, MultithreadWrite) {
+
+    std::vector<std::thread> threads;
+    // Launch multiple threads to acquire and release objects
+    threads.reserve(10);
+    for (int i = 0; i < 10; ++i) {
+        threads.emplace_back([&] {
+            for (int j = 0; j < 100; ++j) {
+                std::string msg = "MSG" + std::to_string(j);
+                const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
+                    demiplane::scroll::INF, msg , std::source_location::current());
+                file_logger->log(entry);
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        });
+    }
+
+    // Join all threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    std::ifstream in(cfg.file);
+    std::string   line;
+    std::chrono::milliseconds prev{};
+    bool first = true;
+    std::uint32_t monotonic_errors = 0;   // how many times we go backwards?
+
+    while (std::getline(in, line))
+    {
+        std::cout << line << '\n';
+        auto ts = parse_sec_ms(line);
+
+        if (!first) {
+            if (ts < prev) {
+                ++monotonic_errors;           // or store the offending line
+            }
+        } else {
+            first = false;
+        }
+        prev = ts;
+    }
+
+    std::cout << "Non-monotonic lines: " << monotonic_errors << '\n';
 }

@@ -11,7 +11,7 @@ namespace demiplane::scroll {
     EntryT make_entry(LogLevel lvl, const std::string_view msg, const std::source_location loc, Extra&&... extra) {
         // 1) collect *runtime* objects only once
         auto available = std::tuple{
-            detail::MetaTimePoint{chrono::Clock::current_time()}, detail::MetaSource{loc},
+            detail::MetaTimePoint{chrono::Clock::now()}, detail::MetaSource{loc},
             detail::MetaThread{std::hash<std::thread::id>{}(std::this_thread::get_id())}, detail::MetaProcess{getpid()},
             std::forward<Extra>(extra)... // e.g. cfg
         };

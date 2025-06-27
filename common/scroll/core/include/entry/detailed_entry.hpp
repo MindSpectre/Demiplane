@@ -15,7 +15,7 @@ namespace demiplane::scroll {
 
         [[nodiscard]] std::string to_string() const override {
             std::ostringstream os;
-            os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::ymd_hms) << " ["
+            os << chrono::UTCClock::format_time_iso8601(time_point, chrono::clock_formats::dmy_hms) << " ["
                << log_level_to_string(level_) << "] "
                << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';

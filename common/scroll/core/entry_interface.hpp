@@ -21,7 +21,7 @@ namespace demiplane::scroll::detail {
         int32_t pid;
     };
     struct MetaTimePoint {
-        std::time_t time_point;
+        std::chrono::time_point<std::chrono::system_clock> time_point;
     };
     // … add MetaTime, MetaSpanCtx, …
 

@@ -1,17 +1,13 @@
+#include "entry/custom_entry.hpp"
+
+#include <demiplane/chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
-#include "custom_entry.hpp"
-#include "chrono_utils.hpp"
+
 #include "colors.hpp"
-namespace {
-    void fill_until_pos(std::ostringstream& log, const std::size_t position) {
-        if (const std::size_t padding = position - log.view().size(); log.view().size() <= position) {
-            log << std::string(padding, ' ');
-        }
-    }
-}
+// namespace
 namespace demiplane::scroll {
     /**
      * Loads the configuration settings from a specified JSON file.
@@ -86,34 +82,7 @@ namespace demiplane::scroll {
         if (root.isMember("colors")) {
             enable_colors = deduce_cond(root, "colors");
         }
-        if (root.isMember("alignment")) {
-            Alignment proposed_alignment;
-            const Json::Value& alignment = root["alignment"];
-            if (alignment.isArray()) {
-                proposed_alignment.time_pos     = alignment[0].asInt();
-                proposed_alignment.level_pos    = alignment[1].asInt();
-                proposed_alignment.thread_pos   = alignment[2].asInt();
-                proposed_alignment.location_pos = alignment[3].asInt();
-                proposed_alignment.message_pos  = alignment[4].asInt();
-            }
-            if (alignment.isObject()) {
-                if (alignment.isMember("time_pos")) {
-                    proposed_alignment.time_pos = alignment["time_pos"].asInt();
-                }
-                if (alignment.isMember("level_pos")) {
-                    proposed_alignment.level_pos = alignment["level_pos"].asInt();
-                }
-                if (alignment.isMember("thread_pos")) {
-                    proposed_alignment.time_pos = alignment["thread_pos"].asInt();
-                }
-                if (alignment.isMember("location_pos")) {
-                    proposed_alignment.time_pos = alignment["location_pos"].asInt();
-                }
-                if (alignment.isMember("message_pos")) {
-                    proposed_alignment.time_pos = alignment["message_pos"].asInt();
-                }
-            }
-        }
+
         return true;
     }
 
@@ -123,24 +92,20 @@ namespace demiplane::scroll {
             header_stream << "DATE ";
         }
         if (add_level) {
-            fill_until_pos(header_stream, custom_alignment.level_pos);
+
             header_stream << "LEVEL ";
         }
-        if (enable_service_name) {
-            fill_until_pos(header_stream, custom_alignment.service_pos);
-            header_stream << "SERVICE ";
-        }
         if (add_thread) {
-            fill_until_pos(header_stream, custom_alignment.thread_pos);
+
             header_stream << "THREAD ID ";
         }
         if (add_location) {
-            fill_until_pos(header_stream, custom_alignment.location_pos);
+
             header_stream << "LOCATION ";
         }
 
         if (add_message) {
-            fill_until_pos(header_stream, custom_alignment.message_pos);
+
             header_stream << "MESSAGE ";
         }
 
@@ -149,66 +114,60 @@ namespace demiplane::scroll {
 
     std::string CustomEntry::to_string() const {
         std::ostringstream log_entry;
-        if (config_.add_time) {
-            log_entry << "[" << chrono::utilities::LocalClock::current_time_custom_fmt(config_.time_fmt) << "] ";
+        if (config_->add_time) {
+            log_entry << chrono::UTCClock::format_time(time_point, config_->time_fmt) << " ";
         }
-        if (config_.add_level) {
-            fill_until_pos(log_entry, config_.custom_alignment.level_pos);
-            log_entry << "[" << scroll::to_string(level_) << "] ";
+        if (config_->add_level) {
+
+            log_entry << "[" << scroll::log_level_to_string(level_) << "] ";
         }
-        // if (config_.enable_service_name) {
-        //     fill_until_pos(log_entry, config_.custom_alignment.service_pos);
-        //     log_entry << "[" << service_ << "] ";
-        // }
-        if (config_.add_thread) {
-            fill_until_pos(log_entry, config_.custom_alignment.thread_pos);
+        if (config_->add_thread) {
+
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
-        if (config_.add_location) {
-            fill_until_pos(log_entry, config_.custom_alignment.location_pos);
-            log_entry << "[" << file_ << ":" << line_;
-            if (config_.add_pretty_function) {
-                log_entry << " " << function_;
+        if (config_->add_location) {
+
+            log_entry << "[" << loc.file_name() << ":" << loc.line();
+            if (config_->add_pretty_function) {
+                log_entry << " " << loc.function_name();
             }
             log_entry << "] ";
         }
 
-        if (config_.add_message) {
-            fill_until_pos(log_entry, config_.custom_alignment.message_pos);
+        if (config_->add_message) {
+
             log_entry << message_ << "\n";
         }
 
-        const std::string_view uncolored_entry = log_entry.view();
+        std::string uncolored_entry = log_entry.str();
         switch (level_) {
         case LogLevel::Debug:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_white(uncolored_entry);
             }
             break;
         case LogLevel::Info:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_green(uncolored_entry);
             }
             break;
         case LogLevel::Warning:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_yellow(uncolored_entry);
             }
             break;
         case LogLevel::Error:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_red(uncolored_entry);
             }
             break;
         case LogLevel::Fatal:
-            if (config_.enable_colors) {
+            if (config_->enable_colors) {
                 return colors::make_bold_red(uncolored_entry);
             }
             break;
         }
-        return uncolored_entry.data();
+        return uncolored_entry;
     }
 
-} // namespace demiplane::tracing
-
-
+} // namespace demiplane::scroll

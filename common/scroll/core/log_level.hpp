@@ -16,7 +16,7 @@ namespace demiplane::scroll {
      * - Error: Used for error messages indicating failures.
      * - Fatal: Used for critical errors requiring immediate attention.
      */
-    enum class LogLevel {
+    enum class LogLevel : uint8_t {
         Debug = 0,
         Info,
         Warning,
@@ -30,7 +30,7 @@ namespace demiplane::scroll {
     inline constexpr auto ERR = LogLevel::Error;
     inline constexpr auto FAT = LogLevel::Fatal;
 
-    constexpr const char* to_string(const LogLevel level) {
+    constexpr const char* log_level_to_string(const LogLevel level) {
         switch (level) {
         case LogLevel::Debug:
             return "DEBUG";

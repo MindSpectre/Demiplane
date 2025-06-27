@@ -1,33 +1,49 @@
-
 #pragma once
 
 #include <iostream>
 
 #include "../logger_interface.hpp"
-
+#include "entry/factory/entry_factory.hpp"
 namespace demiplane::scroll {
 
-    template <IsEntry EntryType>
-    class ConsoleLogger final : public Logger<EntryType> {
+    struct ConsoleLoggerConfig  {
+        LogLevel threshold{LogLevel::Debug};
+        bool flush_each_entry{false};
+    };
+
+    template <detail::EntryConcept EntryType>
+    class ConsoleLogger : public Logger<EntryType> {
     public:
-        ConsoleLogger() = default;
+        explicit ConsoleLogger(const ConsoleLoggerConfig cfg) : config_{cfg} {}
 
-        void log(LogLevel level, const std::string_view message, const char* file, const int line,
-            const char* function) override {
-            // Skip logging if below the threshold
-            if (static_cast<int>(level) < static_cast<int>(this->threshold_)) {
+        void log(LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
+            auto entry = make_entry<EntryType>(lvl, msg, loc);
+            log(entry);
+        }
+
+        void log(const EntryType& entry) override {
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
-
-            EntryType entry(level, message, file, line, function);
-            std::cout << entry.to_string() << std::endl;
+            std::lock_guard lock{mutex_};
+            std::cout << entry.to_string();
+            if (config_.flush_each_entry) {
+                std::cout << std::flush;
+            }
         }
-        void log(EntryType entry) override {
-            if (static_cast<int>(entry.level()) < static_cast<int>(this->threshold_)) {
+        void log(EntryType&& entry) override {
+            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
-            std::cout << entry.to_string() << std::endl;
+            std::lock_guard lock{mutex_};
+            std::cout << entry.to_string();
         }
+        ConsoleLoggerConfig& config() {
+            return config_;
+        }
+    protected:
+        std::mutex mutex_;
+        ConsoleLoggerConfig config_;
     };
 
 } // namespace demiplane::scroll

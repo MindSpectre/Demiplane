@@ -26,6 +26,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
 )
 ##############################################################################
 
+add_subdirectory(scroll)
 
 ##############################################################################
 # Base utilities objects for database

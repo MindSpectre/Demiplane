@@ -189,22 +189,26 @@ parse_sec_ms(std::string_view line)
 
     int  sec = std::stoi(std::string{line.substr(17, 2)});
     int  ms  = std::stoi(std::string{line.substr(20, 3)});
-
+    // std::cout << line << " " << sec << " " << ms << '\n';
     return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
 }
 TEST_F(FileLoggerTest, MultithreadWrite) {
 
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
-    threads.reserve(10);
-    for (int i = 0; i < 10; ++i) {
+    int t_num = 5;
+    int r_num = 1000;
+    std::chrono::milliseconds process_time{1};
+    threads.reserve(t_num);
+
+    for (int i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {
-            for (int j = 0; j < 100; ++j) {
+            for (int j = 0; j < r_num; ++j) {
                 std::string msg = "MSG" + std::to_string(j);
                 const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
                     demiplane::scroll::INF, msg , std::source_location::current());
                 file_logger->log(entry);
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                // std::this_thread::sleep_for(process_time);
             }
         });
     }
@@ -213,15 +217,18 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
     for (auto& thread : threads) {
         thread.join();
     }
+    std::this_thread::sleep_for(process_time*100);
     std::ifstream in(cfg.file);
+    if (!in.is_open()) {
+        std::cout << "File not found" << '\n';
+    }
     std::string   line;
     std::chrono::milliseconds prev{};
     bool first = true;
     std::uint32_t monotonic_errors = 0;   // how many times we go backwards?
-
+    std::uint32_t total_lines = 0;
     while (std::getline(in, line))
     {
-        std::cout << line << '\n';
         auto ts = parse_sec_ms(line);
 
         if (!first) {
@@ -232,7 +239,9 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
             first = false;
         }
         prev = ts;
+        total_lines++;
     }
 
-    std::cout << "Non-monotonic lines: " << monotonic_errors << '\n';
+    std::cout << "Non-monotonic lines: " << monotonic_errors <<  " " << total_lines << '\n';
+    std::cout << "Non-monotonic lines%: " << static_cast<double>(100*monotonic_errors)/(t_num*r_num) << '\n';
 }

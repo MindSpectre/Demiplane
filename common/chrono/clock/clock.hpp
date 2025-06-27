@@ -1,89 +1,82 @@
 #pragma once
-
 #include <chrono>
-#include <iomanip>
-#include <sstream>
+#include <format>
 #include <string>
 #include <string_view>
 
 namespace demiplane::chrono {
 
+    // ─────────────── Base clock (parse & now) ───────────────
     class Clock {
     public:
-        [[nodiscard]] static std::time_t current_time() noexcept {
-            return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        }
-        [[nodiscard]] static std::chrono::time_point<std::chrono::system_clock> now() noexcept {
+        using sys_tp = std::chrono::time_point<std::chrono::system_clock>;
+
+        [[nodiscard]] static sys_tp now() noexcept {
             return std::chrono::system_clock::now();
         }
-    };
-    namespace clock_formats {
-        constexpr auto ymd_hms     = "%Y-%m-%d %H:%M:%S";
-        constexpr auto dmy_hms     = "%d-%m-%Y %H:%M:%S";
-        constexpr auto mdy_hms     = "%m-%d-%Y %H:%M:%S";
-    } // namespace clock_formats
-    enum class ClockType {
-        Local,
-        UTC
-    };
-    template <ClockType CT>
-    class AClock : public Clock {
-    public:
-        [[nodiscard]] static std::string current_time_ymd() {
-            return current_time_fmt("%Y-%m-%d %H:%M:%S");
-        }
 
-        [[nodiscard]] static std::string current_time_dmy() {
-            return current_time_fmt("%d-%m-%Y %H:%M:%S");
-        }
-
-        [[nodiscard]] static std::string current_time_fmt(const std::string_view format) {
-            return format_time(current_time(), format);
-        }
-
-        [[nodiscard]] static std::string format_time(const std::time_t tt, const std::string_view format) {
-            std::ostringstream ss;
-            std::tm buf{};
-            if (CT == ClockType::Local) {
-                if (!localtime_r(&tt, &buf)) {
-                    throw std::runtime_error("Failed to format local time");
-                }
-            } else {
-                if (!gmtime_r(&tt, &buf)) {
-                    throw std::runtime_error("Failed to format UTC time");
-                }
+        template <class Dur = std::chrono::milliseconds>
+        [[nodiscard]] static std::chrono::time_point<std::chrono::system_clock, Dur> parse(
+            const std::string_view txt, std::string_view fmt) {
+            using namespace std::chrono;
+            std::istringstream is(std::string{txt});
+            sys_time<Dur> tp;
+            is >> parse(fmt.data(), tp);
+            if (is.fail()) {
+                throw std::invalid_argument(
+                    "Invalid time format " + std::string{fmt} + " or value:" + std::string{txt});
             }
+            return tp;
+        }
+    };
 
+    // ─────────────── Canonical patterns ───────────────
+    namespace clock_formats {
+        constexpr auto eu_dmy_hms = "%d-%m-%Y %H:%M:%S";
+        constexpr auto us_mdy_hms = "%m-%d-%Y %I:%M:%S %p";
+        constexpr auto iso8601    = "%Y-%m-%dT%H:%M:%S";
+    } // namespace clock_formats
+
+    // ─────────────── Local / UTC clocks ───────────────
+    enum class ClockType { Local, UTC };
+
+    template <ClockType CT>
+    class SpecClock : public Clock {
+
+
+    public:
+        // --- PUBLIC API -------------------------------------------------
+        [[nodiscard]] static std::string current_time(const std::string_view fmt) {
+            return format_time(now(), fmt);
+        }
+        static std::string format_time_iso_ms(const sys_tp tp) {
+            const auto ms    = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
+            std::string base = format_time(tp, clock_formats::iso8601);
+            base += std::format(".{:03}", ms.count());
+            if constexpr (CT == ClockType::UTC) {
+                base += 'Z';
+            }
+            return base;
+        }
+        [[nodiscard]] static std::string format_time(const sys_tp tp, const std::string_view format) {
+            std::ostringstream ss;
+            const std::tm buf = to_tm(tp);
             ss << std::put_time(&buf, format.data());
             return ss.str();
         }
-        [[nodiscard]] static std::string format_time(
-            const std::chrono::time_point<std::chrono::system_clock> tt, const std::string_view format) {
-            return format_time(std::chrono::system_clock::to_time_t(tt), format);
-        }
-        [[nodiscard]] static std::string format_time_iso8601(
-            const std::chrono::time_point<std::chrono::system_clock> time_point, const std::string_view format) {
-            const auto ms     = duration_cast<std::chrono::milliseconds>(time_point.time_since_epoch()) % 1000;
-
-            std::string iso = format_time(std::chrono::system_clock::to_time_t(time_point), format);
-            // Append ".mmm"
-            iso += '.';
-            iso += static_cast<char>('0' + (ms.count() / 100) % 10);
-            iso += static_cast<char>('0' + (ms.count() / 10) % 10);
-            iso += static_cast<char>('0' + (ms.count()) % 10);
-            if (CT == ClockType::UTC) {
-                // Append "Z"
-                iso += 'Z';
+        [[nodiscard]] static std::tm to_tm(const sys_tp tp) {
+            const std::time_t tt = std::chrono::system_clock::to_time_t(tp);
+            std::tm out{};
+            if constexpr (CT == ClockType::Local) {
+                localtime_r(&tt, &out);
+            } else {
+                gmtime_r(&tt, &out);
             }
-            return iso;
+            return out;
         }
-
     };
 
-
-    using LocalClock = AClock<ClockType::Local>;
-    using UTCClock   = AClock<ClockType::UTC>;
-
-
+    using LocalClock = SpecClock<ClockType::Local>;
+    using UTCClock   = SpecClock<ClockType::UTC>;
 
 } // namespace demiplane::chrono

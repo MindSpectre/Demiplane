@@ -87,7 +87,6 @@ namespace demiplane::scroll {
                 std::string item;
 
                 while (queue_.try_dequeue(item)) {
-                    std::cout << item << std::endl;
                     if (item == kReloadSentinel) {
                         break;
                     }
@@ -169,7 +168,7 @@ namespace demiplane::scroll {
 
                 // Format time and construct final file name
                 const auto time =
-                    chrono::LocalClock::current_time_fmt(chrono::clock_formats::dmy_hms); // e.g., "25_06_2025_23_40_01"
+                    chrono::LocalClock::current_time(chrono::clock_formats::eu_dmy_hms); // e.g., "25_06_2025_23_40_01"
                 const std::string new_filename = stem + "_" + time + ext; // "file_25_06_2025_23_40_01.log"
 
                 // Replace only the filename — not the full path

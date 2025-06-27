@@ -3,6 +3,7 @@
 #include <source_location>
 #include <thread>
 
+#include "gears_utils.hpp"
 #include "log_level.hpp"
 
 namespace demiplane::scroll::detail {
@@ -23,7 +24,6 @@ namespace demiplane::scroll::detail {
     struct MetaTimePoint {
         std::chrono::time_point<std::chrono::system_clock> time_point;
     };
-    // … add MetaTime, MetaSpanCtx, …
 
     template <class... Metas>
     class EntryBase : public Metas... {
@@ -38,11 +38,12 @@ namespace demiplane::scroll::detail {
         [[nodiscard]] std::string_view message() const {
             return message_;
         }
-        virtual ~EntryBase() = default;
-        EntryBase() = default;
+        virtual ~EntryBase()                                = default;
+        EntryBase()                                         = default;
         [[nodiscard]] virtual std::string to_string() const = 0;
+
     protected:
-        LogLevel level_;
+        LogLevel level_{LogLevel::Debug};
         std::string message_;
     };
 

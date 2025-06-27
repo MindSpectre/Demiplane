@@ -21,6 +21,12 @@ namespace demiplane::scroll {
                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
             return os.str();
         }
+        static bool comp(const DetailedEntry& lhs, const DetailedEntry& rhs) {
+            if (lhs.time_point == rhs.time_point) {
+                return lhs.level() < rhs.level();
+            }
+            return lhs.time_point < rhs.time_point;
+        }
     };
     template <>
     struct detail::entry_traits<DetailedEntry> {

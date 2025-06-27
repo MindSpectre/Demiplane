@@ -3,6 +3,7 @@
 #include "class_traits.hpp"
 #include "templates.hpp"
 #include "result.hpp"
+#include "concepts.hpp"
 
 #include "gears_utils.hpp"
 #include "gears_macros.hpp"

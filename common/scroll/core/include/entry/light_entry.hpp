@@ -17,6 +17,9 @@ namespace demiplane::scroll {
             formatter << "[" << log_level_to_string(level_) << "] " << message_ << "\n";
             return formatter.str();
         }
+        static bool comp(const LightEntry& lhs, const LightEntry& rhs) {
+            throw std::logic_error("Can not be sorted");
+        }
     };
     template <>
     struct detail::entry_traits<LightEntry> {

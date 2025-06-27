@@ -18,6 +18,7 @@ target_include_directories(${DMP_GEARS}.Result INTERFACE
 add_library(${DMP_GEARS}.MetaProgramming INTERFACE
         meta_programming/include/class_traits.hpp
         meta_programming/include/templates.hpp
+        meta_programming/include/concepts.hpp
 )
 target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
         meta_programming/include

@@ -4,10 +4,10 @@
 #include <string>
 
 #include "../entry_interface.hpp"
-#include <class_traits.hpp>
+#include <concepts.hpp>
 #include <clock.hpp>
 namespace demiplane::scroll {
-    template <gears::HasStaticName Service>
+    template <gears::HasStaticNameM Service>
     class ServiceEntry final
         : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
     public:
@@ -20,6 +20,12 @@ namespace demiplane::scroll {
                << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
             return os.str();
+        }
+        static bool comp(const ServiceEntry& lhs, const ServiceEntry& rhs) {
+            if (lhs.time_point == rhs.time_point) {
+                return lhs.level() < rhs.level();
+            }
+            return lhs.time_point < rhs.time_point;
         }
     };
     template <class Service>

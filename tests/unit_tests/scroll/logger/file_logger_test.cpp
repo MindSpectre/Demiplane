@@ -192,15 +192,16 @@ parse_sec_ms(std::string_view line)
     // std::cout << line << " " << sec << " " << ms << '\n';
     return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
 }
-TEST_F(FileLoggerTest, MultithreadWrite) {
 
+void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> &file_logger) {
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
-    int t_num = 5;
-    int r_num = 1000;
+    int t_num = 20;
+    int r_num = 50000;
     std::chrono::milliseconds process_time{1};
     threads.reserve(t_num);
-
+    demiplane::chrono::TestingStopwatch<> twp;
+    twp.start();
     for (int i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {
             for (int j = 0; j < r_num; ++j) {
@@ -218,7 +219,8 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
         thread.join();
     }
     file_logger->graceful_shutdown();
-    std::ifstream in(cfg.file);
+    twp.finish();
+    std::ifstream in(file_logger->config().file);
     if (!in.is_open()) {
         std::cout << "File not found" << '\n';
     }
@@ -244,4 +246,13 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
 
     std::cout << "Non-monotonic lines: " << monotonic_errors <<  " " << total_lines << '\n';
     std::cout << "Non-monotonic lines%: " << static_cast<double>(100*monotonic_errors)/(t_num*r_num) << '\n';
+}
+
+TEST_F(FileLoggerTest, MultithreadWrite) {
+    file_logger->config().safe_mode = false;
+
+    multithread_write(file_logger);
+}
+TEST_F(FileLoggerTest, MultithreadWriteSafe) {
+    multithread_write(file_logger);
 }

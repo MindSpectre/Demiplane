@@ -1,8 +1,6 @@
 #pragma once
 
-#include <concepts>
 #include <string_view>
-#include <type_traits>
 
 #include "../core/entry_interface.hpp"
 #include "gears_utils.hpp"

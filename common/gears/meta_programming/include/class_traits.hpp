@@ -43,16 +43,6 @@ namespace demiplane::gears {
         using From = InterfaceBundle<Interfaces<T>...>;
     };
 
-    template <typename T>
-    concept HasStaticName = requires {
-        { T::name } -> std::convertible_to<std::string_view>;
-    };
 
-
-    struct AnonymousClass {
-        static constexpr const char* name() {
-            return "Anonymous class";
-        }
-    };
 
 } // namespace demiplane::gears

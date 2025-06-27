@@ -153,7 +153,10 @@ namespace demiplane::scroll {
                     });
                     continue;
                 }
-
+                if (config_.safe_mode) {
+                    static_assert(gears::HasStaticComp<EntryType>, "This entry type does not support comparison");
+                    std::sort(batch.begin(), batch.end(), [](const auto& a, const auto& b) { return EntryType::comp(a, b);});
+                }
                 /* write batch */
                 for (auto& e : batch) {
                     file_stream_ << e.to_string();

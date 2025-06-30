@@ -1,10 +1,12 @@
 #pragma once
 
-#include "detailed_entry.hpp"
-#include "light_entry.hpp"
-#include "service_entry.hpp"
-#include "custom_entry.hpp"
 
-#include "console_logger.hpp"
-#include "file_logger.hpp"
+//#include "custom_entry.hpp"
+
+#include "logger_provider.hpp"
+#include "log_macros.hpp"
+
 #include "../stream_log.hpp"
+
+
+#include "log_macros_adds.hpp"

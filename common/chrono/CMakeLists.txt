@@ -14,7 +14,6 @@ target_include_directories(${DMP_CHRONO}.Stopwatch
 )
 target_link_libraries(${DMP_CHRONO}.Stopwatch
         PUBLIC
-        Demiplane::Scroll
         Demiplane::Gears
 )
 ##############################################################################
@@ -39,11 +38,11 @@ target_link_libraries(${DMP_CHRONO}.Stopwatch
 ##############################################################################
 # Stopwatch class with measure purposes
 ##############################################################################
-add_library(${DMP_CHRONO}.Utilities INTERFACE
+add_library(${DMP_CHRONO}.Clock INTERFACE
 )
-target_include_directories(${DMP_CHRONO}.Utilities
+target_include_directories(${DMP_CHRONO}.Clock
         INTERFACE
-        utilities/
+        clock/
 )
 ##############################################################################
 
@@ -51,7 +50,7 @@ add_combined_library(${DMP_CHRONO}
         DIRECTORIES
         export
         LIBRARIES
-        ${DMP_CHRONO}.Utilities
+        ${DMP_CHRONO}.Clock
         ${DMP_CHRONO}.Stopwatch
         ALIAS
         Demiplane::Chrono

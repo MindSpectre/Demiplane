@@ -35,8 +35,6 @@ find_package(Drogon CONFIG REQUIRED)
 # Conditionally find Boost if enabled
 
 
-
-
 ##############################################################################
 # Lib includes
 ##############################################################################
@@ -49,7 +47,7 @@ if (USE_BOOST)
     set(Boost_NO_SYSTEM_PATHS ON)
     # set(BOOST_ROOT /opt/vcpkg/installed/x64-linux) # Adjust if necessary
 
-    find_package(Boost CONFIG COMPONENTS container system uuid thread)
+    find_package(Boost CONFIG COMPONENTS container system uuid thread lockfree)
     if (NOT Boost_FOUND)
         message(FATAL_ERROR "Boost libraries not found, but USE_BOOST is ON.")
     endif ()

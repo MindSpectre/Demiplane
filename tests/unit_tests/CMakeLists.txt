@@ -8,6 +8,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Stopwatch
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
         PRIVATE
+        Demiplane::Common::Chrono
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -20,7 +21,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
-        Demiplane::Multithread
+        Demiplane::Common::Multithread
         ${TEST_LIBS}
 
 )

@@ -14,8 +14,8 @@ target_include_directories(${DMP_FSM}.Core
 )
 target_link_libraries(${DMP_FSM}.Core
         INTERFACE
-        Demiplane::Gears
-        Demiplane::Math
+        Demiplane::Common::Gears
+        Demiplane::Common::Math
 )
 ##############################################################################
 
@@ -55,12 +55,15 @@ target_link_libraries(${DMP_FSM}.Machine
 )
 ##############################################################################
 
-
+##############################################################################
+# FSM exported library
+##############################################################################
 add_combined_library(${DMP_FSM}
         DIRECTORIES
         export
         LIBRARIES
         ${DMP_FSM}.Machine
-        ALIAS
-        Demiplane::FSM
 )
+
+add_library(Demiplane::Common::FSM ALIAS ${DMP_FSM})
+##############################################################################

@@ -1,8 +1,8 @@
 function(add_combined_library TargetName)
     cmake_parse_arguments(ARG
             ""
-            "ALIAS"
-            "DIRECTORIES;LIBRARIES"
+            "DIRECTORIES"
+            "LIBRARIES"
             ${ARGN}
     )
 
@@ -20,9 +20,5 @@ function(add_combined_library TargetName)
                 INTERFACE
                 ${ARG_LIBRARIES}
         )
-    endif()
-    #TODO: get rid of alias to simplify navigation to declaration location
-    if(ARG_ALIAS)
-        add_library(${ARG_ALIAS} ALIAS ${TargetName})
     endif()
 endfunction()

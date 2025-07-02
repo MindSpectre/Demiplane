@@ -14,11 +14,15 @@ target_include_directories(${DMP_MULTITHREAD}.ThreadPool
 )
 ##############################################################################
 
+##############################################################################
+# Multithread exported library
+##############################################################################
 add_combined_library(${DMP_MULTITHREAD}
         DIRECTORIES
         export
         LIBRARIES
         ${DMP_MULTITHREAD}.ThreadPool
-        ALIAS
-        Demiplane::Multithread
 )
+
+add_library(Demiplane::Common::Multithread ALIAS ${DMP_MULTITHREAD})
+##############################################################################

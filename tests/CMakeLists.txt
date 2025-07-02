@@ -6,10 +6,6 @@ set(TEST_LIBS
         GTest::gtest_main
         GTest::gmock
         GTest::gmock_main
-        Demiplane::Math
-        Demiplane::Crypto
-        Demiplane::Chrono
-        Demiplane::Scroll
 )
 
 

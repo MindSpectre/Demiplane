@@ -13,12 +13,15 @@ target_include_directories(${DMP_MATH}.Random
 )
 ##############################################################################
 
-
+##############################################################################
+# Math exported library
+##############################################################################
 add_combined_library(${DMP_MATH}
         DIRECTORIES
         export
         LIBRARIES
         ${DMP_MATH}.Random
-        ALIAS
-        Demiplane::Math
 )
+
+add_library(Demiplane::Common::Math ALIAS ${DMP_MATH})
+##############################################################################

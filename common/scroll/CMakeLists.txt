@@ -24,8 +24,8 @@ target_include_directories(${DMP_SCROLL}.Core PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Core PUBLIC
         JsonCpp::JsonCpp
-        Demiplane::Chrono
-        Demiplane::Gears
+        Demiplane::Common::Chrono
+        Demiplane::Common::Gears
         ${DMP_SCROLL}.Colors
 )
 
@@ -77,5 +77,5 @@ add_combined_library(${DMP_SCROLL}
         LIBRARIES
         ${DMP_SCROLL}.Logger.Provider
 )
-add_library(Demiplane::Scroll ALIAS ${DMP_SCROLL})
+add_library(Demiplane::Common::Scroll ALIAS ${DMP_SCROLL})
 ##############################################################################

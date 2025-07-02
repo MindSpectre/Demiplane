@@ -3,17 +3,16 @@ set(DMP_CHRONO ${DMP_COMMON}.Chrono)
 ##############################################################################
 # Stopwatch class with measure purposes
 ##############################################################################
-add_library(${DMP_CHRONO}.Stopwatch STATIC
-        stopwatch/source/stopwatch.cpp
-        stopwatch/include/lw_stopwatch.hpp
-        stopwatch/include/testing_stopwatch.hpp
+add_library(${DMP_CHRONO}.Stopwatch INTERFACE
+        stopwatch/include/stopwatch.hpp
+        stopwatch/include/printing_stopwatch.hpp
 )
 target_include_directories(${DMP_CHRONO}.Stopwatch
-        PUBLIC
+        INTERFACE
         stopwatch/include
 )
 target_link_libraries(${DMP_CHRONO}.Stopwatch
-        PUBLIC
+        INTERFACE
         Demiplane::Common::Gears
 )
 ##############################################################################

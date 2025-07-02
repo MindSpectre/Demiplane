@@ -1,5 +1,5 @@
 #pragma once
 
-#include "lw_stopwatch.hpp"
-#include "testing_stopwatch.hpp"
+#include "stopwatch.hpp"
+#include "printing_stopwatch.hpp"
 #include "clock.hpp"

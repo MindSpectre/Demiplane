@@ -1,152 +1,177 @@
+#include "stopwatch.hpp"
 #include <gtest/gtest.h>
 #include <thread>
-
-#include "testing_stopwatch.hpp"
+#include <functional>
 
 using namespace demiplane::chrono;
 
-class TestingStopwatchTest : public testing::Test
-{
+class StopwatchTest : public ::testing::Test {
 protected:
-    TestingStopwatch<> sw; // Stopwatch object using default time unit (milliseconds)
+    Stopwatch<> stopwatch;
 
-    void SetUp() override
-    {
-        // Setup before each test
-        sw.start();
+    void SetUp() override {
+        // Initialize stopwatch before each test
+        stopwatch = Stopwatch(20);
     }
 
-    void TearDown() override
-    {
-        // Teardown after each test
+    void TearDown() override {
+        // Clean up after each test if needed
     }
 
-public:
-    // Utility function to add a delay
-    static void delay_ms(const int milliseconds)
-    {
+    // Helper function to simulate work for a specified duration
+    void sleepFor(int milliseconds) {
         std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
     }
 };
 
-// Test basic functionality: starting, resetting, and flagging
-TEST_F(TestingStopwatchTest, TestStartAndReset)
-{
-    sw.flag("Start Flag");
-    delay_ms(10); // Wait to ensure time passes
-    sw.flag("Mid Flag");
-
-    EXPECT_NO_THROW(sw.reset()); // Ensure reset works
-    EXPECT_NO_THROW(sw.flag("After Reset Flag"));
+// Test basic functionality - start, add flag, stop
+TEST_F(StopwatchTest, BasicFunctionality) {
+    stopwatch.start();
+    sleepFor(10);
+    stopwatch.add_flag();
+    sleepFor(10);
+    auto flags = stopwatch.stop();
+    
+    // Should have 3 flags: start, add_flag, and stop
+    EXPECT_EQ(flags.size(), 3);
 }
 
-// Test the addition and removal of flags using overloaded operators
-TEST_F(TestingStopwatchTest, TestFlagAdditionAndRemoval)
-{
-    sw.flag("First Flag");
-    EXPECT_NO_THROW(++sw); // Add flag using overloaded ++ operator
-    delay_ms(5);
-    EXPECT_NO_THROW(sw.flag("Mid Flag"));
-    EXPECT_NO_THROW(--sw); // Remove flag using overloaded -- operator
-
-    // Test removing flags until none remain
-    EXPECT_NO_THROW(--sw);
-    EXPECT_NO_THROW(--sw); // Should not throw even when there are no flags
+// Test delta_t functionality
+TEST_F(StopwatchTest, DeltaTime) {
+    stopwatch.start();
+    sleepFor(50);
+    stopwatch.add_flag();
+    
+    auto delta = stopwatch.delta_t(1);
+    
+    // The delta_since_prev should be approximately 50ms
+    // Use a tolerance for timing variations
+    EXPECT_GE(delta.first.count(), 40);
+    EXPECT_LE(delta.first.count(), 60);
+    
+    // The delta_since_start should be the same as delta_since_prev here
+    EXPECT_GE(delta.second.count(), 40);
+    EXPECT_LE(delta.second.count(), 60);
 }
 
-// Test countdown from start and previous flags
-TEST_F(TestingStopwatchTest, TestCountdownModes)
-{
-    sw.set_countdown_from_prev(true);
-    sw.set_countdown_from_start(false);
-    EXPECT_TRUE(sw.is_count_from_prev());
-    EXPECT_FALSE(sw.is_count_from_start());
-
-    delay_ms(10);
-    sw.flag("Flag 1");
-    delay_ms(5);
-    sw.flag("Flag 2");
-
-    // Switch to countdown from start and verify
-    sw.set_countdown_from_start(true);
-    sw.set_countdown_from_prev(false);
-    EXPECT_TRUE(sw.is_count_from_start());
-    EXPECT_FALSE(sw.is_count_from_prev());
+// Test delta_t with invalid index
+TEST_F(StopwatchTest, DeltaTimeInvalidIndex) {
+    stopwatch.start();
+    
+    // Index 0 should return zeros
+    auto delta = stopwatch.delta_t(0);
+    EXPECT_EQ(delta.first.count(), 0);
+    EXPECT_EQ(delta.second.count(), 0);
+    
+    // Out of range index should return zeros
+    delta = stopwatch.delta_t(100);
+    EXPECT_EQ(delta.first.count(), 0);
+    EXPECT_EQ(delta.second.count(), 0);
 }
 
-// Test that flags are accurately recorded and the time intervals make sense
-TEST_F(TestingStopwatchTest, TestAccurateFlagging)
-{
-    const auto start_time = std::chrono::high_resolution_clock::now();
-
-    sw.flag("Initial Flag");
-    delay_ms(10); // Simulate a delay
-    sw.flag("Second Flag");
-    const auto end_time = std::chrono::high_resolution_clock::now();
-
-    const auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-
-    // Validate that the elapsed time between start and last flag is within a reasonable range
-    EXPECT_GE(elapsed_time, 10); // At least 10 ms should have passed
+// Test get_flags
+TEST_F(StopwatchTest, GetFlags) {
+    stopwatch.start();
+    stopwatch.add_flag();
+    stopwatch.add_flag();
+    
+    const auto& flags = stopwatch.get_flags();
+    EXPECT_EQ(flags.size(), 3);
 }
 
-// Test finish() automatically prints and flushes flags
-TEST_F(TestingStopwatchTest, TestFinishAndPrint)
-{
-    sw.flag("Start Flag");
-    delay_ms(5);
-    sw.flag("Mid Flag");
-
-    // Finish should print and clear all flags
-    EXPECT_NO_THROW(sw.finish());
-
-    // Ensure that after finish, no flags remain
-    sw.flag("After Finish");
-    EXPECT_NO_THROW(sw.finish()); // Should be empty before adding another flag
+// Test average_delta
+TEST_F(StopwatchTest, AverageDelta) {
+    stopwatch.add_flag();
+    sleepFor(10);
+    stopwatch.add_flag();
+    sleepFor(20);
+    stopwatch.add_flag();
+    sleepFor(30);
+    stopwatch.add_flag();
+    
+    auto avg = stopwatch.average_delta();
+    
+    // Average should be approximately (10+20+30)/3 = 20ms
+    // Using a tolerance for system timing variations
+    EXPECT_GE(avg.count(), 19);
+    EXPECT_LE(avg.count(), 21);
 }
 
-
-
-// Test flags capacity reservation and handling large number of flags
-TEST_F(TestingStopwatchTest, TestFlagCapacityHandling)
-{
-    TestingStopwatch large_sw("Capacity testing", 100); // Reserve capacity for 100 flags
-    large_sw.start();
-    for (int i = 0; i < 100; ++i)
-    {
-        large_sw.flag("Flag " + std::to_string(i));
-        delay_ms(1); // Delay to ensure flag timestamps are distinct
-    }
-    EXPECT_NO_THROW(large_sw.finish()); // Ensure that handling a large number of flags works smoothly
+// Test the new measure function
+TEST_F(StopwatchTest, MeasureLambda) {
+    // Measure a lambda that sleeps for 50ms
+    auto duration = stopwatch.measure([this]() {
+        sleepFor(50);
+    });
+    
+    // Check that the duration is approximately 50ms
+    EXPECT_GE(duration.count(), 45);
+    EXPECT_LE(duration.count(), 60);
 }
 
-// Test time unit conversion by checking durations in different time units
-TEST(StopwatchTimeUnitTest, TestDifferentTimeUnits)
-{
-    TestingStopwatch<std::chrono::microseconds> micro_sw;
-    micro_sw.start();
-    TestingStopwatchTest::delay_ms(1); // 1 ms delay
-    micro_sw.flag("First Microsecond Flag");
-
-    TestingStopwatch<std::chrono::nanoseconds> nano_sw;
-    nano_sw.start();
-    TestingStopwatchTest::delay_ms(1); // 1 ms delay
-    nano_sw.flag("First Nanosecond Flag");
-
-    // Ensure there are no issues with different time units
-    EXPECT_NO_THROW(micro_sw.finish());
-    EXPECT_NO_THROW(nano_sw.finish());
+// Test measure with complex logic
+TEST_F(StopwatchTest, MeasureComplexLogic) {
+    long result = 0;
+    
+    auto duration = stopwatch.measure([&result]() {
+        // Do some computational work
+        for (int i = 0; i < 1000000; i++) {
+            result += i;
+        }
+    });
+    
+    // Verify that the work was done
+    EXPECT_GT(result, 0);
+    
+    // Duration should be greater than 0
+    EXPECT_GT(duration.count(), 0);
 }
-// Test the destructor calls print() automatically
-TEST(StopwatchDestructorTest, TestDestructorCallsPrint)
-{
-    {
-        TestingStopwatch<> temp_stopwatch;
-        temp_stopwatch.start();
-        temp_stopwatch.flag("Start Flag");
-        TestingStopwatchTest::delay_ms(10);
-        temp_stopwatch.flag("End Flag");
 
-        // When temp_stopwatch goes out of scope, print() should be called automatically
-    } // Destructor should be called here
+// Test measure with function reference
+TEST_F(StopwatchTest, MeasureFunctionReference) {
+    // Define a function to be measured
+    std::function<void()> testFunc = [this]() {
+        sleepFor(20);
+    };
+    
+    auto duration = stopwatch.measure(testFunc);
+    
+    // Check duration
+    EXPECT_GE(duration.count(), 15);
+    EXPECT_LE(duration.count(), 30);
 }
+
+// Test measure with multiple calls
+TEST_F(StopwatchTest, MeasureMultipleCalls) {
+    // Measure multiple different durations
+    auto d1 = stopwatch.measure([this]() { sleepFor(10); });
+    auto d2 = stopwatch.measure([this]() { sleepFor(20); });
+    auto d3 = stopwatch.measure([this]() { sleepFor(30); });
+    
+    // Each duration should be approximately its sleep time
+    EXPECT_GE(d1.count(), 5);
+    EXPECT_LE(d1.count(), 20);
+    
+    EXPECT_GE(d2.count(), 15);
+    EXPECT_LE(d2.count(), 30);
+    
+    EXPECT_GE(d3.count(), 25);
+    EXPECT_LE(d3.count(), 40);
+}
+
+// Test that measure doesn't interfere with stopwatch flags
+TEST_F(StopwatchTest, MeasureDoesntChangeFlags) {
+    stopwatch.start();
+    stopwatch.add_flag();
+    
+    auto flagsBefore = stopwatch.get_flags().size();
+    
+    // Measure something
+    stopwatch.measure([this]() { sleepFor(10); });
+    
+    auto flagsAfter = stopwatch.get_flags().size();
+    
+    // Flag count should remain the same
+    EXPECT_EQ(flagsBefore, flagsAfter);
+}
+

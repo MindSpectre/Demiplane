@@ -4,7 +4,9 @@
 # Test Stopwatch benchmark
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Stopwatch
+        stopwatch/test_printing_stopwatch.cpp
         stopwatch/test_stopwatch.cpp
+        stopwatch/main.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
         PRIVATE

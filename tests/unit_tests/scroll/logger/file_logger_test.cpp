@@ -200,7 +200,7 @@ void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demip
     int r_num = 50000;
     std::chrono::milliseconds process_time{1};
     threads.reserve(t_num);
-    demiplane::chrono::TestingStopwatch<> twp;
+    demiplane::chrono::PrintingStopwatch<> twp;
     twp.start();
     for (int i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {

@@ -11,7 +11,7 @@ namespace demiplane::chrono {
      * @tparam T The time unit used for measuring intervals (milliseconds by default).
      */
     template <typename T = std::chrono::milliseconds>
-    class TestingStopwatch {
+    class PrintingStopwatch {
     public:
         /**
          * @brief Checks if time is counted from the previous flag.
@@ -56,7 +56,7 @@ namespace demiplane::chrono {
          * @param flags_cnt_reserve The initial reserved size of the flags vector.
          */
         // Constructor
-        explicit TestingStopwatch(std::string name = "", const std::size_t flags_cnt_reserve = 30)
+        explicit PrintingStopwatch(std::string name = "", const std::size_t flags_cnt_reserve = 30)
             : running_name_(std::move(name)) {
             flags_.reserve(flags_cnt_reserve);
         }
@@ -68,7 +68,7 @@ namespace demiplane::chrono {
          * @brief Destructor that automatically prints the times.
          */
         // Destructor automatically flushes the times
-        ~TestingStopwatch() noexcept {
+        ~PrintingStopwatch() noexcept {
             print();
         }
 
@@ -140,7 +140,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        TestingStopwatch& operator++(int) {
+        PrintingStopwatch& operator++(int) {
             flag("");
             return *this;
         }
@@ -150,7 +150,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        TestingStopwatch& operator++() {
+        PrintingStopwatch& operator++() {
             flag("");
             return *this;
         }
@@ -160,7 +160,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        TestingStopwatch& operator--(int) {
+        PrintingStopwatch& operator--(int) {
             if (!flags_.empty()) {
                 flags_.pop_back();
             }
@@ -172,7 +172,7 @@ namespace demiplane::chrono {
          *
          * @return Reference to the Stopwatch object.
          */
-        TestingStopwatch& operator--() {
+        PrintingStopwatch& operator--() {
             if (!flags_.empty()) {
                 flags_.pop_back();
             }

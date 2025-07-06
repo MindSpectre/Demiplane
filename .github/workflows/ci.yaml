@@ -1,0 +1,105 @@
+name: C++ CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-toolchain-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      toolchain_changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for toolchain changes
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            git diff --name-only origin/${{ github.base_ref }} HEAD > changed_files.txt
+          else
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} > changed_files.txt
+          fi
+          
+          if grep -q "infrastructure/toolchain/" changed_files.txt || grep -q "vcpkg.json" changed_files.txt; then
+            echo "Toolchain files changed"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No toolchain files changed"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-local-toolchain:
+    needs: check-toolchain-changes
+    if: needs.check-toolchain-changes.outputs.toolchain_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local toolchain image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/toolchain/Dockerfile
+          target: toolchain
+          push: false
+          load: true
+          tags: local/dmp_toolchain:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/dmp_toolchain:cache
+
+      - name: Save local toolchain image
+        run: |
+          mkdir -p /tmp/toolchain
+          docker save local/dmp_toolchain:${{ github.sha }} | gzip > /tmp/toolchain/image.tar.gz
+
+      - name: Upload toolchain image artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: toolchain-image
+          path: /tmp/toolchain/image.tar.gz
+          retention-days: 1
+
+  build-test:
+    needs: [ check-toolchain-changes, build-local-toolchain ]
+    if: always() && (needs.check-toolchain-changes.result == 'success')
+    runs-on: ubuntu-latest
+
+    # Fixed the container image specification
+    container:
+      # Use a separate job step to determine the image
+      image: ${{ needs.check-toolchain-changes.outputs.toolchain_changed == 'true' && 'local/dmp_toolchain:latest' || format('ghcr.io/{0}/dmp_toolchain:latest', github.repository_owner) }}
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Download and load local toolchain image if needed
+        if: needs.check-toolchain-changes.outputs.toolchain_changed == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: toolchain-image
+          path: /tmp/toolchain
+
+      - name: Load Docker image if using local toolchain
+        if: needs.check-toolchain-changes.outputs.toolchain_changed == 'true'
+        run: |
+          docker load < /tmp/toolchain/image.tar.gz
+          # Set the loaded image as the current container
+          # This is a workaround since we can't dynamically change the container mid-job
+          # Instead, we'll use docker run to execute our commands
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Build
+        run: cmake --build --preset release -- -j$(nproc)
+
+      - name: Run CTest
+        run: ctest --preset release --output-on-failure

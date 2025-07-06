@@ -7,12 +7,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # 1. Core build tooling
 RUN dnf -y group install development-tools
-RUN dnf -y install clang
+RUN dnf -y install clang perl-IPC-Cmd kernel-headers curl openssl-devel bison flex make cmake autoconf automake
+
+RUN dnf install -y perl-CPAN
+RUN cpan "IPC::Cmd"
 # 2. vcpkg bootstrap (pinned commit for reproducibility)
 RUN git clone https://github.com/microsoft/vcpkg ${VCPKG_ROOT} && \
     cd ${VCPKG_ROOT} && \
     ./bootstrap-vcpkg.sh
-
+#TODO: possibly better add specific commit
 # 3. Copy manifest and restore libraries *before* app sources for cache reuse
 WORKDIR /workspace
 COPY . .

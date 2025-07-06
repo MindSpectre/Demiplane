@@ -6,32 +6,24 @@ set -e  # Exit immediately if a command exits with a non-zero status
 echo "Installation starts for Fedora."
 
 # Update the package list
-sudo dnf update -y && sudo dnf upgrade -y
+sudo dnf update -y && sudo dnf upgrade -y || true
 # Install necessary packages
 sudo dnf install -y \
     @development-tools \
-    pkgconf-pkg-config \
-    curl \
-    haskell-platform \
-    libicu-devel \
-    libuuid-devel \
-    mesa-libGL-devel \
-    mesa-libGLU-devel \
-    xkeyboard-config \
-    openssl-devel \
-    zlib-devel \
-    zip \
-    unzip \
-    git \
-    perl-IPC-Cmd \
-    autoconf \
-    automake \
-    libtool \
-    kernel-headers
+      clang \
+      perl-IPC-Cmd \
+      kernel-headers \
+      curl \
+      openssl-devel \
+      bison \
+      flex \
+      make \
+      cmake \
+      autoconf \
+      automake \
+      git \
+      perl-CPAN
 
-
-
-sudo dnf install -y perl-CPAN
 sudo cpan IPC::Cmd
 
 echo "LLVM and Clang installation completed. Current version" && clang --version

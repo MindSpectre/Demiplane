@@ -11,7 +11,7 @@ target_link_libraries(${DMP_DATABASE}.Pqxx
         PUBLIC
         Boost::container
         libpqxx::pqxx
-        Demiplane::Chrono
+        Demiplane::Common::Chrono
         ${DMP_DATABASE}.Base
         ${DMP_DATABASE}.Exceptions
 

@@ -10,7 +10,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Scroll
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Scroll
         PRIVATE
-        Demiplane::Scroll
+        Demiplane::Common::Scroll
         ${TEST_LIBS}
 )
 ##############################################################################

@@ -48,17 +48,15 @@ target_link_libraries(${DMP_NEXUS}.Provider INTERFACE
 
 
 ##############################################################################
-# Nexus components
+# Nexus exported library
 ##############################################################################
 add_combined_library(${DMP_NEXUS}
         DIRECTORIES
         export
         LIBRARIES
         ${DMP_NEXUS}.Provider
-        ALIAS
-        Demiplane::Component::Nexus
 )
-#add_library(Demiplane::Component::Nexus ALIAS  ${DMP_NEXUS})
+add_library(Demiplane::Component::Nexus ALIAS  ${DMP_NEXUS})
 ##############################################################################
 
 

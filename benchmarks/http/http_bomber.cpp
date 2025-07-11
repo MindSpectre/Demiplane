@@ -162,8 +162,8 @@ private:
 
             if (successful > 0) {
                 const double avg_response_time = static_cast<double>(stats_.total_response_time_ms.load()) / successful;
-                const auto min_response_time = stats_.min_response_time_ms.load();
-                const auto max_response_time = stats_.max_response_time_ms.load();
+                const auto min_response_time   = stats_.min_response_time_ms.load();
+                const auto max_response_time   = stats_.max_response_time_ms.load();
 
                 std::cout << " | Avg: " << std::setw(4) << avg_response_time << "ms"
                           << " | Min: " << std::setw(4) << min_response_time << "ms"

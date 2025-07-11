@@ -114,7 +114,7 @@ namespace demiplane::http {
 
         return data;
     }
-    
+
 
     // Multipart parsing (basic implementation)
     std::optional<std::vector<RequestContext::MultipartField>> RequestContext::multipart_data() const {

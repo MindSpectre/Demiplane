@@ -1,10 +1,11 @@
 #pragma once
 
+#include <json/json.h>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <json/json.h>
+
 #include "aliases.hpp"
 
 // Forward declaration for JSON support
@@ -34,7 +35,9 @@ namespace demiplane::http {
         std::string header_or(std::string_view name, std::string_view default_value) const;
 
         // Body content access
-        std::string body() const { return request_.body(); }
+        std::string body() const {
+            return request_.body();
+        }
 
         // JSON body parsing
         std::optional<Json::Value> json() const;
@@ -52,8 +55,12 @@ namespace demiplane::http {
         std::optional<std::vector<MultipartField>> multipart_data() const;
 
         // Request data
-        std::string method() const { return std::string(request_.method_string()); }
-        std::string target() const { return std::string(request_.target()); }
+        std::string method() const {
+            return std::string(request_.method_string());
+        }
+        std::string target() const {
+            return std::string(request_.target());
+        }
         std::string path_only() const;
         std::string query_string() const;
 

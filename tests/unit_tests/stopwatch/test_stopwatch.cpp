@@ -19,7 +19,7 @@ protected:
     }
 
     // Helper function to simulate work for a specified duration
-    void sleepFor(int milliseconds) {
+    static void sleepFor(const int milliseconds) {
         std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
     }
 };
@@ -111,11 +111,11 @@ TEST_F(StopwatchTest, MeasureLambda) {
 
 // Test measure with complex logic
 TEST_F(StopwatchTest, MeasureComplexLogic) {
-    long result = 0;
-    
-    auto duration = stopwatch.measure([&result]() {
+    volatile long long result = 0;
+
+    const auto duration = stopwatch.measure([&result]() {
         // Do some computational work
-        for (int i = 0; i < 1000000; i++) {
+        for (volatile long long i = 0; i < 1000000; i++) {
             result += i;
         }
     });

@@ -6,14 +6,12 @@
     "boost-log",
     "boost-program-options",
     "boost-system",
-    "grpc",
     "jsoncpp",
     "valijson",
     "libpq",
     "libpqxx",
     "libuuid",
     "libevent",
-    "abseil",
     "gtest"
   ]
 }

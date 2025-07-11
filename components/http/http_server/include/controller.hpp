@@ -47,22 +47,22 @@ namespace demiplane::http {
 
         // Async method binding
         template <IsController Controller>
-        void Get(std::string path, boost::asio::awaitable<Response> (Controller::*method)(RequestContext)) {
+        void Get(std::string path, AsyncResponse (Controller::*method)(RequestContext)) {
             registry_.add_route(boost::beast::http::verb::get, std::move(path), bind_async_method(method));
         }
 
         template <IsController Controller>
-        void Post(std::string path, boost::asio::awaitable<Response> (Controller::*method)(RequestContext)) {
+        void Post(std::string path, AsyncResponse (Controller::*method)(RequestContext)) {
             registry_.add_route(boost::beast::http::verb::post, std::move(path), bind_async_method(method));
         }
 
         template <IsController Controller>
-        void Put(std::string path, boost::asio::awaitable<Response> (Controller::*method)(RequestContext)) {
+        void Put(std::string path, AsyncResponse (Controller::*method)(RequestContext)) {
             registry_.add_route(boost::beast::http::verb::put, std::move(path), bind_async_method(method));
         }
 
         template <IsController Controller>
-        void Delete(std::string path, boost::asio::awaitable<Response> (Controller::*method)(RequestContext)) {
+        void Delete(std::string path, AsyncResponse (Controller::*method)(RequestContext)) {
             registry_.add_route(boost::beast::http::verb::delete_, std::move(path), bind_async_method(method));
         }
 
@@ -79,15 +79,16 @@ namespace demiplane::http {
         template <IsController Controller>
         ContextHandler bind_sync_method(Response (Controller::*method)(RequestContext)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
-            return [self, method](RequestContext ctx) -> boost::asio::awaitable<Response> {
+            return [self, method](RequestContext ctx) -> AsyncResponse {
                 co_return (self.get()->*method)(std::move(ctx));
             };
         }
 
         template <IsController Controller>
-        ContextHandler bind_async_method(boost::asio::awaitable<Response> (Controller::*method)(RequestContext)) {
+        ContextHandler bind_async_method(AsyncResponse (Controller::*method)(RequestContext)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
-            return [self, method](RequestContext ctx) -> boost::asio::awaitable<Response> {
+            return [self, method](RequestContext ctx) -> AsyncResponse {
+                // TODO: Caught ICE
                 co_return co_await (self.get()->*method)(std::move(ctx));
             };
         }

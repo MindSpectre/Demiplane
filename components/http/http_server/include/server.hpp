@@ -24,12 +24,20 @@ namespace demiplane::http {
         // Middleware
         void use_middleware(Middleware middleware);
 
-        // Callbacks
+        // Sync Callbacks (non-blocking, fire-and-forget)
         void on_server_start(ServerCallback callback);
         void on_server_stop(ServerCallback callback);
         void on_request(RequestCallback callback);
         void on_response(ResponseCallback callback);
         void on_error(ErrorCallback callback);
+
+        // Async Callbacks (non-blocking, fire-and-forget)
+        void on_server_start_async(AsyncServerCallback callback);
+        void on_server_stop_async(AsyncServerCallback callback);
+        void on_request_async(AsyncRequestCallback callback);
+        void on_response_async(AsyncResponseCallback callback);
+        void on_error_async(AsyncErrorCallback callback);
+
 
         // Server lifecycle
         void listen(uint16_t port);
@@ -37,7 +45,7 @@ namespace demiplane::http {
         void stop();
 
     private:
-        boost::asio::io_context ioc_;
+        mutable boost::asio::io_context ioc_;
         std::size_t thread_count_;
         RouteRegistry registry_; // Single registry for all routes
         std::vector<Middleware> middlewares_;
@@ -51,13 +59,21 @@ namespace demiplane::http {
         std::vector<ResponseCallback> response_callbacks_;
         std::vector<ErrorCallback> error_callbacks_;
 
-        boost::asio::awaitable<void> session(boost::asio::ip::tcp::socket socket) const;
-        boost::asio::awaitable<Response> handle_request(Request request) const;
+
+        // Async Callbacks
+        std::vector<AsyncServerCallback> async_start_callbacks_;
+        std::vector<AsyncServerCallback> async_stop_callbacks_;
+        std::vector<AsyncRequestCallback> async_request_callbacks_;
+        std::vector<AsyncResponseCallback> async_response_callbacks_;
+        std::vector<AsyncErrorCallback> async_error_callbacks_;
+
+        [[nodiscard]] boost::asio::awaitable<void> session(boost::asio::ip::tcp::socket socket) const;
+        [[nodiscard]] AsyncResponse handle_request(Request request) const;
 
         void merge_controller_routes(HttpController* controller);
         static std::unordered_map<std::string, std::string> parse_query_params(const std::string& query);
 
-        // Callback triggers
+        // Callback triggers (non-blocking)
         void trigger_start_callbacks() const;
         void trigger_stop_callbacks() const;
         void trigger_request_callbacks(const Request& req) const;

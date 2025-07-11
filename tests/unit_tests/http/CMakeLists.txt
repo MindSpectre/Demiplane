@@ -1,8 +1,8 @@
 ##############################################################################
-#  Nexus uint test
+#  Http uint test
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Handler
-        handler/test_handler.cpp
+        handler/manual_example_http_handler.cpp
 )
 
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Handler
@@ -10,3 +10,4 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Handler
         ${TEST_LIBS}
 )
 ##############################################################################
+

@@ -50,6 +50,27 @@ namespace demiplane::http {
     void Server::on_error(ErrorCallback callback) {
         error_callbacks_.push_back(std::move(callback));
     }
+    // Async callback registration
+    void Server::on_server_start_async(AsyncServerCallback callback) {
+        async_start_callbacks_.push_back(std::move(callback));
+    }
+
+    void Server::on_server_stop_async(AsyncServerCallback callback) {
+        async_stop_callbacks_.push_back(std::move(callback));
+    }
+
+    void Server::on_request_async(AsyncRequestCallback callback) {
+        async_request_callbacks_.push_back(std::move(callback));
+    }
+
+    void Server::on_response_async(AsyncResponseCallback callback) {
+        async_response_callbacks_.push_back(std::move(callback));
+    }
+
+    void Server::on_error_async(AsyncErrorCallback callback) {
+        async_error_callbacks_.push_back(std::move(callback));
+    }
+
 
     void Server::listen(uint16_t port) {
         running_ = true;
@@ -108,8 +129,9 @@ namespace demiplane::http {
         beast::tcp_stream stream(std::move(socket));
 
         try {
+            bool keep_alive;
             beast::flat_buffer buffer;
-            for (;;) {
+            do {
                 Request req;
 
                 beast::error_code ec;
@@ -124,13 +146,11 @@ namespace demiplane::http {
 
                 Response res = co_await handle_request(std::move(req));
 
-                bool keep_alive = res.keep_alive();
+                keep_alive = res.keep_alive();
                 co_await beast::http::async_write(stream, res, asio::use_awaitable);
 
-                if (!keep_alive) {
-                    break;
-                }
-            }
+
+            } while (keep_alive);
         } catch (const std::exception& e) {
             trigger_error_callbacks(e);
         }
@@ -140,7 +160,7 @@ namespace demiplane::http {
         gears::unused_value(x);
     }
 
-    asio::awaitable<Response> Server::handle_request(Request request) const {
+    AsyncResponse Server::handle_request(Request request) const {
         trigger_request_callbacks(request);
 
         auto target    = std::string(request.target());
@@ -194,35 +214,133 @@ namespace demiplane::http {
 
         return params;
     }
-
+    // Non-blocking callback triggers
     void Server::trigger_start_callbacks() const {
+        // Execute sync callbacks immediately
         for (const auto& callback : start_callbacks_) {
-            callback();
+            try {
+                callback();
+            } catch (const std::exception& e) {
+                trigger_error_callbacks(e);
+            }
+        }
+
+        // Spawn async callbacks
+        for (const auto& callback : async_start_callbacks_) {
+            asio::co_spawn(
+                ioc_,
+                [this, callback]() -> AsyncVoid {
+                    try {
+                        co_await callback();
+                    } catch (const std::exception& e) {
+                        trigger_error_callbacks(e);
+                    }
+                },
+                asio::detached);
         }
     }
 
     void Server::trigger_stop_callbacks() const {
         for (const auto& callback : stop_callbacks_) {
-            callback();
+            try {
+                callback();
+            } catch (const std::exception& e) {
+                trigger_error_callbacks(e);
+            }
+        }
+
+        // Spawn async callbacks
+        for (const auto& callback : async_stop_callbacks_) {
+            asio::co_spawn(
+                ioc_,
+                [this, callback]() -> AsyncVoid {
+                    try {
+                        co_await callback();
+                    } catch (const std::exception& e) {
+                        trigger_error_callbacks(e);
+                    }
+                },
+                asio::detached);
         }
     }
 
     void Server::trigger_request_callbacks(const Request& req) const {
+        // Execute sync callbacks immediately
         for (const auto& callback : request_callbacks_) {
-            callback(req);
+            try {
+                callback(req);
+            } catch (const std::exception& e) {
+                trigger_error_callbacks(e);
+            }
+        }
+
+        // Spawn async callbacks
+        for (const auto& callback : async_request_callbacks_) {
+            asio::co_spawn(
+                ioc_,
+                [this, callback, req]() -> AsyncVoid {
+                    try {
+                        co_await callback(req);
+                    } catch (const std::exception& e) {
+                        trigger_error_callbacks(e);
+                    }
+                },
+                asio::detached);
         }
     }
 
     void Server::trigger_response_callbacks(const Response& res) const {
+        // Execute sync callbacks immediately
         for (const auto& callback : response_callbacks_) {
-            callback(res);
+            try {
+                callback(res);
+            } catch (const std::exception& e) {
+                trigger_error_callbacks(e);
+            }
+        }
+
+        // Spawn async callbacks
+        for (const auto& callback : async_response_callbacks_) {
+            asio::co_spawn(
+                ioc_,
+                [this, callback, res]() -> AsyncVoid {
+                    try {
+                        co_await callback(res);
+                    } catch (const std::exception& e) {
+                        trigger_error_callbacks(e);
+                    }
+                },
+                asio::detached);
         }
     }
 
     void Server::trigger_error_callbacks(const std::exception& e) const {
+        // Execute sync error callbacks immediately
         for (const auto& callback : error_callbacks_) {
-            callback(e);
+            try {
+                callback(e);
+            } catch (...) {
+                // If error callback itself fails, just log to stderr
+                // Don't trigger more error callbacks to avoid infinite recursion
+                std::cerr << "Error callback failed" << std::endl;
+            }
+        }
+
+        // Spawn async error callbacks
+        for (const auto& callback : async_error_callbacks_) {
+            asio::co_spawn(
+                ioc_,
+                [callback, &e]() -> AsyncVoid {
+                    try {
+                        co_await callback(e);
+                    } catch (...) {
+                        // Same logic - just log, don't recurse
+                        std::cerr << "Async error callback failed" << std::endl;
+                    }
+                },
+                asio::detached);
         }
     }
+
 
 } // namespace demiplane::http

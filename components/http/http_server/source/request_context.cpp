@@ -1,7 +1,10 @@
+
 #include "request_context.hpp"
 
 #include <algorithm>
-
+#include <demiplane/gears>
+#include <json/json.h> // You'll need to add jsoncpp dependency
+#include <sstream>
 namespace demiplane::http {
 
     RequestContext::RequestContext(Request req) : request_(std::move(req)) {
@@ -39,6 +42,124 @@ namespace demiplane::http {
         return content_type && content_type->find("application/x-www-form-urlencoded") != std::string::npos;
     }
 
+    bool RequestContext::is_multipart() const {
+        const auto content_type = header("content-type");
+        return content_type && content_type->find("multipart/form-data") != std::string::npos;
+    }
+
+    // JSON parsing
+    std::optional<Json::Value> RequestContext::json() const {
+        if (!is_json()) {
+            return std::nullopt;
+        }
+
+        if (!cached_json_.has_value()) {
+            try {
+                cached_json_ = parse_json_body();
+            } catch ([[maybe_unused]] const std::runtime_error& e) {
+                cached_json_ = std::nullopt;
+            }
+        }
+
+        return cached_json_;
+    }
+
+    Json::Value RequestContext::parse_json_body() const {
+        Json::Value root;
+        std::string errors;
+
+        const auto body_str = body();
+        std::istringstream stream(body_str);
+
+        if (const Json::CharReaderBuilder builder; !Json::parseFromStream(builder, stream, &root, &errors)) {
+            throw std::runtime_error("Failed to parse JSON: " + errors);
+        }
+
+        return root;
+    }
+
+    // Form data parsing
+    std::optional<std::unordered_map<std::string, std::string>> RequestContext::form_data() const {
+        if (!is_form_data()) {
+            return std::nullopt;
+        }
+
+        if (!cached_form_data_.has_value()) {
+            try {
+                cached_form_data_ = parse_form_data_body();
+            } catch (const std::exception&) {
+                cached_form_data_ = std::nullopt;
+            }
+        }
+
+        return cached_form_data_;
+    }
+
+    std::unordered_map<std::string, std::string> RequestContext::parse_form_data_body() const {
+        std::unordered_map<std::string, std::string> data;
+        const auto body_str = body();
+
+        std::istringstream stream(body_str);
+        std::string pair;
+
+        while (std::getline(stream, pair, '&')) {
+            if (const auto eq_pos = pair.find('='); eq_pos != std::string::npos) {
+                auto key         = pair.substr(0, eq_pos);
+                const auto value = pair.substr(eq_pos + 1);
+
+                // URL decode key and value here if needed
+                data[key] = value;
+            }
+        }
+
+        return data;
+    }
+    
+
+    // Multipart parsing (basic implementation)
+    std::optional<std::vector<RequestContext::MultipartField>> RequestContext::multipart_data() const {
+        if (!is_multipart()) {
+            return std::nullopt;
+        }
+
+        if (!cached_multipart_data_.has_value()) {
+            try {
+                cached_multipart_data_ = parse_multipart_body();
+            } catch (const std::exception&) {
+                cached_multipart_data_ = std::nullopt;
+            }
+        }
+
+        return cached_multipart_data_;
+    }
+
+    std::vector<RequestContext::MultipartField> RequestContext::parse_multipart_body() const {
+        // This is a simplified implementation
+        // In production, you'd want to use a proper multipart parser
+        std::vector<MultipartField> fields;
+
+        // Extract boundary from Content-Type header
+        const auto content_type = header("content-type");
+        if (!content_type) {
+            return fields;
+        }
+
+        const auto boundary_pos = content_type->find("boundary=");
+        if (boundary_pos == std::string::npos) {
+            return fields;
+        }
+
+        std::string boundary = "--" + content_type->substr(boundary_pos + 9);
+
+        // Parse multipart data (simplified)
+        const auto body_str = body();
+        // Implementation would split by boundary and parse each part
+        // This is complex and would typically use a library like cpp-httplib's multipart parser
+
+        return fields;
+    }
+
+    // Rest of the existing methods...
     bool RequestContext::accepts_json() const {
         const auto accept = header("accept");
         return accept

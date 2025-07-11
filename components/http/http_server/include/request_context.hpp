@@ -4,8 +4,10 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-
+#include <json/json.h>
 #include "aliases.hpp"
+
+// Forward declaration for JSON support
 
 namespace demiplane::http {
 
@@ -31,22 +33,34 @@ namespace demiplane::http {
         std::optional<std::string> header(std::string_view name) const;
         std::string header_or(std::string_view name, std::string_view default_value) const;
 
+        // Body content access
+        std::string body() const { return request_.body(); }
+
+        // JSON body parsing
+        std::optional<Json::Value> json() const;
+
+        // Form data parsing
+        std::optional<std::unordered_map<std::string, std::string>> form_data() const;
+
+        // Multipart form data (for file uploads)
+        struct MultipartField {
+            std::string name;
+            std::string value;
+            std::string content_type;
+            std::string filename; // Only for file uploads
+        };
+        std::optional<std::vector<MultipartField>> multipart_data() const;
+
         // Request data
-        std::string body() const {
-            return request_.body();
-        }
-        std::string method() const {
-            return std::string(request_.method_string());
-        }
-        std::string target() const {
-            return std::string(request_.target());
-        }
+        std::string method() const { return std::string(request_.method_string()); }
+        std::string target() const { return std::string(request_.target()); }
         std::string path_only() const;
         std::string query_string() const;
 
         // Content type helpers
         bool is_json() const;
         bool is_form_data() const;
+        bool is_multipart() const;
         bool accepts_json() const;
         bool accepts_html() const;
         std::string preferred_content_type() const;
@@ -58,12 +72,20 @@ namespace demiplane::http {
     private:
         Request request_;
 
-        // Private maps - hidden from public interface
+        // Cached parsed data
+        mutable std::optional<Json::Value> cached_json_;
+        mutable std::optional<std::unordered_map<std::string, std::string>> cached_form_data_;
+        mutable std::optional<std::vector<MultipartField>> cached_multipart_data_;
+
+        // Private maps
         std::unordered_map<std::string, std::string> path_params_;
         std::unordered_map<std::string, std::string> query_params_;
         std::unordered_map<std::string, std::string> headers_;
 
         void parse_headers();
+        Json::Value parse_json_body() const;
+        std::unordered_map<std::string, std::string> parse_form_data_body() const;
+        std::vector<MultipartField> parse_multipart_body() const;
 
         template <typename T>
         std::optional<T> convert_string(const std::string& value) const;

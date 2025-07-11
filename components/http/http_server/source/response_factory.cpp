@@ -88,7 +88,7 @@ namespace demiplane::http {
     }
 
     Response ResponseFactory::custom(const boost::beast::http::status status, std::string body,
-        std::string_view content_type, const std::uint32_t version) {
+        const std::string_view content_type, const std::uint32_t version) {
         Response res{status, version};
         res.set(boost::beast::http::field::content_type, content_type);
         res.set(boost::beast::http::field::server, "demiplane/http");

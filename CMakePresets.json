@@ -19,7 +19,7 @@
     },
     {
       "name": "debug",
-      "displayName": "debug toolchain",
+      "displayName": "Debug toolchain",
       "hidden": false,
       "generator": "Ninja",
       "cacheVariables": {

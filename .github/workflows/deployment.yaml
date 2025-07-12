@@ -1,8 +1,8 @@
-name: CD
+name: Deployment
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -41,7 +41,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
+      - name: Setup environment
+        id: env
+        uses: ./.github/actions/env-setup
       - name: Free up disk space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -66,10 +68,10 @@ jobs:
           target: toolchain
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/dmp_toolchain:latest
-            ghcr.io/${{ github.repository_owner }}/dmp_toolchain:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/dmp_toolchain:cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/dmp_toolchain:cache,mode=max
+            ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:latest
+            ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache,mode=max
 
   # Add your actual deployment steps here
   deploy:

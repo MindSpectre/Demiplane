@@ -1,0 +1,16 @@
+# .github/actions/setup-env/action.yml
+name: 'Setup Environment Variables'
+description: 'Sets up common environment variables'
+
+outputs:
+  owner:
+    description: 'Lowercase repository owner'
+    value: ${{ steps.set-vars.outputs.owner }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: set-vars
+      shell: bash
+      run: |
+        echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT

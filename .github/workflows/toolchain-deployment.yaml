@@ -68,18 +68,7 @@ jobs:
           target: toolchain
           push: true
           tags: |
-            ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:latest
+            ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable
             ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:${{ github.sha }}
           cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
           cache-to: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache,mode=max
-
-  # Add your actual deployment steps here
-  deploy:
-    needs: [ check-toolchain-changes, publish-toolchain ]
-    if: always() && (needs.check-toolchain-changes.result == 'success')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy application
-        run: |
-          echo "Deploy your application here"
-          # Add your deployment logic

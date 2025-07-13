@@ -37,7 +37,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-
+      - name: Setup environment
+        id: env
+        uses: ./.github/actions/env-setup
       - name: Free up disk space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -67,7 +69,7 @@ jobs:
           push: false
           load: true
           tags: local/dmp_toolchain:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/dmp_toolchain:cache
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
 
       - name: Determine container image
         id: container
@@ -75,13 +77,13 @@ jobs:
           if [ "${{ needs.check-toolchain-changes.outputs.toolchain_changed }}" == "true" ]; then
             echo "image=local/dmp_toolchain:latest" >> $GITHUB_OUTPUT
           else
-            echo "image=ghcr.io/${{ github.repository_owner }}/dmp_toolchain:latest" >> $GITHUB_OUTPUT
+            echo "image=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable" >> $GITHUB_OUTPUT
           fi
 
       - name: Pull existing toolchain image (if using existing)
         if: needs.check-toolchain-changes.outputs.toolchain_changed == 'false'
         run: |
-          docker pull ghcr.io/${{ github.repository_owner }}/dmp_toolchain:latest
+          docker pull ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable
 
       - name: Run build and test
         run: |
@@ -95,8 +97,7 @@ jobs:
               ctest --preset release --output-on-failure
             "
 
-  # Optional: Push toolchain to temporary registry for PR testing
-  # This allows you to test the new toolchain in PRs before merging
+  # This allows testing the new toolchain in PRs before merging
   push-pr-toolchain:
     needs: [ check-toolchain-changes, build-and-test ]
     if: |

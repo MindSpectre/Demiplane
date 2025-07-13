@@ -2,18 +2,10 @@
   "name": "demiplane-toolchain",
   "version": "0.1.0",
   "dependencies": [
-    "boost-filesystem",
-    "boost-log",
     "boost-program-options",
-    "boost-system",
     "boost-beast",
     "boost-asio",
     "jsoncpp",
-    "valijson",
-    "libpq",
-    "libpqxx",
-    "libuuid",
-    "libevent",
     "gtest"
   ]
 }

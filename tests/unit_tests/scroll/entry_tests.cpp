@@ -8,7 +8,7 @@ class ServiceTest {
 public:
     void do_something() const {
         std::cout << "Doing something" << std::endl;
-        demiplane::gears::force_non_static(this);
+        demiplane::gears::enforce_non_static(this);
     }
 
     constexpr static std::string_view name = "ServiceTest";

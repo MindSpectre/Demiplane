@@ -3,8 +3,12 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <iomanip>
 #include <limits>
+#include <optional>
 #include <random>
+#include <span>
+#include <sstream>
 
 namespace demiplane::math::random {
 

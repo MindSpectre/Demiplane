@@ -6,6 +6,8 @@ option(USE_TESTS "Tests activated" ON)
 option(DO_BENCHMARKS "Benchmarks activated" ON)
 #Component option
 if (BUILD_COMPONENTS)
+
     option(BUILD_NEXUS "Build nexus" ON)
+    option(BUILD_HTTP "Build http" ON)
     option(BUILD_DATABASE "Build database" OFF)
 endif ()

@@ -35,7 +35,7 @@ namespace demiplane::scroll {
         bool load_config(const std::string& config_file_path);
         [[nodiscard]] std::string make_header() const;
         [[nodiscard]] Json::Value dump_config() const {
-            gears::force_non_static(this);
+            gears::enforce_non_static(this);
             return {};
         }
     };

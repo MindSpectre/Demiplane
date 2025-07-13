@@ -1,4 +1,4 @@
-FROM fedora:latest AS toolchain
+FROM fedora:latest AS base
 
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -7,20 +7,36 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # 1. Core build tooling
 RUN dnf -y group install development-tools
-RUN dnf -y install clang perl-IPC-Cmd kernel-headers curl openssl-devel bison flex make cmake autoconf automake
+RUN dnf -y install clang perl-IPC-Cmd kernel-headers curl openssl-devel bison flex make cmake autoconf automake ninja
 
 RUN dnf install -y perl-CPAN
 RUN cpan "IPC::Cmd"
-# 2. vcpkg bootstrap (pinned commit for reproducibility)
+
+# 2. vcpkg bootstrap
 RUN git clone https://github.com/microsoft/vcpkg ${VCPKG_ROOT} && \
     cd ${VCPKG_ROOT} && \
     ./bootstrap-vcpkg.sh
-#TODO: possibly better add specific commit
-# 3. Copy manifest and restore libraries *before* app sources for cache reuse
-WORKDIR /workspace
-COPY . .
+
+# Intermediate stage for building dependencies
+FROM base AS dependencies
+
+# Copy manifest files to a temporary location
+COPY vcpkg*.json /tmp/
+
+
+# Install dependencies using the manifest
+WORKDIR /tmp
 RUN ${VCPKG_ROOT}/vcpkg install --triplet x64-linux
 
-# 4. Expose helpful environment variables for downstream build containers/VSCode
+# Final toolchain stage
+FROM base AS toolchain
+
+# Copy the installed packages from the dependencies stage
+COPY --from=dependencies /tmp/vcpkg_installed ${VCPKG_ROOT}/installed
+
+# Set up workspace
+WORKDIR /workspace
+COPY . .
+# Expose environment variables
 ENV PATH="$VCPKG_ROOT:$PATH" \
     VCPKG_DEFAULT_TRIPLET=x64-linux

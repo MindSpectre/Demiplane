@@ -14,9 +14,11 @@
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "/opt/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_INSTALLED_DIR": "/opt/vcpkg/installed",
+        "VCPKG_MANIFEST_INSTALL": "OFF",
         "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
       },
-      "binaryDir": "build/opt"
+      "binaryDir": "build/release"
     },
     {
       "name": "debug",

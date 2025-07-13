@@ -1,6 +1,7 @@
 set(UNIT_TESTING_TARGET ${PROJECT_NAME}.Tests.Unit)
 set(FUNCTIONAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Functional)
 set(INTEGRATION_TESTING_TARGET ${PROJECT_NAME}.Tests.Integration)
+set(MANUAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Manual)
 set(TEST_LIBS
         GTest::gtest
         GTest::gtest_main
@@ -8,7 +9,7 @@ set(TEST_LIBS
         GTest::gmock_main
 )
 
-add_subdirectory(examples)
+add_subdirectory(manual_tests)
 
 add_subdirectory(unit_tests)
 
@@ -19,7 +20,7 @@ add_subdirectory(integration_tests)
 # Http component test
 ##############################################################################
 if (BUILD_HTTP)
-    add_subdirectory(examples/http)
+    add_subdirectory(manual_tests/http)
 endif ()
 ##############################################################################
 

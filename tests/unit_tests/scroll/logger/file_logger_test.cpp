@@ -196,15 +196,16 @@ parse_sec_ms(std::string_view line)
 void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> &file_logger) {
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
-    int t_num = 20;
-    int r_num = 50000;
+    std::size_t t_num = 20;
+    std::size_t r_num = 50000;
     std::chrono::milliseconds process_time{1};
+    demiplane::gears::unused_value(process_time);
     threads.reserve(t_num);
     demiplane::chrono::PrintingStopwatch<> twp;
     twp.start();
-    for (int i = 0; i < t_num; ++i) {
+    for (std::size_t i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {
-            for (int j = 0; j < r_num; ++j) {
+            for (std::size_t j = 0; j < r_num; ++j) {
                 std::string msg = "MSG" + std::to_string(j);
                 const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
                     demiplane::scroll::INF, msg , std::source_location::current());
@@ -245,7 +246,7 @@ void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demip
     }
 
     std::cout << "Non-monotonic lines: " << monotonic_errors <<  " " << total_lines << '\n';
-    std::cout << "Non-monotonic lines%: " << static_cast<double>(100*monotonic_errors)/(t_num*r_num) << '\n';
+    std::cout << "Non-monotonic lines%: " << static_cast<double>(100*monotonic_errors)/(static_cast<double>(t_num) * static_cast<double>(r_num)) << '\n';
 }
 
 TEST_F(FileLoggerTest, MultithreadWrite) {

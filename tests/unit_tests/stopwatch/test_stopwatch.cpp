@@ -102,7 +102,7 @@ TEST_F(StopwatchTest, AverageDelta) {
 // Test the new measure function
 TEST_F(StopwatchTest, MeasureLambda) {
     // Measure a lambda that sleeps for 50ms
-    auto duration = stopwatch.measure([this]() { sleepFor(50); });
+    auto duration = stopwatch.measure([]() { sleepFor(50); });
 
     // Check that the duration is approximately 50ms
     EXPECT_GE(duration.count(), 45);
@@ -111,15 +111,15 @@ TEST_F(StopwatchTest, MeasureLambda) {
 
 // Test measure with complex logic
 TEST_F(StopwatchTest, MeasureComplexLogic) {
-    volatile long long result = 0;
+    long long result = 0;
 
-    const auto duration = stopwatch.measure([&result]() {
+    const auto duration = stopwatch.measure([&result] {
         // Do some computational work
         std::uniform_int_distribution dist(0, 5);
-        for (volatile long long i = 0; i < 10000; i++) {
+        for (std::size_t i = 0; i < 10000; ++i) {
             std::random_device rd;
             std::mt19937 gen(rd());
-            result += (dist(gen));
+            result += dist(gen);
         }
     });
 
@@ -133,7 +133,7 @@ TEST_F(StopwatchTest, MeasureComplexLogic) {
 // Test measure with function reference
 TEST_F(StopwatchTest, MeasureFunctionReference) {
     // Define a function to be measured
-    std::function<void()> testFunc = [this]() { sleepFor(20); };
+    std::function<void()> testFunc = []() { sleepFor(20); };
 
     auto duration = stopwatch.measure(testFunc);
 
@@ -145,9 +145,9 @@ TEST_F(StopwatchTest, MeasureFunctionReference) {
 // Test measure with multiple calls
 TEST_F(StopwatchTest, MeasureMultipleCalls) {
     // Measure multiple different durations
-    auto d1 = stopwatch.measure([this]() { sleepFor(10); });
-    auto d2 = stopwatch.measure([this]() { sleepFor(20); });
-    auto d3 = stopwatch.measure([this]() { sleepFor(30); });
+    auto d1 = stopwatch.measure([]() { sleepFor(10); });
+    auto d2 = stopwatch.measure([]() { sleepFor(20); });
+    auto d3 = stopwatch.measure([]() { sleepFor(30); });
 
     // Each duration should be approximately its sleep time
     EXPECT_GE(d1.count(), 5);
@@ -168,7 +168,7 @@ TEST_F(StopwatchTest, MeasureDoesntChangeFlags) {
     auto flagsBefore = stopwatch.get_flags().size();
 
     // Measure something
-    stopwatch.measure([this]() { sleepFor(10); });
+    stopwatch.measure([] { sleepFor(10); });
 
     auto flagsAfter = stopwatch.get_flags().size();
 

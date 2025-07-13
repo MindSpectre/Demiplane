@@ -6,6 +6,8 @@
     "boost-log",
     "boost-program-options",
     "boost-system",
+    "boost-beast",
+    "boost-asio",
     "jsoncpp",
     "valijson",
     "libpq",

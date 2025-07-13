@@ -92,7 +92,8 @@ private:
                 auto response_end = std::chrono::high_resolution_clock::now();
 
                 // Calculate response time (from request sent to response received)
-                auto response_time = std::chrono::duration_cast<std::chrono::microseconds>(response_end - send_start);
+                std::chrono::duration<uint64_t, std::ratio<1, 1000000>> response_time =
+                    std::chrono::duration_cast<std::chrono::microseconds>(response_end - send_start);
 
                 // Close the connection
                 beast::error_code ec;
@@ -248,9 +249,9 @@ int main(const int argc, char* argv[]) {
         const std::string host          = argv[1];
         const std::string port          = argv[2];
         const std::string target        = argv[3];
-        const uint32_t threads          = std::stoul(argv[4]);
-        const uint32_t interval_ms      = std::stoul(argv[5]);
-        const uint32_t duration_seconds = std::stoul(argv[6]);
+        const uint32_t threads          = static_cast<uint32_t>(std::stoi(argv[4]));
+        const uint32_t interval_ms      = static_cast<uint32_t>(std::stoi(argv[5]));
+        const uint32_t duration_seconds = static_cast<uint32_t>(std::stoi(argv[6]));
 
         HttpBomber bomber(host, port, target, threads, interval_ms, duration_seconds);
         bomber.start();

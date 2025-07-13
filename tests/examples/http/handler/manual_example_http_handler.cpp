@@ -1,3 +1,4 @@
+#include <demiplane/math>
 #include <iostream>
 
 #include "controller.hpp"
@@ -18,7 +19,7 @@ public:
     }
 
 private:
-    std::atomic<int> i = 0;
+    std::atomic<int> pressure_counter_ = 0;
     // Instead of synchronous Response, use AsyncResponse
     AsyncResponse get_user(const RequestContext& ctx) {
         const auto user_id = ctx.path<int>("id");
@@ -27,14 +28,16 @@ private:
         }
         int x{0};
 
-        i.fetch_add(1, std::memory_order::relaxed);
-        if (i.load() % 20 == 0) {
+        pressure_counter_.fetch_add(1, std::memory_order::relaxed);
+        if (pressure_counter_.load() % 20 == 0) {
             std::cerr << "PRESSURE" << std::endl;
             co_return ResponseFactory::unauthorized("Pressure");
         }
         for (int i = 0; i < 10000; i++) {
-            ++x;
+            const demiplane::math::random::NumberGenerator generator;
+            x += generator.generate_random_t<int>();
         }
+
         demiplane::gears::enforce_non_const(this);
         const std::string json =
             R"({"id":)" + std::to_string(x) + R"(,"name":"User )" + std::to_string(*user_id) + R"("})";
@@ -73,8 +76,8 @@ int main() {
 
     Server server(4);
     server.on_error([](const std::exception& e) { std::cerr << e.what() << std::endl; });
-    server.on_request([](const Request& req) { std::cout << "REQ" << std::endl; });
-    server.on_response([](const Response& res) { std::cout << "RES" << std::endl; });
+    server.on_request([]([[maybe_unused]] const Request& req) { std::cout << "REQ" << std::endl; });
+    server.on_response([]([[maybe_unused]] const Response& res) { std::cout << "RES" << std::endl; });
     server.on_server_start([] { std::cout << "Server started" << std::endl; });
     server.add_controller(std::make_shared<UserController>());
     server.listen(8080);

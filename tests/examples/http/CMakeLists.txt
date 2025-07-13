@@ -7,6 +7,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Handler
 
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Handler
         Demiplane::Component::Http
+        Demiplane::Common::Math
         ${TEST_LIBS}
 )
 ##############################################################################

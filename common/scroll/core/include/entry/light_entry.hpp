@@ -18,6 +18,8 @@ namespace demiplane::scroll {
             return formatter.str();
         }
         static bool comp(const LightEntry& lhs, const LightEntry& rhs) {
+            gears::unused_value(lhs, rhs);
+            static_assert(true, "Can not be sorted");
             throw std::logic_error("Can not be sorted");
         }
     };

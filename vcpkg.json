@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "dependencies": [
     "boost-program-options",
+    "boost-thread",
     "boost-beast",
     "boost-asio",
     "jsoncpp",

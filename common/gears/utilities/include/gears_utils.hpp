@@ -8,11 +8,11 @@ namespace demiplane::gears {
     }
 
     template <class T = void>
-    consteval void unreachable() {
+    constexpr void unreachable() {
         static_assert(dependent_false_v<T>, "Unreachable branch reached.");
     }
 
-    consteval void force_non_static(const void* this_) {
+    constexpr void force_non_static(const void* this_) {
         static_cast<void>(this_);
     }
 

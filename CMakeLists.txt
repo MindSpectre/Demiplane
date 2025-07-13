@@ -12,6 +12,20 @@ set(CMAKE_HAVE_THREADS_LIBRARY 1)
 set(CMAKE_USE_WIN32_THREADS_INIT 0)
 set(CMAKE_USE_PTHREADS_INIT 1)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+
+add_compile_options(
+        -O2
+        -Wall -Wextra -Wpedantic
+        -Wconversion -Wshadow
+        -Wdouble-promotion -Wnull-dereference
+        -Wnon-virtual-dtor
+        -fstack-protector-strong
+        -D_FORTIFY_SOURCE=2
+        -fvisibility=hidden
+        $<$<CONFIG:Release>:-fomit-frame-pointer>
+)
+
 # Add options to enable or disable Boost and Qt5
 # Toggles
 include(cmake/togglers.cmake)
@@ -31,7 +45,7 @@ find_package(jsoncpp REQUIRED)
 #find_package(absl REQUIRED)
 find_package(libpqxx REQUIRED)
 #find_package(Libevent CONFIG REQUIRED)
-find_package(Drogon CONFIG REQUIRED)
+#find_package(Drogon CONFIG REQUIRED)
 # Conditionally find Boost if enabled
 
 

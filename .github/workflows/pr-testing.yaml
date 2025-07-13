@@ -1,0 +1,132 @@
+name: PR testing
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-toolchain-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      toolchain_changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for toolchain changes
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            git diff --name-only origin/${{ github.base_ref }} HEAD > changed_files.txt
+          else
+            git diff --name-only ${{ github.event.before }} ${{ github.event.after }} > changed_files.txt
+          fi
+          
+          if grep -q "infrastructure/toolchain/" changed_files.txt || grep -q "vcpkg.json" changed_files.txt; then
+            echo "Toolchain files changed"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No toolchain files changed"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-test:
+    needs: check-toolchain-changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Setup environment
+        id: env
+        uses: ./.github/actions/env-setup
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build local toolchain image (if toolchain changed)
+        if: needs.check-toolchain-changes.outputs.toolchain_changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/toolchain/Dockerfile
+          target: toolchain
+          push: false
+          load: true
+          tags: local/dmp_toolchain:latest
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
+
+      - name: Determine container image
+        id: container
+        run: |
+          if [ "${{ needs.check-toolchain-changes.outputs.toolchain_changed }}" == "true" ]; then
+            echo "image=local/dmp_toolchain:latest" >> $GITHUB_OUTPUT
+          else
+            echo "image=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pull existing toolchain image (if using existing)
+        if: needs.check-toolchain-changes.outputs.toolchain_changed == 'false'
+        run: |
+          docker pull ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable
+
+      - name: Run build and test
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${{ steps.container.outputs.image }} \
+            bash -c "
+              cmake --preset release &&
+              cmake --build --preset release -- -j\$(nproc) &&
+              ctest --preset release --output-on-failure
+            "
+
+  # This allows testing the new toolchain in PRs before merging
+  push-pr-toolchain:
+    needs: [ check-toolchain-changes, build-and-test ]
+    if: |
+      github.event_name == 'pull_request' && 
+      needs.check-toolchain-changes.outputs.toolchain_changed == 'true' &&
+      needs.build-and-test.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup environment
+        id: env
+        uses: ./.github/actions/env-setup
+
+      - name: Build and push PR toolchain
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/toolchain/Dockerfile
+          target: toolchain
+          push: true
+          tags: ghcr.io/${{steps.env.outputs.owner }}/dmp_toolchain:pr-${{ github.event.number }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache

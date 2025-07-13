@@ -14,22 +14,33 @@ echo "Updating vcpkg..."
 git pull origin master
 
 echo "Bootstrapping vcpkg..."
-./bootstrap-vcpkg.sh
+$VCPKG_ROOT/bootstrap-vcpkg.sh
 
+export PATH="$VCPKG_ROOT:$PATH"
+export VCPKG_DISABLE_METRICS=1
+export VCPKG_DEFAULT_TRIPLET=x64-linux
 # Install dependencies from Vcpkg
 echo "Installing vcpkg packages..."
-./vcpkg install \
-    boost-system \
-    boost-filesystem \
-    boost-log \
-    boost-program-options \
-    grpc \
-    jsoncpp \
-    valijson \
-    libpq \
-    libuuid \
-    gtest \
-    libpqxx \
-    drogon \
-    abseil \
-    libevent
+
+if [[ -f vcpkg.json ]]; then
+  export VCPKG_FEATURE_FLAGS=manifests
+  $VCPKG_ROOT/vcpkg install --triplet x64-linux
+else
+  echo "vcpkg.json not found. Install without manifest. Possibly requires
+      additional installs to synchronise with manifest"
+  $VCPKG_ROOT/vcpkg install \
+      boost-system \
+      boost-filesystem \
+      boost-log \
+      boost-program-options \
+      grpc \
+      jsoncpp \
+      valijson \
+      libpq \
+      libuuid \
+      gtest \
+      libpqxx \
+      abseil \
+      libevent
+fi
+

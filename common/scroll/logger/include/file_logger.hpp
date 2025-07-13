@@ -243,7 +243,7 @@ namespace demiplane::scroll {
         std::ofstream file_stream_;
         moodycamel::ConcurrentQueue<EntryType> queue_;
 
-        std::atomic<int> pending_entries_{0}; // entries enqueued but not yet written
+        std::atomic<std::size_t> pending_entries_{0}; // entries enqueued but not yet written
         std::atomic<bool> accepting_{true}; // producers allowed to enqueue?
         std::atomic<bool> running_{true}; // writer loop keeps spinning?
 

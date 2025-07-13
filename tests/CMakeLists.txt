@@ -14,8 +14,7 @@ add_executable(${PROJECT_NAME}.Tests.Sandbox
 )
 target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
         PRIVATE
-#        Demiplane::Component::Nexus
-#        Demiplane::Scroll
+        Demiplane::Common::Gears
 )
 
 add_subdirectory(unit_tests)

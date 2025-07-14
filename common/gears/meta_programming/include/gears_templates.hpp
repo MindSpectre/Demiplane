@@ -2,26 +2,31 @@
 
 #include <type_traits>
 #include <vector>
+
 namespace demiplane::gears {
 
 
     template <typename>
-    struct always_false : std::false_type {};
+    struct always_false : std::false_type {
+    };
 
     template <typename T>
     inline constexpr bool always_false_v = always_false<T>::value;
 
     template <typename>
-    struct always_true : std::true_type {};
+    struct always_true : std::true_type {
+    };
 
     template <typename T>
     inline constexpr bool always_true_v = always_true<T>::value;
 
     template <template <class...> class, typename>
-    struct is_specialization_of : std::false_type {};
+    struct is_specialization_of : std::false_type {
+    };
 
     template <template <class...> class Template, typename... Args>
-    struct is_specialization_of<Template, Template<Args...>> : std::true_type {};
+    struct is_specialization_of<Template, Template<Args...>> : std::true_type {
+    };
 
     template <template <class...> class Template, typename... Args>
     inline constexpr bool is_specialization_of_v = is_specialization_of<Template, Args...>::value;
@@ -46,7 +51,8 @@ namespace demiplane::gears {
 
     // Concept for cleaner use
     template <template <typename...> class BaseTemplate, typename Derived>
-    inline constexpr bool derived_from_specialization_of_v = derived_from_specialization_of<BaseTemplate, Derived>::value;
+    inline constexpr bool derived_from_specialization_of_v = derived_from_specialization_of<
+        BaseTemplate, Derived>::value;
 
 
     template <class...>
@@ -54,10 +60,12 @@ namespace demiplane::gears {
 
 
     template <typename>
-    struct is_vector : std::false_type {};
+    struct is_vector : std::false_type {
+    };
 
     template <typename T, typename Alloc>
-    struct is_vector<std::vector<T, Alloc>> : std::true_type {};
+    struct is_vector<std::vector<T, Alloc>> : std::true_type {
+    };
 
     template <typename T>
     inline constexpr bool is_vector_v = is_vector<T>::value;
@@ -67,7 +75,8 @@ namespace demiplane::gears {
 
     // ── tiny type-list ────────────────────────────────────────────────
     template <class... Ts>
-    struct type_list {};
+    struct type_list {
+    };
 
     // ── pick<T>() → std::get<T>(tuple) wrapper ────────────────────────
     template <class T, class Tuple>

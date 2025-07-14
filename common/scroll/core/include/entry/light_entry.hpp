@@ -3,8 +3,8 @@
 #include <sstream>
 #include <string>
 
+#include <gears_templates.hpp>
 #include "../entry_interface.hpp"
-#include <templates.hpp>
 
 namespace demiplane::scroll {
     class LightEntry final : public detail::EntryBase<detail::MetaNone> // only level+msg

@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <functional>
 
-#include <class_traits.hpp>
+#include <gears_class_traits.hpp>
 #include <generators/number_generator.hpp>
 
 namespace demiplane::fsm {

@@ -4,6 +4,8 @@
 #include <optional>
 #include <utility>
 
+#include "gears_exceptions.hpp"
+
 namespace demiplane::gears {
     template <typename T>
     class Result {
@@ -71,32 +73,16 @@ namespace demiplane::gears {
             }
             catch (...) {
                 // Use fold expression to generate individual catch blocks at compile time
-                if (!try_catch_specific<Catch...>(std::current_exception())) {
+                const std::exception_ptr e_ptr = std::current_exception();
+                if (!try_catch_specific<Catch...>(e_ptr)) {
                     // If none of the specified exceptions matched, rethrow
                     throw;
                 }
+                error_ = e_ptr;
             }
         }
 
     private:
-        // Compile-time expansion of catch blocks using fold expressions
-        template <typename First, typename... Rest>
-        bool try_catch_specific(std::exception_ptr eptr) {
-            try {
-                std::rethrow_exception(eptr);
-            }
-            catch (const First& e) {
-                error_ = std::make_exception_ptr(e);
-                return true;
-            }
-            catch (...) {
-                if constexpr (sizeof...(Rest) > 0) {
-                    return try_catch_specific<Rest...>(eptr);
-                }
-                return false;
-            }
-        }
-
         std::optional<T>   value_;
         std::exception_ptr error_;
     };
@@ -127,30 +113,17 @@ namespace demiplane::gears {
                 std::forward<Function>(f)();
             }
             catch (...) {
-                if (!try_catch_specific<Catch...>(std::current_exception())) {
+                // Use fold expression to generate individual catch blocks at compile time
+                const std::exception_ptr e_ptr = std::current_exception();
+                if (!try_catch_specific<Catch...>(e_ptr)) {
+                    // If none of the specified exceptions matched, rethrow
                     throw;
                 }
+                error_ = e_ptr;
             }
         }
 
     private:
-        template <typename First, typename... Rest>
-        bool try_catch_specific(std::exception_ptr eptr) {
-            try {
-                std::rethrow_exception(eptr);
-            }
-            catch (const First& e) {
-                error_ = std::make_exception_ptr(e);
-                return true;
-            }
-            catch (...) {
-                if constexpr (sizeof...(Rest) > 0) {
-                    return try_catch_specific<Rest...>(eptr);
-                }
-                return false;
-            }
-        }
-
         std::exception_ptr error_;
     };
 } // namespace demiplane::gears

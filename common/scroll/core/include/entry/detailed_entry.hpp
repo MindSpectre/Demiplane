@@ -3,9 +3,9 @@
 #include <sstream>
 #include <string>
 
-#include "../entry_interface.hpp"
 #include <clock.hpp>
-#include <templates.hpp>
+#include <gears_templates.hpp>
+#include "../entry_interface.hpp"
 
 namespace demiplane::scroll {
     class DetailedEntry final

@@ -1,120 +1,156 @@
 #pragma once
-
 #include <exception>
 #include <functional>
-#include <iostream>
+#include <optional>
+#include <utility>
 
-#include "class_traits.hpp"
 namespace demiplane::gears {
-
-    enum class Status { Success, Error};
-
-    class Result : NonCopyable {
-    public:
-        Result() = default;
-        explicit Result(const Status status) : status_(status) {}
-
-        void capture(const std::function<void()>& func,
-            const std::function<std::exception_ptr(const std::exception& e)>& fallback = default_fallback()) {
-            try {
-                func();
-            } catch (const std::exception& e) {
-                status_    = Status::Error;
-                exception_ = fallback(e);
-            }
-        }
-        explicit operator bool() const {
-            return is_ok();
-        }
-
-        void rethrow() const {
-            if (exception_) {
-                std::rethrow_exception(exception_);
-            }
-        }
-
-        [[nodiscard]] bool has_captured() const {
-            return static_cast<bool>(exception_);
-        }
-
-        [[nodiscard]] bool is_ok() const {
-            return status_ == Status::Success;
-        }
-
-        [[nodiscard]] bool is_err() const {
-            return status_ == Status::Error;
-        }
-
-        [[nodiscard]] Status status() const {
-            return status_;
-        }
-        static Result sOk() {
-            return Result{Status::Success};
-        }
-        static std::function<std::exception_ptr(const std::exception& e)> default_fallback() {
-            return [](const std::exception& e) {
-                std::cerr << e.what() << std::endl;
-                return std::make_exception_ptr(e);
-            };
-        }
-
-    protected:
-        Status status_{Status::Success};
-        std::exception_ptr exception_;
-    };
-
     template <typename T>
-    class Interceptor : public Result {
+    class Result {
     public:
-        Interceptor() = default;
-        Interceptor(const Status status, T&& value) : Result(status), response_(std::move(value)) {}
-        explicit Interceptor(T&& value) : response_(std::forward<T>(value)) {}
-
-
-        template <typename U>
-        explicit Interceptor(const Interceptor<U>& other) : Result(other), response_(other.response_) {}
-
-        template <typename U>
-        Interceptor& operator=(const Interceptor<U>& other) {
-            if (this != &other) {
-                Result::operator=(other);
-                response_ = other.response_;
-            }
-            return *this;
+        /* ───── state ────────────────────────────────────────────── */
+        [[nodiscard]] bool has_value() const noexcept {
+            return value_.has_value();
         }
-        const T& operator*() const {
-            return response_;
+
+        [[nodiscard]] explicit operator bool() const noexcept {
+            return has_value();
         }
+
+        [[nodiscard]] bool has_error() const noexcept {
+            return static_cast<bool>(error_);
+        }
+
+        /* ───── value access (unchecked) ─────────────────────────── */
+        const T& value() const & {
+            return *value_;
+        }
+
+        T& value() & {
+            return *value_;
+        }
+
+        T&& value() && {
+            return std::move(*value_);
+        }
+
+        const T& operator*() const & {
+            return value();
+        }
+
         const T* operator->() const {
-            return &response_;
+            return &value();
         }
 
-        T* operator->() {
-            return &response_;
-        }
-        void set(T&& value) {
-            response_ = std::forward<T>(value);
-        }
-        void set(const T& value) {
-            response_ = value;
+        /* ───── error access / rethrow ───────────────────────────── */
+        void rethrow() const {
+            if (error_) std::rethrow_exception(error_);
         }
 
-        T& ref() {
-            return response_;
+        /* ───── factory helpers (optional) ───────────────────────── */
+        template <typename... Args>
+        static Result success(Args&&... args)
+            requires std::is_constructible_v<T, Args&&...> {
+            Result r;
+            r.value_.emplace(std::forward<Args>(args)...);
+            return r;
         }
 
-        T response() && {
-            return std::move(response_);
-        }
+        /* ───── multi-catch helper ─────────────────────────────────
+           Usage:
+               res.capture<A,B,C>([&]{ ... });
+        ----------------------------------------------------------------*/
+        template <typename... Catch, typename F>
+        void capture(F&& f) {
+            static_assert(sizeof...(Catch) > 0,
+                          "capture<E...>() needs at least one exception type");
 
-        static Interceptor sOk()
-            requires std::is_default_constructible_v<T>
-        {
-            return Interceptor{Status::Success, {}};
+            try {
+                if constexpr (std::is_void_v<std::invoke_result_t<F>>) std::forward<F>(f)();
+                else value_ = std::forward<F>(f)();
+            }
+            catch (...) {
+                // Use fold expression to generate individual catch blocks at compile time
+                if (!try_catch_specific<Catch...>(std::current_exception())) {
+                    // If none of the specified exceptions matched, rethrow
+                    throw;
+                }
+            }
         }
 
     private:
-        T response_;
+        // Compile-time expansion of catch blocks using fold expressions
+        template <typename First, typename... Rest>
+        bool try_catch_specific(std::exception_ptr eptr) {
+            try {
+                std::rethrow_exception(eptr);
+            }
+            catch (const First& e) {
+                error_ = std::make_exception_ptr(e);
+                return true;
+            }
+            catch (...) {
+                if constexpr (sizeof...(Rest) > 0) {
+                    return try_catch_specific<Rest...>(eptr);
+                }
+                return false;
+            }
+        }
+
+        std::optional<T>   value_;
+        std::exception_ptr error_;
     };
 
-} // namespace demiplane
+    template <>
+    class Result<void> {
+    public:
+        [[nodiscard]] bool has_value() const noexcept {
+            return !error_;
+        }
+
+        [[nodiscard]] explicit operator bool() const noexcept {
+            return has_value();
+        }
+
+        [[nodiscard]] bool has_error() const noexcept {
+            return static_cast<bool>(error_);
+        }
+
+        void rethrow() const {
+            if (error_) std::rethrow_exception(error_);
+        }
+
+        template <typename... Catch, typename Function>
+        void capture(Function&& f) {
+            static_assert(sizeof...(Catch) > 0, "capture<E...>() needs at least one exception type");
+            try {
+                std::forward<Function>(f)();
+            }
+            catch (...) {
+                if (!try_catch_specific<Catch...>(std::current_exception())) {
+                    throw;
+                }
+            }
+        }
+
+    private:
+        template <typename First, typename... Rest>
+        bool try_catch_specific(std::exception_ptr eptr) {
+            try {
+                std::rethrow_exception(eptr);
+            }
+            catch (const First& e) {
+                error_ = std::make_exception_ptr(e);
+                return true;
+            }
+            catch (...) {
+                if constexpr (sizeof...(Rest) > 0) {
+                    return try_catch_specific<Rest...>(eptr);
+                }
+                return false;
+            }
+        }
+
+        std::exception_ptr error_;
+    };
+} // namespace demiplane::gears

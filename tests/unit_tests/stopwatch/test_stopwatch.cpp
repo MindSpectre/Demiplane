@@ -1,11 +1,13 @@
 #include <functional>
-#include <gtest/gtest.h>
 #include <random>
 #include <thread>
+#include <gtest/gtest.h>
 
-#include "stopwatch.hpp"
+#include <demiplane/chrono>
+
 
 using namespace demiplane::chrono;
+using namespace std::literals;
 
 class StopwatchTest : public ::testing::Test {
 protected:
@@ -20,18 +22,14 @@ protected:
         // Clean up after each test if needed
     }
 
-    // Helper function to simulate work for a specified duration
-    static void sleepFor(const int milliseconds) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-    }
 };
 
 // Test basic functionality - start, add flag, stop
 TEST_F(StopwatchTest, BasicFunctionality) {
     stopwatch.start();
-    sleepFor(10);
+    sleep_for(10ms);
     stopwatch.add_flag();
-    sleepFor(10);
+    sleep_for(10ms);
     auto flags = stopwatch.stop();
 
     // Should have 3 flags: start, add_flag, and stop
@@ -41,7 +39,7 @@ TEST_F(StopwatchTest, BasicFunctionality) {
 // Test delta_t functionality
 TEST_F(StopwatchTest, DeltaTime) {
     stopwatch.start();
-    sleepFor(50);
+    sleep_for(50ms);
     stopwatch.add_flag();
 
     auto delta = stopwatch.delta_t(1);
@@ -84,11 +82,11 @@ TEST_F(StopwatchTest, GetFlags) {
 // Test average_delta
 TEST_F(StopwatchTest, AverageDelta) {
     stopwatch.add_flag();
-    sleepFor(10);
+    sleep_for(10ms);
     stopwatch.add_flag();
-    sleepFor(20);
+    sleep_for(20ms);
     stopwatch.add_flag();
-    sleepFor(30);
+    sleep_for(30ms);
     stopwatch.add_flag();
 
     auto avg = stopwatch.average_delta();
@@ -102,7 +100,9 @@ TEST_F(StopwatchTest, AverageDelta) {
 // Test the new measure function
 TEST_F(StopwatchTest, MeasureLambda) {
     // Measure a lambda that sleeps for 50ms
-    auto duration = stopwatch.measure([]() { sleepFor(50); });
+    auto duration = stopwatch.measure([]() {
+        sleep_for(50ms);
+    });
 
     // Check that the duration is approximately 50ms
     EXPECT_GE(duration.count(), 45);
@@ -133,7 +133,8 @@ TEST_F(StopwatchTest, MeasureComplexLogic) {
 // Test measure with function reference
 TEST_F(StopwatchTest, MeasureFunctionReference) {
     // Define a function to be measured
-    std::function<void()> testFunc = []() { sleepFor(20); };
+    std::function<void()> testFunc = []() {
+        sleep_for(20ms); };
 
     auto duration = stopwatch.measure(testFunc);
 
@@ -145,9 +146,14 @@ TEST_F(StopwatchTest, MeasureFunctionReference) {
 // Test measure with multiple calls
 TEST_F(StopwatchTest, MeasureMultipleCalls) {
     // Measure multiple different durations
-    auto d1 = stopwatch.measure([]() { sleepFor(10); });
-    auto d2 = stopwatch.measure([]() { sleepFor(20); });
-    auto d3 = stopwatch.measure([]() { sleepFor(30); });
+    auto d1 = stopwatch.measure([]() {
+        sleep_for(10ms);
+    });
+    auto d2 = stopwatch.measure([]() {
+        sleep_for(20ms);
+    });
+    auto d3 = stopwatch.measure([]() {
+        sleep_for(30ms); });
 
     // Each duration should be approximately its sleep time
     EXPECT_GE(d1.count(), 5);
@@ -168,7 +174,7 @@ TEST_F(StopwatchTest, MeasureDoesntChangeFlags) {
     auto flagsBefore = stopwatch.get_flags().size();
 
     // Measure something
-    stopwatch.measure([] { sleepFor(10); });
+    stopwatch.measure([] { sleep_for(10ms); });
 
     auto flagsAfter = stopwatch.get_flags().size();
 

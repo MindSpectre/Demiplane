@@ -47,4 +47,5 @@ add_executable(${PROJECT_NAME}.Tests.Sandbox
 target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
         PRIVATE
         Demiplane::Common::Gears
+        Demiplane::Common::Chrono
 )

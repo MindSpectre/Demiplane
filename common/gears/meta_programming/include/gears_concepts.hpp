@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string_view>
 
 namespace demiplane::gears {
@@ -15,4 +16,10 @@ namespace demiplane::gears {
     concept HasStaticComparator = requires(const T& a, const T& b) {
         { T::comp(a, b) } -> std::same_as<bool>;
     };
+
+    template <typename T>
+    concept Interface = std::is_abstract_v<T>;
+
+    template <typename T>
+    concept IsDuration = std::chrono::__is_duration_v<T>;
 } // namespace demiplane::gears

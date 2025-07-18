@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gears_templates.hpp"
+#include "gears_concepts.hpp"
 
 namespace demiplane::gears {
     struct NonCopyable {

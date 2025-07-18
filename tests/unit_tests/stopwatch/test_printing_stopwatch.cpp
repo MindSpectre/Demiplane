@@ -1,39 +1,31 @@
-#include <gtest/gtest.h>
 #include <thread>
+#include <gtest/gtest.h>
 
-#include "printing_stopwatch.hpp"
+#include <demiplane/chrono>
 
 using namespace demiplane::chrono;
+using namespace std::literals;
 
-class TestPrintingStopwatchTest : public testing::Test
-{
+class TestPrintingStopwatchTest : public testing::Test {
 protected:
     PrintingStopwatch<> sw; // Stopwatch object using default time unit (milliseconds)
 
-    void SetUp() override
-    {
+    void SetUp() override {
         // Setup before each test
         sw.start();
     }
 
-    void TearDown() override
-    {
+    void TearDown() override {
         // Teardown after each test
     }
 
 public:
-    // Utility function to add a delay
-    static void delay_ms(const int milliseconds)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-    }
 };
 
 // Test basic functionality: starting, resetting, and flagging
-TEST_F(TestPrintingStopwatchTest, TestStartAndReset)
-{
+TEST_F(TestPrintingStopwatchTest, TestStartAndReset) {
     sw.flag("Start Flag");
-    delay_ms(10); // Wait to ensure time passes
+    sleep_for(10ms); // Wait to ensure time passes
     sw.flag("Mid Flag");
 
     EXPECT_NO_THROW(sw.reset()); // Ensure reset works
@@ -41,11 +33,10 @@ TEST_F(TestPrintingStopwatchTest, TestStartAndReset)
 }
 
 // Test the addition and removal of flags using overloaded operators
-TEST_F(TestPrintingStopwatchTest, TestFlagAdditionAndRemoval)
-{
+TEST_F(TestPrintingStopwatchTest, TestFlagAdditionAndRemoval) {
     sw.flag("First Flag");
     EXPECT_NO_THROW(++sw); // Add flag using overloaded ++ operator
-    delay_ms(5);
+    sleep_for(5ms);
     EXPECT_NO_THROW(sw.flag("Mid Flag"));
     EXPECT_NO_THROW(--sw); // Remove flag using overloaded -- operator
 
@@ -55,16 +46,15 @@ TEST_F(TestPrintingStopwatchTest, TestFlagAdditionAndRemoval)
 }
 
 // Test countdown from start and previous flags
-TEST_F(TestPrintingStopwatchTest, TestCountdownModes)
-{
+TEST_F(TestPrintingStopwatchTest, TestCountdownModes) {
     sw.set_countdown_from_prev(true);
     sw.set_countdown_from_start(false);
     EXPECT_TRUE(sw.is_count_from_prev());
     EXPECT_FALSE(sw.is_count_from_start());
 
-    delay_ms(10);
+    sleep_for(10ms);
     sw.flag("Flag 1");
-    delay_ms(5);
+    sleep_for(5ms);
     sw.flag("Flag 2");
 
     // Switch to countdown from start and verify
@@ -75,12 +65,11 @@ TEST_F(TestPrintingStopwatchTest, TestCountdownModes)
 }
 
 // Test that flags are accurately recorded and the time intervals make sense
-TEST_F(TestPrintingStopwatchTest, TestAccurateFlagging)
-{
+TEST_F(TestPrintingStopwatchTest, TestAccurateFlagging) {
     const auto start_time = std::chrono::high_resolution_clock::now();
 
     sw.flag("Initial Flag");
-    delay_ms(10); // Simulate a delay
+    sleep_for(10ms); // Simulate a delay
     sw.flag("Second Flag");
     const auto end_time = std::chrono::high_resolution_clock::now();
 
@@ -91,10 +80,9 @@ TEST_F(TestPrintingStopwatchTest, TestAccurateFlagging)
 }
 
 // Test finish() automatically prints and flushes flags
-TEST_F(TestPrintingStopwatchTest, TestFinishAndPrint)
-{
+TEST_F(TestPrintingStopwatchTest, TestFinishAndPrint) {
     sw.flag("Start Flag");
-    delay_ms(5);
+    sleep_for(5ms);
     sw.flag("Mid Flag");
 
     // Finish should print and clear all flags
@@ -106,45 +94,41 @@ TEST_F(TestPrintingStopwatchTest, TestFinishAndPrint)
 }
 
 
-
 // Test flags capacity reservation and handling large number of flags
-TEST_F(TestPrintingStopwatchTest, TestFlagCapacityHandling)
-{
+TEST_F(TestPrintingStopwatchTest, TestFlagCapacityHandling) {
     PrintingStopwatch large_sw("Capacity testing", 100); // Reserve capacity for 100 flags
     large_sw.start();
-    for (int i = 0; i < 100; ++i)
-    {
+    for (int i = 0; i < 100; ++i) {
         large_sw.flag("Flag " + std::to_string(i));
-        delay_ms(1); // Delay to ensure flag timestamps are distinct
+        sleep_for(1ms); // Delay to ensure flag timestamps are distinct
     }
     EXPECT_NO_THROW(large_sw.finish()); // Ensure that handling a large number of flags works smoothly
 }
 
 // Test time unit conversion by checking durations in different time units
-TEST(StopwatchTimeUnitTest, TestDifferentTimeUnits)
-{
+TEST(StopwatchTimeUnitTest, TestDifferentTimeUnits) {
     PrintingStopwatch<std::chrono::microseconds> micro_sw;
     micro_sw.start();
-    TestPrintingStopwatchTest::delay_ms(1); // 1 ms delay
+    sleep_for(1ms); // 1 ms delay
     micro_sw.flag("First Microsecond Flag");
 
     PrintingStopwatch<std::chrono::nanoseconds> nano_sw;
     nano_sw.start();
-    TestPrintingStopwatchTest::delay_ms(1); // 1 ms delay
+    sleep_for(1ms); // 1 ms delay
     nano_sw.flag("First Nanosecond Flag");
 
     // Ensure there are no issues with different time units
     EXPECT_NO_THROW(micro_sw.finish());
     EXPECT_NO_THROW(nano_sw.finish());
 }
+
 // Test the destructor calls print() automatically
-TEST(StopwatchDestructorTest, TestDestructorCallsPrint)
-{
+TEST(StopwatchDestructorTest, TestDestructorCallsPrint) {
     {
         PrintingStopwatch<> temp_stopwatch;
         temp_stopwatch.start();
         temp_stopwatch.flag("Start Flag");
-        TestPrintingStopwatchTest::delay_ms(10);
+        sleep_for(10ms);
         temp_stopwatch.flag("End Flag");
 
         // When temp_stopwatch goes out of scope, print() should be called automatically

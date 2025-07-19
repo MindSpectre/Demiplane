@@ -49,6 +49,7 @@ target_include_directories(${DMP_CHRONO}.Clock
 ##############################################################################
 add_library(${DMP_CHRONO}.Timer INTERFACE
         timer/include/timer.hpp
+        timer/include/cancellation_token.hpp
 
 )
 target_include_directories(${DMP_CHRONO}.Timer
@@ -57,6 +58,7 @@ target_include_directories(${DMP_CHRONO}.Timer
 )
 target_link_libraries(${DMP_CHRONO}.Timer INTERFACE
         Demiplane::Common::Gears
+        Demiplane::Common::Multithread
 )
 ##############################################################################
 

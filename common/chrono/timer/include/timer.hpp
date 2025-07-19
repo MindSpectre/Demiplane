@@ -1,55 +1,39 @@
-// timer.hpp  — C++23, single header, snake_case identifiers
 #pragma once
-#include <atomic>
 #include <chrono>
 #include <concepts>
 #include <functional>
 #include <future>
 #include <thread>
+#include <tuple>
 #include <type_traits>
 #include <utility>
-#include <demiplane/gears>
-//-------------------------------------------------------------------
-//public API
-//-------------------------------------------------------------------
+
+#include <gears_templates.hpp>
+#include <thread_pool.hpp>
+#include "../cancellation_token.hpp"
 namespace demiplane::chrono {
-    class cancellation_token : gears::NonCopyable {
-    public:
-        void cancel() noexcept {
-            flag_.store(true, std::memory_order_consume);
-        }
-
-        [[nodiscard]] bool stop_requested() const noexcept {
-            return flag_.load(std::memory_order_relaxed);
-        }
-
-    private:
-        std::atomic_bool flag_{false};
-    };
-
     class Timer {
     public:
+        Timer() {
+            pool_ = std::make_shared<multithread::ThreadPool>(0, 2);
+        }
+        explicit Timer(std::shared_ptr<multithread::ThreadPool> pool) : pool_(std::move(pool)) {
+        }
         using clock = std::chrono::steady_clock;
 
-        explicit Timer(std::chrono::nanoseconds timeout)
-            : timeout_(timeout) {}
+        template <typename... Args, typename Callable>
+            requires std::invocable<Callable, Args...>
+        auto execute_polite_vanish(std::chrono::milliseconds timeout, Callable&& fn, Args&&... args);
 
         template <typename... Args, typename Callable>
             requires std::invocable<Callable, Args...>
-        auto execute(Callable&& fn, Args&&... args);
-
-        template <typename... Args, typename Callable>
-            requires std::invocable<Callable, cancellation_token&, Args...>
-        auto execute_polite_vanish(cancellation_token& tok,
-                                   Callable&& fn,
-                                   Args&&... args);
-
-        template <typename... Args, typename Callable>
-            requires std::invocable<Callable, Args...>
-        auto execute_violent_kill(cancellation_token& token, Callable&& fn, Args&&... args);
+        auto execute_violent_kill(std::chrono::milliseconds timeout,
+                                  CancellationToken&        token,
+                                  Callable&&                fn,
+                                  Args&&... args);
 
     private:
-        std::chrono::nanoseconds timeout_;
+        std::shared_ptr<multithread::ThreadPool> pool_;
 
         // helper - default spawns a jthread; replace with thread-pool later
         template <typename F>
@@ -58,61 +42,45 @@ namespace demiplane::chrono {
         }
 
         // type-trait: does first arg look like a cancellation token?
-        template <typename First, typename... Rest>
-        static constexpr bool first_arg_is_token =
-            std::is_same_v<std::remove_cvref_t<First>, cancellation_token> ||
-            std::is_same_v<std::remove_cvref_t<First>, std::stop_token>;
     };
 
     //-------------------------------------------------------------------
-    //implementation
+    // implementation
     //-------------------------------------------------------------------
+
     template <typename... Args, typename Callable>
         requires std::invocable<Callable, Args...>
-    auto Timer::execute(Callable&& fn, Args&&... args) {
-        if constexpr (sizeof...(Args) > 0 &&
-                      first_arg_is_token<std::tuple_element_t<0,
-                                                              std::tuple<Args...>>, Args...>) {
-            return execute_polite_vanish(std::get<0>(std::forward_as_tuple(args...)),
-                                         std::forward<Callable>(fn),
-                                         std::forward<Args>(args)...);
-        }
-        else {
-            return execute_violent_kill(std::forward<Callable>(fn),
-                                        std::forward<Args>(args)...);
-        }
-    }
+    auto Timer::execute_polite_vanish(const std::chrono::milliseconds timeout, Callable&& fn, Args&&... args) {
+        // Extract the token reference from arguments
+        static_assert(gears::has_exact_arg_type<CancellationToken&, Args...>(),
+                      "No task properties found in arguments");
 
-    template <typename... Args, typename Callable>
-        requires std::invocable<Callable, cancellation_token&, Args...>
-    auto Timer::execute_polite_vanish(cancellation_token& ext_tok,
-                                      Callable&& fn,
-                                      Args&&... args) {
-        using result_t = std::invoke_result_t<Callable, cancellation_token&, Args...>;
+        // Extract the token reference using the generic get_arg function
+        CancellationToken& ext_tok = gears::get_arg<CancellationToken&>(args...);
 
+
+        using result_t = std::invoke_result_t<Callable, Args...>;
+
+        // Use a lambda instead of std::bind to avoid copying non-copyable token
         std::packaged_task<result_t()> task(
-            std::bind(std::forward<Callable>(fn),
-                      std::ref(ext_tok),
-                      std::forward<Args>(args)...));
-
-        auto fut      = task.get_future();
-        auto deadline = clock::now() + timeout_;
-
-        // worker
-        auto worker = spawn([t = std::move(task),
-                tok = std::stop_source{}, &ext_tok]() mutable {
-                std::stop_callback cb(tok.get_token(), [&ext_tok] {
-                    ext_tok.cancel();
-                });
-                t();
+            [fn = std::forward<Callable>(fn), args_tuple = std::forward_as_tuple(args...)]() mutable -> result_t {
+                return std::apply(fn, std::move(args_tuple));
             });
 
+        auto fut      = task.get_future();
+        auto deadline = clock::now() + timeout;
+
+        // worker
+        auto worker = pool_->enqueue([t = std::move(task)]() mutable {;
+            t();
+        });
+
         // watchdog - fixed
-        spawn([&ext_tok, deadline, st = worker.get_stop_source()]() mutable {
+        spawn([&ext_tok, deadline]() mutable {
             while (!ext_tok.stop_requested() && clock::now() < deadline) {
                 std::this_thread::sleep_for(std::chrono::milliseconds{10});
             }
-            st.request_stop(); // polite request to worker
+            ext_tok.cancel(); // polite request to worker
         });
 
         return fut;
@@ -120,14 +88,15 @@ namespace demiplane::chrono {
 
     template <typename... Args, typename Callable>
         requires std::invocable<Callable, Args...>
-    auto Timer::execute_violent_kill(cancellation_token& token, Callable&& fn, Args&&... args) {
+    auto Timer::execute_violent_kill(const std::chrono::milliseconds timeout,
+                                     CancellationToken&              token,
+                                     Callable&&                      fn,
+                                     Args&&... args) {
         using result_t = std::invoke_result_t<Callable, Args...>;
 
-        std::packaged_task<result_t()> task(
-            std::bind(std::forward<Callable>(fn),
-                      std::forward<Args>(args)...));
-        auto fut            = task.get_future();
-        const auto deadline = clock::now() + timeout_;
+        std::packaged_task<result_t()> task(std::bind(std::forward<Callable>(fn), std::forward<Args>(args)...));
+        auto                           fut      = task.get_future();
+        const auto                     deadline = clock::now() + timeout;
 
         // worker
         auto th = std::thread(std::move(task));
@@ -139,15 +108,15 @@ namespace demiplane::chrono {
                 std::this_thread::sleep_for(std::chrono::milliseconds{10});
             }
 
-            #   if defined(_WIN32)
-            ::TerminateThread(h, 1);     // dangerous!
-            #   elif defined(__linux__)
+#if defined(_WIN32)
+            ::TerminateThread(h, 1); // dangerous!
+#elif defined(__linux__)
             ::pthread_cancel(h); // UB if locks held
-            #   endif
+#endif
 
             if (th.joinable()) th.detach();
         });
 
         return fut;
     }
-} // namespace util
+} // namespace demiplane::chrono

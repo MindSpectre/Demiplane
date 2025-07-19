@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       toolchain_changed: ${{ steps.check.outputs.changed }}
+    permissions:
+        contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,6 +36,8 @@ jobs:
   build-and-test:
     needs: check-toolchain-changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4

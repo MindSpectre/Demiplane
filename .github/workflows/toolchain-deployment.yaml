@@ -8,6 +8,8 @@ on:
 jobs:
   check-toolchain-changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       toolchain_changed: ${{ steps.check.outputs.changed }}
     steps:

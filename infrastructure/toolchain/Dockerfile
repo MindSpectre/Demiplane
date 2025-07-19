@@ -7,7 +7,19 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # 1. Core build tooling
 RUN dnf -y group install development-tools
-RUN dnf -y install clang perl-IPC-Cmd kernel-headers curl openssl-devel bison flex make cmake autoconf automake ninja
+RUN dnf -y install  \
+    clang  \
+    perl-IPC-Cmd  \
+    kernel-headers \
+    curl  \
+    openssl-devel \
+    bison  \
+    flex  \
+    make  \
+    cmake \
+    autoconf \
+    automake  \
+    ninja
 
 RUN dnf install -y perl-CPAN
 RUN cpan "IPC::Cmd"

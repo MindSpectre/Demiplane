@@ -6,24 +6,33 @@
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <vector>
-
-#include <gears_class_traits.hpp>
 #include <iostream>
 #include <list>
 
+#include <gears_class_traits.hpp>
+#include <thread_safe_resource.hpp>
+
 #include "../enqueued_task.hpp"
-#include "sync_resource.hpp"
+#include "thread_pool_config.hpp"
 
 namespace demiplane::multithread {
-
     class ThreadPool : gears::Immutable {
     public:
         using TaskPriority = uint32_t;
 
-        ThreadPool(std::size_t               min_threads,
-                   std::size_t               max_threads,
-                   std::chrono::milliseconds idle_timeout = std::chrono::seconds(30));
+        explicit ThreadPool(const ThreadPoolConfig& config) {
+            if (!config.ok()) {
+                throw std::invalid_argument("Invalid config");
+            }
+            config_ = config;
+            for (std::size_t i = 0; i < min_threads(); ++i) {
+                create_worker();
+            }
+            if (config_.enable_cleanup_thread) {
+                start_cleanup_thread();
+            }
+        }
+
         ~ThreadPool();
 
         template <class Func, class... Args>
@@ -42,38 +51,57 @@ namespace demiplane::multithread {
         }
 
         [[nodiscard]] std::size_t min_threads() const {
-            return min_threads_;
+            return config_.min_threads;
         }
+
         [[nodiscard]] std::size_t max_threads() const {
-            return max_threads_;
+            return config_.max_threads;
         }
+
         [[nodiscard]] const std::atomic<size_t>& active_threads() const {
             return active_threads_;
         }
+
+        [[nodiscard]] const ThreadPoolConfig& config() const {
+            return config_;
+        }
+
+        [[nodiscard]] bool is_full() const {
+            return size() >= max_threads();
+        }
+
         [[nodiscard]] std::chrono::milliseconds idle_timeout() const {
-            return idle_timeout_;
+            return config_.idle_timeout;
+        }
+
+        [[nodiscard]] std::chrono::milliseconds cleanup_interval() const {
+            return config_.cleanup_interval;
         }
 
     private:
         struct safe_thread {
-            std::atomic<bool>         valid{true};
-            std::jthread thread;
+            std::atomic<bool> valid{true};
+            std::jthread      thread;
         };
-        void create_worker();
 
-        SyncResource<std::list<safe_thread>>           workers_;
-        SyncResource<std::priority_queue<EnqueuedTask>> tasks_;
+        void                                                  create_worker();
+        void                                                  start_cleanup_thread();
+        void                                                  cleanup_invalid_workers();
+        ThreadSafeResource<std::list<safe_thread>>            workers_;
+        ThreadSafeResource<std::priority_queue<EnqueuedTask>> tasks_;
 
-        std::mutex              queue_mutex_;
-        std::condition_variable condition_;
-        std::atomic<bool>       stop_;
+        std::mutex              task_queue_mutex_;
+        std::condition_variable task_condition_;
 
-        std::size_t               min_threads_;
-        std::size_t               max_threads_;
-        std::atomic<size_t>       active_threads_;
-        std::chrono::milliseconds idle_timeout_;
+        std::jthread            cleanup_thread_;
+        std::condition_variable cleanup_condition_;
+        std::mutex              cleanup_mutex_;
+
+        std::atomic<bool> stop_{false};
+
+        ThreadPoolConfig    config_{};
+        std::atomic<size_t> active_threads_{0};
     };
-
 } // namespace demiplane::multithread
 
 template <class Func, class... Args>
@@ -88,21 +116,20 @@ demiplane::multithread::ThreadPool::enqueue(Func&& f, TaskPriority task_priority
 
     std::future<return_type> res = task->get_future();
     {
-        std::unique_lock lock(queue_mutex_);
+        std::unique_lock lock(task_queue_mutex_);
         if (stop_) {
             throw std::runtime_error("ThreadPool is stopped");
         }
-        tasks_.write()->emplace([task] { (*task)(); }, task_priority);
-        workers_.with_lock([&](auto& list_) {
-            std::erase_if(list_, [](const safe_thread& t) { return !t.valid; });
-        });
+        tasks_.write()->emplace([task] {
+            (*task)();
+        }, task_priority);
 
-
-// Create worker if needed and we haven't reached max threads
-        if (workers_.read()->size() < max_threads_ && tasks_.read()->size() > active_threads_) {
+        cleanup_invalid_workers();
+        // Create worker if needed and we haven't reached max threads
+        if (!is_full()) {
             create_worker();
         }
     }
-    condition_.notify_one();
+    task_condition_.notify_one();
     return res;
 }

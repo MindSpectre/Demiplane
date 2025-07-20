@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 
 class ThreadPoolTest : public ::testing::Test {
 protected:
-    ThreadPoolConfig default_cfg = ThreadPoolConfig::testing();
+    ThreadPoolConfig default_cfg = ThreadPoolConfig::basic();
 
     void SetUp() override {
         // Common setup if needed
@@ -214,7 +214,7 @@ TEST_F(ThreadPoolTest, ThreadIdleTimeoutCleanup) {
     std::this_thread::sleep_for(500ms);
 
     // Should have reduced back towards min_threads
-    EXPECT_LE(pool.active_threads().load(), pool.max_threads());
+    EXPECT_LE(pool.active_threads(), pool.max_threads());
 }
 
 // Test: Race conditions in task submission
@@ -397,7 +397,7 @@ TEST_F(ThreadPoolTest, ShutdownBehaviorWithPendingTasks) {
 // Test: Memory and resource management
 TEST_F(ThreadPoolTest, ResourceManagement) {
     {
-        ThreadPoolConfig cfg = ThreadPoolConfig::testing();
+        ThreadPoolConfig cfg = ThreadPoolConfig::basic();
         cfg.min_threads      = 3;
         cfg.max_threads      = 6;
         cfg.idle_timeout     = 200ms;

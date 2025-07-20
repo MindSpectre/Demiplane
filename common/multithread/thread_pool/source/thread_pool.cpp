@@ -31,6 +31,10 @@ void demiplane::multithread::ThreadPool::create_worker() {
                     last_activity = std::chrono::steady_clock::now();
                 }
                 else {
+                    /*TODO:
+                        doesnt consider minimum amount of threads
+                        (so pool can be exhausted (leave 0 workers))
+                    */
                     // No tasks available - check if we should exit due to idle timeout
                     if (size() > min_threads() && std::chrono::steady_clock::now() - last_activity > idle_timeout()) {
                         break; // Exit idle worker

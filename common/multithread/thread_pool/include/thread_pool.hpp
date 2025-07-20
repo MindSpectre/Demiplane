@@ -58,8 +58,8 @@ namespace demiplane::multithread {
             return config_.max_threads;
         }
 
-        [[nodiscard]] const std::atomic<size_t>& active_threads() const {
-            return active_threads_;
+        [[nodiscard]] size_t active_threads() const {
+            return active_threads_.load();
         }
 
         [[nodiscard]] const ThreadPoolConfig& config() const {
@@ -126,7 +126,7 @@ demiplane::multithread::ThreadPool::enqueue(Func&& f, TaskPriority task_priority
 
         cleanup_invalid_workers();
         // Create worker if needed and we haven't reached max threads
-        if (!is_full()) {
+        if (!is_full() && active_threads() <= size()) {
             create_worker();
         }
     }

@@ -3,17 +3,17 @@
 #include <chrono>
 #include <condition_variable>
 #include <future>
+#include <iostream>
+#include <list>
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <iostream>
-#include <list>
 
 #include <gears_class_traits.hpp>
 #include <thread_safe_resource.hpp>
 
-#include "../enqueued_task.hpp"
 #include "thread_pool_config.hpp"
+#include "../enqueued_task.hpp"
 
 namespace demiplane::multithread {
     class ThreadPool : gears::Immutable {
@@ -58,8 +58,12 @@ namespace demiplane::multithread {
             return config_.max_threads;
         }
 
-        [[nodiscard]] size_t active_threads() const {
+        [[nodiscard]] std::size_t active_threads() const {
             return active_threads_.load();
+        }
+
+        [[nodiscard]] std::size_t free_threads() const {
+            return size() - active_threads();
         }
 
         [[nodiscard]] const ThreadPoolConfig& config() const {
@@ -125,8 +129,9 @@ demiplane::multithread::ThreadPool::enqueue(Func&& f, TaskPriority task_priority
         }, task_priority);
 
         cleanup_invalid_workers();
-        // Create worker if needed and we haven't reached max threads
-        if (!is_full() && active_threads() <= size()) {
+        // Create worker if needed and we haven't reached max threadss
+        // TODO: Issue#33
+        if (!is_full() && !free_threads()) {
             create_worker();
         }
     }

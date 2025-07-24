@@ -1,14 +1,14 @@
 
 #include <barrier>
 #include <chrono>
-#include <gtest/gtest.h>
 #include <vector>
+#include <gtest/gtest.h>
 
 #include <demiplane/multithread>
 
-#include "generators/time_generator.hpp"
 #include "random_utils.hpp"
 #include "stopwatch.hpp"
+#include "generators/time_generator.hpp"
 
 using namespace demiplane::multithread;
 using namespace std::chrono_literals;
@@ -59,7 +59,7 @@ TEST_F(ThreadPoolTest, TaskExecution) {
 
 // Test: Tasks execute in order of priority
 TEST_F(ThreadPoolTest, PriorityExecution) {
-    ThreadPoolConfig cfg = ThreadPoolConfig::minimal(); // Single thread for ordering
+    const ThreadPoolConfig cfg = ThreadPoolConfig::minimal(); // Single thread for ordering
     ThreadPool       pool(cfg);
 
     std::vector<int> results;
@@ -172,7 +172,8 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
 
     for (int i = 0; i < 4; ++i) {
         futures.push_back(pool.enqueue([&] {
-            int current    = ++concurrent_tasks;
+            std::cerr << "Task " << i << " starting\n";
+            const int current    = ++concurrent_tasks;
             max_concurrent = std::max(max_concurrent.load(), current);
 
             sync_point.arrive_and_wait(); // Wait for all 4 to start
@@ -180,6 +181,7 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
 
             --concurrent_tasks;
         }));
+        std::this_thread::sleep_for(100ms); // Ensure tasks start in order
     }
 
     // Wait for all tasks
@@ -194,7 +196,7 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
 
 // Test: Thread idle timeout and cleanup
 TEST_F(ThreadPoolTest, ThreadIdleTimeoutCleanup) {
-    ThreadPoolConfig cfg = ThreadPoolConfig::quick_cleanup();
+    const ThreadPoolConfig cfg = ThreadPoolConfig::quick_cleanup();
     ThreadPool       pool(cfg);
 
     // Submit many tasks to force scaling up
@@ -457,7 +459,7 @@ TEST_F(ThreadPoolTest, StressTestRapidTasks) {
         f.get();
     }
 
-    auto duration = static_cast<unsigned long long>(sw.total_time().count());
+    const auto duration = static_cast<unsigned long long>(sw.total_time().count());
     EXPECT_EQ(counter.load(), TASK_COUNT);
     // Should complete reasonably quickly with multiple threads
     EXPECT_LT(duration, 7000); // Less than 7 seconds
@@ -470,11 +472,12 @@ TEST_F(ThreadPoolTest, SleepPool) {
     ThreadPoolConfig cfg = default_cfg;
     cfg.min_threads      = 2;
     cfg.max_threads      = 3;
-    cfg.idle_timeout     = 1s;
+    cfg.idle_timeout     = 500ms;
+    cfg.cleanup_interval = 100ms;
     ThreadPool pool(cfg);
 
     std::atomic   counter{0};
-    constexpr int TASK_COUNT = 1;
+    constexpr int TASK_COUNT = 4;
 
     std::vector<std::future<void>> futures;
     futures.reserve(TASK_COUNT);

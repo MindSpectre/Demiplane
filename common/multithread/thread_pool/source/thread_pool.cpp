@@ -32,6 +32,7 @@ void demiplane::multithread::ThreadPool::create_worker() {
                 }
                 else {
                     /*TODO:
+                     *  Issue#33
                         doesnt consider minimum amount of threads
                         (so pool can be exhausted (leave 0 workers))
                     */
@@ -80,7 +81,6 @@ void demiplane::multithread::ThreadPool::cleanup_invalid_workers() {
                 return !t.valid.load();
             });
     });
-
     if (!needs_cleanup) return;
 
     // Perform actual cleanup

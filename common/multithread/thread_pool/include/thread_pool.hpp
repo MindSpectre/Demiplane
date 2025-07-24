@@ -71,7 +71,7 @@ namespace demiplane::multithread {
         }
 
         [[nodiscard]] bool is_full() const {
-            return size() >= max_threads();
+            return size() == max_threads();
         }
 
         [[nodiscard]] std::chrono::milliseconds idle_timeout() const {
@@ -129,7 +129,7 @@ demiplane::multithread::ThreadPool::enqueue(Func&& f, TaskPriority task_priority
         }, task_priority);
 
         cleanup_invalid_workers();
-        // Create worker if needed and we haven't reached max threadss
+        // Create worker if needed and we haven't reached max threads
         // TODO: Issue#33
         if (!is_full() && !free_threads()) {
             create_worker();

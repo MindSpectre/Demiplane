@@ -1,68 +1,118 @@
 #pragma once
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <future>
+#include <iostream>
+#include <list>
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <vector>
 
+#include <gears_class_traits.hpp>
+#include <thread_safe_resource.hpp>
+
+#include "thread_pool_config.hpp"
 #include "../enqueued_task.hpp"
 
 namespace demiplane::multithread {
-
-
-    /// Possible enhancements:
-    /// Overload of threads causes skipping Low priority tasks: suggested Round Robin
-    /// Thread Affinity(latest)
-    /// Timeout for thread
-    /// Observers over function that allows to cancel task
-    /// Resize of min_max thread limits
-
-    class ThreadPool {
+    class ThreadPool : gears::Immutable {
     public:
         using TaskPriority = uint32_t;
-        // Constructs the thread pool with specified minimum and maximum threads.
-        // - min_threads: Minimum number of threads that will always remain active.
-        // - max_threads: Maximum number of threads allowed.
-        // Notes:
-        // - If min_threads == max_threads, the pool size remains fixed.
-        // - If min_threads is set to 0, threads are only created dynamically when tasks are added.
 
-        explicit ThreadPool(std::size_t min_threads, std::size_t max_threads);
+        explicit ThreadPool(const ThreadPoolConfig& config) {
+            if (!config.ok()) {
+                throw std::invalid_argument("Invalid config");
+            }
+            config_ = config;
+            for (std::size_t i = 0; i < min_threads(); ++i) {
+                create_worker();
+            }
+            if (config_.enable_cleanup_thread) {
+                start_cleanup_thread();
+            }
+        }
 
         ~ThreadPool();
 
-        // Add a task to the thread pool
         template <class Func, class... Args>
-        std::future<std::invoke_result_t<Func, Args...>> enqueue(
-            Func&& f, TaskPriority task_priority = 1, Args&&... args);
+        std::future<std::invoke_result_t<Func, Args...>>
+        enqueue(Func&& f, TaskPriority task_priority = 1, Args&&... args);
 
         void shutdown();
 
+
+        [[nodiscard]] bool is_running() const {
+            return !stop_;
+        }
+
+        [[nodiscard]] std::size_t size() const {
+            return workers_.read()->size();
+        }
+
+        [[nodiscard]] std::size_t min_threads() const {
+            return config_.min_threads;
+        }
+
+        [[nodiscard]] std::size_t max_threads() const {
+            return config_.max_threads;
+        }
+
+        [[nodiscard]] std::size_t active_threads() const {
+            return active_threads_.load();
+        }
+
+        [[nodiscard]] std::size_t free_threads() const {
+            return size() - active_threads();
+        }
+
+        [[nodiscard]] const ThreadPoolConfig& config() const {
+            return config_;
+        }
+
+        [[nodiscard]] bool is_full() const {
+            return size() == max_threads();
+        }
+
+        [[nodiscard]] std::chrono::milliseconds idle_timeout() const {
+            return config_.idle_timeout;
+        }
+
+        [[nodiscard]] std::chrono::milliseconds cleanup_interval() const {
+            return config_.cleanup_interval;
+        }
+
     private:
-        void create_worker();
+        struct safe_thread {
+            std::atomic<bool> valid{true};
+            std::jthread      thread;
+        };
 
-        std::vector<std::jthread> workers_; // Worker threads
-        std::priority_queue<EnqueuedTask> tasks_; // Task queue using max-heap priority behavior
+        void                                                  create_worker();
+        void                                                  start_cleanup_thread();
+        void                                                  cleanup_invalid_workers();
+        ThreadSafeResource<std::list<safe_thread>>            workers_;
+        ThreadSafeResource<std::priority_queue<EnqueuedTask>> tasks_;
 
-        std::mutex queue_mutex_; // Protects task queue
-        std::condition_variable condition_; // Notify workers
-        std::atomic<bool> stop_; // Stop flag
+        std::mutex              task_queue_mutex_;
+        std::condition_variable task_condition_;
 
-        std::size_t min_threads_; // Minimum threads
-        std::size_t max_threads_; // Maximum threads
-        std::atomic<size_t> active_threads_; // Count of active threads
+        std::jthread            cleanup_thread_;
+        std::condition_variable cleanup_condition_;
+        std::mutex              cleanup_mutex_;
+
+        std::atomic<bool> stop_{false};
+
+        ThreadPoolConfig    config_{};
+        std::atomic<size_t> active_threads_{0};
     };
-
 } // namespace demiplane::multithread
 
 template <class Func, class... Args>
-std::future<std::invoke_result_t<Func, Args...>> demiplane::multithread::ThreadPool::enqueue(
-    Func&& f, TaskPriority task_priority, Args&&... args) {
+std::future<std::invoke_result_t<Func, Args...>>
+demiplane::multithread::ThreadPool::enqueue(Func&& f, TaskPriority task_priority, Args&&... args) {
     using return_type = std::invoke_result_t<Func, Args...>;
 
-    // Wrap the task in a lambda instead of std::bind
     auto task = std::make_shared<std::packaged_task<return_type()>>(
         [func = std::forward<Func>(f), ... args = std::forward<Args>(args)]() mutable {
             return std::invoke(std::move(func), std::move(args)...);
@@ -70,16 +120,21 @@ std::future<std::invoke_result_t<Func, Args...>> demiplane::multithread::ThreadP
 
     std::future<return_type> res = task->get_future();
     {
-        std::unique_lock lock(queue_mutex_);
+        std::unique_lock lock(task_queue_mutex_);
         if (stop_) {
             throw std::runtime_error("ThreadPool is stopped");
         }
-        tasks_.emplace(task_priority, [task]() { (*task)(); });
+        tasks_.write()->emplace([task] {
+            (*task)();
+        }, task_priority);
 
-        if (active_threads_ < max_threads_ && workers_.size() < max_threads_ && tasks_.size() > active_threads_) {
+        cleanup_invalid_workers();
+        // Create worker if needed and we haven't reached max threads
+        // TODO: Issue#33
+        if (!is_full() && !free_threads()) {
             create_worker();
         }
     }
-    condition_.notify_one();
+    task_condition_.notify_one();
     return res;
 }

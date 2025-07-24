@@ -49,6 +49,17 @@ namespace demiplane::chrono {
             return {since_prev, since_start};
         }
 
+        duration from_start(const std::size_t i) const {
+            return std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
+        }
+        duration from_prev(const std::size_t i) const {
+            return std::chrono::duration_cast<duration>(flags_[i] - flags_[i-1]);
+        }
+
+        duration total_time() const {
+            return std::chrono::duration_cast<duration>(flags_.back() - flags_[0]);
+        }
+
         const std::vector<time_point>& get_flags() const {
             return flags_;
         }

@@ -22,6 +22,8 @@ add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
 target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
         Demiplane::Common::Multithread
+        Demiplane::Common::Math
+        Demiplane::Common::Chrono
         ${TEST_LIBS}
 
 )

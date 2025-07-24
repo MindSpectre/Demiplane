@@ -173,8 +173,8 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
     for (int i = 0; i < 4; ++i) {
         futures.push_back(pool.enqueue([&] {
             std::cerr << "Task " << i << " starting\n";
-            const int current    = ++concurrent_tasks;
-            max_concurrent = std::max(max_concurrent.load(), current);
+            const int current = ++concurrent_tasks;
+            max_concurrent    = std::max(max_concurrent.load(), current);
 
             sync_point.arrive_and_wait(); // Wait for all 4 to start
             std::this_thread::sleep_for(100ms);

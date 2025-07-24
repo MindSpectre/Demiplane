@@ -47,16 +47,16 @@ target_include_directories(${DMP_CHRONO}.Clock
 ##############################################################################
 # Timer for managing function flow
 ##############################################################################
-add_library(${DMP_CHRONO}.Timer INTERFACE
+add_library(${DMP_CHRONO}.Timer STATIC
         timer/include/timer.hpp
-        timer/include/cancellation_token.hpp
-
+        timer/source/timer.inl
+        timer/source/timer.cpp
 )
 target_include_directories(${DMP_CHRONO}.Timer
-        INTERFACE
+        PUBLIC
         timer/include
 )
-target_link_libraries(${DMP_CHRONO}.Timer INTERFACE
+target_link_libraries(${DMP_CHRONO}.Timer PUBLIC
         Demiplane::Common::Gears
         Demiplane::Common::Multithread
 )

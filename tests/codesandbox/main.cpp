@@ -35,15 +35,15 @@ void complete_usage_example() {
     // ============================================================================
 
     // Type-safe column references
-    auto user_id = users_schema->column<int>("id");
-    auto user_name = users_schema->column<std::string>("name");
-    auto user_email = users_schema->column<std::string>("email");
-    auto user_age = users_schema->column<int>("age");
+    auto user_id     = users_schema->column<int>("id");
+    auto user_name   = users_schema->column<std::string>("name");
+    auto user_email  = users_schema->column<std::string>("email");
+    auto user_age    = users_schema->column<int>("age");
     auto user_active = users_schema->column<bool>("active");
 
     // auto post_id = posts_schema->column<int>("id");
-    auto post_user_id = posts_schema->column<int>("user_id");
-    auto post_title = posts_schema->column<std::string>("title");
+    auto post_user_id   = posts_schema->column<int>("user_id");
+    auto post_title     = posts_schema->column<std::string>("title");
     auto post_published = posts_schema->column<bool>("published");
 
     // ============================================================================
@@ -52,10 +52,10 @@ void complete_usage_example() {
 
     // Simple SELECT with WHERE
     auto query1 = select(user_id, user_name, user_email)
-        .from(users_schema)
-        .where(user_age > lit(18) && user_active == lit(true))
-        .order_by(desc(user_name))
-        .limit(10);
+                  .from(users_schema)
+                  .where(user_age > lit(18) && user_active == lit(true))
+                  .order_by(desc(user_name))
+                  .limit(10);
 
     // SELECT with JOIN
     // auto query2 = select(user_name, post_title)
@@ -63,30 +63,30 @@ void complete_usage_example() {
     //     .join(posts_schema).on(user_id == post_user_id);
     // Aggregate query
     auto query3 = select(user_active, count(user_id).as("user_count"))
-        .from(users_schema)
-        .group_by(user_active)
-        .having(count(user_id) > lit(5));
+                  .from(users_schema)
+                  .group_by(user_active)
+                  .having(count(user_id) > lit(5));
 
     // Complex query with subquery
     auto active_users = select(user_id)
-        .from(users_schema)
-        .where(user_active == lit(true));
+                        .from(users_schema)
+                        .where(user_active == lit(true));
 
     auto query4 = select(post_title)
-        .from(posts_schema)
-        .where(in(post_user_id, subquery(active_users)));
+                  .from(posts_schema)
+                  .where(in(post_user_id, subquery(active_users)));
 
     // INSERT query
     auto insert_query = insert_into(users_schema)
-        .into({"name", "email", "age", "active"})
-        .values({"John Doe", "john@example.com", 25, true})
-        .values({"Jane Smith", "jane@example.com", 30, true});
+                        .into({"name", "email", "age", "active"})
+                        .values({"John Doe", "john@example.com", 25, true})
+                        .values({"Jane Smith", "jane@example.com", 30, true});
 
     // UPDATE query
     auto update_query = update(users_schema)
-        .set("active", false)
-        .set("balance", 0.0)
-        .where(user_age < 18);
+                        .set("active", false)
+                        .set("balance", 0.0)
+                        .where(user_age < 18);
 
     // DELETE query
     auto delete_query = delete_from(users_schema)
@@ -104,7 +104,7 @@ void complete_usage_example() {
     std::cout << "PostgreSQL: " << compiled1.sql << std::endl;
     // Output: SELECT "id", "name", "email" FROM "users" WHERE "age" > $1 AND "active" = $2 ORDER BY "name" DESC LIMIT 10
     // Parameters: [18, true]
-    for (const auto& v: compiled1.parameters) {
+    for (const auto& v : compiled1.parameters) {
         std::cout << pg_dial->format_value(v) << " ";
     }
     std::cout << std::endl;
@@ -129,13 +129,13 @@ void complete_usage_example() {
 
     // Build query from record
     auto query_from_record = select(all())
-        .from(user_record)
-        .where(user_id == user_record["id"].get<int32_t>());
+                             .from(user_record)
+                             .where(user_id == user_record["id"].get<int32_t>());
 
     // Insert from record
     auto insert_from_record = insert_into(users_schema)
-        .into({"name", "email", "age", "active", "balance"})
-        .values(user_record);
+                              .into({"name", "email", "age", "active", "balance"})
+                              .values(user_record);
 
     // ============================================================================
     // Step 6: Advanced Queries
@@ -143,9 +143,9 @@ void complete_usage_example() {
 
     // WITH clause (CTE)
     auto high_value_users = with("high_value_users",
-        select(user_id, user_name)
-        .from(users_schema)
-        .where(user_active == true && user_age > 25)
+                                 select(user_id, user_name)
+                                 .from(users_schema)
+                                 .where(user_active == true && user_age > 25)
     );
 
     // UNION query
@@ -156,12 +156,12 @@ void complete_usage_example() {
 
     // EXISTS query
     auto exists_query = select(user_name)
-        .from(users_schema)
-        .where(exists(
-            select(lit(1))
-            .from(posts_schema)
-            .where(post_user_id == user_id && post_published == true)
-        ));
+                        .from(users_schema)
+                        .where(exists(
+                            select(lit(1))
+                            .from(posts_schema)
+                            .where(post_user_id == user_id && post_published == true)
+                        ));
 
     // CASE expression (if you implement it)
     // auto case_query = select(
@@ -182,7 +182,8 @@ void complete_usage_example() {
 
         // This will throw because column doesn't exist
         // auto missing = users_schema->column<std::string>("missing_column");
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
@@ -195,7 +196,7 @@ void complete_usage_example() {
 
     // Add conditions based on runtime values
     bool include_active_only = true;
-    int min_age = 21;
+    int min_age              = 21;
 
     if (include_active_only && min_age > 0) {
         auto filtered = base_query.where(user_active == lit(true) && user_age >= lit(min_age));

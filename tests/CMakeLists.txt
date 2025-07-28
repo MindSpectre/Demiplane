@@ -46,5 +46,6 @@ add_executable(${PROJECT_NAME}.Tests.Sandbox
 )
 target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
         PRIVATE
-        Demiplane::Common::Gears
+        Demiplane.Component.Database.Query.Compiler
+        Demiplane.Component.Database.Dialect.PostgreSQL
 )

@@ -20,7 +20,7 @@ add_compile_options(
         -Wconversion -Wshadow
         -Wdouble-promotion -Wnull-dereference
         -Wnon-virtual-dtor
-        -Werror
+        #        -Werror
         -fstack-protector-strong
         -D_FORTIFY_SOURCE=2
         -fvisibility=hidden

@@ -1,101 +1,34 @@
 set(DMP_DATABASE ${DMP_COMPONENT}.Database)
 
 ##############################################################################
-# Database General
-##############################################################################
-add_combined_library(${DMP_DATABASE}
-        DIRECTORIES
-        export
-        LIBRARIES
-        Demiplane::Database::Pool
-        Demiplane::Database::Transactions
-
-        Demiplane::Database::Mock::Basic
-        Demiplane::Database::Mock::Silent
-
-        ${DMP_DATABASE}.Factory
-        ALIAS
-        Demiplane::Database
-)
-##############################################################################
-
-
-##############################################################################
-# Database main classes NECESSARY UTILITY
+# Fundamental structures for orm
 ##############################################################################
 add_library(${DMP_DATABASE}.Core STATIC
-        core/field/db_field.hpp
-        core/field/db_record.hpp
-        core/field/db_column.hpp
-        core/field/db_factory.hpp
-        core/db_shortcuts.hpp
-        core/conditions/db_query.hpp
-
-        core/source/db_core.cpp
-        core/conditions/contexts/where.hpp
-        core/conditions/contexts/order_by.hpp
-        core/conditions/contexts/table.hpp
-        core/conditions/contexts/limit_offset.hpp
-        core/conditions/contexts/similarity.hpp
-        core/conditions/contexts/returning.hpp
+        core/include/db_field_schema.hpp
+        core/include/arena.hpp # TODO: exclude ARENA
+        core/include/db_record.hpp
+        core/include/db_field.hpp
+        core/include/db_record_factory.hpp
+        core/source/db_table_schema.cpp
+        core/include/db_field_value.hpp
+        core/source/db_field.cpp
+        core/source/db_record.cpp
+        core/source/db_table_schema.inl
+        core/source/db_field.inl
+        core/include/db_column.hpp
 )
 
-target_include_directories(${DMP_DATABASE}.Core
-        PUBLIC
+target_include_directories(${DMP_DATABASE}.Core PUBLIC
         core/include
 )
-target_link_libraries(${DMP_DATABASE}.Core
-        PUBLIC
-        JsonCpp::JsonCpp
-        Demiplane::Gears
+target_link_libraries(${DMP_DATABASE}.Core PUBLIC
+        Boost::container
+        Demiplane::Common::Gears
 )
 ##############################################################################
 
-##############################################################################
-# Database Client Interface
-##############################################################################
-add_library(${DMP_DATABASE}.Base
-        STATIC
-        base/db_connect_params.hpp
-        base/db_config_interface.hpp
-        base/include/db_base.hpp
-        base/include/traits/transaction_trait.hpp
-        base/include/traits/table_management_trait.hpp
-        base/include/traits/unique_constraint_trait.hpp
-        base/include/traits/search_trait.hpp
-)
 
-target_link_libraries(${DMP_DATABASE}.Base
-        PUBLIC
-        Demiplane::Scroll
-        ${DMP_DATABASE}.Core
-        ${DMP_DATABASE}.Exceptions
-)
-target_include_directories(${DMP_DATABASE}.Base
-        PUBLIC
-        base/include
-)
-##############################################################################
+add_subdirectory(dialects)
 
-##############################################################################
-# Error handling
-##############################################################################
-add_library(${DMP_DATABASE}.Exceptions INTERFACE
-        exceptions/db_exceptions.hpp
-        exceptions/db_error_codes.hpp
-)
-target_include_directories(${DMP_DATABASE}.Exceptions INTERFACE
-        exceptions
-)
-##############################################################################
+add_subdirectory(query)
 
-##############################################################################
-
-
-add_subdirectory(creational)
-
-add_subdirectory(behavioral)
-
-add_subdirectory(mock)
-
-add_subdirectory(postgres)

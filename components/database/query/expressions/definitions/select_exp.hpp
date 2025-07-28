@@ -1,0 +1,67 @@
+#pragma once
+
+#include <algorithm>
+
+#include "db_column.hpp"
+#include "db_record.hpp"
+#include "../basic.hpp"
+
+namespace demiplane::db {
+    template <IsQuery Select>
+    class FromExpr;
+
+    template <IsSelectExpression... Columns>
+    class SelectExpr : public Expression<SelectExpr<Columns...>> {
+    public:
+        constexpr explicit SelectExpr(Columns... cols)
+            : columns_(cols...) {}
+
+        constexpr SelectExpr& set_distinct(const bool d = true) {
+            distinct_ = d;
+            return *this;
+        }
+
+        [[nodiscard]] const std::tuple<Columns...>& columns() const {
+            return columns_;
+        }
+
+        [[nodiscard]] bool distinct() const {
+            return distinct_;
+        }
+
+        // FROM clause - always returns FromExpr with TableSchemaPtr
+        [[nodiscard]] constexpr auto from(TableSchemaPtr table) const {
+            return FromExpr<SelectExpr>{*this, std::move(table)};
+        }
+
+        // FROM with Record
+        [[nodiscard]] auto from(const Record& record) const {
+            return FromExpr<SelectExpr>{*this, record.schema_ptr()};
+        }
+
+        // FROM with table name (creates temporary schema)
+        [[nodiscard]] auto from(const std::string_view table_name) const {
+            auto schema = std::make_shared<const TableSchema>(table_name);
+            return FromExpr<SelectExpr>{*this, std::move(schema)};
+        }
+
+    private:
+        std::tuple<Columns...> columns_;
+        bool distinct_{false};
+    };
+
+    template <typename... Columns>
+    constexpr auto select(Columns... columns) {
+        return SelectExpr<Columns...>{columns...};
+    }
+
+    template <typename... Columns>
+    constexpr auto select_distinct(Columns... columns) {
+        return SelectExpr<Columns...>{columns...}.set_distinct(true);
+    }
+
+    // Select from schema
+    inline auto select_from_schema(TableSchemaPtr schema) {
+        return SelectExpr{all()}.from(std::move(schema));
+    }
+}

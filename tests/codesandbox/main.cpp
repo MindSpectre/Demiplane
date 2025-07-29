@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "db_record_factory.hpp"
-#include "pq_dialect.hpp"
+#include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 using namespace demiplane::db;
 
@@ -53,14 +53,14 @@ void complete_usage_example() {
     // Simple SELECT with WHERE
     auto query1 = select(user_id, user_name, user_email)
                   .from(users_schema)
-                  .where(user_age > lit(18) && user_active == lit(true))
+                  .where(user_age > 18 && user_active == true)
                   .order_by(desc(user_name))
                   .limit(10);
 
     // SELECT with JOIN
-    // auto query2 = select(user_name, post_title)
-    //     .from(users_schema)
-    //     .join(posts_schema).on(user_id == post_user_id);
+    auto query2 = select(user_name, post_title)
+                  .from(users_schema)
+                  .join(posts_schema->table_name()).on(post_user_id == user_id);
     // Aggregate query
     auto query3 = select(user_active, count(user_id).as("user_count"))
                   .from(users_schema)
@@ -98,18 +98,18 @@ void complete_usage_example() {
 
     // PostgreSQL compilation
     auto pg_dial = std::make_unique<PostgresDialect>();
-    QueryCompiler pg_compiler(std::make_unique<PostgresDialect>());
+    QueryCompiler pg_compiler(std::make_unique<PostgresDialect>(), false);
 
     auto compiled1 = pg_compiler.compile(query1);
     std::cout << "PostgreSQL: " << compiled1.sql << std::endl;
     // Output: SELECT "id", "name", "email" FROM "users" WHERE "age" > $1 AND "active" = $2 ORDER BY "name" DESC LIMIT 10
     // Parameters: [18, true]
-    for (const auto& v : compiled1.parameters) {
-        std::cout << pg_dial->format_value(v) << " ";
-    }
-    std::cout << std::endl;
-    auto compiled2 = pg_compiler.compile(query3);
+    auto compiled2 = pg_compiler.compile(query2);
     std::cout << "PostgreSQL: " << compiled2.sql << std::endl;
+    // Output: SELECT "name", "title" FROM "users" JOIN "posts" ON "id" = "user_id" WHERE "published" = $1 ORDER BY "name" ASC, "title" DESC
+
+    auto compiled3 = pg_compiler.compile(query3);
+    std::cout << "PostgreSQL: " << compiled3.sql << std::endl;
     // Output: SELECT "name", "title" FROM "users" JOIN "posts" ON "id" = "user_id" WHERE "published" = $1 ORDER BY "name" ASC, "title" DESC
 
 
@@ -136,7 +136,8 @@ void complete_usage_example() {
     auto insert_from_record = insert_into(users_schema)
                               .into({"name", "email", "age", "active", "balance"})
                               .values(user_record);
-
+    auto compiled_query_from_record = pg_compiler.compile(query_from_record);
+    std::cout << "PostgreSQL: " << compiled_query_from_record.sql << std::endl;
     // ============================================================================
     // Step 6: Advanced Queries
     // ============================================================================
@@ -147,13 +148,15 @@ void complete_usage_example() {
                                  .from(users_schema)
                                  .where(user_active == true && user_age > 25)
     );
-
+    // auto compiled_high_value_users = pg_compiler.compile(high_value_users);
+    // std::cout << "PostgreSQL: " << compiled_high_value_users.sql << std::endl;
     // UNION query
     auto union_query = union_all(
         select(user_name).from(users_schema).where(user_active == true),
         select(user_name).from(users_schema).where(user_age > 65)
     );
-
+    auto compiled_union_query = pg_compiler.compile(union_query);
+    std::cout << "PostgreSQL: " << compiled_union_query.sql << std::endl;
     // EXISTS query
     auto exists_query = select(user_name)
                         .from(users_schema)
@@ -162,15 +165,18 @@ void complete_usage_example() {
                             .from(posts_schema)
                             .where(post_user_id == user_id && post_published == true)
                         ));
-
+    auto compiled_exists_query = pg_compiler.compile(exists_query);
+    std::cout << "PostgreSQL: " << compiled_exists_query.sql << std::endl;
     // CASE expression (if you implement it)
-    // auto case_query = select(
-    //     user_name,
-    //     case_when(user_age < 18, lit("minor"))
-    //         .when(user_age < 65, lit("adult"))
-    //         .else_(lit("senior"))
-    //         .as("age_group")
-    // ).from(users_schema);
+    auto case_query = select(
+        user_name,
+        case_when(user_age < 18, lit("minor"))
+        .when(user_age < 65, lit("adult"))
+        .else_(lit("senior"))
+    ).from(users_schema);
+    auto compiled_case_query = pg_compiler.compile(case_query);
+    std::cout << "PostgreSQL: " << compiled_case_query.sql << std::endl;
+    //todo: case expr
 
     // ============================================================================
     // Step 7: Error Handling
@@ -178,8 +184,8 @@ void complete_usage_example() {
 
     try {
         // This will throw because types don't match
-        // auto bad_column = users_schema->column<double>("id"); // id is int, not double
-
+        auto bad_column = users_schema->column<double>("id"); // id is int, not double
+        std::cout << "Bad column: " << bad_column.table() << std::endl;
         // This will throw because column doesn't exist
         // auto missing = users_schema->column<std::string>("missing_column");
     }
@@ -204,9 +210,6 @@ void complete_usage_example() {
         std::cout << "Dynamic query: " << compiled.sql << std::endl;
     }
 }
-class X {
-public:
-};
 
 int main() {
     complete_usage_example();

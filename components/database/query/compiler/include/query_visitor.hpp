@@ -18,6 +18,7 @@ namespace demiplane::db {
         void visit(const Column<void>& col) {
             visit_column_impl(col.schema(), col.table(), col.alias());
         }
+
         template <typename T>
         void visit(const Literal<T>& lit) {
             visit_literal_impl(FieldValue(lit.value));
@@ -50,24 +51,24 @@ namespace demiplane::db {
         void visit(const UnaryExpr<O, Op>& expr) {
             visit_unary_expr_start();
             visit_unary_op_impl(Op{});
-            expr.operand.accept(*this);
+            expr.operand().accept(*this);
             visit_unary_expr_end();
         }
 
         template <typename O, typename L, typename U>
         void visit(const BetweenExpr<O, L, U>& expr) {
-            expr.operand.accept(*this);
+            expr.operand().accept(*this);
             visit_between_impl();
-            expr.lower.accept(*this);
+            expr.lower().accept(*this);
             visit_and_impl();
-            expr.upper.accept(*this);
+            expr.upper().accept(*this);
         }
 
         template <typename O, typename... Values>
         void visit(const InListExpr<O, Values...>& expr) {
-            expr.operand.accept(*this);
+            expr.operand().accept(*this);
             visit_in_list_start();
-            visit_tuple_elements(expr.values, std::index_sequence_for<Values...>{});
+            visit_tuple_elements(expr.values(), std::index_sequence_for<Values...>{});
             visit_in_list_end();
         }
 
@@ -76,15 +77,15 @@ namespace demiplane::db {
             visit_subquery_start();
             sq.query().accept(*this);
             visit_subquery_end();
-            if (sq.alias) {
-                visit_alias_impl(sq.alias);
+            if (sq.alias()) {
+                visit_alias_impl(sq.alias());
             }
         }
 
         template <typename Q>
         void visit(const ExistsExpr<Q>& expr) {
             visit_exists_start();
-            expr.subquery().accept(*this);
+            expr.query().accept(*this);
             visit_exists_end();
         }
 
@@ -114,7 +115,7 @@ namespace demiplane::db {
 
         template <typename T>
         void visit(const MaxExpr<T>& expr) {
-            visit_max_impl(expr.alias);
+            visit_max_impl(expr.alias());
             expr.column().accept(*this);
             visit_aggregate_end();
         }
@@ -193,13 +194,13 @@ namespace demiplane::db {
         template <typename Q, typename J, typename C>
         void visit(const JoinExpr<Q, J, C>& expr) {
             expr.query().accept(*this);
-            visit_join_start(expr.type);
-            visit_table_impl(expr.joined_table);
-            if (expr.joined_alias) {
-                visit_table_alias_impl(expr.joined_alias);
+            visit_join_start(expr.type());
+            visit_table_impl(expr.joined_table());
+            if (expr.joined_alias()) {
+                visit_table_alias_impl(expr.joined_alias());
             }
             visit_join_on();
-            expr.on_condition.accept(*this);
+            expr.on_condition().accept(*this);
             visit_join_end();
         }
 
@@ -221,9 +222,9 @@ namespace demiplane::db {
 
         template <typename C>
         void visit(const UpdateWhereExpr<C>& expr) {
-            expr.update.accept(*this);
+            expr.update().accept(*this);
             visit_where_start();
-            expr.condition.accept(*this);
+            expr.condition().accept(*this);
             visit_where_end();
         }
 
@@ -235,18 +236,35 @@ namespace demiplane::db {
 
         template <typename C>
         void visit(const DeleteWhereExpr<C>& expr) {
-            expr.del.accept(*this);
+            expr.del().accept(*this);
             visit_where_start();
-            expr.condition.accept(*this);
+            expr.condition().accept(*this);
             visit_where_end();
         }
 
         // Set operations
         template <typename L, typename R>
         void visit(const SetOpExpr<L, R>& expr) {
-            expr.left.accept(*this);
-            visit_set_op_impl(expr.op);
-            expr.right.accept(*this);
+            expr.left().accept(*this);
+            visit_set_op_impl(expr.op());
+            expr.right().accept(*this);
+        }
+
+        template <typename... WhenClauses>
+        void visit(const CaseExpr<WhenClauses...>& expr) {
+            visit_case_start();
+            visit_when_clauses(expr.when_clauses(), std::index_sequence_for<WhenClauses...>{});
+            visit_case_end();
+        }
+
+        template <typename ElseExpr, typename... WhenClauses>
+        void visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
+            visit_case_start();
+            visit_when_clauses(expr.when_clauses(), std::index_sequence_for<WhenClauses...>{});
+            visit_else_start();
+            expr.else_clause().accept(*this);
+            visit_else_end();
+            visit_case_end();
         }
 
     protected:
@@ -339,6 +357,14 @@ namespace demiplane::db {
         // Set operations
         virtual void visit_set_op_impl(SetOperation op) = 0;
 
+        virtual void visit_case_start() = 0;
+        virtual void visit_case_end() = 0;
+        virtual void visit_when_start() = 0;
+        virtual void visit_when_then() = 0;
+        virtual void visit_when_end() = 0;
+        virtual void visit_else_start() = 0;
+        virtual void visit_else_end() = 0;
+
         // Column separator
         virtual void visit_column_separator() = 0;
 
@@ -357,6 +383,20 @@ namespace demiplane::db {
             }
             first = false;
             visit(elem);
+        }
+
+        template <typename Tuple, std::size_t... Is>
+        void visit_when_clauses(const Tuple& t, std::index_sequence<Is...>) {
+            ((visit_when_clause(std::get<Is>(t))), ...);
+        }
+
+        template <typename ConditionExpr, typename ValueExpr>
+        void visit_when_clause(const WhenClause<ConditionExpr, ValueExpr>& when) {
+            visit_when_start();
+            when.condition.accept(*this);
+            visit_when_then();
+            when.value.accept(*this);
+            visit_when_end();
         }
     };
 }

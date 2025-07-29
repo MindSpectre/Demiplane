@@ -66,45 +66,43 @@ namespace demiplane::db {
             return LimitExpr<FromExpr>{*this, count, 0};
         }
 
+        struct JoinBuilder {
+            const FromExpr& from;
+            TableSchemaPtr right_table;
+            JoinType type;
+            const char* right_alias = nullptr;
+
+            JoinBuilder(const FromExpr& from, TableSchemaPtr right_table, JoinType type)
+                : from{from},
+                  right_table{std::move(right_table)},
+                  type{type} {}
+
+            JoinBuilder& as(const char* name) {
+                right_alias = name;
+                return *this;
+            }
+            template <IsCondition Condition>
+            auto on(Condition cond) const {
+                return JoinExpr<FromExpr, TableSchemaPtr, Condition>{
+                    from,
+                    right_table,
+                    std::move(cond),
+                    type,
+                    right_alias
+                };
+            }
+        };
         // JOIN - returns JoinBuilder
-        template <IsCondition Condition>
+
         constexpr auto join(TableSchemaPtr right_table, JoinType type = JoinType::INNER) const {
             // Helper to build join with condition
-            struct JoinBuilder {
-                const FromExpr& from;
-                TableSchemaPtr right_table;
-                JoinType type;
-                const char* right_alias = nullptr;
-
-                JoinBuilder(const FromExpr& from, TableSchemaPtr right_table, JoinType type)
-                    : from{from},
-                      right_table{std::move(right_table)},
-                      type{type} {}
-
-                JoinBuilder& as(const char* name) {
-                    right_alias = name;
-                    return *this;
-                }
-
-                auto on(Condition cond) const {
-                    return JoinExpr<FromExpr, TableSchemaPtr, Condition>{
-                        from,
-                        right_table,
-                        std::move(cond),
-                        type,
-                        right_alias
-                    };
-                }
-            };
-
             return JoinBuilder{*this, std::move(right_table), type};
         }
 
         // Overload for string table name
-        template <IsCondition Condition>
         auto join(const std::string& table_name, JoinType type = JoinType::INNER) const {
             auto schema = std::make_shared<TableSchema>(table_name);
-            return join<Condition>(std::move(schema), type);
+            return join(std::move(schema), type);
         }
     private:
         Select select_;

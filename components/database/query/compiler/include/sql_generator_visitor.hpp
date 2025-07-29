@@ -155,6 +155,20 @@ namespace demiplane::db {
 
         void visit_delete_end() override;
 
+        void visit_case_start() override;
+
+        void visit_case_end() override;
+
+        void visit_when_start() override;
+
+        void visit_when_then() override;
+
+        void visit_when_end() override;
+
+        void visit_else_start() override;
+
+        void visit_else_end() override;
+
         // Set operations
         void visit_set_op_impl(SetOperation op) override;
 

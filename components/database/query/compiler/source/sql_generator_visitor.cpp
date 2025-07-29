@@ -307,6 +307,34 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_delete_end() {}
 
+    void SqlGeneratorVisitor::visit_case_start() {
+        sql_ << "CASE";
+    }
+
+    void SqlGeneratorVisitor::visit_case_end() {
+        sql_ << " END";
+    }
+
+    void SqlGeneratorVisitor::visit_when_start() {
+        sql_ << " WHEN ";
+    }
+
+    void SqlGeneratorVisitor::visit_when_then() {
+        sql_ << " THEN ";
+    }
+
+    void SqlGeneratorVisitor::visit_when_end() {
+        // Nothing needed after each WHEN clause
+    }
+
+    void SqlGeneratorVisitor::visit_else_start() {
+        sql_ << " ELSE ";
+    }
+
+    void SqlGeneratorVisitor::visit_else_end() {
+        // Nothing needed after ELSE clause
+    }
+
     void SqlGeneratorVisitor::visit_set_op_impl(const SetOperation op) {
         switch (op) {
             case SetOperation::UNION:

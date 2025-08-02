@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "db_column.hpp"
 #include "../basic.hpp"
 
@@ -10,17 +12,13 @@ namespace demiplane::db {
         explicit CountExpr(Column<T> col)
             : column_(std::move(col)) {}
 
-        CountExpr(Column<T> col, const bool dist)
-            : column_(std::move(col)),
-              distinct_(dist) {}
-
-        CountExpr(Column<T> col, const bool dist, const char* a)
+        CountExpr(Column<T> col, const bool dist, std::optional<std::string> alias = std::nullopt)
             : column_(std::move(col)),
               distinct_(dist),
-              alias_(a) {}
+              alias_(std::move(alias)) {}
 
-        CountExpr& as(const char* name) {
-            alias_ = name;
+        CountExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
 
@@ -32,25 +30,26 @@ namespace demiplane::db {
             return distinct_;
         }
 
-        [[nodiscard]] const char* alias() const {
+        [[nodiscard]] const std::optional<std::string>& alias() const {
             return alias_;
         }
 
     private:
         Column<T> column_;
         bool distinct_{false};
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 
 
     template <typename T>
     class SumExpr : public Expression<SumExpr<T>> {
     public:
-        SumExpr(Column<T> column, const char* alias)
+        SumExpr(Column<T> column, std::optional<std::string> alias)
             : column_{std::move(column)},
-              alias_{alias} {}
-        SumExpr& as(const char* name) {
-            alias_ = name;
+              alias_{std::move(alias)} {}
+
+        SumExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
 
@@ -59,24 +58,24 @@ namespace demiplane::db {
             return column_;
         }
 
-        [[nodiscard]] const char* alias() const {
+        [[nodiscard]] std::optional<std::string> alias() const {
             return alias_;
         }
 
     private:
         Column<T> column_;
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 
     template <typename T>
     class AvgExpr : public Expression<AvgExpr<T>> {
     public:
-
-        AvgExpr(Column<T> column, const char* const alias)
+        AvgExpr(Column<T> column, std::optional<std::string> alias)
             : column_{std::move(column)},
-              alias_{alias} {}
-        AvgExpr& as(const char* name) {
-            alias_ = name;
+              alias_{std::move(alias)} {}
+
+        AvgExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
 
@@ -84,24 +83,24 @@ namespace demiplane::db {
             return column_;
         }
 
-        [[nodiscard]] const char* alias() const {
+        [[nodiscard]] std::optional<std::string> alias() const {
             return alias_;
         }
 
     private:
         Column<T> column_;
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 
     template <typename T>
     class MaxExpr : public Expression<MaxExpr<T>> {
     public:
-        MaxExpr(Column<T> column, const char* const alias)
+        MaxExpr(Column<T> column, std::optional<std::string> alias)
             : column_{std::move(column)},
-              alias_{alias} {}
+              alias_{std::move(alias)} {}
 
-        MaxExpr& as(const char* name) {
-            alias_ = name;
+        MaxExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
 
@@ -109,23 +108,24 @@ namespace demiplane::db {
             return column_;
         }
 
-        [[nodiscard]] const char* alias() const {
+        [[nodiscard]] std::optional<std::string> alias() const {
             return alias_;
         }
 
     private:
         Column<T> column_;
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 
     template <typename T>
     class MinExpr : public Expression<MinExpr<T>> {
     public:
-        MinExpr(Column<T> column, const char* const alias)
+        MinExpr(Column<T> column, std::optional<std::string> alias)
             : column_{std::move(column)},
-              alias_{alias} {}
-        MinExpr& as(const char* name) {
-            alias_ = name;
+              alias_{std::move(alias)} {}
+
+        MinExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
 
@@ -133,13 +133,13 @@ namespace demiplane::db {
             return column_;
         }
 
-        [[nodiscard]] const char* alias() const {
+        [[nodiscard]] std::optional<std::string> alias() const {
             return alias_;
         }
 
     private:
         Column<T> column_;
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 
     // Aggregate function factories
@@ -154,7 +154,7 @@ namespace demiplane::db {
     }
 
     inline CountExpr<void> count_all() {
-        return CountExpr{Column<void>{nullptr, nullptr}};
+        return CountExpr{Column<void>{nullptr}};
     }
 
 

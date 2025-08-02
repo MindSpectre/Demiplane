@@ -5,8 +5,40 @@
 #include <typeindex>
 
 namespace demiplane::gears {
+    template <std::size_t N>
+
+    struct FixedString {
+        char data[N] = {};
+
+        constexpr explicit FixedString(const char (&str)[N]) {
+            std::ranges::copy_n(str, N, data);
+        }
+
+        constexpr explicit operator std::string_view() const {
+            return std::string_view(data, N - 1);
+        }
+
+        constexpr bool operator==(const FixedString& other) const {
+            return std::string_view(*this) == std::string_view(other);
+        }
+
+        template <size_t M>
+        constexpr bool operator==(const FixedString<M>&) const {
+            return false;
+        }
+    };
+
+    template <std::size_t N>
+    FixedString(const char (&)[N]) -> FixedString<N>;
+
+
     // Byte
     namespace literals {
+        template <FixedString Str>
+        constexpr  auto operator""_fs() {
+            return Str;
+        }
+
         constexpr unsigned long long operator""_b(const unsigned long long value) {
             return value;
         }

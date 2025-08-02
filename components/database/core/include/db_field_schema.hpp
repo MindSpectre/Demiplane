@@ -1,11 +1,11 @@
 #pragma once
+#include <gears_types.hpp>
+#include <gears_utils.hpp>
 #include <memory>
 #include <string>
 #include <typeindex>
 #include <typeinfo>
-#include <gears_types.hpp>
 #include <boost/container/flat_map.hpp>
-
 namespace demiplane::db {
     // Forward declarations
     template <typename T>
@@ -34,7 +34,7 @@ namespace demiplane::db {
 
         // Create typed column reference
         template <typename T>
-        Column<T> as_column(const char* table) const {
+        Column<T> as_column(std::shared_ptr<std::string> table) const {
             // Type safety check
             if (cpp_type != std::type_index(typeid(void)) &&
                 cpp_type != std::type_index(typeid(T))) {
@@ -42,7 +42,19 @@ namespace demiplane::db {
                                        " expects " + gears::get_type_name_from_index(cpp_type) +
                                        " but got " + gears::get_type_name<T>());
             }
-            return Column<T>{this, table};
+            return Column<T>{this, std::move(table)};
+        }
+
+        template <typename T>
+        Column<T> as_column(std::string table) const {
+            // Type safety check
+            if (cpp_type != std::type_index(typeid(void)) &&
+                cpp_type != std::type_index(typeid(T))) {
+                throw std::logic_error("Type mismatch: field " + name +
+                                       " expects " + gears::get_type_name_from_index(cpp_type) +
+                                       " but got " + gears::get_type_name<T>());
+            }
+            return Column<T>{this, std::move(table)};
         }
     };
 } // namespace demiplane::db

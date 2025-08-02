@@ -1,4 +1,5 @@
 #pragma once
+#include <ostream>
 
 namespace demiplane::db {
     template <typename T>
@@ -15,12 +16,14 @@ namespace demiplane::db {
 
     // Implementation of TableSchema::column
     template <typename T>
-    Column<T> TableSchema::column(const std::string& name) const {
-        auto* field = get_field_schema(name);
+    Column<T> TableSchema::column(const std::string_view field_name) const {
+        auto* field = get_field_schema(field_name);
         if (!field) {
-            throw std::runtime_error("Unknown column: " + name + " in table " + table_name_);
+            std::ostringstream ss;
+            ss << "Unknown column: " << field_name << " in table " << table_name_;
+            throw std::runtime_error(ss.str());
         }
-        return field->as_column<T>(table_name_.c_str());
+        return field->as_column<T>(std::make_shared<std::string>(table_name_));
     }
 
 }

@@ -11,11 +11,12 @@ namespace demiplane::db {
         constexpr explicit Subquery(Query q)
             : query_(std::move(q)) {}
 
-        Subquery& as(const char* name) {
-            alias_ = name;
+        Subquery& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
-        [[nodiscard]] const char* alias() const {
+
+        [[nodiscard]] const std::optional<std::string>& alias() const {
             return alias_;
         }
         const Query& query() const {
@@ -23,7 +24,7 @@ namespace demiplane::db {
         }
     private:
         Query query_;
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 
     template <typename Q>

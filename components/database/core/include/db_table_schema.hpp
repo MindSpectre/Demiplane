@@ -23,10 +23,8 @@ namespace demiplane::db {
 
         // Type-safe column accessor
         template <typename T>
-        Column<T> column(const std::string& name) const;
+        Column<T> column(std::string_view field_name) const;
 
-        // Get column without type checking (for dynamic queries)
-        Column<void> column(const std::string& name) const;
 
         // Existing methods
         TableSchema& primary_key(std::string_view field_name);
@@ -54,6 +52,7 @@ namespace demiplane::db {
         std::vector<std::unique_ptr<FieldSchema>> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
     };
+
 
     // Shared pointer type for schemas
     using TableSchemaPtr = std::shared_ptr<const TableSchema>;

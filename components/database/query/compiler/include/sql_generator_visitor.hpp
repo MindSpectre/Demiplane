@@ -1,9 +1,10 @@
 #pragma once
 
 #include "query_visitor.hpp"
-#include "../../../dialects/interface/sql_dialect.hpp"
 
 namespace demiplane::db {
+    class SqlDialect;
+
     class SqlGeneratorVisitor final : public QueryVisitor {
     public:
         explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, bool use_params = true);
@@ -19,21 +20,23 @@ namespace demiplane::db {
 
     protected:
         // Column and value implementations
-        void visit_column_impl(const FieldSchema* schema, const char* table, const char* alias) override;
+        void visit_column_impl(const FieldSchema* schema,
+                               const std::shared_ptr<std::string>& table,
+                               const std::optional<std::string>& alias) override;
 
         void visit_literal_impl(const FieldValue& value) override;
 
         void visit_null_impl() override;
 
-        void visit_all_columns_impl(const char* table) override;
+        void visit_all_columns_impl(const std::shared_ptr<std::string>& table) override;
 
-        void visit_parameter_impl(std::size_t index, std::type_index type) override;
+        void visit_parameter_impl(std::size_t index) override;
 
         void visit_table_impl(const TableSchemaPtr& table) override;
 
-        void visit_alias_impl(const char* alias) override;
+        void visit_table_spec_impl(const std::shared_ptr<std::string>& table) override;
 
-        void visit_table_alias_impl(const char* alias) override;
+        void visit_alias_impl(const std::optional<std::string>& alias) override;
 
         // Expression helpers
         void visit_binary_expr_start() override;
@@ -88,17 +91,17 @@ namespace demiplane::db {
         void visit_in_list_separator() override;
 
         // Aggregate functions
-        void visit_count_impl(bool distinct, const char* alias) override;
+        void visit_count_impl(bool distinct) override;
 
-        void visit_sum_impl(const char* alias) override;
+        void visit_sum_impl() override;
 
-        void visit_avg_impl(const char* alias) override;
+        void visit_avg_impl() override;
 
-        void visit_max_impl(const char* alias) override;
+        void visit_max_impl() override;
 
-        void visit_min_impl(const char* alias) override;
+        void visit_min_impl() override;
 
-        void visit_aggregate_end() override;
+        void visit_aggregate_end(const std::optional<std::string>& alias) override;
 
         // Query parts
         void visit_select_start(bool distinct) override;

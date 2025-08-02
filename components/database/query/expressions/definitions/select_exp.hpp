@@ -14,7 +14,7 @@ namespace demiplane::db {
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
     public:
         constexpr explicit SelectExpr(Columns... cols)
-            : columns_(cols...) {}
+            : columns_(std::forward<Columns>(cols)...) {}
 
         constexpr SelectExpr& set_distinct(const bool d = true) {
             distinct_ = d;
@@ -62,6 +62,6 @@ namespace demiplane::db {
 
     // Select from schema
     inline auto select_from_schema(TableSchemaPtr schema) {
-        return SelectExpr{all()}.from(std::move(schema));
+        return SelectExpr{all(schema->table_name())}.from(std::move(schema));
     }
 }

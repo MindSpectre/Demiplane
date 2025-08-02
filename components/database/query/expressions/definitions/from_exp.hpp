@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <utility>
 
 #include "db_table_schema.hpp"
 #include "../basic.hpp"
@@ -34,12 +35,13 @@ namespace demiplane::db {
         [[nodiscard]] const TableSchemaPtr& table() const {
             return table_;
         }
-        [[nodiscard]] const char* alias() const {
+
+        [[nodiscard]] const std::optional<std::string>& alias() const {
             return alias_;
         }
         // Table alias
-        constexpr FromExpr& as(const char* name) {
-            alias_ = name;
+        constexpr FromExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return *this;
         }
 
@@ -70,15 +72,15 @@ namespace demiplane::db {
             const FromExpr& from;
             TableSchemaPtr right_table;
             JoinType type;
-            const char* right_alias = nullptr;
+            std::optional<std::string> right_alias;
 
             JoinBuilder(const FromExpr& from, TableSchemaPtr right_table, JoinType type)
                 : from{from},
                   right_table{std::move(right_table)},
                   type{type} {}
 
-            JoinBuilder& as(const char* name) {
-                right_alias = name;
+            JoinBuilder& as(std::optional<std::string> name) {
+                right_alias = std::move(name);
                 return *this;
             }
             template <IsCondition Condition>
@@ -107,6 +109,6 @@ namespace demiplane::db {
     private:
         Select select_;
         TableSchemaPtr table_;
-        const char* alias_{nullptr};
+        std::optional<std::string> alias_;
     };
 }

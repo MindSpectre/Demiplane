@@ -39,4 +39,8 @@ namespace demiplane::gears {
     constexpr void enforce_non_const(T) {
         static_assert(!std::is_const_v<std::remove_pointer_t<T>>, "Function must not be const-qualified!");
     }
+
+
+
+
 } // namespace demiplane::gears

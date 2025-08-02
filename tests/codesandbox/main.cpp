@@ -201,9 +201,8 @@ void complete_usage_example() {
     auto base_query = select(user_id, user_name).from(users_schema);
 
     // Add conditions based on runtime values
-    bool include_active_only = true;
-    int min_age              = 21;
-
+    bool include_active_only = rand() % 2;
+    int min_age              = rand() % 50;
     if (include_active_only && min_age > 0) {
         auto filtered = base_query.where(user_active == lit(true) && user_age >= lit(min_age));
         auto compiled = pg_compiler.compile(filtered);
@@ -212,6 +211,8 @@ void complete_usage_example() {
 }
 
 int main() {
+    using namespace demiplane::gears;
     complete_usage_example();
+
     return 0;
 }

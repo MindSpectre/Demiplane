@@ -30,11 +30,11 @@ namespace demiplane::db {
         }
 
         void visit(const AllColumns& all) {
-            visit_all_columns_impl(all.table);
+            visit_all_columns_impl(all.table());
         }
 
         void visit(const Parameter& param) {
-            visit_parameter_impl(param.index, param.type);
+            visit_parameter_impl(param.index);
         }
 
         // Expressions
@@ -92,39 +92,39 @@ namespace demiplane::db {
         // Aggregate functions
         template <typename T>
         void visit(const CountExpr<T>& expr) {
-            visit_count_impl(expr.distinct(), expr.alias());
+            visit_count_impl(expr.distinct());
             if (expr.column().schema()) {
                 expr.column().accept(*this);
             }
-            visit_aggregate_end();
+            visit_aggregate_end(expr.alias());
         }
 
         template <typename T>
         void visit(const SumExpr<T>& expr) {
-            visit_sum_impl(expr.alias());
+            visit_sum_impl();
             expr.column().accept(*this);
-            visit_aggregate_end();
+            visit_aggregate_end(expr.alias());
         }
 
         template <typename T>
         void visit(const AvgExpr<T>& expr) {
-            visit_avg_impl(expr.alias());
+            visit_avg_impl();
             expr.column().accept(*this);
-            visit_aggregate_end();
+            visit_aggregate_end(expr.alias());
         }
 
         template <typename T>
         void visit(const MaxExpr<T>& expr) {
             visit_max_impl(expr.alias());
             expr.column().accept(*this);
-            visit_aggregate_end();
+            visit_aggregate_end(expr.alias());
         }
 
         template <typename T>
         void visit(const MinExpr<T>& expr) {
-            visit_min_impl(expr.alias());
+            visit_min_impl();
             expr.column().accept(*this);
-            visit_aggregate_end();
+            visit_aggregate_end(expr.alias());
         }
 
         // Order by
@@ -147,9 +147,7 @@ namespace demiplane::db {
             expr.select().accept(*this);
             visit_from_start();
             visit_table_impl(expr.table());
-            if (expr.alias()) {
-                visit_table_alias_impl(expr.alias());
-            }
+            visit_alias_impl(expr.alias());
             visit_from_end();
         }
 
@@ -196,9 +194,7 @@ namespace demiplane::db {
             expr.query().accept(*this);
             visit_join_start(expr.type());
             visit_table_impl(expr.joined_table());
-            if (expr.joined_alias()) {
-                visit_table_alias_impl(expr.joined_alias());
-            }
+            visit_alias_impl(expr.joined_alias());
             visit_join_on();
             expr.on_condition().accept(*this);
             visit_join_end();
@@ -269,14 +265,16 @@ namespace demiplane::db {
 
     protected:
         // Subclasses implement these
-        virtual void visit_column_impl(const FieldSchema* schema, const char* table, const char* alias) = 0;
+        virtual void visit_column_impl(const FieldSchema* schema,
+                                       const std::shared_ptr<std::string>& table,
+                                       const std::optional<std::string>& alias) = 0;
         virtual void visit_literal_impl(const FieldValue& value) = 0;
         virtual void visit_null_impl() = 0;
-        virtual void visit_all_columns_impl(const char* table) = 0;
-        virtual void visit_parameter_impl(std::size_t index, std::type_index type) = 0;
+        virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
+        virtual void visit_parameter_impl(std::size_t index) = 0;
         virtual void visit_table_impl(const TableSchemaPtr& table) = 0;
-        virtual void visit_alias_impl(const char* alias) = 0;
-        virtual void visit_table_alias_impl(const char* alias) = 0;
+        virtual void visit_table_spec_impl(const std::shared_ptr<std::string>& table) = 0;
+        virtual void visit_alias_impl(const std::optional<std::string>& alias) = 0;
 
         // Expression helpers
         virtual void visit_binary_expr_start() {}
@@ -313,12 +311,12 @@ namespace demiplane::db {
         virtual void visit_in_list_separator() = 0;
 
         // Aggregate functions
-        virtual void visit_count_impl(bool distinct, const char* alias) = 0;
-        virtual void visit_sum_impl(const char* alias) = 0;
-        virtual void visit_avg_impl(const char* alias) = 0;
-        virtual void visit_max_impl(const char* alias) = 0;
-        virtual void visit_min_impl(const char* alias) = 0;
-        virtual void visit_aggregate_end() = 0;
+        virtual void visit_count_impl(bool distinct) = 0;
+        virtual void visit_sum_impl() = 0;
+        virtual void visit_avg_impl() = 0;
+        virtual void visit_max_impl() = 0;
+        virtual void visit_min_impl() = 0;
+        virtual void visit_aggregate_end(const std::optional<std::string>& alias) = 0;
 
         // Query parts
         virtual void visit_select_start(bool distinct) = 0;

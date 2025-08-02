@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <utility>
 
 #include "db_table_schema.hpp"
 #include "../basic.hpp"
@@ -18,12 +19,16 @@ namespace demiplane::db {
     template <IsQuery Query, typename JoinedTable, IsCondition Condition>
     class JoinExpr : public Expression<JoinExpr<Query, JoinedTable, Condition>> {
     public:
-        constexpr JoinExpr(Query q, JoinedTable jt, Condition c, JoinType t, const char* alias = nullptr)
+        constexpr JoinExpr(Query q,
+                           JoinedTable jt,
+                           Condition c,
+                           JoinType t,
+                           std::optional<std::string> alias = std::nullopt)
             : query_(std::move(q)),
               joined_table_(std::move(jt)),
               on_condition_(std::move(c)),
               type_(t),
-              joined_alias_(alias) {}
+              joined_alias_(std::move(alias)) {}
 
         // Additional JOINs
         template <typename Cond>
@@ -32,15 +37,15 @@ namespace demiplane::db {
                 const JoinExpr& parent;
                 TableSchemaPtr right_table;
                 JoinType type;
-                const char* right_alias = nullptr;
+                std::optional<std::string> right_alias;
 
                 JoinBuilder(const JoinExpr& parent, TableSchemaPtr right_table, JoinType type)
                     : parent{parent},
                       right_table{std::move(right_table)},
                       type{type} {}
 
-                JoinBuilder& as(const char* name) {
-                    right_alias = name;
+                JoinBuilder& as(std::optional<std::string> name) {
+                    right_alias = std::move(name);
                     return *this;
                 }
 
@@ -97,7 +102,7 @@ namespace demiplane::db {
             return type_;
         }
 
-        [[nodiscard]] const char* joined_alias() const {
+        [[nodiscard]] const std::optional<std::string>& joined_alias() const {
             return joined_alias_;
         }
 
@@ -106,6 +111,6 @@ namespace demiplane::db {
         JoinedTable joined_table_;
         Condition on_condition_;
         JoinType type_;
-        const char* joined_alias_{nullptr};
+        std::optional<std::string> joined_alias_;
     };
 }

@@ -1,18 +1,17 @@
 #include "sql_generator_visitor.hpp"
+#include "sql_dialect.hpp"
 
 namespace demiplane::db {
     SqlGeneratorVisitor::SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, const bool use_params)
         : dialect_(std::move(dialect)),
           use_parameters_(use_params) {}
 
-    void SqlGeneratorVisitor::visit_column_impl(const FieldSchema* schema, const char* table, const char* alias) {
-        if (table) {
-            sql_ << dialect_->quote_identifier(table) << ".";
-        }
+    void SqlGeneratorVisitor::visit_column_impl(const FieldSchema* schema,
+                                                const std::shared_ptr<std::string>& table,
+                                                const std::optional<std::string>& alias) {
+        visit_table_spec_impl(table);
         sql_ << dialect_->quote_identifier(schema->name);
-        if (alias && alias != table) {
-            sql_ << " AS " << dialect_->quote_identifier(alias);
-        }
+        visit_alias_impl(alias);
     }
 
     void SqlGeneratorVisitor::visit_literal_impl(const FieldValue& value) {
@@ -29,14 +28,12 @@ namespace demiplane::db {
         sql_ << "NULL";
     }
 
-    void SqlGeneratorVisitor::visit_all_columns_impl(const char* table) {
-        if (table) {
-            sql_ << dialect_->quote_identifier(table) << ".";
-        }
+    void SqlGeneratorVisitor::visit_all_columns_impl(const std::shared_ptr<std::string>& table) {
+        visit_table_spec_impl(table);
         sql_ << "*";
     }
 
-    void SqlGeneratorVisitor::visit_parameter_impl(const std::size_t index, std::type_index type) {
+    void SqlGeneratorVisitor::visit_parameter_impl(const std::size_t index) {
         sql_ << dialect_->placeholder(index);
     }
 
@@ -44,13 +41,18 @@ namespace demiplane::db {
         sql_ << dialect_->quote_identifier(table->table_name());
     }
 
-    void SqlGeneratorVisitor::visit_alias_impl(const char* alias) {
-        sql_ << " AS " << dialect_->quote_identifier(alias);
+    void SqlGeneratorVisitor::visit_table_spec_impl(const std::shared_ptr<std::string>& table) {
+        if (table) {
+            sql_ << dialect_->quote_identifier(*table) << ".";
+        }
     }
 
-    void SqlGeneratorVisitor::visit_table_alias_impl(const char* alias) {
-        sql_ << " AS " << dialect_->quote_identifier(alias);
+    void SqlGeneratorVisitor::visit_alias_impl(const std::optional<std::string>& alias) {
+        if (alias.has_value()) {
+            sql_ << " AS " << dialect_->quote_identifier(alias.value());
+        }
     }
+
 
     void SqlGeneratorVisitor::visit_binary_expr_start() {
         sql_ << "(";
@@ -148,29 +150,30 @@ namespace demiplane::db {
         sql_ << ", ";
     }
 
-    void SqlGeneratorVisitor::visit_count_impl(const bool distinct, const char* alias) {
+    void SqlGeneratorVisitor::visit_count_impl(const bool distinct) {
         sql_ << "COUNT(";
         if (distinct) sql_ << "DISTINCT ";
     }
 
-    void SqlGeneratorVisitor::visit_sum_impl(const char* alias) {
+    void SqlGeneratorVisitor::visit_sum_impl() {
         sql_ << "SUM(";
     }
 
-    void SqlGeneratorVisitor::visit_avg_impl(const char* alias) {
+    void SqlGeneratorVisitor::visit_avg_impl() {
         sql_ << "AVG(";
     }
 
-    void SqlGeneratorVisitor::visit_max_impl(const char* alias) {
+    void SqlGeneratorVisitor::visit_max_impl() {
         sql_ << "MAX(";
     }
 
-    void SqlGeneratorVisitor::visit_min_impl(const char* alias) {
+    void SqlGeneratorVisitor::visit_min_impl() {
         sql_ << "MIN(";
     }
 
-    void SqlGeneratorVisitor::visit_aggregate_end() {
+    void SqlGeneratorVisitor::visit_aggregate_end(const std::optional<std::string>& alias) {
         sql_ << ")";
+        visit_alias_impl(alias);
     }
 
     void SqlGeneratorVisitor::visit_select_start(const bool distinct) {

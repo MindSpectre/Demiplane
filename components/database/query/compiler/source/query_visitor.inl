@@ -1,9 +1,5 @@
 #pragma once
 namespace demiplane::db {
-    // ============================================================================
-    // Visitor method implementations
-    // ============================================================================
-
     template <typename T>
     void Column<T>::accept(QueryVisitor& visitor) const {
         visitor.visit(*this);

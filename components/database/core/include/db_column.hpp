@@ -1,11 +1,11 @@
 #pragma once
 #include <string>
 
-#include <gears_templates.hpp>
 #include <memory>
 #include <optional>
 #include <utility>
 
+#include "db_core_fwd.hpp"
 #include "db_field_schema.hpp"
 
 namespace demiplane::db {
@@ -148,19 +148,4 @@ namespace demiplane::db {
     constexpr AllColumns all(std::shared_ptr<std::string> table = nullptr) {
         return AllColumns{std::move(table)};
     }
-
-    template <typename T>
-    concept IsColumn = std::is_same_v<T, Column<void>> ||
-                       std::is_same_v<T, AllColumns> ||
-                       gears::is_specialization_of_v<Column, T>;
-
-    template <typename T>
-    concept IsTypedColumn = gears::is_specialization_of_v<Column, T> &&
-                            !std::is_same_v<T, Column<void>>;
-
-    template <typename T>
-    concept IsUntypedColumn = std::is_same_v<T, Column<void>>;
-
-    template <typename T>
-    concept IsAllColumns = std::is_same_v<T, AllColumns>;
 }

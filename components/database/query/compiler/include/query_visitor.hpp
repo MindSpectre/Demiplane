@@ -1,6 +1,6 @@
 #pragma once
 
-#include "db_column.hpp"
+#include "db_core_fwd.hpp"
 #include "gears_utils.hpp"
 #include "query_expressions.hpp"
 

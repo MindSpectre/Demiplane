@@ -1,4 +1,6 @@
 #include "db_record.hpp"
+#include "db_field.hpp"
+#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     Record::Record(TableSchemaPtr schema): schema_(std::move(schema)) {

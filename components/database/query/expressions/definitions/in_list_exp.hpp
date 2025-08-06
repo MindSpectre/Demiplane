@@ -24,6 +24,7 @@ namespace demiplane::db {
         Operand operand_;
         std::tuple<Values...> values_;
     };
+
     template <typename O, typename... Values>
     constexpr auto in(O operand, Values... values) {
         return InListExpr<O, Values...>{std::move(operand), values...};

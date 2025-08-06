@@ -5,15 +5,6 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsQuery Query, IsCondition Condition>
-    class HavingExpr;
-
-    template <IsQuery Query, IsOrderByExpression ... Orders>
-    class OrderByExpr;
-
-    template <IsQuery Query>
-    class LimitExpr;
-
     template <IsQuery Query, typename... Columns>
     class GroupByExpr : public Expression<GroupByExpr<Query, Columns...>> {
     public:

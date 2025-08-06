@@ -7,14 +7,6 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsQuery Query, IsCondition Condition>
-    class WhereExpr;
-
-    template <IsQuery Query, IsOrderByExpression... Orders>
-    class OrderByExpr;
-
-    template <IsQuery Query>
-    class LimitExpr;
 
     template <IsQuery Query, typename JoinedTable, IsCondition Condition>
     class JoinExpr : public Expression<JoinExpr<Query, JoinedTable, Condition>> {

@@ -1,9 +1,10 @@
 #pragma once
 
 #include <gears_hash.hpp>
+#include <boost/unordered/unordered_map.hpp>
 
+#include "db_core_fwd.hpp"
 #include "db_field.hpp"
-#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     class Record final {

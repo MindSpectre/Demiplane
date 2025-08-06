@@ -5,6 +5,7 @@ set(DMP_DB_QUERY ${DMP_DATABASE}.Query)
 add_library(${DMP_DB_QUERY}.Expressions INTERFACE
         expressions/query_expressions.hpp
         expressions/basic.hpp
+        expressions/db_expressions_fwd.hpp
 )
 target_include_directories(${DMP_DB_QUERY}.Expressions INTERFACE
         expressions

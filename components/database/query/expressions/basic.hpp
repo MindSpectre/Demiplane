@@ -3,11 +3,9 @@
 #include <algorithm>
 #include <typeindex>
 
-#include "query_concepts.hpp"
+#include "db_expressions_fwd.hpp"
 
 namespace demiplane::db {
-    class QueryVisitor;
-
     template <class Derived>
     class Expression {
     public:

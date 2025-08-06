@@ -21,9 +21,6 @@ namespace demiplane::db {
         }
     }
 
-    template <IsQuery Query>
-    class Subquery;
-
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr : public Expression<BinaryExpr<Left, Right, Op>> {
     public:

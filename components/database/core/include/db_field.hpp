@@ -1,9 +1,8 @@
 #pragma once
 #include <optional>
 
-#include "db_field_schema.hpp"
+#include "db_core_fwd.hpp"
 #include "db_field_value.hpp"
-
 namespace demiplane::db {
     class Field final {
     public:

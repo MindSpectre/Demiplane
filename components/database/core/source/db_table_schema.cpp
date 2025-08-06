@@ -1,6 +1,8 @@
 #include "db_table_schema.hpp"
 
 namespace demiplane::db {
+    TableSchema::TableSchema(const std::string_view table_name)
+        : table_name_(table_name) {}
 
     TableSchema& TableSchema::add_field(std::string name, std::string db_type, std::type_index cpp_type) {
         auto field      = std::make_unique<FieldSchema>();
@@ -12,7 +14,6 @@ namespace demiplane::db {
         fields_.push_back(std::move(field));
         return *this;
     }
-
 
 
     TableSchema& TableSchema::primary_key(const std::string_view field_name) {
@@ -81,6 +82,7 @@ namespace demiplane::db {
         }
         return names;
     }
+
     std::size_t TableSchema::field_count() const {
         return fields_.size();
     }

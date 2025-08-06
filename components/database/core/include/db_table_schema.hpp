@@ -5,14 +5,13 @@
 #include <typeindex>
 #include <vector>
 #include <boost/unordered_map.hpp>
-#include "db_field_schema.hpp"
+#include "db_core_fwd.hpp"
 
 namespace demiplane::db {
     // Enhanced TableSchema with type-safe column access
     class TableSchema {
     public:
-        explicit TableSchema(const std::string_view table_name)
-            : table_name_(table_name) {}
+        explicit TableSchema(std::string_view table_name);
 
         // Enhanced builder pattern with type information
         template <typename T>
@@ -52,13 +51,6 @@ namespace demiplane::db {
         std::vector<std::unique_ptr<FieldSchema>> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
     };
-
-
-    // Shared pointer type for schemas
-    using TableSchemaPtr = std::shared_ptr<const TableSchema>;
-
-    template <typename TablePtr>
-    concept IsTableSchema = std::is_same_v<std::remove_cvref_t<TableSchemaPtr>, TablePtr>;
 } // namespace demiplane::db
 
 #include "../source/db_table_schema.inl"

@@ -3,9 +3,6 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <typename ElseExpr, typename... WhenClauses>
-    class CaseExprWithElse;
-
     template <typename ConditionExpr, typename ValueExpr>
     struct WhenClause {
         ConditionExpr condition;

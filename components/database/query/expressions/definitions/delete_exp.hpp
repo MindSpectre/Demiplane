@@ -6,9 +6,6 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsCondition Condition>
-    class DeleteWhereExpr;
-
     class DeleteExpr : public Expression<DeleteExpr> {
     public:
         explicit DeleteExpr(TableSchemaPtr t)
@@ -17,7 +14,10 @@ namespace demiplane::db {
         // WHERE clause
         template <IsCondition Condition>
         auto where(Condition cond) const {
-            return DeleteWhereExpr<Condition>{*this, std::move(cond)};
+            return DeleteWhereExpr < Condition >
+            {
+                *this, std::move(cond)
+            };
         }
 
         [[nodiscard]] const TableSchemaPtr& table() const {
@@ -27,6 +27,7 @@ namespace demiplane::db {
     private:
         TableSchemaPtr table_{nullptr};
     };
+
     inline auto delete_from(TableSchemaPtr table) {
         return DeleteExpr{std::move(table)};
     }

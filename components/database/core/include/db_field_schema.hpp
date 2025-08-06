@@ -6,14 +6,10 @@
 #include <typeindex>
 #include <typeinfo>
 #include <boost/container/flat_map.hpp>
+
+#include "db_core_fwd.hpp"
+
 namespace demiplane::db {
-    // Forward declarations
-    template <typename T>
-    class Column;
-
-    template <>
-    class Column<void>;
-
     // Enhanced FieldSchema with C++ type information
     struct FieldSchema {
         std::string name;

@@ -1,4 +1,7 @@
+#include <stdexcept>
+
 #include "db_field.hpp"
+#include "db_field_schema.hpp"
 
 namespace demiplane::db {
     Field::Field(const FieldSchema* schema)

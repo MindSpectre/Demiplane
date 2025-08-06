@@ -2,13 +2,9 @@
 
 #include <algorithm>
 
-#include "db_column.hpp"
-#include "db_record.hpp"
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsQuery Select>
-    class FromExpr;
 
     template <IsSelectExpression... Columns>
     class SelectExpr : public Expression<SelectExpr<Columns...>> {

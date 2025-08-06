@@ -16,6 +16,7 @@ add_library(${DMP_DATABASE}.Core STATIC
         core/source/db_table_schema.inl
         core/source/db_field.inl
         core/include/db_column.hpp
+        core/include/db_core_fwd.hpp
 )
 
 target_include_directories(${DMP_DATABASE}.Core PUBLIC

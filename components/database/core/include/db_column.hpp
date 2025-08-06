@@ -153,4 +153,14 @@ namespace demiplane::db {
     concept IsColumn = std::is_same_v<T, Column<void>> ||
                        std::is_same_v<T, AllColumns> ||
                        gears::is_specialization_of_v<Column, T>;
+
+    template <typename T>
+    concept IsTypedColumn = gears::is_specialization_of_v<Column, T> &&
+                            !std::is_same_v<T, Column<void>>;
+
+    template <typename T>
+    concept IsUntypedColumn = std::is_same_v<T, Column<void>>;
+
+    template <typename T>
+    concept IsAllColumns = std::is_same_v<T, AllColumns>;
 }

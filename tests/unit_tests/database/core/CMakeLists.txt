@@ -1,5 +1,5 @@
 # Database Core Unit Tests
-add_unit_test(Demiplane.Tests.Unit.Database.Core.FieldSchema
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.FieldSchema
         test_field_schema.cpp
         LINK_LIBS
         ${TEST_LIBS}
@@ -7,7 +7,7 @@ add_unit_test(Demiplane.Tests.Unit.Database.Core.FieldSchema
         Demiplane.Component.Database.Core
 )
 
-add_unit_test(Demiplane.Tests.Unit.Database.Core.TableSchema
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.TableSchema
         test_table_schema.cpp
         LINK_LIBS
         ${TEST_LIBS}
@@ -15,7 +15,7 @@ add_unit_test(Demiplane.Tests.Unit.Database.Core.TableSchema
         Demiplane.Component.Database.Core
 )
 
-add_unit_test(Demiplane.Tests.Unit.Database.Core.Column
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.Column
         test_column.cpp
         LINK_LIBS
         ${TEST_LIBS}
@@ -23,7 +23,7 @@ add_unit_test(Demiplane.Tests.Unit.Database.Core.Column
         Demiplane.Component.Database.Core
 )
 
-add_unit_test(Demiplane.Tests.Unit.Database.Core.Field
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.Field
         test_field.cpp
         LINK_LIBS
         ${TEST_LIBS}

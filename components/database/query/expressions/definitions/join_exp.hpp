@@ -3,12 +3,10 @@
 #include <algorithm>
 #include <utility>
 
-#include "db_table_schema.hpp"
 #include "../basic.hpp"
 
 namespace demiplane::db {
-
-    template <IsQuery Query, typename JoinedTable, IsCondition Condition>
+    template <IsQuery Query, IsTableSchema JoinedTable, IsCondition Condition>
     class JoinExpr : public Expression<JoinExpr<Query, JoinedTable, Condition>> {
     public:
         constexpr JoinExpr(Query q,
@@ -56,19 +54,19 @@ namespace demiplane::db {
         }
 
         // WHERE clause
-        template <typename WhereCondition>
+        template <IsCondition WhereCondition>
         constexpr auto where(WhereCondition cond) const {
             return WhereExpr<JoinExpr, WhereCondition>{*this, std::move(cond)};
         }
 
         // GROUP BY
-        template <typename... GroupColumns>
+        template <IsOrderBy... GroupColumns>
         constexpr auto group_by(GroupColumns... cols) const {
             return GroupByExpr<JoinExpr, GroupColumns...>{*this, cols...};
         }
 
         // ORDER BY
-        template <typename... Orders>
+        template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<JoinExpr, Orders...>{*this, orders...};
         }

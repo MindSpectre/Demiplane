@@ -37,13 +37,13 @@ namespace demiplane::db {
         }
 
         // Direct GROUP BY (no WHERE)
-        template <typename... GroupColumns>
+        template <IsColumn... GroupColumns>
         constexpr auto group_by(GroupColumns... cols) const {
             return GroupByExpr<FromExpr, GroupColumns...>{*this, cols...};
         }
 
         // Direct ORDER BY (no WHERE)
-        template <typename... Orders>
+        template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<FromExpr, Orders...>{*this, orders...};
         }

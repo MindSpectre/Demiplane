@@ -41,7 +41,7 @@ namespace demiplane::db {
         return OrderBy<T>{col, OrderDirection::DESC};
     }
 
-    template <IsQuery Query, IsOrderByExpression... Orders>
+    template <IsQuery Query, IsOrderBy... Orders>
     class OrderByExpr : public Expression<OrderByExpr<Query, Orders...>> {
     public:
         constexpr explicit OrderByExpr(Query q, Orders... o)
@@ -64,6 +64,7 @@ namespace demiplane::db {
         constexpr auto limit(std::size_t count, std::size_t offset) const {
             return LimitExpr<OrderByExpr>{*this, count, offset};
         }
+
     private:
         Query query_;
         std::tuple<Orders...> orders_;

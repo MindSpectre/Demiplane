@@ -2,11 +2,12 @@
 
 #include <algorithm>
 
+#include "db_column.hpp"
+#include "db_record.hpp"
+#include "db_table_schema.hpp"
 #include "../basic.hpp"
-
 namespace demiplane::db {
-
-    template <IsSelectExpression... Columns>
+    template <IsSelectable... Columns>
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
     public:
         constexpr explicit SelectExpr(Columns... cols)
@@ -46,12 +47,12 @@ namespace demiplane::db {
         bool distinct_{false};
     };
 
-    template <typename... Columns>
+    template <IsSelectable... Columns>
     constexpr auto select(Columns... columns) {
         return SelectExpr<Columns...>{columns...};
     }
 
-    template <typename... Columns>
+    template <IsSelectable... Columns>
     constexpr auto select_distinct(Columns... columns) {
         return SelectExpr<Columns...>{columns...}.set_distinct(true);
     }

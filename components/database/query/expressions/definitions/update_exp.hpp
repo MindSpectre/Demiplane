@@ -15,8 +15,8 @@ namespace demiplane::db {
             : table_(std::move(t)) {}
 
         // Set single column
-        UpdateExpr& set(const std::string& column, FieldValue value) {
-            assignments_.emplace_back(column, std::move(value));
+        UpdateExpr& set(std::string column, FieldValue value) {
+            assignments_.emplace_back(std::move(column), std::move(value));
             return *this;
         }
 

@@ -20,14 +20,14 @@ namespace demiplane::db {
             return alias_;
         }
         const Query& query() const {
-            return query;
+            return query_;
         }
     private:
         Query query_;
         std::optional<std::string> alias_;
     };
 
-    template <typename Q>
+    template <IsQuery Q>
     constexpr auto subquery(Q query) {
         return Subquery<Q>{std::move(query)};
     }

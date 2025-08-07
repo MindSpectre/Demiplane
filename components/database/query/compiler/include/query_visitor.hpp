@@ -115,7 +115,7 @@ namespace demiplane::db {
 
         template <typename T>
         void visit(const MaxExpr<T>& expr) {
-            visit_max_impl(expr.alias());
+            visit_max_impl();
             expr.column().accept(*this);
             visit_aggregate_end(expr.alias());
         }
@@ -263,6 +263,16 @@ namespace demiplane::db {
             visit_case_end();
         }
 
+        template <typename Query>
+        void visit(const CteExpr<Query>& expr) {
+            visit_cte_start(expr.recursive());
+            visit_cte_name_impl(expr.name());
+            visit_cte_as_start();
+            expr.query().accept(*this);
+            visit_cte_as_end();
+            visit_cte_end();
+        }
+
     protected:
         // Subclasses implement these
         virtual void visit_column_impl(const FieldSchema* schema,
@@ -296,6 +306,7 @@ namespace demiplane::db {
         virtual void visit_binary_op_impl(OpAnd) = 0;
         virtual void visit_binary_op_impl(OpOr) = 0;
         virtual void visit_binary_op_impl(OpLike) = 0;
+        virtual void visit_binary_op_impl(OpIn) = 0;
         virtual void visit_binary_op_impl(OpNotLike) = 0;
 
         // Unary operators
@@ -362,6 +373,13 @@ namespace demiplane::db {
         virtual void visit_when_end() = 0;
         virtual void visit_else_start() = 0;
         virtual void visit_else_end() = 0;
+
+        // CTE (Common Table Expression)
+        virtual void visit_cte_start(bool recursive) = 0;
+        virtual void visit_cte_name_impl(std::string_view name) = 0;
+        virtual void visit_cte_as_start() = 0;
+        virtual void visit_cte_as_end() = 0;
+        virtual void visit_cte_end() = 0;
 
         // Column separator
         virtual void visit_column_separator() = 0;

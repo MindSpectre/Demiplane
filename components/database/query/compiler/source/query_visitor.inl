@@ -1,4 +1,5 @@
 #pragma once
+
 namespace demiplane::db {
     template <typename T>
     void Column<T>::accept(QueryVisitor& visitor) const {

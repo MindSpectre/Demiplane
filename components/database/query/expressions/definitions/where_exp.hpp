@@ -23,13 +23,13 @@ namespace demiplane::db {
 
 
         // GROUP BY
-        template <typename... GroupColumns>
+        template <IsColumn... GroupColumns>
         constexpr auto group_by(GroupColumns... cols) const {
             return GroupByExpr<WhereExpr, GroupColumns...>{*this, cols...};
         }
 
         // ORDER BY
-        template <typename... Orders>
+        template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<WhereExpr, Orders...>{*this, orders...};
         }

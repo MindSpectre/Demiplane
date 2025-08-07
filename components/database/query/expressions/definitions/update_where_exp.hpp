@@ -4,7 +4,6 @@
 
 #include "../basic.hpp"
 namespace demiplane::db {
-    class UpdateExpr;
 
     template <IsCondition Condition>
     class UpdateWhereExpr : public Expression<UpdateWhereExpr<Condition>> {

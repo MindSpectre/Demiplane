@@ -3,7 +3,7 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <typename ConditionExpr, typename ValueExpr>
+    template <IsCondition ConditionExpr, typename ValueExpr>
     struct WhenClause {
         ConditionExpr condition;
         ValueExpr value;
@@ -13,7 +13,7 @@ namespace demiplane::db {
               value(std::move(val)) {}
     };
 
-    template <typename... WhenClauses>
+    template <IsWhenClause... WhenClauses>
     class CaseExpr : public Expression<CaseExpr<WhenClauses...>> {
     public:
         [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
@@ -48,7 +48,7 @@ namespace demiplane::db {
         std::tuple<WhenClauses...> when_clauses_;
     };
 
-    template <typename ElseExpr, typename... WhenClauses>
+    template <typename ElseExpr, IsWhenClause... WhenClauses>
     class CaseExprWithElse : public Expression<CaseExprWithElse<ElseExpr, WhenClauses...>> {
     public:
         [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
@@ -69,7 +69,7 @@ namespace demiplane::db {
     };
 
     // Factory function to create initial CASE expression
-    template <typename ConditionExpr, typename ValueExpr>
+    template <IsCondition ConditionExpr, typename ValueExpr>
     [[nodiscard]] constexpr auto case_when(ConditionExpr&& condition, ValueExpr&& value) {
         using WhenType = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
         return CaseExpr<WhenType>(WhenType(std::forward<ConditionExpr>(condition),

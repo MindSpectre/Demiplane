@@ -14,7 +14,7 @@ namespace demiplane::db {
               condition_(std::move(c)) {}
 
         // ORDER BY
-        template <typename... Orders>
+        template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<HavingExpr, Orders...>{*this, orders...};
         }

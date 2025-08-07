@@ -22,11 +22,11 @@ namespace demiplane::gears {
     template <template <class...> class Template, typename... Args>
     struct is_specialization_of<Template, Template<Args...>> : std::true_type {};
 
-    template <template <class...> class Template, typename... Args>
-    inline constexpr bool is_specialization_of_v = is_specialization_of<Template, Args...>::value;
+    template <template <class...> class BaseClass, typename... ClassWithTemplate>
+    inline constexpr bool is_specialization_of_v = is_specialization_of<BaseClass, ClassWithTemplate...>::value;
 
 
-    template < typename Derived, template <typename...> class BaseTemplate>
+    template <typename Derived, template <typename...> class BaseTemplate>
     struct derived_from_specialization_of {
     private:
         // Helper to detect convertibility to BaseTemplate<Args...>
@@ -44,7 +44,7 @@ namespace demiplane::gears {
     };
 
     // Concept for cleaner use
-    template < typename Derived,template <typename...> class BaseTemplate>
+    template <typename Derived, template <typename...> class BaseTemplate>
     inline constexpr bool derived_from_specialization_of_v = derived_from_specialization_of<
         Derived, BaseTemplate>::value;
 
@@ -82,7 +82,13 @@ namespace demiplane::gears {
     template <class... Ts, class Tuple>
     struct make_arg_tuple<type_list<Ts...>, Tuple> {
         static auto from(Tuple&& tup) {
-            return std::tuple<decltype(pick<Ts>(tup))...>(pick<Ts>(tup)...);
+            return std::tuple < decltype(pick<Ts>(tup))
+            ...
+            >
+            (pick<Ts>(tup)
+            ...
+            )
+            ;
         }
     };
 } // namespace demiplane::gears

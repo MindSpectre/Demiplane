@@ -118,6 +118,10 @@ namespace demiplane::db {
         sql_ << " NOT LIKE ";
     }
 
+    void SqlGeneratorVisitor::visit_binary_op_impl(OpIn) {
+        sql_ << " IN ";
+    }
+
     void SqlGeneratorVisitor::visit_unary_op_impl(OpNot) {
         sql_ << "NOT ";
     }
@@ -353,6 +357,29 @@ namespace demiplane::db {
                 sql_ << " EXCEPT ";
                 break;
         }
+    }
+
+    void SqlGeneratorVisitor::visit_cte_start(const bool recursive) {
+        sql_ << "WITH ";
+        if (recursive) {
+            sql_ << "RECURSIVE ";
+        }
+    }
+
+    void SqlGeneratorVisitor::visit_cte_name_impl(const std::string_view name) {
+        sql_ << dialect_->quote_identifier(std::string(name));
+    }
+
+    void SqlGeneratorVisitor::visit_cte_as_start() {
+        sql_ << " AS (";
+    }
+
+    void SqlGeneratorVisitor::visit_cte_as_end() {
+        sql_ << ")";
+    }
+
+    void SqlGeneratorVisitor::visit_cte_end() {
+        sql_ << " ";
     }
 
     void SqlGeneratorVisitor::visit_column_separator() {

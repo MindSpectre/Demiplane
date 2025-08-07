@@ -8,7 +8,7 @@ namespace demiplane::db {
     template <typename Left, typename Right>
     class SetOpExpr : public Expression<SetOpExpr<Left, Right>> {
     public:
-        SetOpExpr(Left l, Right r, SetOperation o)
+        SetOpExpr(Left l, Right r, const SetOperation o)
             : left_(std::move(l)),
               right_(std::move(r)),
               op_(o) {}

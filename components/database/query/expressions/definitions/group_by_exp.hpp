@@ -5,10 +5,10 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsQuery Query, typename... Columns>
-    class GroupByExpr : public Expression<GroupByExpr<Query, Columns...>> {
+    template <IsQuery Query, IsColumn... GroupColumns>
+    class GroupByExpr : public Expression<GroupByExpr<Query, GroupColumns...>> {
     public:
-        constexpr explicit GroupByExpr(Query q, Columns... cols)
+        constexpr explicit GroupByExpr(Query q, GroupColumns... cols)
             : query_(std::move(q)),
               columns_(cols...) {}
 
@@ -19,7 +19,7 @@ namespace demiplane::db {
         }
 
         // ORDER BY (skip HAVING)
-        template <typename... Orders>
+        template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<GroupByExpr, Orders...>{*this, orders...};
         }
@@ -32,11 +32,11 @@ namespace demiplane::db {
             return query_;
         }
 
-        [[nodiscard]] const std::tuple<Columns...>& columns() const {
+        [[nodiscard]] const std::tuple<GroupColumns...>& columns() const {
             return columns_;
         }
     private:
         Query query_;
-        std::tuple<Columns...> columns_;
+        std::tuple<GroupColumns...> columns_;
     };
 }

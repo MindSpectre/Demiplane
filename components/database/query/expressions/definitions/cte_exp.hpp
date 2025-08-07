@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+#include "../basic.hpp"
+
 namespace demiplane::db {
     template <IsQuery Query>
     class CteExpr : public Expression<CteExpr<Query>> {

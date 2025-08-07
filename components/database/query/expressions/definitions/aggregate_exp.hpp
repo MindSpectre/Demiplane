@@ -160,21 +160,21 @@ namespace demiplane::db {
 
     template <typename T>
     SumExpr<T> sum(const Column<T>& col) {
-        return SumExpr<T>{col, nullptr};
+        return SumExpr<T>{col, std::nullopt};
     }
 
     template <typename T>
     AvgExpr<T> avg(const Column<T>& col) {
-        return AvgExpr<T>{col, nullptr};
+        return AvgExpr<T>{col, std::nullopt};
     }
 
     template <typename T>
     MaxExpr<T> max(const Column<T>& col) {
-        return MaxExpr<T>{col, nullptr};
+        return MaxExpr<T>{col, std::nullopt};
     }
 
     template <typename T>
     MinExpr<T> min(const Column<T>& col) {
-        return MinExpr<T>{col, nullptr};
+        return MinExpr<T>{col, std::nullopt};
     }
 }

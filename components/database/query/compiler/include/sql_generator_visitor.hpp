@@ -72,6 +72,7 @@ namespace demiplane::db {
 
         void visit_binary_op_impl(OpNotLike) override;
 
+        void visit_binary_op_impl(OpIn) override;
         // Unary operators
         void visit_unary_op_impl(OpNot) override;
 
@@ -171,6 +172,17 @@ namespace demiplane::db {
         void visit_else_start() override;
 
         void visit_else_end() override;
+
+        // CTE (Common Table Expression)
+        void visit_cte_start(bool recursive) override;
+
+        void visit_cte_name_impl(std::string_view name) override;
+
+        void visit_cte_as_start() override;
+
+        void visit_cte_as_end() override;
+
+        void visit_cte_end() override;
 
         // Set operations
         void visit_set_op_impl(SetOperation op) override;

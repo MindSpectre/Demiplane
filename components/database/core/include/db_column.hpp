@@ -140,7 +140,6 @@ namespace demiplane::db {
     constexpr Column<T> col(const FieldSchema* schema, std::string table) {
         return Column<T>{schema, table};
     }
-
     constexpr AllColumns all(std::string table) {
         return AllColumns{std::move(table)};
     }

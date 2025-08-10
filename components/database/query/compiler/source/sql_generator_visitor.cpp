@@ -273,6 +273,8 @@ namespace demiplane::db {
         sql_ << ") VALUES ";
     }
 
+    void SqlGeneratorVisitor::visit_insert_columns(std::vector<std::string>&& columns) {}
+
     void SqlGeneratorVisitor::visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) {
         bool first_row = true;
         for (const auto& row : rows) {
@@ -288,6 +290,8 @@ namespace demiplane::db {
             sql_ << ")";
         }
     }
+
+    void SqlGeneratorVisitor::visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) {}
 
     void SqlGeneratorVisitor::visit_insert_end() {}
 
@@ -305,6 +309,8 @@ namespace demiplane::db {
             visit_literal_impl(val);
         }
     }
+
+    void SqlGeneratorVisitor::visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) {}
 
     void SqlGeneratorVisitor::visit_update_end() {}
 

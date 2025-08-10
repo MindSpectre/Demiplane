@@ -25,7 +25,7 @@ namespace demiplane::db {
         // GROUP BY
         template <IsColumn... GroupColumns>
         constexpr auto group_by(GroupColumns... cols) const {
-            return GroupByExpr<WhereExpr, GroupColumns...>{*this, cols...};
+            return GroupByColumnExpr<WhereExpr, GroupColumns...>{*this, cols...};
         }
 
         // ORDER BY

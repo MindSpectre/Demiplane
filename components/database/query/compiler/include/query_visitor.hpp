@@ -21,7 +21,8 @@ namespace demiplane::db {
 
         template <typename T>
         void visit(const Literal<T>& lit) {
-            visit_literal_impl(FieldValue(lit.value));
+            visit_literal_impl(FieldValue(lit.value()));
+            visit_alias_impl(lit.alias());
         }
 
         void visit(const NullLiteral& null) {
@@ -51,7 +52,8 @@ namespace demiplane::db {
         void visit(const UnaryExpr<O, Op>& expr) {
             visit_unary_expr_start();
             visit_unary_op_impl(Op{});
-            expr.operand().accept(*this);
+            visit(expr.operand());
+            // expr.operand().accept(*this);
             visit_unary_expr_end();
         }
 
@@ -142,12 +144,20 @@ namespace demiplane::db {
             visit_select_end();
         }
 
-        template <typename S>
-        void visit(const FromExpr<S>& expr) {
+        template <typename SelectQuery>
+        void visit(const FromTableExpr<SelectQuery>& expr) {
             expr.select().accept(*this);
             visit_from_start();
             visit_table_impl(expr.table());
             visit_alias_impl(expr.alias());
+            visit_from_end();
+        }
+
+        template <typename SelectQuery, typename FromAnotherQuery>
+        void visit(const FromQueryExpr<SelectQuery, FromAnotherQuery>& expr) {
+            expr.select().accept(*this);
+            visit_from_start();
+            visit(expr.query());
             visit_from_end();
         }
 
@@ -159,11 +169,19 @@ namespace demiplane::db {
             visit_where_end();
         }
 
-        template <typename Q, typename... C>
-        void visit(const GroupByExpr<Q, C...>& expr) {
+        template <typename PreGroupQuery, typename... Columns>
+        void visit(const GroupByColumnExpr<PreGroupQuery, Columns...>& expr) {
             expr.query().accept(*this);
             visit_group_by_start();
-            visit_tuple_elements(expr.columns(), std::index_sequence_for<C...>{});
+            visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
+            visit_group_by_end();
+        }
+
+        template <typename PreGroupQuery, typename Criteria>
+        void visit(const GroupByQueryExpr<PreGroupQuery, Criteria>& expr) {
+            expr.query().accept(*this);
+            visit_group_by_start();
+            visit(expr.criteria());
             visit_group_by_end();
         }
 
@@ -249,20 +267,33 @@ namespace demiplane::db {
         template <typename... WhenClauses>
         void visit(const CaseExpr<WhenClauses...>& expr) {
             visit_case_start();
-            visit_when_clauses(expr.when_clauses(), std::index_sequence_for<WhenClauses...>{});
+            // Visit each WHEN clause
+            std::apply([this](const auto&... when_clauses) {
+                (..., (visit_when_start(),
+                       when_clauses.condition.accept(*this),
+                       visit_when_then(),
+                       when_clauses.value.accept(*this),
+                       visit_when_end()));
+            }, expr.when_clauses());
             visit_case_end();
         }
 
         template <typename ElseExpr, typename... WhenClauses>
         void visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
             visit_case_start();
-            visit_when_clauses(expr.when_clauses(), std::index_sequence_for<WhenClauses...>{});
+            // Visit each WHEN clause
+            std::apply([this](const auto&... when_clauses) {
+                (..., (visit_when_start(),
+                       when_clauses.condition.accept(*this),
+                       visit_when_then(),
+                       when_clauses.value.accept(*this),
+                       visit_when_end()));
+            }, expr.when_clauses());
             visit_else_start();
             expr.else_clause().accept(*this);
             visit_else_end();
             visit_case_end();
         }
-
         template <typename Query>
         void visit(const CteExpr<Query>& expr) {
             visit_cte_start(expr.recursive());
@@ -353,11 +384,14 @@ namespace demiplane::db {
         // DML
         virtual void visit_insert_start() = 0;
         virtual void visit_insert_columns(const std::vector<std::string>& columns) = 0;
+        virtual void visit_insert_columns(std::vector<std::string>&& columns) = 0;
         virtual void visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) = 0;
+        virtual void visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) = 0;
         virtual void visit_insert_end() = 0;
 
         virtual void visit_update_start() = 0;
         virtual void visit_update_set(const std::vector<std::pair<std::string, FieldValue>>& assignments) = 0;
+        virtual void visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) = 0;
         virtual void visit_update_end() = 0;
 
         virtual void visit_delete_start() = 0;

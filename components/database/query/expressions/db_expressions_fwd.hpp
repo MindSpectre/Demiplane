@@ -16,50 +16,50 @@ namespace demiplane::db {
     template <typename T>
     concept IsQuery = requires {
         // Must inherit from Expression (CRTP pattern)
-        requires std::derived_from<T, Expression<T>>;
+        requires std::derived_from<std::remove_cvref_t<T>, Expression<std::remove_cvref_t<T>>>;
     };
 
     template <typename T>
-    struct Literal;
+    class Literal;
 
     template <typename T>
-    concept IsLiteral = gears::is_specialization_of_v<Literal, T>;
+    concept IsLiteral = gears::is_specialization_of_v<T, Literal>;
 
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr;
 
     template <typename T>
-    concept IsBinaryOperand = gears::derived_from_specialization_of_v<T, BinaryExpr>;
+    concept IsBinaryOperator = gears::is_specialization_of_v<T, BinaryExpr>;
 
     template <typename Operand, IsOperator Op>
     class UnaryExpr;
 
     template <typename T>
-    concept IsUnaryOperand = gears::derived_from_specialization_of_v<T, UnaryExpr>;
+    concept IsUnaryOperand = gears::is_specialization_of_v<T, UnaryExpr>;
 
 
     template <IsQuery Query>
     class ExistsExpr;
 
     template <typename T>
-    concept IsExistExpr = gears::derived_from_specialization_of_v<T, ExistsExpr>;
+    concept IsExistExpr = gears::is_specialization_of_v<T, ExistsExpr>;
 
     // Between expression concept
     template <typename Operand, typename Lower, typename Upper>
     class BetweenExpr;
 
     template <typename T>
-    concept IsBetweenExpr = gears::derived_from_specialization_of_v<T, BetweenExpr>;
+    concept IsBetweenExpr = gears::is_specialization_of_v<T, BetweenExpr>;
 
     // In list expression concept
     template <typename Operand, typename... Values>
     class InListExpr;
 
     template <typename T>
-    concept IsInListExpr = gears::derived_from_specialization_of_v<T, InListExpr>;
+    concept IsInListExpr = gears::is_specialization_of_v<T, InListExpr>;
 
     template <typename T>
-    concept IsCondition = IsBinaryOperand<T> ||
+    concept IsCondition = IsBinaryOperator<T> ||
                           IsUnaryOperand<T> ||
                           IsExistExpr<T> ||
                           IsInListExpr<T> ||
@@ -83,24 +83,24 @@ namespace demiplane::db {
 
 
     template <typename T>
-    concept IsAggregate = demiplane::gears::is_specialization_of_v<CountExpr, T> ||
-                          demiplane::gears::is_specialization_of_v<SumExpr, T> ||
-                          demiplane::gears::is_specialization_of_v<AvgExpr, T> ||
-                          demiplane::gears::is_specialization_of_v<MaxExpr, T> ||
-                          demiplane::gears::is_specialization_of_v<MinExpr, T>;
+    concept IsAggregate = demiplane::gears::is_specialization_of_v<T, CountExpr> ||
+                          demiplane::gears::is_specialization_of_v<T, SumExpr> ||
+                          demiplane::gears::is_specialization_of_v<T, AvgExpr> ||
+                          demiplane::gears::is_specialization_of_v<T, MaxExpr> ||
+                          demiplane::gears::is_specialization_of_v<T, MinExpr>;
 
     // OrderBy expression concept
     template <typename T>
     class OrderBy;
 
     template <typename T>
-    concept IsOrderBy = gears::is_specialization_of_v<OrderBy, T>;
+    concept IsOrderBy = gears::is_specialization_of_v<T, OrderBy>;
 
     template <IsCondition ConditionExpr, typename ValueExpr>
     struct WhenClause;
 
     template <typename T>
-    concept IsWhenClause = gears::is_specialization_of_v<WhenClause, T>;
+    concept IsWhenClause = gears::is_specialization_of_v<T, WhenClause>;
 
     // Case expression concepts
     template <IsWhenClause... WhenClauses>
@@ -110,8 +110,8 @@ namespace demiplane::db {
     class CaseExprWithElse;
 
     template <typename T>
-    concept IsCaseExpr = gears::derived_from_specialization_of_v<T, CaseExpr> ||
-                         gears::derived_from_specialization_of_v<T, CaseExprWithElse>;
+    concept IsCaseExpr = gears::is_specialization_of_v<T, CaseExpr> ||
+                         gears::is_specialization_of_v<T, CaseExprWithElse>;
 
     template <typename T>
     concept IsSelectable = IsColumn<T> || IsAggregate<T> || IsCaseExpr<T> || IsLiteral<T>;
@@ -129,7 +129,10 @@ namespace demiplane::db {
 
     // Group by expression concept
     template <IsQuery Query, IsColumn... GroupColumns>
-    class GroupByExpr;
+    class GroupByColumnExpr;
+
+    template <IsQuery PreGroupQuery, IsQuery GroupingCriteria>
+    class GroupByQueryExpr;
 
     // Having expression concept
     template <IsQuery Query, IsCondition Condition>
@@ -139,9 +142,12 @@ namespace demiplane::db {
     template <IsQuery Query, IsTableSchema JoinedTable, IsCondition Condition>
     class JoinExpr;
 
-    // From expression concept
     template <IsQuery Query>
-    class FromExpr;
+    class FromTableExpr;
+
+    // From expression concept
+    template <IsQuery Query, IsQuery FromAnotherQuery>
+    class FromQueryExpr;
 
     // CTE expression concept
     template <IsQuery Query>

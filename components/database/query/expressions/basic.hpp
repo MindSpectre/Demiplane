@@ -75,13 +75,29 @@ namespace demiplane::db {
     };
 
     template <typename T>
-    struct Literal {
-        T value;
+    class Literal {
+    public:
+        [[nodiscard]] const T& value() const {
+            return value_;
+        }
+
+        [[nodiscard]] const std::optional<std::string>& alias() const {
+            return alias_;
+        }
 
         constexpr explicit Literal(T v)
-            : value(std::move(v)) {}
+            : value_(std::move(v)) {}
+
+        Literal& as(std::optional<std::string> alias) {
+            alias_ = std::move(alias);
+            return *this;
+        }
 
         void accept(QueryVisitor& visitor) const;
+
+    private:
+        T value_;
+        std::optional<std::string> alias_;
     };
 
     template <typename T>

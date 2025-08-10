@@ -44,7 +44,17 @@ namespace demiplane::db {
         constexpr explicit CaseExpr(WhenClauses... clauses)
             : when_clauses_(clauses...) {}
 
+        CaseExpr& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
+            return *this;
+        }
+
+        [[nodiscard]] const std::optional<std::string>& alias() const {
+            return alias_;
+        }
+
     private:
+        std::optional<std::string> alias_;
         std::tuple<WhenClauses...> when_clauses_;
     };
 
@@ -63,7 +73,17 @@ namespace demiplane::db {
             : when_clauses_(when_clauses),
               else_clause_(std::move(else_expr)) {}
 
+        CaseExprWithElse& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
+            return *this;
+        }
+
+        [[nodiscard]] const std::optional<std::string>& alias() const {
+            return alias_;
+        }
+
     private:
+        std::optional<std::string> alias_;
         std::tuple<WhenClauses...> when_clauses_;
         ElseExpr else_clause_;
     };
@@ -76,27 +96,4 @@ namespace demiplane::db {
                                            std::forward<ValueExpr>(value)));
     }
 
-    // Visitor support for CASE expressions
-    template <typename Visitor>
-    void visit_case_expression(Visitor& visitor, const auto& case_expr) {
-        visitor.visit_case_start();
-
-        // Visit each WHEN clause
-        std::apply([&visitor](const auto&... when_clauses) {
-            (..., (visitor.visit_when_start(),
-                   when_clauses.condition.accept(visitor),
-                   visitor.visit_then(),
-                   when_clauses.value.accept(visitor),
-                   visitor.visit_when_end()));
-        }, case_expr.when_clauses());
-
-        // Visit ELSE clause if present
-        if constexpr (requires { case_expr.else_clause(); }) {
-            visitor.visit_else_start();
-            case_expr.else_clause().accept(visitor);
-            visitor.visit_else_end();
-        }
-
-        visitor.visit_case_end();
-    }
 }

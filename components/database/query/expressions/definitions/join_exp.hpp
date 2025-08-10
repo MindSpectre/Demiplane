@@ -62,7 +62,7 @@ namespace demiplane::db {
         // GROUP BY
         template <IsOrderBy... GroupColumns>
         constexpr auto group_by(GroupColumns... cols) const {
-            return GroupByExpr<JoinExpr, GroupColumns...>{*this, cols...};
+            return GroupByColumnExpr<JoinExpr, GroupColumns...>{*this, cols...};
         }
 
         // ORDER BY

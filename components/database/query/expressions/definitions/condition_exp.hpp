@@ -44,7 +44,7 @@ namespace demiplane::db {
     template <typename Operand, IsOperator Op>
     class UnaryExpr : public Expression<UnaryExpr<Operand, Op>> {
     public:
-        [[nodiscard]] const Operand& operand() {
+        [[nodiscard]] const Operand& operand() const {
             return operand_;
         }
 
@@ -61,12 +61,12 @@ namespace demiplane::db {
     }
 
     // Helper functions for special operators
-    template <IsBinaryOperand T>
+    template <typename T>
     constexpr auto is_null(T operand) {
         return UnaryExpr<T, OpIsNull>{std::move(operand)};
     }
 
-    template <IsBinaryOperand T>
+    template <typename T>
     constexpr auto is_not_null(T operand) {
         return UnaryExpr<T, OpIsNotNull>{std::move(operand)};
     }

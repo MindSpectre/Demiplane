@@ -144,14 +144,17 @@ namespace demiplane::db {
         void visit_insert_start() override;
 
         void visit_insert_columns(const std::vector<std::string>& columns) override;
+        void visit_insert_columns(std::vector<std::string>&& columns) override;
 
         void visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) override;
+        void visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) override;
 
         void visit_insert_end() override;
 
         void visit_update_start() override;
 
         void visit_update_set(const std::vector<std::pair<std::string, FieldValue>>& assignments) override;
+        void visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) override;
 
         void visit_update_end() override;
 

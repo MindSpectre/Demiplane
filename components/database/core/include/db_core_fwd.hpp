@@ -2,7 +2,6 @@
 
 #include <gears_templates.hpp>
 #include <memory>
-#include "db_field_value.hpp"
 
 namespace demiplane::db {
     class QueryVisitor;
@@ -16,7 +15,7 @@ namespace demiplane::db {
     class AllColumns;
 
     template <typename T>
-    concept IsTypedColumn = gears::is_specialization_of_v<Column, T> &&
+    concept IsTypedColumn = gears::is_specialization_of_v<T, Column> &&
                             !std::is_same_v<T, Column<void>>;
 
     template <typename T>

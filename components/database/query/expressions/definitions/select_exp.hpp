@@ -28,18 +28,23 @@ namespace demiplane::db {
 
         // FROM clause - always returns FromExpr with TableSchemaPtr
         [[nodiscard]] constexpr auto from(TableSchemaPtr table) const {
-            return FromExpr<SelectExpr>{*this, std::move(table)};
+            return FromTableExpr<SelectExpr>{*this, std::move(table)};
         }
 
         // FROM with Record
         [[nodiscard]] auto from(const Record& record) const {
-            return FromExpr<SelectExpr>{*this, record.schema_ptr()};
+            return FromTableExpr<SelectExpr>{*this, record.schema_ptr()};
         }
 
         // FROM with table name (creates temporary schema)
         [[nodiscard]] auto from(const std::string_view table_name) const {
             auto schema = std::make_shared<const TableSchema>(table_name);
-            return FromExpr<SelectExpr>{*this, std::move(schema)};
+            return FromTableExpr<SelectExpr>{*this, std::move(schema)};
+        }
+
+        template <IsQuery Query>
+        [[nodiscard]] auto from(Query&& query) const {
+            return FromQueryExpr<SelectExpr, Query>{*this, std::forward<Query>(query)};
         }
 
     private:

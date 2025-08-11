@@ -1,4 +1,7 @@
 #include "sql_generator_visitor.hpp"
+
+#include <iostream>
+
 #include "sql_dialect.hpp"
 
 namespace demiplane::db {
@@ -14,6 +17,12 @@ namespace demiplane::db {
         visit_alias_impl(alias);
     }
 
+    void SqlGeneratorVisitor::visit_column_impl(const FieldSchema* schema,
+                                                std::shared_ptr<std::string>&& table,
+                                                std::optional<std::string>&& alias) {
+        std::cout << "mv";
+    }
+
     void SqlGeneratorVisitor::visit_literal_impl(const FieldValue& value) {
         if (use_parameters_) {
             parameters_.push_back(value);
@@ -22,6 +31,10 @@ namespace demiplane::db {
         else {
             sql_ << dialect_->format_value(value);
         }
+    }
+
+    void SqlGeneratorVisitor::visit_literal_impl(FieldValue&& value) {
+        std::cout << "mv";
     }
 
     void SqlGeneratorVisitor::visit_null_impl() {
@@ -33,6 +46,10 @@ namespace demiplane::db {
         sql_ << "*";
     }
 
+    void SqlGeneratorVisitor::visit_all_columns_impl(std::shared_ptr<std::string>&& table) {
+        std::cout << "mv";
+    }
+
     void SqlGeneratorVisitor::visit_parameter_impl(const std::size_t index) {
         sql_ << dialect_->placeholder(index);
     }
@@ -41,16 +58,28 @@ namespace demiplane::db {
         sql_ << dialect_->quote_identifier(table->table_name());
     }
 
+    void SqlGeneratorVisitor::visit_table_impl(TableSchemaPtr&& table) {
+        std::cout << "mv";
+    }
+
     void SqlGeneratorVisitor::visit_table_spec_impl(const std::shared_ptr<std::string>& table) {
         if (table) {
             sql_ << dialect_->quote_identifier(*table) << ".";
         }
     }
 
+    void SqlGeneratorVisitor::visit_table_spec_impl(std::shared_ptr<std::string>&& table) {
+        std::cout << "mv";
+    }
+
     void SqlGeneratorVisitor::visit_alias_impl(const std::optional<std::string>& alias) {
         if (alias.has_value()) {
             sql_ << " AS " << dialect_->quote_identifier(alias.value());
         }
+    }
+
+    void SqlGeneratorVisitor::visit_alias_impl(std::optional<std::string>&& alias) {
+        std::cout << "mv";
     }
 
 
@@ -180,6 +209,10 @@ namespace demiplane::db {
         visit_alias_impl(alias);
     }
 
+    void SqlGeneratorVisitor::visit_aggregate_end(std::optional<std::string>&& alias) {
+        std::cout << "mv";
+    }
+
     void SqlGeneratorVisitor::visit_select_start(const bool distinct) {
         sql_ << "SELECT ";
         if (distinct) sql_ << "DISTINCT ";
@@ -291,7 +324,9 @@ namespace demiplane::db {
         }
     }
 
-    void SqlGeneratorVisitor::visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) {}
+    void SqlGeneratorVisitor::visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) {
+        std::cout << "mv";
+    }
 
     void SqlGeneratorVisitor::visit_insert_end() {}
 
@@ -310,7 +345,9 @@ namespace demiplane::db {
         }
     }
 
-    void SqlGeneratorVisitor::visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) {}
+    void SqlGeneratorVisitor::visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) {
+        std::cout << "mv";
+    }
 
     void SqlGeneratorVisitor::visit_update_end() {}
 

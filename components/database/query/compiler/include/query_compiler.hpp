@@ -15,13 +15,12 @@ namespace demiplane::db {
               use_parameters_(use_params) {}
 
         // Compile any expression to SQL
-        template <typename Expr>
-        CompiledQuery compile(const Expr& expr) {
+        template <IsQuery Expr>
+        CompiledQuery compile(Expr&& expr) {
             SqlGeneratorVisitor visitor(dialect_, use_parameters_);
-            expr.accept(visitor);
-            return {visitor.sql(), visitor.parameters()};
+            std::forward<Expr>(expr).accept(visitor);
+            return {std::move(visitor).sql(), std::move(visitor).parameters()};
         }
-
         // Get dialect for feature checking
         [[nodiscard]] const SqlDialect& dialect() const {
             return *dialect_;

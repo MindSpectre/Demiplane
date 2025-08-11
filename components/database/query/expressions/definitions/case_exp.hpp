@@ -14,7 +14,7 @@ namespace demiplane::db {
     };
 
     template <IsWhenClause... WhenClauses>
-    class CaseExpr : public Expression<CaseExpr<WhenClauses...>> {
+    class CaseExpr : public AliasableExpression<CaseExpr<WhenClauses...>> {
     public:
         [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
             return when_clauses_;
@@ -44,22 +44,12 @@ namespace demiplane::db {
         constexpr explicit CaseExpr(WhenClauses... clauses)
             : when_clauses_(clauses...) {}
 
-        CaseExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
-        }
-
-        [[nodiscard]] const std::optional<std::string>& alias() const {
-            return alias_;
-        }
-
     private:
-        std::optional<std::string> alias_;
         std::tuple<WhenClauses...> when_clauses_;
     };
 
     template <typename ElseExpr, IsWhenClause... WhenClauses>
-    class CaseExprWithElse : public Expression<CaseExprWithElse<ElseExpr, WhenClauses...>> {
+    class CaseExprWithElse : public AliasableExpression<CaseExprWithElse<ElseExpr, WhenClauses...>> {
     public:
         [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
             return when_clauses_;
@@ -73,17 +63,7 @@ namespace demiplane::db {
             : when_clauses_(when_clauses),
               else_clause_(std::move(else_expr)) {}
 
-        CaseExprWithElse& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
-        }
-
-        [[nodiscard]] const std::optional<std::string>& alias() const {
-            return alias_;
-        }
-
     private:
-        std::optional<std::string> alias_;
         std::tuple<WhenClauses...> when_clauses_;
         ElseExpr else_clause_;
     };

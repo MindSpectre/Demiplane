@@ -7,139 +7,86 @@
 
 namespace demiplane::db {
     template <typename T>
-    class CountExpr : public Expression<CountExpr<T>> {
+    class CountExpr : public AliasableExpression<CountExpr<T>> {
     public:
         explicit CountExpr(Column<T> col)
             : column_(std::move(col)) {}
 
-        CountExpr(Column<T> col, const bool dist, std::optional<std::string> alias = std::nullopt)
+        CountExpr(Column<T> col, const bool dist)
             : column_(std::move(col)),
-              distinct_(dist),
-              alias_(std::move(alias)) {}
+              distinct_(dist) {}
 
-        CountExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
-        }
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
+        template <typename Self>
+        [[nodiscard]] auto&& column(this Self&& self) {
+            return std::forward<Self>(self).column_;
         }
 
         [[nodiscard]] bool distinct() const {
             return distinct_;
         }
 
-        [[nodiscard]] const std::optional<std::string>& alias() const {
-            return alias_;
-        }
-
     private:
         Column<T> column_;
         bool distinct_{false};
-        std::optional<std::string> alias_;
     };
 
 
     template <typename T>
-    class SumExpr : public Expression<SumExpr<T>> {
+    class SumExpr : public AliasableExpression<SumExpr<T>> {
     public:
-        SumExpr(Column<T> column, std::optional<std::string> alias)
-            : column_{std::move(column)},
-              alias_{std::move(alias)} {}
+        SumExpr(Column<T> column)
+            : column_{std::move(column)} {}
 
-        SumExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
+        [[nodiscard]] const Column<T>& column() const {
+            return column_;
         }
+
+    private:
+        Column<T> column_;
+    };
+
+    template <typename T>
+    class AvgExpr : public AliasableExpression<AvgExpr<T>> {
+    public:
+        constexpr explicit AvgExpr(Column<T> column)
+            : column_{std::move(column)} {}
+
+        [[nodiscard]] const Column<T>& column() const {
+            return column_;
+        }
+
+    private:
+        Column<T> column_;
+    };
+
+    template <typename T>
+    class MaxExpr : public AliasableExpression<MaxExpr<T>> {
+    public:
+        constexpr explicit MaxExpr(Column<T> column)
+            : column_{std::move(column)} {}
 
 
         [[nodiscard]] const Column<T>& column() const {
             return column_;
         }
 
-        [[nodiscard]] std::optional<std::string> alias() const {
-            return alias_;
-        }
-
     private:
         Column<T> column_;
-        std::optional<std::string> alias_;
     };
 
     template <typename T>
-    class AvgExpr : public Expression<AvgExpr<T>> {
+    class MinExpr : public AliasableExpression<MinExpr<T>> {
     public:
-        AvgExpr(Column<T> column, std::optional<std::string> alias)
-            : column_{std::move(column)},
-              alias_{std::move(alias)} {}
+        constexpr explicit MinExpr(Column<T> column)
+            : column_{std::move(column)} {}
 
-        AvgExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
-        }
 
         [[nodiscard]] const Column<T>& column() const {
             return column_;
         }
 
-        [[nodiscard]] std::optional<std::string> alias() const {
-            return alias_;
-        }
-
     private:
         Column<T> column_;
-        std::optional<std::string> alias_;
-    };
-
-    template <typename T>
-    class MaxExpr : public Expression<MaxExpr<T>> {
-    public:
-        MaxExpr(Column<T> column, std::optional<std::string> alias)
-            : column_{std::move(column)},
-              alias_{std::move(alias)} {}
-
-        MaxExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
-        }
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
-        }
-
-        [[nodiscard]] std::optional<std::string> alias() const {
-            return alias_;
-        }
-
-    private:
-        Column<T> column_;
-        std::optional<std::string> alias_;
-    };
-
-    template <typename T>
-    class MinExpr : public Expression<MinExpr<T>> {
-    public:
-        MinExpr(Column<T> column, std::optional<std::string> alias)
-            : column_{std::move(column)},
-              alias_{std::move(alias)} {}
-
-        MinExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
-        }
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
-        }
-
-        [[nodiscard]] std::optional<std::string> alias() const {
-            return alias_;
-        }
-
-    private:
-        Column<T> column_;
-        std::optional<std::string> alias_;
     };
 
     // Aggregate function factories
@@ -160,21 +107,21 @@ namespace demiplane::db {
 
     template <typename T>
     SumExpr<T> sum(const Column<T>& col) {
-        return SumExpr<T>{col, std::nullopt};
+        return SumExpr<T>{col};
     }
 
     template <typename T>
     AvgExpr<T> avg(const Column<T>& col) {
-        return AvgExpr<T>{col, std::nullopt};
+        return AvgExpr<T>{col};
     }
 
     template <typename T>
     MaxExpr<T> max(const Column<T>& col) {
-        return MaxExpr<T>{col, std::nullopt};
+        return MaxExpr<T>{col};
     }
 
     template <typename T>
     MinExpr<T> min(const Column<T>& col) {
-        return MinExpr<T>{col, std::nullopt};
+        return MinExpr<T>{col};
     }
 }

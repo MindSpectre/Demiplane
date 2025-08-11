@@ -10,18 +10,35 @@ namespace demiplane::db {
     class Expression {
     public:
         using self_type = Derived;
+        void accept(this auto&& self, QueryVisitor& visitor);
 
-        [[nodiscard]] const Derived& self() const {
-            return static_cast<const Derived&>(*this);
+    protected:
+        auto&& self(this auto&& self) {
+            return static_cast<std::conditional_t<
+                std::is_const_v<std::remove_reference_t<decltype(self)>>,
+                const Derived,
+                Derived
+            >&&>(self);
         }
+    };
 
-        Derived& self() {
+    template <typename Derived>
+    class AliasableExpression : public Expression<Derived> {
+    public:
+        Derived& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
             return static_cast<Derived&>(*this);
         }
 
-        void accept(QueryVisitor& visitor) const;
-    };
+        template <typename Self>
+        [[nodiscard]] auto&& alias(this Self&& self) {
+            return std::forward<Self>(self).alias_;
+        }
 
+    protected:
+        std::optional<std::string> alias_;
+        constexpr AliasableExpression() = default;
+    };
 
     // Binary operators
     struct OpBase {};
@@ -77,12 +94,12 @@ namespace demiplane::db {
     template <typename T>
     class Literal {
     public:
-        [[nodiscard]] const T& value() const {
-            return value_;
+        auto&& value(this auto&& self) {
+            return std::forward<decltype(self)>(self).value_;
         }
 
-        [[nodiscard]] const std::optional<std::string>& alias() const {
-            return alias_;
+        auto&& alias(this auto&& self) {
+            return std::forward<decltype(self)>(self).alias_;
         }
 
         constexpr explicit Literal(T v)
@@ -93,7 +110,7 @@ namespace demiplane::db {
             return *this;
         }
 
-        void accept(QueryVisitor& visitor) const;
+        void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
         T value_;

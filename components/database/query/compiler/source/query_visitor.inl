@@ -2,22 +2,21 @@
 
 namespace demiplane::db {
     template <typename T>
-    void Column<T>::accept(QueryVisitor& visitor) const {
-        visitor.visit(*this);
+    void Column<T>::accept(this auto&& self, QueryVisitor& visitor) {
+        visitor.visit(std::forward<decltype(self)>(self));
     }
-
     // Same for Column<void> specialization
-    inline void Column<void>::accept(QueryVisitor& visitor) const {
-        visitor.visit(*this);
+    void Column<void>::accept(this auto&& self, QueryVisitor& visitor) {
+        visitor.visit(std::forward<decltype(self)>(self));
     }
 
     template <typename Derived>
-    void Expression<Derived>::accept(QueryVisitor& visitor) const {
-        visitor.visit(self());
+    void Expression<Derived>::accept(this auto&& self, QueryVisitor& visitor) {
+        visitor.visit(std::forward<decltype(self)>(self).self());
     }
 
     template <typename T>
-    void Literal<T>::accept(QueryVisitor& visitor) const {
-        visitor.visit(*this);
+    void Literal<T>::accept(this auto&& self, QueryVisitor& visitor) {
+        visitor.visit(std::forward<decltype(self)>(self));
     }
 }

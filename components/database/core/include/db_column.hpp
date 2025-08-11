@@ -55,7 +55,7 @@ namespace demiplane::db {
             return Column{schema_, table_, std::string{alias}};
         }
 
-        void accept(QueryVisitor& visitor) const;
+        void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
         const FieldSchema* schema_;
@@ -106,7 +106,7 @@ namespace demiplane::db {
             return schema_->name;
         }
 
-        void accept(QueryVisitor& visitor) const;
+        void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
         const FieldSchema* schema_;

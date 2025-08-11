@@ -51,7 +51,7 @@ TEST_F(InsertQueryTest, InsertWithTableNameExpression) {
     auto query = insert_into("users")
                  .into({"name", "age"})
                  .values({"Jane Doe", 30});
-    auto result = compiler->compile(query);
+    auto result = compiler->compile(std::move(query));
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
         std::cout << result.sql << std::endl;

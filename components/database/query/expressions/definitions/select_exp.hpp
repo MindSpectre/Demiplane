@@ -27,7 +27,7 @@ namespace demiplane::db {
         }
 
         // FROM clause - always returns FromExpr with TableSchemaPtr
-        [[nodiscard]] constexpr auto from(TableSchemaPtr table) const {
+        [[nodiscard]] auto from(TableSchemaPtr table) const {
             return FromTableExpr<SelectExpr>{*this, std::move(table)};
         }
 

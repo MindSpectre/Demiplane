@@ -9,7 +9,7 @@
 
 namespace demiplane::db {
     template <IsQuery Select>
-    class FromTableExpr : public Expression<FromTableExpr<Select>> {
+    class FromTableExpr : public AliasableExpression<FromTableExpr<Select>> {
     public:
         constexpr FromTableExpr(Select select_q, TableSchemaPtr table)
             : select_(std::move(select_q)),
@@ -21,16 +21,6 @@ namespace demiplane::db {
 
         [[nodiscard]] const TableSchemaPtr& table() const {
             return table_;
-        }
-
-        [[nodiscard]] const std::optional<std::string>& alias() const {
-            return alias_;
-        }
-
-        // Table alias
-        constexpr FromTableExpr& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return *this;
         }
 
         // WHERE clause
@@ -105,7 +95,6 @@ namespace demiplane::db {
     private:
         Select select_;
         TableSchemaPtr table_;
-        std::optional<std::string> alias_;
     };
 
     template <IsQuery Select, IsQuery FromAnotherQuery>
@@ -194,7 +183,6 @@ namespace demiplane::db {
 
     private:
         Select select_;
-
         FromAnotherQuery query_;
     };
 }

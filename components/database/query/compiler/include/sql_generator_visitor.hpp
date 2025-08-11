@@ -23,20 +23,27 @@ namespace demiplane::db {
         void visit_column_impl(const FieldSchema* schema,
                                const std::shared_ptr<std::string>& table,
                                const std::optional<std::string>& alias) override;
+        void visit_column_impl(const FieldSchema* schema,
+                               std::shared_ptr<std::string>&& table,
+                               std::optional<std::string>&& alias) override;
 
         void visit_literal_impl(const FieldValue& value) override;
-
+        void visit_literal_impl(FieldValue&& value) override;
         void visit_null_impl() override;
 
         void visit_all_columns_impl(const std::shared_ptr<std::string>& table) override;
+        void visit_all_columns_impl(std::shared_ptr<std::string>&& table) override;
 
         void visit_parameter_impl(std::size_t index) override;
 
         void visit_table_impl(const TableSchemaPtr& table) override;
+        void visit_table_impl(TableSchemaPtr&& table) override;
 
         void visit_table_spec_impl(const std::shared_ptr<std::string>& table) override;
+        void visit_table_spec_impl(std::shared_ptr<std::string>&& table) override;
 
         void visit_alias_impl(const std::optional<std::string>& alias) override;
+        void visit_alias_impl(std::optional<std::string>&& alias) override;
 
         // Expression helpers
         void visit_binary_expr_start() override;
@@ -103,7 +110,7 @@ namespace demiplane::db {
         void visit_min_impl() override;
 
         void visit_aggregate_end(const std::optional<std::string>& alias) override;
-
+        void visit_aggregate_end(std::optional<std::string>&& alias) override;
         // Query parts
         void visit_select_start(bool distinct) override;
 

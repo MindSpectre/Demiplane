@@ -15,14 +15,14 @@ namespace demiplane::db {
     class AllColumns;
 
     template <typename T>
-    concept IsTypedColumn = gears::is_specialization_of_v<T, Column> &&
-                            !std::is_same_v<T, Column<void>>;
+    concept IsTypedColumn = gears::is_specialization_of_v<std::remove_cvref_t<T>, Column> &&
+                            !std::is_same_v<std::remove_cvref_t<T>, Column<void>>;
 
     template <typename T>
-    concept IsUntypedColumn = std::is_same_v<T, Column<void>>;
+    concept IsUntypedColumn = std::is_same_v<std::remove_cvref_t<T>, Column<void>>;
 
     template <typename T>
-    concept IsAllColumns = std::is_same_v<T, AllColumns>;
+    concept IsAllColumns = std::is_same_v<std::remove_cvref_t<T>, AllColumns>;
 
     template <typename T>
     concept IsColumn = IsUntypedColumn<T> ||

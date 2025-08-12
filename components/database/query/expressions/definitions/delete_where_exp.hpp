@@ -13,12 +13,14 @@ namespace demiplane::db {
             : del_(std::move(d)),
               condition_(std::move(c)) {}
 
-        [[nodiscard]] const DeleteExpr& del() const {
-            return del_;
+        template <typename Self>
+        [[nodiscard]] auto&& del(this Self&& self) {
+            return std::forward<Self>(self).del_;
         }
 
-        [[nodiscard]] const Condition& condition() const {
-            return condition_;
+        template <typename Self>
+        [[nodiscard]] auto&& condition(this Self&& self) {
+            return std::forward<Self>(self).condition_;
         }
 
     private:

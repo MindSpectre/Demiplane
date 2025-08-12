@@ -13,23 +13,23 @@ namespace demiplane::db {
             : query_(std::move(q)),
               condition_(std::move(c)) {}
 
-        // ORDER BY
         template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<HavingExpr, Orders...>{*this, orders...};
         }
 
-        // LIMIT
         constexpr auto limit(std::size_t count) const {
             return LimitExpr<HavingExpr>{*this, count, 0};
         }
 
-        [[nodiscard]] const Query& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] const Condition& condition() const {
-            return condition_;
+        template <typename Self>
+        [[nodiscard]] auto&& condition(this Self&& self) {
+            return std::forward<Self>(self).condition_;
         }
 
     private:

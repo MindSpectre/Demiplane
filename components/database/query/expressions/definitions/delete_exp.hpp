@@ -11,7 +11,6 @@ namespace demiplane::db {
         explicit DeleteExpr(TableSchemaPtr t)
             : table_(std::move(t)) {}
 
-        // WHERE clause
         template <IsCondition Condition>
         auto where(Condition cond) const {
             return DeleteWhereExpr < Condition >
@@ -20,8 +19,9 @@ namespace demiplane::db {
             };
         }
 
-        [[nodiscard]] const TableSchemaPtr& table() const {
-            return table_;
+        template <typename Self>
+        [[nodiscard]] auto&& table(this Self&& self) {
+            return std::forward<Self>(self).table_;
         }
 
     private:

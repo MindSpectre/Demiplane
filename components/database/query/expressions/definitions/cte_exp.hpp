@@ -14,12 +14,14 @@ namespace demiplane::db {
               query_(std::move(q)),
               recursive_(r) {}
 
-        [[nodiscard]] const std::string& name() const {
-            return name_;
+        template <typename Self>
+        [[nodiscard]] auto&& name(this Self&& self) {
+            return std::forward<Self>(self).name_;
         }
 
-        [[nodiscard]] const Query& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
         [[nodiscard]] bool recursive() const {

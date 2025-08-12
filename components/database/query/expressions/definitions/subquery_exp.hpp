@@ -11,9 +11,11 @@ namespace demiplane::db {
         constexpr explicit Subquery(Query q)
             : query_(std::move(q)) {}
 
-        const Query& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
+
     private:
         Query query_;
     };

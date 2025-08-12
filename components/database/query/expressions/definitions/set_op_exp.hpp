@@ -13,12 +13,14 @@ namespace demiplane::db {
               right_(std::move(r)),
               op_(o) {}
 
-        [[nodiscard]] const Left& left() const {
-            return left_;
+        template <typename Self>
+        [[nodiscard]] auto&& left(this Self&& self) {
+            return std::forward<Self>(self).left_;
         }
 
-        [[nodiscard]] const Right& right() const {
-            return right_;
+        template <typename Self>
+        [[nodiscard]] auto&& right(this Self&& self) {
+            return std::forward<Self>(self).right_;
         }
 
         [[nodiscard]] SetOperation op() const {

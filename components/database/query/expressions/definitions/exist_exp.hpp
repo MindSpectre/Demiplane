@@ -11,8 +11,9 @@ namespace demiplane::db {
         constexpr explicit ExistsExpr(Query sq)
             : query_(std::move(sq)) {}
 
-        [[nodiscard]] const Query& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
     private:

@@ -20,7 +20,6 @@ namespace demiplane::db {
               type_(t),
               joined_alias_(std::move(alias)) {}
 
-        // Additional JOINs
         template <typename Cond>
         constexpr auto join(TableSchemaPtr right_table, JoinType join_type = JoinType::INNER) const {
             struct JoinBuilder {
@@ -53,47 +52,47 @@ namespace demiplane::db {
             return JoinBuilder{*this, std::move(right_table), join_type};
         }
 
-        // WHERE clause
         template <IsCondition WhereCondition>
         constexpr auto where(WhereCondition cond) const {
             return WhereExpr<JoinExpr, WhereCondition>{*this, std::move(cond)};
         }
 
-        // GROUP BY
         template <IsOrderBy... GroupColumns>
         constexpr auto group_by(GroupColumns... cols) const {
             return GroupByColumnExpr<JoinExpr, GroupColumns...>{*this, cols...};
         }
 
-        // ORDER BY
         template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<JoinExpr, Orders...>{*this, orders...};
         }
 
-        // LIMIT
         [[nodiscard]] constexpr auto limit(std::size_t count) const {
             return LimitExpr<JoinExpr>{*this, count, 0};
         }
 
-        [[nodiscard]] const Query& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] const JoinedTable& joined_table() const {
-            return joined_table_;
+        template <typename Self>
+        [[nodiscard]] auto&& joined_table(this Self&& self) {
+            return std::forward<Self>(self).joined_table_;
         }
 
-        [[nodiscard]] const Condition& on_condition() const {
-            return on_condition_;
+        template <typename Self>
+        [[nodiscard]] auto&& on_condition(this Self&& self) {
+            return std::forward<Self>(self).on_condition_;
         }
 
         [[nodiscard]] JoinType type() const {
             return type_;
         }
 
-        [[nodiscard]] const std::optional<std::string>& joined_alias() const {
-            return joined_alias_;
+        template <typename Self>
+        [[nodiscard]] auto&& joined_alias(this Self&& self) {
+            return std::forward<Self>(self).joined_alias_;
         }
 
     private:

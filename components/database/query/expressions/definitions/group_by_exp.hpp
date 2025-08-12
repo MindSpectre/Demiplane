@@ -12,30 +12,30 @@ namespace demiplane::db {
             : query_(std::move(q)),
               columns_(cols...) {}
 
-        // HAVING
         template <IsCondition Condition>
         constexpr auto having(Condition cond) const {
             return HavingExpr<GroupByColumnExpr, Condition>{*this, std::move(cond)};
         }
 
-        // ORDER BY (skip HAVING)
         template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<GroupByColumnExpr, Orders...>{*this, orders...};
         }
 
-        // LIMIT (skip HAVING)
         constexpr auto limit(std::size_t count) const {
             return LimitExpr<GroupByColumnExpr>{*this, count, 0};
         }
 
-        [[nodiscard]] const PreGroupQuery& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] const std::tuple<GroupColumns...>& columns() const {
-            return columns_;
+        template <typename Self>
+        [[nodiscard]] auto&& columns(this Self&& self) {
+            return std::forward<Self>(self).columns_;
         }
+
     private:
         PreGroupQuery query_;
         std::tuple<GroupColumns...> columns_;
@@ -48,29 +48,28 @@ namespace demiplane::db {
             : query_(std::move(q)),
               grouping_criteria_(std::forward<GroupingCriteria>(query)) {}
 
-        // HAVING
         template <IsCondition Condition>
         constexpr auto having(Condition cond) const {
             return HavingExpr<GroupByQueryExpr, Condition>{*this, std::move(cond)};
         }
 
-        // ORDER BY (skip HAVING)
         template <IsOrderBy... Orders>
         constexpr auto order_by(Orders... orders) const {
             return OrderByExpr<GroupByQueryExpr, Orders...>{*this, orders...};
         }
 
-        // LIMIT (skip HAVING)
         constexpr auto limit(std::size_t count) const {
             return LimitExpr<GroupByQueryExpr>{*this, count, 0};
         }
 
-        [[nodiscard]] const PreGroupQuery& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
-        const GroupingCriteria& criteria() const {
-            return grouping_criteria_;
+        template <typename Self>
+        [[nodiscard]] auto&& criteria(this Self&& self) {
+            return std::forward<Self>(self).grouping_criteria_;
         }
 
     private:

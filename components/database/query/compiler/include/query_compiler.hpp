@@ -19,6 +19,7 @@ namespace demiplane::db {
         CompiledQuery compile(Expr&& expr) {
             SqlGeneratorVisitor visitor(dialect_, use_parameters_);
             std::forward<Expr>(expr).accept(visitor);
+            std::cout << visitor.sql() << std::endl;
             return {std::move(visitor).sql(), std::move(visitor).parameters()};
         }
         // Get dialect for feature checking

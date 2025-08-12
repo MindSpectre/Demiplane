@@ -11,6 +11,7 @@ namespace demiplane::db {
 
         // Column and literals - using deducing this
         template <typename T, typename Self, IsColumn ColumnTRef>
+            requires std::same_as<std::remove_cvref_t<ColumnTRef>, Column<T>>
         void visit(this Self&& self, ColumnTRef&& col) {
             self.visit_column_impl(std::forward<ColumnTRef>(col).schema(),
                                    std::forward<ColumnTRef>(col).table(),
@@ -18,12 +19,14 @@ namespace demiplane::db {
         }
 
         template <typename T, typename Self, IsLiteral LiteralTRef>
+            requires std::same_as<std::remove_cvref_t<LiteralTRef>, Literal<T>>
         void visit(this Self&& self, LiteralTRef&& lit) {
             self.visit_literal_impl(FieldValue(std::forward<LiteralTRef>(lit).value()));
             self.visit_alias_impl(std::forward<LiteralTRef>(lit).alias());
         }
 
         template <typename Self, typename NullLiteralRef>
+            requires std::same_as<std::remove_cvref_t<NullLiteralRef>, NullLiteral>
         void visit(this Self&& self, NullLiteralRef&& null) {
             gears::unused_value(null);
             self.visit_null_impl();
@@ -32,11 +35,6 @@ namespace demiplane::db {
         template <typename Self, IsAllColumns AllColumnsRef>
         void visit(this Self&& self, AllColumns&& all) {
             self.visit_all_columns_impl(std::forward<AllColumnsRef>(all).table());
-        }
-
-        template <typename Self>
-        void visit(this Self&& self, Parameter&& param) {
-            self.visit_parameter_impl(std::forward<Parameter>(param).index);
         }
 
         // Expressions - using deducing this

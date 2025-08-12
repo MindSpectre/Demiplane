@@ -18,25 +18,23 @@ namespace demiplane::db {
             return *this;
         }
 
-        [[nodiscard]] const std::tuple<Columns...>& columns() const {
-            return columns_;
+        template <typename Self>
+        [[nodiscard]] auto&& columns(this Self&& self) {
+            return std::forward<Self>(self).columns_;
         }
 
         [[nodiscard]] bool distinct() const {
             return distinct_;
         }
 
-        // FROM clause - always returns FromExpr with TableSchemaPtr
         [[nodiscard]] auto from(TableSchemaPtr table) const {
             return FromTableExpr<SelectExpr>{*this, std::move(table)};
         }
 
-        // FROM with Record
         [[nodiscard]] auto from(const Record& record) const {
             return FromTableExpr<SelectExpr>{*this, record.schema_ptr()};
         }
 
-        // FROM with table name (creates temporary schema)
         [[nodiscard]] auto from(const std::string_view table_name) const {
             auto schema = std::make_shared<const TableSchema>(table_name);
             return FromTableExpr<SelectExpr>{*this, std::move(schema)};
@@ -62,7 +60,6 @@ namespace demiplane::db {
         return SelectExpr<Columns...>{columns...}.set_distinct(true);
     }
 
-    // Select from schema
     inline auto select_from_schema(TableSchemaPtr schema) {
         return SelectExpr{all(schema->table_name())}.from(std::move(schema));
     }

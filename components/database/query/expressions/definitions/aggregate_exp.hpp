@@ -34,7 +34,7 @@ namespace demiplane::db {
     template <typename T>
     class SumExpr : public AliasableExpression<SumExpr<T>> {
     public:
-        SumExpr(Column<T> column)
+        explicit SumExpr(Column<T> column)
             : column_{std::move(column)} {}
 
         [[nodiscard]] const Column<T>& column() const {

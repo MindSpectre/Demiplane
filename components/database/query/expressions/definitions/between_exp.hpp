@@ -13,16 +13,19 @@ namespace demiplane::db {
               lower_(std::move(l)),
               upper_(std::move(u)) {}
 
-        [[nodiscard]] const Operand& operand() const {
-            return operand_;
+        template <typename Self>
+        [[nodiscard]] auto&& operand(this Self&& self) {
+            return std::forward<Self>(self).operand_;
         }
 
-        [[nodiscard]] const Lower& lower() const {
-            return lower_;
+        template <typename Self>
+        [[nodiscard]] auto&& lower(this Self&& self) {
+            return std::forward<Self>(self).lower_;
         }
 
-        [[nodiscard]] const Upper& upper() const {
-            return upper_;
+        template <typename Self>
+        [[nodiscard]] auto&& upper(this Self&& self) {
+            return std::forward<Self>(self).upper_;
         }
 
     private:
@@ -30,6 +33,7 @@ namespace demiplane::db {
         Lower lower_;
         Upper upper_;
     };
+
     template <typename O, typename L, typename U>
     constexpr auto between(O operand, L lower, U upper) {
         return BetweenExpr<O, L, U>{std::move(operand), std::move(lower), std::move(upper)};

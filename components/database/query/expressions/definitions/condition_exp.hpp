@@ -28,12 +28,14 @@ namespace demiplane::db {
             : left_(std::move(l)),
               right_(std::move(r)) {}
 
-        [[nodiscard]] const Left& left() const {
-            return left_;
+        template <typename Self>
+        [[nodiscard]] auto&& left(this Self&& self) {
+            return std::forward<Self>(self).left_;
         }
 
-        [[nodiscard]] const Right& right() const {
-            return right_;
+        template <typename Self>
+        [[nodiscard]] auto&& right(this Self&& self) {
+            return std::forward<Self>(self).right_;
         }
 
     private:
@@ -44,12 +46,13 @@ namespace demiplane::db {
     template <typename Operand, IsOperator Op>
     class UnaryExpr : public Expression<UnaryExpr<Operand, Op>> {
     public:
-        [[nodiscard]] const Operand& operand() const {
-            return operand_;
-        }
-
         constexpr explicit UnaryExpr(Operand op)
             : operand_(std::move(op)) {}
+
+        template <typename Self>
+        [[nodiscard]] auto&& operand(this Self&& self) {
+            return std::forward<Self>(self).operand_;
+        }
 
     private:
         Operand operand_;
@@ -82,7 +85,7 @@ namespace demiplane::db {
         };
     }
 
-        template <typename L, typename R>
+    template <typename L, typename R>
     constexpr auto operator!=(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));

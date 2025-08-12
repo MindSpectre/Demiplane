@@ -1,10 +1,10 @@
 #pragma once
 
 #include <algorithm>
-
+#include "update_exp.hpp"
 #include "../basic.hpp"
-namespace demiplane::db {
 
+namespace demiplane::db {
     template <IsCondition Condition>
     class UpdateWhereExpr : public Expression<UpdateWhereExpr<Condition>> {
     public:
@@ -12,26 +12,19 @@ namespace demiplane::db {
             : update_(std::move(u)),
               condition_(std::move(c)) {}
 
-        [[nodiscard]] const UpdateExpr& update() const {
-            return update_;
+        template <typename Self>
+        [[nodiscard]] auto&& update(this Self&& self) {
+            return std::forward<Self>(self).update_;
         }
 
-        void set_update(UpdateExpr update) {
-            update_ = std::move(update);
-        }
 
-        [[nodiscard]] const Condition& condition() const {
-            return condition_;
-        }
-
-        void set_condition(Condition condition) {
-            condition_ = std::move(condition);
+        template <typename Self>
+        [[nodiscard]] auto&& condition(this Self&& self) {
+            return std::forward<Self>(self).condition_;
         }
 
     private:
         UpdateExpr update_;
         Condition condition_;
     };
-
-    // UPDATE builder function
 }

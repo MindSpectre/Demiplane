@@ -9,7 +9,6 @@ namespace demiplane::db {
         DESC
     };
 
-    // Order by expression
     template <typename T>
     class OrderBy {
     public:
@@ -17,8 +16,9 @@ namespace demiplane::db {
             : column_(col),
               direction_(dir) {}
 
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
+        template <typename Self>
+        [[nodiscard]] auto&& column(this Self&& self) {
+            return std::forward<Self>(self).column_;
         }
 
         [[nodiscard]] OrderDirection direction() const {
@@ -30,7 +30,6 @@ namespace demiplane::db {
         OrderDirection direction_;
     };
 
-    // Helper functions for ordering
     template <typename T>
     OrderBy<T> asc(const Column<T>& col) {
         return OrderBy<T>{col, OrderDirection::ASC};
@@ -48,15 +47,16 @@ namespace demiplane::db {
             : query_(std::move(q)),
               orders_(o...) {}
 
-        [[nodiscard]] const Query& query() const {
-            return query_;
+        template <typename Self>
+        [[nodiscard]] auto&& query(this Self&& self) {
+            return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] const std::tuple<Orders...>& orders() const {
-            return orders_;
+        template <typename Self>
+        [[nodiscard]] auto&& orders(this Self&& self) {
+            return std::forward<Self>(self).orders_;
         }
 
-        // LIMIT
         constexpr auto limit(std::size_t count) const {
             return LimitExpr<OrderByExpr>{*this, count, 0};
         }

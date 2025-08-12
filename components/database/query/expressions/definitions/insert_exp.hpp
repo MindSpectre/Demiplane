@@ -11,19 +11,16 @@ namespace demiplane::db {
         explicit InsertExpr(TableSchemaPtr t)
             : table_(std::move(t)) {}
 
-        // Set columns
         InsertExpr& into(std::initializer_list<std::string> cols) {
             columns_ = cols;
             return *this;
         }
 
-        // Add single value row
         InsertExpr& values(std::initializer_list<FieldValue> vals) {
             rows_.emplace_back(vals);
             return *this;
         }
 
-        // Add row from Record
         InsertExpr& values(const Record& record) {
             std::vector<FieldValue> row;
             row.reserve(columns_.size());
@@ -34,24 +31,27 @@ namespace demiplane::db {
             return *this;
         }
 
-        // Batch insert
         InsertExpr& batch(const std::vector<Record>& records) {
+            //TODO: move
             for (const auto& record : records) {
                 values(record);
             }
             return *this;
         }
 
-        [[nodiscard]] const TableSchemaPtr& table() const {
-            return table_;
+        template <typename Self>
+        [[nodiscard]] auto&& table(this Self&& self) {
+            return std::forward<Self>(self).table_;
         }
 
-        [[nodiscard]] const std::vector<std::string>& columns() const {
-            return columns_;
+        template <typename Self>
+        [[nodiscard]] auto&& columns(this Self&& self) {
+            return std::forward<Self>(self).columns_;
         }
 
-        [[nodiscard]] const std::vector<std::vector<FieldValue>>& rows() const {
-            return rows_;
+        template <typename Self>
+        [[nodiscard]] auto&& rows(this Self&& self) {
+            return std::forward<Self>(self).rows_;
         }
 
     private:

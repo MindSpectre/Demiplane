@@ -10,12 +10,14 @@ namespace demiplane::db {
         explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, bool use_params = true);
 
         // Get results
-        std::string sql() const {
-            return sql_.str();
+        template <typename Self>
+        [[nodiscard]] auto sql(this Self&& self) {
+            return std::forward<Self>(self).sql_.str();
         }
 
-        const std::vector<FieldValue>& parameters() const {
-            return parameters_;
+        template <typename Self>
+        [[nodiscard]] auto&& parameters(this Self&& self) {
+            return std::forward<Self>(self).parameters_;
         }
 
     protected:

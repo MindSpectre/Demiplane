@@ -12,12 +12,14 @@ namespace demiplane::db {
             : operand_(std::move(op)),
               values_(vals...) {}
 
-        [[nodiscard]] const Operand& operand() const {
-            return operand_;
+        template <typename Self>
+        [[nodiscard]] auto&& operand(this Self&& self) {
+            return std::forward<Self>(self).operand_;
         }
 
-        [[nodiscard]] const std::tuple<Values...>& values() const {
-            return values_;
+        template <typename Self>
+        [[nodiscard]] auto&& values(this Self&& self) {
+            return std::forward<Self>(self).values_;
         }
 
     private:

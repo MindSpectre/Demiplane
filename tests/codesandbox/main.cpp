@@ -60,7 +60,7 @@ void complete_usage_example() {
     // SELECT with JOIN
     auto query2 = select(user_name, post_title)
                   .from(users_schema)
-                  .join(posts_schema->table_name()).on(post_user_id == user_id);
+                  .join(posts_schema).on(post_user_id == user_id);
     // Aggregate query
     auto query3 = select(user_active, count(user_id).as("user_count"))
                   .from(users_schema)

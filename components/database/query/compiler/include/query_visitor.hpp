@@ -9,364 +9,579 @@ namespace demiplane::db {
     public:
         virtual ~QueryVisitor() = default;
 
-        // Column and literals - using deducing this
-        template <typename T, typename Self, IsColumn ColumnTRef>
-            requires std::same_as<std::remove_cvref_t<ColumnTRef>, Column<T>>
-        void visit(this Self&& self, ColumnTRef&& col) {
-            self.visit_column_impl(std::forward<ColumnTRef>(col).schema(),
-                                   std::forward<ColumnTRef>(col).table(),
-                                   std::forward<ColumnTRef>(col).alias());
+        // Column and literals - now with perfect forwarding
+
+        template <typename T>
+        void visit(const Column<T>& col) {
+            visit_column_impl(col.schema(), col.table(), col.alias());
         }
 
-        template <typename T, typename Self, IsLiteral LiteralTRef>
-            requires std::same_as<std::remove_cvref_t<LiteralTRef>, Literal<T>>
-        void visit(this Self&& self, LiteralTRef&& lit) {
-            self.visit_literal_impl(FieldValue(std::forward<LiteralTRef>(lit).value()));
-            self.visit_alias_impl(std::forward<LiteralTRef>(lit).alias());
+        void visit(const Column<void>& col) {
+            visit_column_impl(col.schema(), col.table(), col.alias());
         }
 
-        template <typename Self, typename NullLiteralRef>
-            requires std::same_as<std::remove_cvref_t<NullLiteralRef>, NullLiteral>
-        void visit(this Self&& self, NullLiteralRef&& null) {
+        template <typename T>
+        void visit(Literal<T>&& lit) {
+            visit_value_impl(FieldValue(std::move(lit).value()));
+            visit_alias_impl(std::move(lit).alias());
+        }
+
+        template <typename T>
+        void visit(const Literal<T>& lit) {
+            visit_value_impl(FieldValue(lit.value()));
+            visit_alias_impl(lit.alias());
+        }
+
+        void visit(const NullLiteral& null) {
             gears::unused_value(null);
-            self.visit_null_impl();
+            visit_null_impl();
         }
 
-        template <typename Self, IsAllColumns AllColumnsRef>
-        void visit(this Self&& self, AllColumns&& all) {
-            self.visit_all_columns_impl(std::forward<AllColumnsRef>(all).table());
+        void visit(const AllColumns& all) {
+            visit_all_columns_impl(all.table());
         }
 
-        // Expressions - using deducing this
-        template <typename L, typename R, IsOperator Op, IsBinaryOperator BinaryOperatorTRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<BinaryOperatorTRef>, BinaryExpr<L, R, Op>>
-        void visit(this Self&& self, BinaryOperatorTRef&& expr) {
-            self.visit_binary_expr_start();
-            std::forward<BinaryOperatorTRef>(expr).left().accept(self);
-            self.visit_binary_op_impl(Op{});
-            std::forward<BinaryOperatorTRef>(expr).right().accept(self);
-            self.visit_binary_expr_end();
+        // Expressions - perfect forwarding versions
+        template <typename L, typename R, IsOperator Op>
+        void visit(BinaryExpr<L, R, Op>&& expr) {
+            visit_binary_expr_start();
+            std::move(expr).left().accept(*this);
+            visit_binary_op_impl(Op{});
+            std::move(expr).right().accept(*this);
+            visit_binary_expr_end();
         }
 
-        template <typename O, IsOperator Op, IsUnaryOperator UnaryOperatorRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<UnaryOperatorRef>, UnaryExpr<O, Op>>
-        void visit(this Self&& self, UnaryOperatorRef&& expr) {
-            self.visit_unary_expr_start();
-            self.visit_unary_op_impl(Op{});
-            self.visit(std::forward<UnaryOperatorRef>(expr).operand());
-            self.visit_unary_expr_end();
+        template <typename L, typename R, IsOperator Op>
+        void visit(const BinaryExpr<L, R, Op>& expr) {
+            visit_binary_expr_start();
+            expr.left().accept(*this);
+            visit_binary_op_impl(Op{});
+            expr.right().accept(*this);
+            visit_binary_expr_end();
         }
 
-        template <typename O, typename L, typename U, IsBetweenExpr BetweenExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<BetweenExprRef>, BetweenExpr<O, L, U>>
-        void visit(this Self&& self, BetweenExprRef&& expr) {
-            std::forward<BetweenExprRef>(expr).operand().accept(self);
-            self.visit_between_impl();
-            std::forward<BetweenExprRef>(expr).lower().accept(self);
-            self.visit_and_impl();
-            std::forward<BetweenExprRef>(expr).upper().accept(self);
+        template <typename O, IsOperator Op>
+        void visit(UnaryExpr<O, Op>&& expr) {
+            visit_unary_expr_start();
+            visit_unary_op_impl(Op{});
+            visit(std::move(expr).operand());
+            visit_unary_expr_end();
         }
 
-        template <typename O, typename... Values, IsInListExpr InListExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<InListExprRef>, InListExpr<O, Values...>>
-        void visit(this Self&& self, InListExprRef&& expr) {
-            std::forward<InListExprRef>(expr).operand().accept(self);
-            self.visit_in_list_start();
-            self.visit_tuple_elements(std::forward<InListExprRef>(expr).values(),
-                                      std::index_sequence_for<Values...>{});
-            self.visit_in_list_end();
+        template <typename O, IsOperator Op>
+        void visit(const UnaryExpr<O, Op>& expr) {
+            visit_unary_expr_start();
+            visit_unary_op_impl(Op{});
+            visit(expr.operand());
+            visit_unary_expr_end();
         }
 
-        template <typename Q, IsSubquery SubqueryRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<SubqueryRef>, Subquery<Q>>
-        void visit(this Self&& self, SubqueryRef&& sq) {
-            self.visit_subquery_start();
-            std::forward<SubqueryRef>(sq).query().accept(self);
-            self.visit_subquery_end();
+        template <typename O, typename L, typename U>
+        void visit(BetweenExpr<O, L, U>&& expr) {
+            std::move(expr).operand().accept(*this);
+            visit_between_impl();
+            std::move(expr).lower().accept(*this);
+            visit_and_impl();
+            std::move(expr).upper().accept(*this);
+        }
+
+        template <typename O, typename L, typename U>
+        void visit(const BetweenExpr<O, L, U>& expr) {
+            expr.operand().accept(*this);
+            visit_between_impl();
+            expr.lower().accept(*this);
+            visit_and_impl();
+            expr.upper().accept(*this);
+        }
+
+        template <typename O, typename... Values>
+        void visit(InListExpr<O, Values...>&& expr) {
+            std::move(expr).operand().accept(*this);
+            visit_in_list_start();
+            visit_tuple_elements(std::move(expr).values(), std::index_sequence_for<Values...>{});
+            visit_in_list_end();
+        }
+
+        template <typename O, typename... Values>
+        void visit(const InListExpr<O, Values...>& expr) {
+            expr.operand().accept(*this);
+            visit_in_list_start();
+            visit_tuple_elements(expr.values(), std::index_sequence_for<Values...>{});
+            visit_in_list_end();
+        }
+
+        template <typename Q>
+        void visit(Subquery<Q>&& sq) {
+            visit_subquery_start();
+            std::move(sq).query().accept(*this);
+            visit_subquery_end();
             if (sq.alias()) {
-                self.visit_alias_impl(std::forward<SubqueryRef>(sq).alias());
+                visit_alias_impl(std::move(sq).alias());
             }
         }
 
-        template <typename Q, IsExistExpr ExistExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<ExistExprRef>, ExistsExpr<Q>>
-        void visit(this Self&& self, ExistExprRef&& expr) {
-            self.visit_exists_start();
-            std::forward<ExistExprRef>(expr).query().accept(self);
-            self.visit_exists_end();
+        template <typename Q>
+        void visit(const Subquery<Q>& sq) {
+            visit_subquery_start();
+            sq.query().accept(*this);
+            visit_subquery_end();
+            if (sq.alias()) {
+                visit_alias_impl(sq.alias());
+            }
         }
 
-        // Aggregate functions - using deducing this
-        template <typename T, IsCountExpr CountExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<CountExprRef>, CountExpr<T>>
-        void visit(this Self&& self, CountExprRef&& expr) {
-            self.visit_count_impl(expr.distinct());
+        template <typename Q>
+        void visit(ExistsExpr<Q>&& expr) {
+            visit_exists_start();
+            std::move(expr).query().accept(*this);
+            visit_exists_end();
+        }
+
+        template <typename Q>
+        void visit(const ExistsExpr<Q>& expr) {
+            visit_exists_start();
+            expr.query().accept(*this);
+            visit_exists_end();
+        }
+
+        // Aggregate functions - perfect forwarding
+        template <typename T>
+        void visit(CountExpr<T>&& expr) {
+            visit_count_impl(expr.distinct());
             if (expr.column().schema()) {
-                std::forward<CountExprRef>(expr).column().accept(self);
+                std::move(expr).column().accept(*this);
             }
-            self.visit_aggregate_end(std::forward<CountExprRef>(expr).alias());
+            visit_aggregate_end(std::move(expr).alias());
         }
 
-        template <typename T, IsSumExpr SumExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<SumExprRef>, SumExpr<T>>
-        void visit(this Self&& self, SumExprRef&& expr) {
-            self.visit_sum_impl();
-            std::forward<SumExprRef>(expr).column().accept(self);
-            self.visit_aggregate_end(std::forward<SumExprRef>(expr).alias());
+        template <typename T>
+        void visit(const CountExpr<T>& expr) {
+            visit_count_impl(expr.distinct());
+            if (expr.column().schema()) {
+                expr.column().accept(*this);
+            }
+            visit_aggregate_end(expr.alias());
         }
 
-        template <typename T, IsAvgExpr AvgExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<AvgExprRef>, AvgExpr<T>>
-        void visit(this Self&& self, AvgExprRef&& expr) {
-            self.visit_avg_impl();
-            std::forward<AvgExprRef>(expr).column().accept(self);
-            self.visit_aggregate_end(std::forward<AvgExprRef>(expr).alias());
+        template <typename T>
+        void visit(SumExpr<T>&& expr) {
+            visit_sum_impl();
+            std::move(expr).column().accept(*this);
+            visit_aggregate_end(std::move(expr).alias());
         }
 
-        template <typename T, IsMaxExpr MaxExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<MaxExprRef>, MaxExpr<T>>
-        void visit(this Self&& self, MaxExprRef&& expr) {
-            self.visit_max_impl();
-            std::forward<MaxExprRef>(expr).column().accept(self);
-            self.visit_aggregate_end(std::forward<MaxExprRef>(expr).alias());
+        template <typename T>
+        void visit(const SumExpr<T>& expr) {
+            visit_sum_impl();
+            expr.column().accept(*this);
+            visit_aggregate_end(expr.alias());
         }
 
-        template <typename T, IsMinExpr MinExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<MinExprRef>, MinExpr<T>>
-        void visit(this Self&& self, MinExprRef&& expr) {
-            self.visit_min_impl();
-            std::forward<MinExprRef>(expr).column().accept(self);
-            self.visit_aggregate_end(std::forward<MinExprRef>(expr).alias());
+        template <typename T>
+        void visit(AvgExpr<T>&& expr) {
+            visit_avg_impl();
+            std::move(expr).column().accept(*this);
+            visit_aggregate_end(std::move(expr).alias());
         }
 
-
-        template <typename T, IsOrderBy OrderByRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<OrderByRef>, OrderBy<T>>
-        void visit(this Self&& self, OrderByRef&& order) {
-            std::forward<OrderByRef>(order).column().accept(self);
-            self.visit_order_direction_impl(order.direction());
+        template <typename T>
+        void visit(const AvgExpr<T>& expr) {
+            visit_avg_impl();
+            expr.column().accept(*this);
+            visit_aggregate_end(expr.alias());
         }
 
-        // Query builders - using deducing this
-        template <typename... Columns, IsSelectExpr SelectExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<SelectExprRef>, SelectExpr<Columns...>>
-        void visit(this Self&& self, SelectExprRef&& expr) {
-            self.visit_select_start(expr.distinct());
-            self.visit_tuple_elements(std::forward<SelectExprRef>(expr).columns(),
-                                      std::index_sequence_for<Columns...>{});
-            self.visit_select_end();
+        template <typename T>
+        void visit(MaxExpr<T>&& expr) {
+            visit_max_impl();
+            std::move(expr).column().accept(*this);
+            visit_aggregate_end(std::move(expr).alias());
         }
 
-        template <typename SelectQuery, IsFromExpr FromTableExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<FromTableExprRef>, FromTableExpr<SelectQuery>>
-        void visit(this Self&& self, FromTableExprRef&& expr) {
-            std::forward<FromTableExprRef>(expr).select().accept(self);
-            self.visit_from_start();
-            self.visit_table_impl(std::forward<FromTableExprRef>(expr).table());
-            self.visit_alias_impl(std::forward<FromTableExprRef>(expr).alias());
-            self.visit_from_end();
+        template <typename T>
+        void visit(const MaxExpr<T>& expr) {
+            visit_max_impl();
+            expr.column().accept(*this);
+            visit_aggregate_end(expr.alias());
         }
 
-        template <typename SelectQuery, typename FromAnotherQuery, IsFromExpr FromQueryExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<FromQueryExprRef>, FromQueryExpr<SelectQuery, FromAnotherQuery>>
-        void visit(this Self&& self, FromQueryExprRef&& expr) {
-            std::forward<FromQueryExprRef>(expr).select().accept(self);
-            self.visit_from_start();
-            self.visit(std::forward<FromQueryExprRef>(expr).query());
-            self.visit_from_end();
+        template <typename T>
+        void visit(MinExpr<T>&& expr) {
+            visit_min_impl();
+            std::move(expr).column().accept(*this);
+            visit_aggregate_end(std::move(expr).alias());
         }
 
-        template <typename Q, typename C, IsWhereExpr WhereExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<WhereExprRef>, WhereExpr<Q, C>>
-        void visit(this Self&& self, WhereExprRef&& expr) {
-            std::forward<WhereExprRef>(expr).query().accept(self);
-            self.visit_where_start();
-            std::forward<WhereExprRef>(expr).condition().accept(self);
-            self.visit_where_end();
+        template <typename T>
+        void visit(const MinExpr<T>& expr) {
+            visit_min_impl();
+            expr.column().accept(*this);
+            visit_aggregate_end(expr.alias());
         }
 
-        template <typename PreGroupQuery, typename... Columns, IsGroupByExpr GroupByColumnExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<GroupByColumnExprRef>, GroupByColumnExpr<
-                                      PreGroupQuery, Columns...>>
-        void visit(this Self&& self, GroupByColumnExprRef&& expr) {
-            std::forward<GroupByColumnExprRef>(expr).query().accept(self);
-            self.visit_group_by_start();
-            self.visit_tuple_elements(std::forward<GroupByColumnExprRef>(expr).columns(),
-                                      std::index_sequence_for<Columns...>{});
-            self.visit_group_by_end();
+        // Order by - perfect forwarding
+        template <typename T>
+        void visit(OrderBy<T>&& order) {
+            std::move(order).column().accept(*this);
+            visit_order_direction_impl(order.direction());
         }
 
-        template <typename PreGroupQuery, typename Criteria, IsGroupByExpr GroupByQueryExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<GroupByQueryExprRef>, GroupByQueryExpr<PreGroupQuery, Criteria>>
-        void visit(this Self&& self, GroupByQueryExprRef&& expr) {
-            std::forward<GroupByQueryExprRef>(expr).query().accept(self);
-            self.visit_group_by_start();
-            self.visit(std::forward<GroupByQueryExprRef>(expr).criteria());
-            self.visit_group_by_end();
+        template <typename T>
+        void visit(const OrderBy<T>& order) {
+            order.column().accept(*this);
+            visit_order_direction_impl(order.direction());
         }
 
-        template <typename Q, typename C, IsHavingExpr HavingExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<HavingExprRef>, HavingExpr<Q, C>>
-        void visit(this Self&& self, HavingExprRef&& expr) {
-            std::forward<HavingExprRef>(expr).query().accept(self);
-            self.visit_having_start();
-            std::forward<HavingExprRef>(expr).condition().accept(self);
-            self.visit_having_end();
+        // Query builders - perfect forwarding
+        template <typename... Columns>
+        void visit(SelectExpr<Columns...>&& expr) {
+            visit_select_start(expr.distinct());
+            visit_tuple_elements(std::move(expr).columns(), std::index_sequence_for<Columns...>{});
+            visit_select_end();
         }
 
-        template <typename Q, typename... O, IsOrderByExpr OrderByExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<OrderByExprRef>, OrderByExpr<Q, O...>>
-        void visit(this Self&& self, OrderByExprRef&& expr) {
-            std::forward<OrderByExprRef>(expr).query().accept(self);
-            self.visit_order_by_start();
-            self.visit_tuple_elements(std::forward<OrderByExprRef>(expr).orders(),
-                                      std::index_sequence_for<O...>{});
-            self.visit_order_by_end();
+        template <typename... Columns>
+        void visit(const SelectExpr<Columns...>& expr) {
+            visit_select_start(expr.distinct());
+            visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
+            visit_select_end();
         }
 
-        template <typename Q, IsLimitExpr LimitExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<LimitExprRef>, LimitExpr<Q>>
-        void visit(this Self&& self, LimitExprRef&& expr) {
-            std::forward<LimitExprRef>(expr).query().accept(self);
-            self.visit_limit_impl(expr.count(), expr.offset());
+        template <typename SelectQuery>
+        void visit(FromTableExpr<SelectQuery>&& expr) {
+            std::move(expr).select().accept(*this);
+            visit_from_start();
+            visit_table_impl(std::move(expr).table());
+            visit_alias_impl(std::move(expr).alias());
+            visit_from_end();
         }
 
-        template <typename Q, typename J, typename C, IsJoinExpr JoinExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<JoinExprRef>, JoinExpr<Q, J, C>>
-        void visit(this Self&& self, JoinExprRef&& expr) {
-            std::forward<JoinExprRef>(expr).query().accept(self);
-            self.visit_join_start(expr.type());
-            self.visit_table_impl(std::forward<JoinExprRef>(expr).joined_table());
-            self.visit_alias_impl(std::forward<JoinExprRef>(expr).joined_alias());
-            self.visit_join_on();
-            std::forward<JoinExprRef>(expr).on_condition().accept(self);
-            self.visit_join_end();
+        template <typename SelectQuery>
+        void visit(const FromTableExpr<SelectQuery>& expr) {
+            expr.select().accept(*this);
+            visit_from_start();
+            visit_table_impl(expr.table());
+            visit_alias_impl(expr.alias());
+            visit_from_end();
         }
 
-        // DML operations - using deducing this
-        template <typename Self, IsInsertExpr InsertExprRef>
-            requires std::same_as<std::remove_cvref_t<InsertExprRef>, InsertExpr>
-        void visit(this Self&& self, InsertExprRef&& expr) {
-            self.visit_insert_start();
-            self.visit_table_impl(std::forward<InsertExprRef>(expr).table());
-            self.visit_insert_columns(std::forward<InsertExprRef>(expr).columns());
-            self.visit_insert_values(std::forward<InsertExprRef>(expr).rows());
-            self.visit_insert_end();
+        template <typename SelectQuery, typename FromAnotherQuery>
+        void visit(FromQueryExpr<SelectQuery, FromAnotherQuery>&& expr) {
+            std::move(expr).select().accept(*this);
+            visit_from_start();
+            visit(std::move(expr).query());
+            visit_from_end();
         }
 
-        template <typename Self, IsUpdateExpr UpdateExprRef>
-            requires std::same_as<std::remove_cvref_t<UpdateExprRef>, UpdateExpr>
-        void visit(this Self&& self, UpdateExprRef&& expr) {
-            self.visit_update_start();
-            self.visit_table_impl(std::forward<UpdateExprRef>(expr).table());
-            self.visit_update_set(std::forward<UpdateExprRef>(expr).assignments());
-            self.visit_update_end();
+        template <typename SelectQuery, typename FromAnotherQuery>
+        void visit(const FromQueryExpr<SelectQuery, FromAnotherQuery>& expr) {
+            expr.select().accept(*this);
+            visit_from_start();
+            visit(expr.query());
+            visit_from_end();
         }
 
-        template <typename C, IsUpdateExpr UpdateWhereExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<UpdateWhereExprRef>, UpdateWhereExpr<C>>
-        void visit(this Self&& self, UpdateWhereExprRef&& expr) {
-            std::forward<UpdateWhereExprRef>(expr).update().accept(self);
-            self.visit_where_start();
-            std::forward<UpdateWhereExprRef>(expr).condition().accept(self);
-            self.visit_where_end();
+        template <typename Q, typename C>
+        void visit(WhereExpr<Q, C>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_where_start();
+            std::move(expr).condition().accept(*this);
+            visit_where_end();
         }
 
-        template <typename Self, IsDeleteExpr DeleteExprRef>
-            requires std::same_as<std::remove_cvref_t<DeleteExprRef>, DeleteExpr>
-        void visit(this Self&& self, DeleteExprRef&& expr) {
-            self.visit_delete_start();
-            self.visit_table_impl(std::forward<DeleteExprRef>(expr).table());
-            self.visit_delete_end();
+        template <typename Q, typename C>
+        void visit(const WhereExpr<Q, C>& expr) {
+            expr.query().accept(*this);
+            visit_where_start();
+            expr.condition().accept(*this);
+            visit_where_end();
         }
 
-        template <typename C, IsDeleteExpr DeleteWhereExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<DeleteWhereExprRef>, DeleteWhereExpr<C>>
-        void visit(this Self&& self, DeleteWhereExprRef&& expr) {
-            std::forward<DeleteWhereExprRef>(expr).del().accept(self);
-            self.visit_where_start();
-            std::forward<DeleteWhereExprRef>(expr).condition().accept(self);
-            self.visit_where_end();
+        template <typename PreGroupQuery, typename... Columns>
+        void visit(GroupByColumnExpr<PreGroupQuery, Columns...>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_group_by_start();
+            visit_tuple_elements(std::move(expr).columns(), std::index_sequence_for<Columns...>{});
+            visit_group_by_end();
         }
 
-        // Set operations - using deducing this
-        template <typename L, typename R, IsSetOpExpr SetOpExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<SetOpExprRef>, SetOpExpr<L, R>>
-        void visit(this Self&& self, SetOpExprRef&& expr) {
-            std::forward<SetOpExprRef>(expr).left().accept(self);
-            self.visit_set_op_impl(expr.op());
-            std::forward<SetOpExprRef>(expr).right().accept(self);
+        template <typename PreGroupQuery, typename... Columns>
+        void visit(const GroupByColumnExpr<PreGroupQuery, Columns...>& expr) {
+            expr.query().accept(*this);
+            visit_group_by_start();
+            visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
+            visit_group_by_end();
         }
 
-        // Case expressions - using deducing this
-        template <typename... WhenClauses, IsCaseExpr CaseExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<CaseExprRef>, CaseExpr<WhenClauses...>>
-        void visit(this Self&& self, CaseExprRef&& expr) {
-            self.visit_case_start();
-            std::apply([&self](auto&&... when_clauses) {
-                (..., (self.visit_when_start(),
-                       std::forward<decltype(when_clauses)>(when_clauses).condition.accept(self),
-                       self.visit_when_then(),
-                       std::forward<decltype(when_clauses)>(when_clauses).value.accept(self),
-                       self.visit_when_end()));
-            }, std::forward<CaseExprRef>(expr).when_clauses());
-            self.visit_case_end();
+        template <typename PreGroupQuery, typename Criteria>
+        void visit(GroupByQueryExpr<PreGroupQuery, Criteria>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_group_by_start();
+            visit(std::move(expr).criteria());
+            visit_group_by_end();
         }
 
-        template <typename ElseExpr, typename... WhenClauses, IsCaseExpr CaseExprWithElseRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<CaseExprWithElseRef>, CaseExprWithElse<ElseExpr, WhenClauses...>>
-        void visit(this Self&& self, CaseExprWithElseRef&& expr) {
-            self.visit_case_start();
-            std::apply([&self](auto&&... when_clauses) {
-                (..., (self.visit_when_start(),
-                       std::forward<decltype(when_clauses)>(when_clauses).condition.accept(self),
-                       self.visit_when_then(),
-                       std::forward<decltype(when_clauses)>(when_clauses).value.accept(self),
-                       self.visit_when_end()));
-            }, std::forward<CaseExprWithElseRef>(expr).when_clauses());
-            self.visit_else_start();
-            std::forward<CaseExprWithElseRef>(expr).else_clause().accept(self);
-            self.visit_else_end();
-            self.visit_case_end();
+        template <typename PreGroupQuery, typename Criteria>
+        void visit(const GroupByQueryExpr<PreGroupQuery, Criteria>& expr) {
+            expr.query().accept(*this);
+            visit_group_by_start();
+            visit(expr.criteria());
+            visit_group_by_end();
         }
 
-        // CTE expressions - using deducing this
-        template <typename Query, IsCteExpr CteExprRef, typename Self>
-            requires std::same_as<std::remove_cvref_t<CteExprRef>, CteExpr<Query>>
-        void visit(this Self&& self, CteExprRef&& expr) {
-            self.visit_cte_start(expr.recursive());
-            self.visit_cte_name_impl(expr.name());
-            self.visit_cte_as_start();
-            std::forward<CteExprRef>(expr).query().accept(self);
-            self.visit_cte_as_end();
-            self.visit_cte_end();
+        template <typename Q, typename C>
+        void visit(HavingExpr<Q, C>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_having_start();
+            std::move(expr).condition().accept(*this);
+            visit_having_end();
+        }
+
+        template <typename Q, typename C>
+        void visit(const HavingExpr<Q, C>& expr) {
+            expr.query().accept(*this);
+            visit_having_start();
+            expr.condition().accept(*this);
+            visit_having_end();
+        }
+
+        template <typename Q, typename... O>
+        void visit(OrderByExpr<Q, O...>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_order_by_start();
+            visit_tuple_elements(std::move(expr).orders(), std::index_sequence_for<O...>{});
+            visit_order_by_end();
+        }
+
+        template <typename Q, typename... O>
+        void visit(const OrderByExpr<Q, O...>& expr) {
+            expr.query().accept(*this);
+            visit_order_by_start();
+            visit_tuple_elements(expr.orders(), std::index_sequence_for<O...>{});
+            visit_order_by_end();
+        }
+
+        template <typename Q>
+        void visit(LimitExpr<Q>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_limit_impl(expr.count(), expr.offset());
+        }
+
+        template <typename Q>
+        void visit(const LimitExpr<Q>& expr) {
+            expr.query().accept(*this);
+            visit_limit_impl(expr.count(), expr.offset());
+        }
+
+        template <typename Query, typename Condition>
+        void visit(JoinExpr<Query, Condition>&& expr) {
+            std::move(expr).query().accept(*this);
+            visit_join_start(expr.type());
+            visit_table_impl(std::move(expr).joined_table());
+            visit_alias_impl(std::move(expr).joined_alias());
+            visit_join_on();
+            std::move(expr).on_condition().accept(*this);
+            visit_join_end();
+        }
+
+        template <typename Query, typename Condition>
+        void visit(const JoinExpr<Query, Condition>& expr) {
+            expr.query().accept(*this);
+            visit_join_start(expr.type());
+            visit_table_impl(expr.joined_table());
+            visit_alias_impl(expr.joined_alias());
+            visit_join_on();
+            expr.on_condition().accept(*this);
+            visit_join_end();
+        }
+
+        // DML operations - perfect forwarding
+        void visit(InsertExpr&& expr) {
+            visit_insert_start();
+            visit_table_impl(std::move(expr).table());
+            visit_insert_columns(std::move(expr).columns());
+            visit_insert_values(std::move(expr).rows());
+            visit_insert_end();
+        }
+
+        void visit(const InsertExpr& expr) {
+            visit_insert_start();
+            visit_table_impl(expr.table());
+            visit_insert_columns(expr.columns());
+            visit_insert_values(expr.rows());
+            visit_insert_end();
+        }
+
+        void visit(UpdateExpr&& expr) {
+            visit_update_start();
+            visit_table_impl(std::move(expr).table());
+            visit_update_set(std::move(expr).assignments());
+            visit_update_end();
+        }
+
+        void visit(const UpdateExpr& expr) {
+            visit_update_start();
+            visit_table_impl(expr.table());
+            visit_update_set(expr.assignments());
+            visit_update_end();
+        }
+
+        template <typename C>
+        void visit(UpdateWhereExpr<C>&& expr) {
+            std::move(expr).update().accept(*this);
+            visit_where_start();
+            std::move(expr).condition().accept(*this);
+            visit_where_end();
+        }
+
+        template <typename C>
+        void visit(const UpdateWhereExpr<C>& expr) {
+            expr.update().accept(*this);
+            visit_where_start();
+            expr.condition().accept(*this);
+            visit_where_end();
+        }
+
+        void visit(DeleteExpr&& expr) {
+            visit_delete_start();
+            visit_table_impl(std::move(expr).table());
+            visit_delete_end();
+        }
+
+        void visit(const DeleteExpr& expr) {
+            visit_delete_start();
+            visit_table_impl(expr.table());
+            visit_delete_end();
+        }
+
+        template <typename C>
+        void visit(DeleteWhereExpr<C>&& expr) {
+            std::move(expr).del().accept(*this);
+            visit_where_start();
+            std::move(expr).condition().accept(*this);
+            visit_where_end();
+        }
+
+        template <typename C>
+        void visit(const DeleteWhereExpr<C>& expr) {
+            expr.del().accept(*this);
+            visit_where_start();
+            expr.condition().accept(*this);
+            visit_where_end();
+        }
+
+        // Set operations - perfect forwarding
+        template <typename L, typename R>
+        void visit(SetOpExpr<L, R>&& expr) {
+            std::move(expr).left().accept(*this);
+            visit_set_op_impl(expr.op());
+            std::move(expr).right().accept(*this);
+        }
+
+        template <typename L, typename R>
+        void visit(const SetOpExpr<L, R>& expr) {
+            expr.left().accept(*this);
+            visit_set_op_impl(expr.op());
+            expr.right().accept(*this);
+        }
+
+        // Case expressions - perfect forwarding
+        template <typename... WhenClauses>
+        void visit(CaseExpr<WhenClauses...>&& expr) {
+            visit_case_start();
+            std::apply([this](auto&&... when_clauses) {
+                (..., (visit_when_start(),
+                       std::forward<decltype(when_clauses)>(when_clauses).condition.accept(*this),
+                       visit_when_then(),
+                       std::forward<decltype(when_clauses)>(when_clauses).value.accept(*this),
+                       visit_when_end()));
+            }, std::move(expr).when_clauses());
+            visit_case_end();
+        }
+
+        template <typename... WhenClauses>
+        void visit(const CaseExpr<WhenClauses...>& expr) {
+            visit_case_start();
+            std::apply([this](const auto&... when_clauses) {
+                (..., (visit_when_start(),
+                       when_clauses.condition.accept(*this),
+                       visit_when_then(),
+                       when_clauses.value.accept(*this),
+                       visit_when_end()));
+            }, expr.when_clauses());
+            visit_case_end();
+        }
+
+        template <typename ElseExpr, typename... WhenClauses>
+        void visit(CaseExprWithElse<ElseExpr, WhenClauses...>&& expr) {
+            visit_case_start();
+            std::apply([this](auto&&... when_clauses) {
+                (..., (visit_when_start(),
+                       std::forward<decltype(when_clauses)>(when_clauses).condition.accept(*this),
+                       visit_when_then(),
+                       std::forward<decltype(when_clauses)>(when_clauses).value.accept(*this),
+                       visit_when_end()));
+            }, std::move(expr).when_clauses());
+            visit_else_start();
+            std::move(expr).else_clause().accept(*this);
+            visit_else_end();
+            visit_case_end();
+        }
+
+        template <typename ElseExpr, typename... WhenClauses>
+        void visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
+            visit_case_start();
+            std::apply([this](const auto&... when_clauses) {
+                (..., (visit_when_start(),
+                       when_clauses.condition.accept(*this),
+                       visit_when_then(),
+                       when_clauses.value.accept(*this),
+                       visit_when_end()));
+            }, expr.when_clauses());
+            visit_else_start();
+            expr.else_clause().accept(*this);
+            visit_else_end();
+            visit_case_end();
+        }
+
+        // CTE expressions - perfect forwarding
+        template <typename Query>
+        void visit(CteExpr<Query>&& expr) {
+            visit_cte_start(expr.recursive());
+            visit_cte_name_impl(expr.name());
+            visit_cte_as_start();
+            std::move(expr).query().accept(*this);
+            visit_cte_as_end();
+            visit_cte_end();
+        }
+
+        template <typename Query>
+        void visit(const CteExpr<Query>& expr) {
+            visit_cte_start(expr.recursive());
+            visit_cte_name_impl(expr.name());
+            visit_cte_as_start();
+            expr.query().accept(*this);
+            visit_cte_as_end();
+            visit_cte_end();
         }
 
     protected:
-        // Virtual interface methods
-        virtual void visit_column_impl(const FieldSchema* schema,
-                                       std::shared_ptr<std::string>&& table,
-                                       std::optional<std::string>&& alias) = 0;
+        // Virtual interface methods - now with move support for appropriate parameters
         virtual void visit_column_impl(const FieldSchema* schema,
                                        const std::shared_ptr<std::string>& table,
                                        const std::optional<std::string>& alias) = 0;
-        virtual void visit_literal_impl(const FieldValue& value) = 0;
-        virtual void visit_literal_impl(FieldValue&& value) = 0;
+        virtual void visit_value_impl(const FieldValue& value) = 0;
+        virtual void visit_value_impl(FieldValue&& value) = 0;
         virtual void visit_null_impl() = 0;
 
         virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
-        virtual void visit_all_columns_impl(std::shared_ptr<std::string>&& table) = 0;
-
-        virtual void visit_parameter_impl(std::size_t index) = 0;
 
         virtual void visit_table_impl(const TableSchemaPtr& table) = 0;
         virtual void visit_table_impl(TableSchemaPtr&& table) = 0;
-
-        virtual void visit_table_spec_impl(const std::shared_ptr<std::string>& table) = 0;
-        virtual void visit_table_spec_impl(std::shared_ptr<std::string>&& table) = 0;
+        virtual void visit_table_impl(std::string_view table_name) = 0;
+        virtual void visit_table_impl(const std::shared_ptr<std::string>& table) = 0;
 
         virtual void visit_alias_impl(const std::optional<std::string>& alias) = 0;
-        virtual void visit_alias_impl(std::optional<std::string>&& alias) = 0;
 
         // Expression helpers
         virtual void visit_binary_expr_start() {}
@@ -410,7 +625,7 @@ namespace demiplane::db {
         virtual void visit_max_impl() = 0;
         virtual void visit_min_impl() = 0;
         virtual void visit_aggregate_end(const std::optional<std::string>& alias) = 0;
-        virtual void visit_aggregate_end(std::optional<std::string>&& alias) = 0;
+
         // Query parts
         virtual void visit_select_start(bool distinct) = 0;
         virtual void visit_select_end() = 0;
@@ -432,7 +647,7 @@ namespace demiplane::db {
         virtual void visit_join_on() = 0;
         virtual void visit_join_end() = 0;
 
-        // DML
+        // DML - now with move support
         virtual void visit_insert_start() = 0;
         virtual void visit_insert_columns(const std::vector<std::string>& columns) = 0;
         virtual void visit_insert_columns(std::vector<std::string>&& columns) = 0;
@@ -472,40 +687,21 @@ namespace demiplane::db {
 
     private:
         // Helper to visit tuple elements with perfect forwarding
-        template <typename Tuple, std::size_t... Is, typename Self>
-        void visit_tuple_elements(this Self&& self, Tuple&& t, std::index_sequence<Is...>) {
+        template <typename Tuple, std::size_t... Is>
+        void visit_tuple_elements(Tuple&& t, std::index_sequence<Is...>) {
             bool first = true;
-            ((self.visit_tuple_element(std::get<Is>(std::forward<Tuple>(t)), first)), ...);
+            ((visit_tuple_element(std::get<Is>(std::forward<Tuple>(t)), first)), ...);
         }
 
-        template <typename T, typename Self>
-        void visit_tuple_element(this Self&& self, T&& elem, bool& first) {
+        template <typename T>
+        void visit_tuple_element(T&& elem, bool& first) {
             if (!first) {
-                self.visit_column_separator();
+                visit_column_separator();
             }
             first = false;
-            self.visit(std::forward<T>(elem));
+            visit(std::forward<T>(elem));
         }
     };
-
-    // Update accept methods in Expression classes to use deducing this
-    template <typename T>
-    void Column<T>::accept(this auto&& self, QueryVisitor& visitor) {
-        visitor.visit(std::forward<decltype(self)>(self));
-    }
-
-    // Specialization for Column<void>
-    void Column<void>::accept(this auto&& self, QueryVisitor& visitor) {
-        visitor.visit(std::forward<decltype(self)>(self));
-    }
-
-    template <typename Derived>
-    void Expression<Derived>::accept(this auto&& self, QueryVisitor& visitor) {
-        visitor.visit(std::forward<decltype(self)>(self).self());
-    }
-
-    template <typename T>
-    void Literal<T>::accept(this auto&& self, QueryVisitor& visitor) {
-        visitor.visit(std::forward<decltype(self)>(self));
-    }
 }
+
+#include "../source/query_visitor.inl"

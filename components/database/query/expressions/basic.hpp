@@ -1,9 +1,9 @@
 #pragma once
 
 #include <algorithm>
-#include <typeindex>
 
 #include "db_expressions_fwd.hpp"
+#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     template <class Derived>
@@ -20,24 +20,6 @@ namespace demiplane::db {
                 Derived
             >&&>(self);
         }
-    };
-
-    template <typename Derived>
-    class AliasableExpression : public Expression<Derived> {
-    public:
-        Derived& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return static_cast<Derived&>(*this);
-        }
-
-        template <typename Self>
-        [[nodiscard]] auto&& alias(this Self&& self) {
-            return std::forward<Self>(self).alias_;
-        }
-
-    protected:
-        std::optional<std::string> alias_;
-        constexpr AliasableExpression() = default;
     };
 
     // Binary operators
@@ -127,13 +109,206 @@ namespace demiplane::db {
 
     constexpr NullLiteral null_value{};
 
-    // Parameter placeholder for prepared statements
-    struct Parameter {
-        std::size_t index;
-        std::type_index type;
 
-        Parameter(const std::size_t idx, const std::type_index t)
-            : index(idx),
-              type(t) {}
+    template <typename Derived>
+    class AliasableExpression : public Expression<Derived> {
+    public:
+        Derived& as(std::optional<std::string> name) {
+            alias_ = std::move(name);
+            return static_cast<Derived&>(*this);
+        }
+
+        template <typename Self>
+        [[nodiscard]] auto&& alias(this Self&& self) {
+            return std::forward<Self>(self).alias_;
+        }
+
+    protected:
+        std::optional<std::string> alias_;
+        constexpr AliasableExpression() = default;
+    };
+
+    struct AllowWhere {};
+
+    struct AllowGroupBy {};
+
+    struct AllowHaving {};
+
+    struct AllowJoin {};
+
+    struct AllowOrderBy {};
+
+    struct AllowLimit {};
+
+    struct AllowDistinct {};
+
+    struct AllowUnion {};
+
+
+    template <typename Feature, typename... Features>
+    constexpr bool has_feature = (std::is_same_v<Feature, Features> || ...);
+
+    template <typename Parent>
+    class JoinBuilder {
+    public:
+        JoinBuilder(Parent parent, const TableSchemaPtr& right_table, JoinType type)
+            : parent_{std::move(parent)},
+              right_table_name_{right_table->table_name()},
+              type_{type} {}
+
+        JoinBuilder(Parent parent, std::string right_table, JoinType type)
+            : parent_{std::move(parent)},
+              right_table_name_{std::move(right_table)},
+              type_{type} {}
+
+        JoinBuilder(Parent parent, const std::string_view right_table, JoinType type)
+            : parent_{std::move(parent)},
+              right_table_name_{right_table},
+              type_{type} {}
+
+        JoinBuilder& as(std::optional<std::string> name) {
+            right_alias_ = std::move(name);
+            return *this;
+        }
+
+        template <IsCondition Condition>
+        auto on(Condition cond) && {
+            return JoinExpr<Parent, Condition>{
+                std::move(parent_),
+                std::move(right_table_name_),
+                std::move(cond),
+                type_,
+                right_alias_
+            };
+        }
+
+        template <IsCondition Condition>
+        auto on(Condition cond) const & {
+            return JoinExpr<Parent, Condition>{
+                parent_,
+                right_table_name_,
+                std::move(cond),
+                type_,
+                right_alias_
+            };
+        }
+
+    private:
+        Parent parent_;
+        std::string right_table_name_;
+        JoinType type_;
+        std::optional<std::string> right_alias_;
+    };
+
+    template <typename Derived, typename... AllowedFeatures>
+    class QueryOperations {
+    public:
+        // WHERE - only if AllowWhere is present
+        template <IsCondition Condition>
+        auto where(Condition cond) const &
+            requires (has_feature<AllowWhere, AllowedFeatures...>) {
+            return WhereExpr<Derived, Condition>{derived(), std::move(cond)};
+        }
+
+        template <IsCondition Condition>
+        auto where(Condition cond) &&
+            requires (has_feature<AllowWhere, AllowedFeatures...>) {
+            return WhereExpr<Derived, Condition>{std::move(derived()), std::move(cond)};
+        }
+
+        // GROUP BY - only if AllowGroupBy is present
+        template <IsColumn... GroupColumns>
+        auto group_by(GroupColumns... cols) const &
+            requires (has_feature<AllowGroupBy, AllowedFeatures...>) {
+            return GroupByColumnExpr<Derived, GroupColumns...>{derived(), cols...};
+        }
+
+        template <IsColumn... GroupColumns>
+        auto group_by(GroupColumns... cols) &&
+            requires (has_feature<AllowGroupBy, AllowedFeatures...>) {
+            return GroupByColumnExpr<Derived, GroupColumns...>{std::move(derived()), cols...};
+        }
+
+        template <IsQuery GroupingCriteria>
+        auto group_by(GroupingCriteria&& query) const &
+            requires (has_feature<AllowGroupBy, AllowedFeatures...>) {
+            return GroupByQueryExpr<Derived, GroupingCriteria>{
+                derived(),
+                std::forward<GroupingCriteria>(query)
+            };
+        }
+
+        template <IsQuery GroupingCriteria>
+        auto group_by(GroupingCriteria&& query) &&
+            requires (has_feature<AllowGroupBy, AllowedFeatures...>) {
+            return GroupByQueryExpr<Derived, GroupingCriteria>{
+                std::move(derived()),
+                std::forward<GroupingCriteria>(query)
+            };
+        }
+
+        // HAVING - only if AllowHaving is present
+        template <IsCondition Condition>
+        auto having(Condition cond) const &
+            requires (has_feature<AllowHaving, AllowedFeatures...>) {
+            return HavingExpr<Derived, Condition>{derived(), std::move(cond)};
+        }
+
+        template <IsCondition Condition>
+        auto having(Condition cond) &&
+            requires (has_feature<AllowHaving, AllowedFeatures...>) {
+            return HavingExpr<Derived, Condition>{std::move(derived()), std::move(cond)};
+        }
+
+        // JOIN - only if AllowJoin is present
+        template <typename JoinTable>
+        auto join(JoinTable&& table, JoinType type = JoinType::INNER) const &
+            requires (has_feature<AllowJoin, AllowedFeatures...>) {
+            return JoinBuilder<Derived>{derived(), std::forward<JoinTable>(table), type};
+        }
+
+        template <typename JoinTable>
+        auto join(JoinTable&& table, JoinType type = JoinType::INNER) &&
+            requires (has_feature<AllowJoin, AllowedFeatures...>) {
+            return JoinBuilder<Derived>{std::move(derived()), std::forward<JoinTable>(table), type};
+        }
+
+        // ORDER BY - only if AllowOrderBy is present
+        template <IsOrderBy... Orders>
+        auto order_by(Orders... orders) const &
+            requires (has_feature<AllowOrderBy, AllowedFeatures...>) {
+            return OrderByExpr<Derived, Orders...>{derived(), orders...};
+        }
+
+        template <IsOrderBy... Orders>
+        auto order_by(Orders... orders) &&
+            requires (has_feature<AllowOrderBy, AllowedFeatures...>) {
+            return OrderByExpr<Derived, Orders...>{std::move(derived()), orders...};
+        }
+
+        // LIMIT - only if AllowLimit is present
+        auto limit(std::size_t count) const &
+            requires (has_feature<AllowLimit, AllowedFeatures...>) {
+            return LimitExpr<Derived>{derived(), count, 0};
+        }
+
+        auto limit(std::size_t count) &&
+            requires (has_feature<AllowLimit, AllowedFeatures...>) {
+            return LimitExpr<Derived>{std::move(derived()), count, 0};
+        }
+
+    protected:
+        // Helper to get derived instance
+        const Derived& derived() const & {
+            return static_cast<const Derived&>(*this);
+        }
+
+        Derived&& derived() && {
+            return static_cast<Derived&&>(*this);
+        }
+
+        Derived& derived() & {
+            return static_cast<Derived&>(*this);
+        }
     };
 }

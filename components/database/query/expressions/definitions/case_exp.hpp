@@ -13,9 +13,16 @@ namespace demiplane::db {
               value(std::move(val)) {}
     };
 
-    template <IsWhenClause... WhenClauses>
-    class CaseExpr : public AliasableExpression<CaseExpr<WhenClauses...>> {
+    // Base class with common functionality
+    template <typename Derived, IsWhenClause... WhenClauses>
+    class CaseExprBase : public AliasableExpression<Derived> {
     public:
+        constexpr explicit CaseExprBase(std::tuple<WhenClauses...> clauses)
+            : when_clauses_(std::move(clauses)) {}
+
+        constexpr explicit CaseExprBase(WhenClauses... clauses)
+            : when_clauses_(clauses...) {}
+
         [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
             return when_clauses_;
         }
@@ -23,57 +30,74 @@ namespace demiplane::db {
         template <typename ConditionExpr, typename ValueExpr>
         [[nodiscard]] auto when(ConditionExpr&& condition, ValueExpr&& value) const {
             using NewWhenClause = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
-            return CaseExpr<WhenClauses..., NewWhenClause>(
-                std::tuple_cat(when_clauses_,
-                               std::make_tuple(NewWhenClause(std::forward<ConditionExpr>(condition),
-                                                             std::forward<ValueExpr>(value))))
+            return static_cast<const Derived&>(*this).add_when_clause(
+                NewWhenClause(std::forward<ConditionExpr>(condition),
+                              std::forward<ValueExpr>(value))
             );
         }
 
-        template <typename ElseExpr>
-        [[nodiscard]] auto else_(ElseExpr&& else_expr) const {
-            // Fixed: ElseExpr should be the template parameter, not in the variadic pack
-            return CaseExprWithElse<std::decay_t<ElseExpr>, WhenClauses...>(
-                when_clauses_, std::forward<ElseExpr>(else_expr)
-            );
-        }
-
-        constexpr explicit CaseExpr(std::tuple<WhenClauses...> clauses)
-            : when_clauses_(std::move(clauses)) {}
-
-        constexpr explicit CaseExpr(WhenClauses... clauses)
-            : when_clauses_(clauses...) {}
-
-    private:
+    protected:
         std::tuple<WhenClauses...> when_clauses_;
     };
 
-    template <typename ElseExpr, IsWhenClause... WhenClauses>
-    class CaseExprWithElse : public AliasableExpression<CaseExprWithElse<ElseExpr, WhenClauses...>> {
+    // Case expression without else clause
+    template <IsWhenClause... WhenClauses>
+    class CaseExpr : public CaseExprBase<CaseExpr<WhenClauses...>, WhenClauses...> {
+        using Base = CaseExprBase<CaseExpr<WhenClauses...>, WhenClauses...>;
+
     public:
-        [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
-            return when_clauses_;
+        using Base::Base; // Inherit constructors
+
+        template <typename ElseExpr>
+        [[nodiscard]] auto else_(ElseExpr&& else_expr) const {
+            return CaseExprWithElse<std::decay_t<ElseExpr>, WhenClauses...>(
+                this->when_clauses_, std::forward<ElseExpr>(else_expr)
+            );
         }
+
+        // Used by base class when() method
+        template <typename NewWhenClause>
+        [[nodiscard]] auto add_when_clause(NewWhenClause&& new_clause) const {
+            return CaseExpr<WhenClauses..., std::decay_t<NewWhenClause>>(
+                std::tuple_cat(this->when_clauses_, std::make_tuple(std::forward<NewWhenClause>(new_clause)))
+            );
+        }
+    };
+
+    // Case expression with else clause
+    template <typename ElseExpr, IsWhenClause... WhenClauses>
+    class CaseExprWithElse : public CaseExprBase<CaseExprWithElse<ElseExpr, WhenClauses...>, WhenClauses...> {
+        using Base = CaseExprBase<CaseExprWithElse<ElseExpr, WhenClauses...>, WhenClauses...>;
+
+    public:
+        constexpr CaseExprWithElse(const std::tuple<WhenClauses...>& when_clauses, ElseExpr else_expr)
+            : Base(when_clauses),
+              else_clause_(std::move(else_expr)) {}
 
         [[nodiscard]] const ElseExpr& else_clause() const {
             return else_clause_;
         }
 
-        constexpr CaseExprWithElse(const std::tuple<WhenClauses...>& when_clauses, ElseExpr else_expr)
-            : when_clauses_(when_clauses),
-              else_clause_(std::move(else_expr)) {}
+        // Used by base class when() method
+        template <typename NewWhenClause>
+        [[nodiscard]] auto add_when_clause(NewWhenClause&& new_clause) const {
+            return CaseExprWithElse<ElseExpr, WhenClauses..., std::decay_t<NewWhenClause>>(
+                std::tuple_cat(this->when_clauses_, std::make_tuple(std::forward<NewWhenClause>(new_clause))),
+                else_clause_
+            );
+        }
 
     private:
-        std::tuple<WhenClauses...> when_clauses_;
         ElseExpr else_clause_;
     };
 
-    // Factory function to create initial CASE expression
+    // Factory function
     template <IsCondition ConditionExpr, typename ValueExpr>
     [[nodiscard]] constexpr auto case_when(ConditionExpr&& condition, ValueExpr&& value) {
         using WhenType = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
-        return CaseExpr<WhenType>(WhenType(std::forward<ConditionExpr>(condition),
-                                           std::forward<ValueExpr>(value)));
+        return CaseExpr<WhenType>(
+            WhenType(std::forward<ConditionExpr>(condition), std::forward<ValueExpr>(value))
+        );
     }
 
 }

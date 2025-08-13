@@ -41,17 +41,17 @@ protected:
                        .add_field<std::string>("content", "TEXT");
 
         // Create column references
-        user_id = users_schema->column<int>("id");
-        user_name = users_schema->column<std::string>("name");
-        user_age = users_schema->column<int>("age");
+        user_id     = users_schema->column<int>("id");
+        user_name   = users_schema->column<std::string>("name");
+        user_age    = users_schema->column<int>("age");
         user_active = users_schema->column<bool>("active");
 
-        post_id = posts_schema->column<int>("id");
-        post_user_id = posts_schema->column<int>("user_id");
-        post_title = posts_schema->column<std::string>("title");
+        post_id        = posts_schema->column<int>("id");
+        post_user_id   = posts_schema->column<int>("user_id");
+        post_title     = posts_schema->column<std::string>("title");
         post_published = posts_schema->column<bool>("published");
 
-        comment_id = comments_schema->column<int>("id");
+        comment_id      = comments_schema->column<int>("id");
         comment_post_id = comments_schema->column<int>("post_id");
         comment_user_id = comments_schema->column<int>("user_id");
         comment_content = comments_schema->column<std::string>("content");
@@ -63,22 +63,22 @@ protected:
     std::shared_ptr<TableSchema> users_schema;
     std::shared_ptr<TableSchema> posts_schema;
     std::shared_ptr<TableSchema> comments_schema;
-    
+
     Column<int> user_id{nullptr, ""};
     Column<std::string> user_name{nullptr, ""};
     Column<int> user_age{nullptr, ""};
     Column<bool> user_active{nullptr, ""};
-    
+
     Column<int> post_id{nullptr, ""};
     Column<int> post_user_id{nullptr, ""};
     Column<std::string> post_title{nullptr, ""};
     Column<bool> post_published{nullptr, ""};
-    
+
     Column<int> comment_id{nullptr, ""};
     Column<int> comment_post_id{nullptr, ""};
     Column<int> comment_user_id{nullptr, ""};
     Column<std::string> comment_content{nullptr, ""};
-    
+
     std::unique_ptr<QueryCompiler> compiler;
 };
 
@@ -86,11 +86,11 @@ protected:
 TEST_F(JoinQueryTest, InnerJoinExpression) {
     auto query = select(user_name, post_title)
                  .from(users_schema)
-                 .join(posts_schema->table_name()).on(post_user_id == user_id);
+                 .join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -102,7 +102,7 @@ TEST_F(JoinQueryTest, LeftJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -114,7 +114,7 @@ TEST_F(JoinQueryTest, RightJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -126,7 +126,7 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -138,7 +138,7 @@ TEST_F(JoinQueryTest, CrossJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -150,7 +150,7 @@ TEST_F(JoinQueryTest, MultipleJoinsExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -163,7 +163,7 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -176,7 +176,7 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -188,7 +188,7 @@ TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 
@@ -201,6 +201,6 @@ TEST_F(JoinQueryTest, JoinWithOrderByExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }

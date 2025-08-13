@@ -5,6 +5,7 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
+    //TODO: maybe unite
     template <IsQuery PreGroupQuery, IsColumn... GroupColumns>
     class GroupByColumnExpr : public Expression<GroupByColumnExpr<PreGroupQuery, GroupColumns...>> {
     public:

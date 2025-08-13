@@ -13,9 +13,10 @@ namespace demiplane::db {
 
         template <IsCondition Condition>
         auto where(Condition cond) const {
-            return DeleteWhereExpr < Condition >
+            return DeleteWhereExpr<Condition>
             {
-                *this, std::move(cond)
+                *this,
+                std::move(cond)
             };
         }
 

@@ -165,7 +165,7 @@ namespace demiplane::db {
     concept IsHavingExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, HavingExpr>;
 
     // Join expression concept
-    template <IsQuery Query, IsTableSchema JoinedTable, IsCondition Condition>
+    template <IsQuery Query, IsCondition Condition>
     class JoinExpr;
 
     template <typename T>

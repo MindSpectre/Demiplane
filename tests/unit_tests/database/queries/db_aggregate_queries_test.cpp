@@ -49,7 +49,7 @@ protected:
 // Test basic aggregate expressions
 TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
     // COUNT
-    auto count_query = count(user_id);
+    auto count_query  = select(count(user_id)).from(users_schema);
     auto count_result = compiler->compile(count_query);
     EXPECT_FALSE(count_result.sql.empty());
     

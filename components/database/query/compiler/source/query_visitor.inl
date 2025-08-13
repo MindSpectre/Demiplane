@@ -5,7 +5,8 @@ namespace demiplane::db {
     void Column<T>::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }
-    // Same for Column<void> specialization
+
+    // Specialization for Column<void>
     void Column<void>::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }

@@ -6,88 +6,71 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <typename T>
-    class CountExpr : public AliasableExpression<CountExpr<T>> {
+    template <typename Derived, typename T>
+    class SingleColumnAggregateExpr : public AliasableExpression<Derived> {
     public:
-        explicit CountExpr(Column<T> col)
-            : column_(std::move(col)) {}
-
-        CountExpr(Column<T> col, const bool dist)
-            : column_(std::move(col)),
-              distinct_(dist) {}
+        explicit SingleColumnAggregateExpr(Column<T> column)
+            : column_{std::move(column)} {}
 
         template <typename Self>
         [[nodiscard]] auto&& column(this Self&& self) {
             return std::forward<Self>(self).column_;
         }
 
+    protected:
+        Column<T> column_;
+    };
+
+    // Count expression with optional distinct support
+    template <typename T>
+    class CountExpr : public SingleColumnAggregateExpr<CountExpr<T>, T> {
+        using Base = SingleColumnAggregateExpr<CountExpr<T>, T>;
+
+    public:
+        explicit CountExpr(Column<T> col)
+            : Base(std::move(col)) {}
+
+        CountExpr(Column<T> col, const bool dist)
+            : Base(std::move(col)),
+              distinct_(dist) {}
+
         [[nodiscard]] bool distinct() const {
             return distinct_;
         }
 
     private:
-        Column<T> column_;
         bool distinct_{false};
     };
 
-
+    // Simple aggregate expressions
     template <typename T>
-    class SumExpr : public AliasableExpression<SumExpr<T>> {
+    class SumExpr : public SingleColumnAggregateExpr<SumExpr<T>, T> {
     public:
         explicit SumExpr(Column<T> column)
-            : column_{std::move(column)} {}
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
-        }
-
-    private:
-        Column<T> column_;
+            : SingleColumnAggregateExpr<SumExpr<T>, T>(std::move(column)) {}
     };
 
     template <typename T>
-    class AvgExpr : public AliasableExpression<AvgExpr<T>> {
+    class AvgExpr : public SingleColumnAggregateExpr<AvgExpr<T>, T> {
     public:
         constexpr explicit AvgExpr(Column<T> column)
-            : column_{std::move(column)} {}
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
-        }
-
-    private:
-        Column<T> column_;
+            : SingleColumnAggregateExpr<AvgExpr<T>, T>(std::move(column)) {}
     };
 
     template <typename T>
-    class MaxExpr : public AliasableExpression<MaxExpr<T>> {
+    class MaxExpr : public SingleColumnAggregateExpr<MaxExpr<T>, T> {
     public:
         constexpr explicit MaxExpr(Column<T> column)
-            : column_{std::move(column)} {}
-
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
-        }
-
-    private:
-        Column<T> column_;
+            : SingleColumnAggregateExpr<MaxExpr<T>, T>(std::move(column)) {}
     };
 
     template <typename T>
-    class MinExpr : public AliasableExpression<MinExpr<T>> {
+    class MinExpr : public SingleColumnAggregateExpr<MinExpr<T>, T> {
     public:
         constexpr explicit MinExpr(Column<T> column)
-            : column_{std::move(column)} {}
-
-
-        [[nodiscard]] const Column<T>& column() const {
-            return column_;
-        }
-
-    private:
-        Column<T> column_;
+            : SingleColumnAggregateExpr<MinExpr<T>, T>(std::move(column)) {}
     };
+
 
     // Aggregate function factories
     template <typename T>
@@ -123,5 +106,36 @@ namespace demiplane::db {
     template <typename T>
     MinExpr<T> min(const Column<T>& col) {
         return MinExpr<T>{col};
+    }
+
+
+    template <typename T>
+    CountExpr<T> count(Column<T>&& col) {
+        return CountExpr<T>{std::move(col), false};
+    }
+
+    template <typename T>
+    CountExpr<T> count_distinct(Column<T>&& col) {
+        return CountExpr<T>{std::move(col), true};
+    }
+
+    template <typename T>
+    SumExpr<T> sum(Column<T>&& col) {
+        return SumExpr<T>{std::move(col)};
+    }
+
+    template <typename T>
+    AvgExpr<T> avg(Column<T>&& col) {
+        return AvgExpr<T>{std::move(col)};
+    }
+
+    template <typename T>
+    MaxExpr<T> max(Column<T>&& col) {
+        return MaxExpr<T>{std::move(col)};
+    }
+
+    template <typename T>
+    MinExpr<T> min(Column<T>&& col) {
+        return MinExpr<T>{std::move(col)};
     }
 }

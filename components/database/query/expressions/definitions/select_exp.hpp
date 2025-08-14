@@ -6,6 +6,7 @@
 #include "db_record.hpp"
 #include "db_table_schema.hpp"
 #include "../basic.hpp"
+
 namespace demiplane::db {
     template <IsSelectable... Columns>
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
@@ -31,18 +32,17 @@ namespace demiplane::db {
             return FromTableExpr<SelectExpr>{*this, std::move(table)};
         }
 
+        [[nodiscard]] auto from(std::string table_name) const {
+            return FromTableExpr<SelectExpr>{*this, TableSchema::make_ptr(std::move(table_name))};
+        }
+
         [[nodiscard]] auto from(const Record& record) const {
             return FromTableExpr<SelectExpr>{*this, record.schema_ptr()};
         }
 
-        [[nodiscard]] auto from(const std::string_view table_name) const {
-            auto schema = std::make_shared<const TableSchema>(table_name);
-            return FromTableExpr<SelectExpr>{*this, std::move(schema)};
-        }
-
-        template <IsQuery Query>
+        template <IsCteExpr Query>
         [[nodiscard]] auto from(Query&& query) const {
-            return FromQueryExpr<SelectExpr, Query>{*this, std::forward<Query>(query)};
+            return FromCteExpr<SelectExpr, Query>{*this, std::forward<Query>(query)};
         }
 
     private:

@@ -74,7 +74,6 @@ namespace demiplane::db {
     }
 
 
-
     void SqlGeneratorVisitor::visit_binary_expr_start() {
         sql_ << "(";
     }
@@ -427,7 +426,7 @@ namespace demiplane::db {
     }
 
     void SqlGeneratorVisitor::visit_cte_name_impl(const std::string_view name) {
-        sql_ << dialect_->quote_identifier(std::string(name));
+        sql_ << dialect_->quote_identifier(name);
     }
 
     void SqlGeneratorVisitor::visit_cte_as_start() {

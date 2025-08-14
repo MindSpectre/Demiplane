@@ -1,3 +1,4 @@
+
 // SQL clause tests (WHERE, FROM, GROUP BY, HAVING, ORDER BY, LIMIT)
 // Comprehensive tests for SQL clause expressions
 
@@ -10,14 +11,24 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for SQL clause operations
-class ClauseQueryTest : public ::testing::Test {
+class ClauseQueryTest : public ::testing::Test,
+                        public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -85,10 +96,8 @@ TEST_F(ClauseQueryTest, FromClauseExpression) {
     auto result2 = compiler->compile(query2);
     EXPECT_FALSE(result2.sql.empty());
 
-    #ifdef MANUAL_CHECK
-    std::cout << "FROM schema: " << result1.sql << std::endl;
-    std::cout << "FROM string: " << result2.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "FROM schema: " << result1.sql;
+    SCROLL_LOG_INF() << "FROM string: " << result2.sql;
 }
 
 // Test WHERE clause with various conditions
@@ -119,12 +128,10 @@ TEST_F(ClauseQueryTest, WhereClauseExpression) {
     auto result4 = compiler->compile(query4);
     EXPECT_FALSE(result4.sql.empty());
 
-    #ifdef MANUAL_CHECK
-    std::cout << "WHERE simple: " << result1.sql << std::endl;
-    std::cout << "WHERE complex: " << result2.sql << std::endl;
-    std::cout << "WHERE IN: " << result3.sql << std::endl;
-    std::cout << "WHERE BETWEEN: " << result4.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "WHERE simple: " << result1.sql;
+    SCROLL_LOG_INF() << "WHERE complex: " << result2.sql;
+    SCROLL_LOG_INF() << "WHERE IN: " << result3.sql;
+    SCROLL_LOG_INF() << "WHERE BETWEEN: " << result4.sql;
 }
 
 // Test GROUP BY clause
@@ -151,11 +158,9 @@ TEST_F(ClauseQueryTest, GroupByClauseExpression) {
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql.empty());
 
-    #ifdef MANUAL_CHECK
-    std::cout << "GROUP BY single: " << result1.sql << std::endl;
-    std::cout << "GROUP BY multiple: " << result2.sql << std::endl;
-    std::cout << "GROUP BY with WHERE: " << result3.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "GROUP BY single: " << result1.sql;
+    SCROLL_LOG_INF() << "GROUP BY multiple: " << result2.sql;
+    SCROLL_LOG_INF() << "GROUP BY with WHERE: " << result3.sql;
 }
 
 // Test HAVING clause
@@ -185,11 +190,9 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql.empty());
 
-    #ifdef MANUAL_CHECK
-    std::cout << "HAVING simple: " << result1.sql << std::endl;
-    std::cout << "HAVING multiple: " << result2.sql << std::endl;
-    std::cout << "HAVING with WHERE/GROUP BY: " << result3.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "HAVING simple: " << result1.sql;
+    SCROLL_LOG_INF() << "HAVING multiple: " << result2.sql;
+    SCROLL_LOG_INF() << "HAVING with WHERE/GROUP BY: " << result3.sql;
 }
 
 // Test ORDER BY clause
@@ -222,12 +225,10 @@ TEST_F(ClauseQueryTest, OrderByClauseExpression) {
     auto result4 = compiler->compile(query4);
     EXPECT_FALSE(result4.sql.empty());
 
-    #ifdef MANUAL_CHECK
-    std::cout << "ORDER BY ASC: " << result1.sql << std::endl;
-    std::cout << "ORDER BY DESC: " << result2.sql << std::endl;
-    std::cout << "ORDER BY multiple: " << result3.sql << std::endl;
-    std::cout << "ORDER BY expression: " << result4.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "ORDER BY ASC: " << result1.sql;
+    SCROLL_LOG_INF() << "ORDER BY DESC: " << result2.sql;
+    SCROLL_LOG_INF() << "ORDER BY multiple: " << result3.sql;
+    SCROLL_LOG_INF() << "ORDER BY expression: " << result4.sql;
 }
 
 // Test LIMIT clause
@@ -256,11 +257,9 @@ TEST_F(ClauseQueryTest, LimitClauseExpression) {
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql.empty());
 
-    #ifdef MANUAL_CHECK
-    std::cout << "LIMIT basic: " << result1.sql << std::endl;
-    std::cout << "LIMIT with ORDER BY: " << result2.sql << std::endl;
-    std::cout << "LIMIT with WHERE/ORDER BY: " << result3.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "LIMIT basic: " << result1.sql;
+    SCROLL_LOG_INF() << "LIMIT with ORDER BY: " << result2.sql;
+    SCROLL_LOG_INF() << "LIMIT with WHERE/ORDER BY: " << result3.sql;
 }
 
 // Test complex query with all clauses
@@ -278,9 +277,7 @@ TEST_F(ClauseQueryTest, ComplexQueryWithAllClausesExpression) {
 
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << "Complex query: " << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "Complex query: " << result.sql;
 }
 
 // Test clause combinations with JOINs
@@ -296,7 +293,5 @@ TEST_F(ClauseQueryTest, ClausesWithJoinsExpression) {
 
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << "Clauses with JOIN: " << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "Clauses with JOIN: " << result.sql;
 }

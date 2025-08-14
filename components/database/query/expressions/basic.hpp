@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <utility>
 
 #include "db_expressions_fwd.hpp"
 #include "db_table_schema.hpp"
@@ -80,8 +81,8 @@ namespace demiplane::db {
             return std::forward<decltype(self)>(self).value_;
         }
 
-        auto&& alias(this auto&& self) {
-            return std::forward<decltype(self)>(self).alias_;
+        [[nodiscard]] const std::optional<std::string>& alias() const {
+            return alias_;
         }
 
         constexpr explicit Literal(T v)
@@ -113,6 +114,9 @@ namespace demiplane::db {
     template <typename Derived>
     class AliasableExpression : public Expression<Derived> {
     public:
+        constexpr explicit AliasableExpression(std::optional<std::string> alias)
+            : alias_(std::move(alias)) {}
+
         Derived& as(std::optional<std::string> name) {
             alias_ = std::move(name);
             return static_cast<Derived&>(*this);
@@ -151,19 +155,9 @@ namespace demiplane::db {
     template <typename Parent>
     class JoinBuilder {
     public:
-        JoinBuilder(Parent parent, const TableSchemaPtr& right_table, JoinType type)
-            : parent_{std::move(parent)},
-              right_table_name_{right_table->table_name()},
-              type_{type} {}
-
-        JoinBuilder(Parent parent, std::string right_table, JoinType type)
+        JoinBuilder(Parent parent, TableSchemaPtr right_table, JoinType type)
             : parent_{std::move(parent)},
               right_table_name_{std::move(right_table)},
-              type_{type} {}
-
-        JoinBuilder(Parent parent, const std::string_view right_table, JoinType type)
-            : parent_{std::move(parent)},
-              right_table_name_{right_table},
               type_{type} {}
 
         JoinBuilder& as(std::optional<std::string> name) {
@@ -195,7 +189,7 @@ namespace demiplane::db {
 
     private:
         Parent parent_;
-        std::string right_table_name_;
+        TableSchemaPtr right_table_name_;
         JoinType type_;
         std::optional<std::string> right_alias_;
     };
@@ -261,16 +255,24 @@ namespace demiplane::db {
         }
 
         // JOIN - only if AllowJoin is present
-        template <typename JoinTable>
-        auto join(JoinTable&& table, JoinType type = JoinType::INNER) const &
+        auto join(std::string table, JoinType type = JoinType::INNER) const &
             requires (has_feature<AllowJoin, AllowedFeatures...>) {
-            return JoinBuilder<Derived>{derived(), std::forward<JoinTable>(table), type};
+            return JoinBuilder<Derived>{derived(), TableSchema::make_ptr(std::move(table)), type};
         }
 
-        template <typename JoinTable>
-        auto join(JoinTable&& table, JoinType type = JoinType::INNER) &&
+        auto join(TableSchemaPtr table, JoinType type = JoinType::INNER) const &
             requires (has_feature<AllowJoin, AllowedFeatures...>) {
-            return JoinBuilder<Derived>{std::move(derived()), std::forward<JoinTable>(table), type};
+            return JoinBuilder<Derived>{derived(), table, type};
+        }
+
+        auto join(std::string table, JoinType type = JoinType::INNER) &&
+            requires (has_feature<AllowJoin, AllowedFeatures...>) {
+            return JoinBuilder<Derived>{std::move(derived()), TableSchema::make_ptr(std::move(table)), type};
+        }
+
+        auto join(TableSchemaPtr table, JoinType type = JoinType::INNER) &&
+            requires (has_feature<AllowJoin, AllowedFeatures...>) {
+            return JoinBuilder<Derived>{std::move(derived()), std::move(table), type};
         }
 
         // ORDER BY - only if AllowOrderBy is present

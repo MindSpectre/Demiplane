@@ -1,3 +1,4 @@
+
 // UPDATE query expression tests
 // Comprehensive tests for update operations
 
@@ -10,14 +11,23 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
 
 // Test fixture for UPDATE operations
-class UpdateQueryTest : public ::testing::Test {
+class UpdateQueryTest : public ::testing::Test,
+                        public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -53,9 +63,7 @@ TEST_F(UpdateQueryTest, BasicUpdateExpression) {
                  .where(user_age < lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE with table name string
@@ -65,9 +73,7 @@ TEST_F(UpdateQueryTest, UpdateWithTableNameExpression) {
                  .where(user_id > lit(0));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE with multiple set operations
@@ -78,9 +84,7 @@ TEST_F(UpdateQueryTest, UpdateMultipleSetExpression) {
                  .where(user_age < lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE with initializer list set
@@ -90,9 +94,7 @@ TEST_F(UpdateQueryTest, UpdateInitializerListSetExpression) {
                  .where(user_age < lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE without WHERE clause
@@ -100,9 +102,7 @@ TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
     auto update_query = update(users_schema).set("active", true);
     auto result = compiler->compile(update_query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE WHERE expression
@@ -111,9 +111,7 @@ TEST_F(UpdateQueryTest, UpdateWhereExpression) {
     auto query = UpdateWhereExpr{update_query, user_age < lit(18)};
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE method chaining
@@ -126,9 +124,7 @@ TEST_F(UpdateQueryTest, UpdateMethodChainingExpression) {
     
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test UPDATE with various field value types
@@ -140,7 +136,5 @@ TEST_F(UpdateQueryTest, UpdateVariousValueTypesExpression) {
                  .where(user_id == lit(1));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }

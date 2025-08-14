@@ -22,13 +22,13 @@ namespace demiplane::db {
 
         template <typename T>
         void visit(Literal<T>&& lit) {
-            visit_value_impl(FieldValue(std::move(lit).value()));
+            visit_value_impl(FieldValue{std::move(lit).value()});
             visit_alias_impl(std::move(lit).alias());
         }
 
         template <typename T>
         void visit(const Literal<T>& lit) {
-            visit_value_impl(FieldValue(lit.value()));
+            visit_value_impl(FieldValue{lit.value()});
             visit_alias_impl(lit.alias());
         }
 
@@ -115,9 +115,7 @@ namespace demiplane::db {
             visit_subquery_start();
             std::move(sq).query().accept(*this);
             visit_subquery_end();
-            if (sq.alias()) {
-                visit_alias_impl(std::move(sq).alias());
-            }
+            visit_alias_impl(sq.alias());
         }
 
         template <typename Q>
@@ -125,9 +123,7 @@ namespace demiplane::db {
             visit_subquery_start();
             sq.query().accept(*this);
             visit_subquery_end();
-            if (sq.alias()) {
-                visit_alias_impl(sq.alias());
-            }
+            visit_alias_impl(sq.alias());
         }
 
         template <typename Q>
@@ -145,30 +141,18 @@ namespace demiplane::db {
         }
 
         // Aggregate functions - perfect forwarding
-        template <typename T>
-        void visit(CountExpr<T>&& expr) {
-            visit_count_impl(expr.distinct());
-            if (expr.column().schema()) {
-                std::move(expr).column().accept(*this);
-            }
-            visit_aggregate_end(std::move(expr).alias());
-        }
 
         template <typename T>
         void visit(const CountExpr<T>& expr) {
             visit_count_impl(expr.distinct());
-            if (expr.column().schema()) {
+            if (expr.is_all_columns()) {
+                expr.all_columns().accept(*this);
+            } else {
                 expr.column().accept(*this);
             }
             visit_aggregate_end(expr.alias());
         }
 
-        template <typename T>
-        void visit(SumExpr<T>&& expr) {
-            visit_sum_impl();
-            std::move(expr).column().accept(*this);
-            visit_aggregate_end(std::move(expr).alias());
-        }
 
         template <typename T>
         void visit(const SumExpr<T>& expr) {
@@ -177,12 +161,6 @@ namespace demiplane::db {
             visit_aggregate_end(expr.alias());
         }
 
-        template <typename T>
-        void visit(AvgExpr<T>&& expr) {
-            visit_avg_impl();
-            std::move(expr).column().accept(*this);
-            visit_aggregate_end(std::move(expr).alias());
-        }
 
         template <typename T>
         void visit(const AvgExpr<T>& expr) {
@@ -191,12 +169,6 @@ namespace demiplane::db {
             visit_aggregate_end(expr.alias());
         }
 
-        template <typename T>
-        void visit(MaxExpr<T>&& expr) {
-            visit_max_impl();
-            std::move(expr).column().accept(*this);
-            visit_aggregate_end(std::move(expr).alias());
-        }
 
         template <typename T>
         void visit(const MaxExpr<T>& expr) {
@@ -205,12 +177,6 @@ namespace demiplane::db {
             visit_aggregate_end(expr.alias());
         }
 
-        template <typename T>
-        void visit(MinExpr<T>&& expr) {
-            visit_min_impl();
-            std::move(expr).column().accept(*this);
-            visit_aggregate_end(std::move(expr).alias());
-        }
 
         template <typename T>
         void visit(const MinExpr<T>& expr) {
@@ -251,8 +217,8 @@ namespace demiplane::db {
         void visit(FromTableExpr<SelectQuery>&& expr) {
             std::move(expr).select().accept(*this);
             visit_from_start();
-            visit_table_impl(std::move(expr).table());
-            visit_alias_impl(std::move(expr).alias());
+            visit_table_impl(expr.table());
+            visit_alias_impl(expr.alias());
             visit_from_end();
         }
 
@@ -265,19 +231,21 @@ namespace demiplane::db {
             visit_from_end();
         }
 
-        template <typename SelectQuery, typename FromAnotherQuery>
-        void visit(FromQueryExpr<SelectQuery, FromAnotherQuery>&& expr) {
+        template <IsSelectExpr SelectQuery, IsCteExpr CteQuery>
+        void visit(FromCteExpr<SelectQuery, CteQuery>&& expr) {
+            visit(std::move(expr).cte_query());
             std::move(expr).select().accept(*this);
             visit_from_start();
-            visit(std::move(expr).query());
+            visit_table_impl(std::move(expr).cte_query().name());
             visit_from_end();
         }
 
-        template <typename SelectQuery, typename FromAnotherQuery>
-        void visit(const FromQueryExpr<SelectQuery, FromAnotherQuery>& expr) {
+        template <IsSelectExpr SelectQuery, IsCteExpr CteQuery>
+        void visit(const FromCteExpr<SelectQuery, CteQuery>& expr) {
+            visit(expr.cte_query());
             expr.select().accept(*this);
             visit_from_start();
-            visit(expr.query());
+            visit_table_impl(std::move(expr).cte_query().name());
             visit_from_end();
         }
 
@@ -378,7 +346,7 @@ namespace demiplane::db {
             std::move(expr).query().accept(*this);
             visit_join_start(expr.type());
             visit_table_impl(std::move(expr).joined_table());
-            visit_alias_impl(std::move(expr).joined_alias());
+            visit_alias_impl(expr.alias());
             visit_join_on();
             std::move(expr).on_condition().accept(*this);
             visit_join_end();
@@ -389,7 +357,7 @@ namespace demiplane::db {
             expr.query().accept(*this);
             visit_join_start(expr.type());
             visit_table_impl(expr.joined_table());
-            visit_alias_impl(expr.joined_alias());
+            visit_alias_impl(expr.alias());
             visit_join_on();
             expr.on_condition().accept(*this);
             visit_join_end();
@@ -442,12 +410,6 @@ namespace demiplane::db {
             visit_where_end();
         }
 
-        void visit(DeleteExpr&& expr) {
-            visit_delete_start();
-            visit_table_impl(std::move(expr).table());
-            visit_delete_end();
-        }
-
         void visit(const DeleteExpr& expr) {
             visit_delete_start();
             visit_table_impl(expr.table());
@@ -489,11 +451,11 @@ namespace demiplane::db {
         template <typename... WhenClauses>
         void visit(CaseExpr<WhenClauses...>&& expr) {
             visit_case_start();
-            std::apply([this](auto&&... when_clauses) {
+            std::apply([this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
                 (..., (visit_when_start(),
-                       std::forward<decltype(when_clauses)>(when_clauses).condition.accept(*this),
+                       std::forward<WhenClauseT>(when_clauses).condition.accept(*this),
                        visit_when_then(),
-                       std::forward<decltype(when_clauses)>(when_clauses).value.accept(*this),
+                       std::forward<WhenClauseT>(when_clauses).value.accept(*this),
                        visit_when_end()));
             }, std::move(expr).when_clauses());
             visit_case_end();
@@ -515,11 +477,11 @@ namespace demiplane::db {
         template <typename ElseExpr, typename... WhenClauses>
         void visit(CaseExprWithElse<ElseExpr, WhenClauses...>&& expr) {
             visit_case_start();
-            std::apply([this](auto&&... when_clauses) {
+            std::apply([this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
                 (..., (visit_when_start(),
-                       std::forward<decltype(when_clauses)>(when_clauses).condition.accept(*this),
+                       std::forward<WhenClauseT>(when_clauses).condition.accept(*this),
                        visit_when_then(),
-                       std::forward<decltype(when_clauses)>(when_clauses).value.accept(*this),
+                       std::forward<WhenClauseT>(when_clauses).value.accept(*this),
                        visit_when_end()));
             }, std::move(expr).when_clauses());
             visit_else_start();

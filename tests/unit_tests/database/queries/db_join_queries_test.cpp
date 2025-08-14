@@ -1,3 +1,4 @@
+
 // JOIN query expression tests
 // Comprehensive tests for join operations and join types
 
@@ -10,14 +11,24 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for JOIN operations
-class JoinQueryTest : public ::testing::Test {
+class JoinQueryTest : public ::testing::Test,
+                      public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -89,9 +100,8 @@ TEST_F(JoinQueryTest, InnerJoinExpression) {
                  .join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test LEFT JOIN
@@ -101,9 +111,8 @@ TEST_F(JoinQueryTest, LeftJoinExpression) {
                  .join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test RIGHT JOIN
@@ -113,9 +122,8 @@ TEST_F(JoinQueryTest, RightJoinExpression) {
                  .join(posts_schema, JoinType::RIGHT).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test FULL OUTER JOIN
@@ -125,9 +133,8 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
                  .join(posts_schema, JoinType::FULL).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test CROSS JOIN (simplified - cross join typically doesn't need ON clause)
@@ -137,9 +144,8 @@ TEST_F(JoinQueryTest, CrossJoinExpression) {
                  .join(posts_schema, JoinType::CROSS).on(user_id > lit(0));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test multiple JOINs (simplified to single join for now)
@@ -149,9 +155,8 @@ TEST_F(JoinQueryTest, MultipleJoinsExpression) {
                  .join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test JOIN with complex conditions
@@ -162,9 +167,8 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
                  .on(post_user_id == user_id && post_published == lit(true));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test JOIN with WHERE clause
@@ -175,9 +179,8 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
                  .where(user_active == lit(true));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test JOIN with aggregates (simplified without GROUP BY for now)
@@ -187,9 +190,8 @@ TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
                  .join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test JOIN with ORDER BY
@@ -200,7 +202,6 @@ TEST_F(JoinQueryTest, JoinWithOrderByExpression) {
                  .order_by(asc(user_name), desc(post_title));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }

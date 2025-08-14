@@ -1,3 +1,4 @@
+
 // SET operations tests
 // Comprehensive tests for UNION, INTERSECT, EXCEPT operations
 
@@ -10,14 +11,24 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for SET operations
-class SetOperationsTest : public ::testing::Test {
+class SetOperationsTest : public ::testing::Test,
+                          public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -83,9 +94,8 @@ TEST_F(SetOperationsTest, UnionExpression) {
     auto query  = union_query(active_users, young_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test UNION ALL operation
@@ -99,9 +109,8 @@ TEST_F(SetOperationsTest, UnionAllExpression) {
     auto query  = union_all(all_users, all_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test INTERSECT operation
@@ -117,9 +126,8 @@ TEST_F(SetOperationsTest, IntersectExpression) {
     auto query  = intersect(it_users, it_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test EXCEPT operation
@@ -134,9 +142,8 @@ TEST_F(SetOperationsTest, ExceptExpression) {
     auto query  = except(all_user_names, inactive_user_names);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test multiple UNION operations
@@ -156,9 +163,8 @@ TEST_F(SetOperationsTest, MultipleUnionExpression) {
     auto query  = union_all(union_all(young_users, senior_employees), high_salary_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test SET operation with ORDER BY
@@ -176,7 +182,7 @@ TEST_F(SetOperationsTest, SetOperationWithOrderByExpression) {
     // EXPECT_FALSE(result.sql.empty());
     // #ifdef MANUAL_CHECK
     //     std::cout << result.sql << std::endl;
-    // #endif
+    // 
 }
 
 // Test SET operation with LIMIT
@@ -193,7 +199,7 @@ TEST_F(SetOperationsTest, SetOperationWithLimitExpression) {
     // EXPECT_FALSE(result.sql.empty());
     // #ifdef MANUAL_CHECK
     //     std::cout << result.sql << std::endl;
-    // #endif
+    // 
 }
 
 // Test SET operation with different column counts (should match)
@@ -212,9 +218,8 @@ TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
     auto query  = union_all(user_summary, employee_summary);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }
 
 // Test complex SET operations with subqueries
@@ -231,7 +236,6 @@ TEST_F(SetOperationsTest, ComplexSetOperationsWithSubqueriesExpression) {
     auto query  = union_all(dept_users, dept_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
+    
 }

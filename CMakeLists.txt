@@ -30,6 +30,12 @@ add_compile_options(
 # Add options to enable or disable Boost and Qt5
 # Toggles
 include(cmake/togglers.cmake)
+
+# Add compile definitions based on options
+if(ENABLE_LOGGING)
+    add_compile_definitions(ENABLE_LOGGING)
+endif()
+
 #custom directives
 include(cmake/tests.cmake)
 include(cmake/combined_library.cmake)

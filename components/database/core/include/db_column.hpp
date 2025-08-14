@@ -55,6 +55,14 @@ namespace demiplane::db {
             return Column{schema_, table_, std::string{alias}};
         }
 
+        Column clone(std::string new_table) const {
+            return Column{schema_, std::move(new_table), alias_};
+        }
+
+        Column clone() const {
+            return Column{schema_, table_, alias_};
+        }
+
         void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
@@ -130,7 +138,7 @@ namespace demiplane::db {
         [[nodiscard]] const std::shared_ptr<std::string>& table() const {
             return table_;
         }
-
+        void accept(this auto&& self, QueryVisitor& visitor);
     private:
         std::shared_ptr<std::string> table_;
     };
@@ -140,6 +148,7 @@ namespace demiplane::db {
     constexpr Column<T> col(const FieldSchema* schema, std::string table) {
         return Column<T>{schema, table};
     }
+
     constexpr AllColumns all(std::string table) {
         return AllColumns{std::move(table)};
     }

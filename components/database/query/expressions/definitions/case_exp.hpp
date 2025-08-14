@@ -43,7 +43,7 @@ namespace demiplane::db {
     // Case expression without else clause
     template <IsWhenClause... WhenClauses>
     class CaseExpr : public CaseExprBase<CaseExpr<WhenClauses...>, WhenClauses...> {
-        using Base = CaseExprBase<CaseExpr<WhenClauses...>, WhenClauses...>;
+        using Base = CaseExprBase<CaseExpr, WhenClauses...>;
 
     public:
         using Base::Base; // Inherit constructors
@@ -67,7 +67,7 @@ namespace demiplane::db {
     // Case expression with else clause
     template <typename ElseExpr, IsWhenClause... WhenClauses>
     class CaseExprWithElse : public CaseExprBase<CaseExprWithElse<ElseExpr, WhenClauses...>, WhenClauses...> {
-        using Base = CaseExprBase<CaseExprWithElse<ElseExpr, WhenClauses...>, WhenClauses...>;
+        using Base = CaseExprBase<CaseExprWithElse, WhenClauses...>;
 
     public:
         constexpr CaseExprWithElse(const std::tuple<WhenClauses...>& when_clauses, ElseExpr else_expr)

@@ -5,7 +5,6 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-
     class UpdateExpr : public Expression<UpdateExpr> {
     public:
         explicit UpdateExpr(TableSchemaPtr t)
@@ -47,8 +46,7 @@ namespace demiplane::db {
         return UpdateExpr{std::move(table)};
     }
 
-    inline auto update(const std::string_view table_name) {
-        auto schema = std::make_shared<const TableSchema>(table_name);
-        return UpdateExpr{std::move(schema)};
+    inline auto update(std::string table_name) {
+        return UpdateExpr{TableSchema::make_ptr(std::move(table_name))};
     }
 }

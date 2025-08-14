@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "aggregate_exp.hpp"
 #include "db_column.hpp"
 #include "../basic.hpp"
 
@@ -12,9 +13,8 @@ namespace demiplane::db {
         explicit SingleColumnAggregateExpr(Column<T> column)
             : column_{std::move(column)} {}
 
-        template <typename Self>
-        [[nodiscard]] auto&& column(this Self&& self) {
-            return std::forward<Self>(self).column_;
+        [[nodiscard]] const Column<T>& column() const {
+            return column_;
         }
 
     protected:
@@ -23,22 +23,34 @@ namespace demiplane::db {
 
     // Count expression with optional distinct support
     template <typename T>
-    class CountExpr : public SingleColumnAggregateExpr<CountExpr<T>, T> {
-        using Base = SingleColumnAggregateExpr<CountExpr<T>, T>;
-
+    class CountExpr : public AliasableExpression<CountExpr<T>> {
     public:
-        explicit CountExpr(Column<T> col)
-            : Base(std::move(col)) {}
+        explicit CountExpr(Column<T> col, const bool dist)
+            : column_(std::move(col)),
+              distinct_(dist) {}
 
-        CountExpr(Column<T> col, const bool dist)
-            : Base(std::move(col)),
+        explicit CountExpr(AllColumns col, const bool dist)
+            : column_(std::move(col)),
               distinct_(dist) {}
 
         [[nodiscard]] bool distinct() const {
             return distinct_;
         }
 
+        [[nodiscard]] const Column<T>& column() const {
+            return std::get<Column<T>>(column_);
+        }
+
+        [[nodiscard]] const AllColumns& all_columns() const {
+            return std::get<AllColumns>(column_);
+        }
+
+        [[nodiscard]] bool is_all_columns() const {
+            return std::holds_alternative<AllColumns>(column_);
+        }
+
     private:
+        std::variant<Column<T>, AllColumns> column_;
         bool distinct_{false};
     };
 
@@ -79,15 +91,27 @@ namespace demiplane::db {
     }
 
     template <typename T>
+    CountExpr<T> count(Column<T>&& col) {
+        return CountExpr<T>{std::move(col), false};
+    }
+
+    template <typename T>
     CountExpr<T> count_distinct(const Column<T>& col) {
         return CountExpr<T>{col, true};
     }
-
-    inline CountExpr<void> count_all() {
-        return CountExpr{Column<void>{nullptr}};
+    
+    template <typename T>
+    CountExpr<T> count_distinct(Column<T>&& col) {
+        return CountExpr<T>{std::move(col), true};
     }
 
+    inline CountExpr<void> count_all(std::string table) {
+        return CountExpr<void>{AllColumns{std::move(table)}, false};
+    }
 
+    inline CountExpr<void> count_all_distinct(std::string table) {
+        return CountExpr<void>{AllColumns{std::move(table)}, true};
+    }
     template <typename T>
     SumExpr<T> sum(const Column<T>& col) {
         return SumExpr<T>{col};
@@ -108,16 +132,6 @@ namespace demiplane::db {
         return MinExpr<T>{col};
     }
 
-
-    template <typename T>
-    CountExpr<T> count(Column<T>&& col) {
-        return CountExpr<T>{std::move(col), false};
-    }
-
-    template <typename T>
-    CountExpr<T> count_distinct(Column<T>&& col) {
-        return CountExpr<T>{std::move(col), true};
-    }
 
     template <typename T>
     SumExpr<T> sum(Column<T>&& col) {

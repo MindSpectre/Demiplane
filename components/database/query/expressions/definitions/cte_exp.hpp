@@ -9,14 +9,14 @@ namespace demiplane::db {
     template <IsQuery Query>
     class CteExpr : public Expression<CteExpr<Query>> {
     public:
-        CteExpr(std::string n, Query q, const bool r = false)
-            : name_(std::move(n)),
+        CteExpr(std::string name, Query q, const bool r = false)
+            : cte_name_(std::move(name)),
               query_(std::move(q)),
               recursive_(r) {}
 
-        template <typename Self>
-        [[nodiscard]] auto&& name(this Self&& self) {
-            return std::forward<Self>(self).name_;
+
+        [[nodiscard]] const std::string& name() const {
+            return cte_name_;
         }
 
         template <typename Self>
@@ -29,18 +29,18 @@ namespace demiplane::db {
         }
 
     private:
-        std::string name_;
+        std::string cte_name_;
         Query query_;
         bool recursive_{false};
     };
 
     template <IsQuery Query>
-    auto with(const std::string& name, Query query) {
-        return CteExpr<Query>{name, std::move(query), false};
+    auto with(std::string name, Query query) {
+        return CteExpr<Query>{std::move(name), std::move(query), false};
     }
 
     template <IsQuery Query>
-    auto with_recursive(const std::string& name, Query query) {
-        return CteExpr<Query>{name, std::move(query), true};
+    auto with_recursive(std::string name, Query query) {
+        return CteExpr<Query>{std::move(name), std::move(query), true};
     }
 }

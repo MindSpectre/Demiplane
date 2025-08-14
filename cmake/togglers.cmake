@@ -4,6 +4,7 @@ option(USE_PROTOBUF "Enable Protobuf" OFF)
 option(BUILD_COMPONENTS "Build components" ON)
 option(USE_TESTS "Tests activated" ON)
 option(DO_BENCHMARKS "Benchmarks activated" ON)
+option(ENABLE_LOGGING "Enable logging in tests and components" ON)
 #Component option
 if (BUILD_COMPONENTS)
     option(BUILD_NEXUS "Build nexus" ON)

@@ -3,6 +3,7 @@
 
 #include "db_core_fwd.hpp"
 #include "db_field_value.hpp"
+
 namespace demiplane::db {
     class Field final {
     public:
@@ -36,7 +37,8 @@ namespace demiplane::db {
         // Convenience getters
         [[nodiscard]] bool is_null() const;
 
-        [[nodiscard]] const FieldValue& raw_value() const;
+        [[nodiscard]] const FieldValue& raw_value() const &;
+        [[nodiscard]] FieldValue raw_value() &&;
 
         [[nodiscard]] const FieldSchema& schema() const;
 
@@ -46,7 +48,6 @@ namespace demiplane::db {
         FieldValue value_;
         const FieldSchema* schema_; // Non-owning, guaranteed to outlive this field
     };
-
 }
 
 #include "../source/db_field.inl"

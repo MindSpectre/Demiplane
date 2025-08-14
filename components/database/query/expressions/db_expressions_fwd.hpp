@@ -172,22 +172,24 @@ namespace demiplane::db {
     concept IsJoinExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, JoinExpr>;
 
     template <IsQuery Query>
-    class FromTableExpr;
-
-    // From expression concept
-    template <IsQuery Query, IsQuery FromAnotherQuery>
-    class FromQueryExpr;
-
-    template <typename T>
-    concept IsFromExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, FromTableExpr> ||
-                         gears::is_specialization_of_v<std::remove_cvref_t<T>, FromQueryExpr>;
-
-    // CTE expression concept
-    template <IsQuery Query>
     class CteExpr;
 
     template <typename T>
     concept IsCteExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, CteExpr>;
+
+    template <IsQuery Query>
+    class FromTableExpr;
+
+    // From expression concept
+    template <IsQuery Query, IsCteExpr CteExpr>
+    class FromCteExpr;
+
+    template <typename T>
+    concept IsFromExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, FromTableExpr> ||
+                         gears::is_specialization_of_v<std::remove_cvref_t<T>, FromCteExpr>;
+
+    // CTE expression concept
+
 
     // Insert expression concepts
     class InsertExpr;

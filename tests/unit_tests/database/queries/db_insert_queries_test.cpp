@@ -1,3 +1,4 @@
+
 // INSERT query expression tests
 // Comprehensive tests for insert operations
 
@@ -10,14 +11,24 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for INSERT operations
-class InsertQueryTest : public ::testing::Test {
+class InsertQueryTest : public ::testing::Test,
+                        public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -41,9 +52,7 @@ TEST_F(InsertQueryTest, BasicInsertExpression) {
                  .values({"John Doe", 25, true});
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test INSERT with table name string
@@ -53,9 +62,7 @@ TEST_F(InsertQueryTest, InsertWithTableNameExpression) {
                  .values({"Jane Doe", 30});
     auto result = compiler->compile(std::move(query));
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test INSERT with Record
@@ -70,9 +77,7 @@ TEST_F(InsertQueryTest, InsertWithRecordExpression) {
                  .values(test_record);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test INSERT batch operation
@@ -94,9 +99,7 @@ TEST_F(InsertQueryTest, InsertBatchExpression) {
                  .batch(records);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test INSERT multiple values calls
@@ -107,9 +110,7 @@ TEST_F(InsertQueryTest, InsertMultipleValuesExpression) {
                  .values({"User2", 30, false});
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test INSERT with empty columns (should work with schema inference)
@@ -130,7 +131,5 @@ TEST_F(InsertQueryTest, InsertMethodChainingExpression) {
     
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }

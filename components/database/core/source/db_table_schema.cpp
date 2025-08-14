@@ -1,8 +1,8 @@
 #include "db_table_schema.hpp"
 
 namespace demiplane::db {
-    TableSchema::TableSchema(const std::string_view table_name)
-        : table_name_(table_name) {}
+    TableSchema::TableSchema(std::string table_name)
+        : table_name_(std::move(table_name)) {}
 
     TableSchema& TableSchema::add_field(std::string name, std::string db_type, std::type_index cpp_type) {
         auto field      = std::make_unique<FieldSchema>();
@@ -81,6 +81,27 @@ namespace demiplane::db {
             names.push_back(field->name);
         }
         return names;
+    }
+
+    std::shared_ptr<TableSchema> TableSchema::clone() {
+        auto cloned = std::make_shared<TableSchema>(table_name_);
+
+        // Copy fields
+        cloned->fields_.reserve(fields_.size());
+        for (const auto& field : fields_) {
+            if (field) {
+                cloned->fields_.push_back(std::make_unique<FieldSchema>(*field));
+            }
+        }
+
+        // Copy field index
+        cloned->field_index_ = field_index_;
+
+        return cloned;
+    }
+
+    std::shared_ptr<TableSchema> TableSchema::make_ptr(std::string name) {
+        return std::make_shared<TableSchema>(std::move(name));
     }
 
     std::size_t TableSchema::field_count() const {

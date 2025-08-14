@@ -40,8 +40,12 @@ namespace demiplane::db {
         return std::holds_alternative<std::monostate>(value_);
     }
 
-    const FieldValue& Field::raw_value() const {
+    const FieldValue& Field::raw_value() const & {
         return value_;
+    }
+
+    FieldValue Field::raw_value() && {
+        return std::move(value_);
     }
 
     const FieldSchema& Field::schema() const {

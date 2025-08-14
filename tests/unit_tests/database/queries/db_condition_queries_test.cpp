@@ -1,3 +1,4 @@
+
 // Condition query expression tests
 // Comprehensive tests for condition expressions and operators
 
@@ -10,14 +11,24 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for condition operations
-class ConditionQueryTest : public ::testing::Test {
+class ConditionQueryTest : public ::testing::Test,
+                           public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -96,14 +107,12 @@ TEST_F(ConditionQueryTest, BinaryConditionExpressions) {
     auto lte_result = compiler->compile(lte_query);
     EXPECT_FALSE(lte_result.sql.empty());
     
-    #ifdef MANUAL_CHECK
-        std::cout << "EQ: " << eq_result.sql << std::endl;
-        std::cout << "NEQ: " << neq_result.sql << std::endl;
-        std::cout << "GT: " << gt_result.sql << std::endl;
-        std::cout << "GTE: " << gte_result.sql << std::endl;
-        std::cout << "LT: " << lt_result.sql << std::endl;
-        std::cout << "LTE: " << lte_result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "EQ: " << eq_result.sql;
+    SCROLL_LOG_INF() << "NEQ: " << neq_result.sql;
+    SCROLL_LOG_INF() << "GT: " << gt_result.sql;
+    SCROLL_LOG_INF() << "GTE: " << gte_result.sql;
+    SCROLL_LOG_INF() << "LT: " << lt_result.sql;
+    SCROLL_LOG_INF() << "LTE: " << lte_result.sql;
 }
 
 // Test logical condition expressions
@@ -120,10 +129,8 @@ TEST_F(ConditionQueryTest, LogicalConditionExpressions) {
     auto or_result = compiler->compile(or_query);
     EXPECT_FALSE(or_result.sql.empty());
     
-    #ifdef MANUAL_CHECK
-        std::cout << "AND: " << and_result.sql << std::endl;
-        std::cout << "OR: " << or_result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "AND: " << and_result.sql;
+    SCROLL_LOG_INF() << "OR: " << or_result.sql;
 }
 
 // Test unary condition expressions
@@ -133,9 +140,7 @@ TEST_F(ConditionQueryTest, UnaryConditionExpressions) {
     auto not_result = compiler->compile(not_query);
     EXPECT_FALSE(not_result.sql.empty());
     
-    #ifdef MANUAL_CHECK
-        std::cout << "NOT condition: " << not_result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "NOT condition: " << not_result.sql;
 }
 
 // Test string comparison expressions (placeholder for LIKE when available)
@@ -145,9 +150,7 @@ TEST_F(ConditionQueryTest, StringComparisonExpressions) {
     auto str_eq_result = compiler->compile(str_eq_query);
     EXPECT_FALSE(str_eq_result.sql.empty());
     
-    #ifdef MANUAL_CHECK
-        std::cout << "String equality: " << str_eq_result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << "String equality: " << str_eq_result.sql;
 }
 
 // Test BETWEEN expressions
@@ -157,9 +160,7 @@ TEST_F(ConditionQueryTest, BetweenExpressions) {
                  .where(between(user_age, lit(18), lit(65)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test IN LIST expressions
@@ -169,9 +170,7 @@ TEST_F(ConditionQueryTest, InListExpressions) {
                  .where(in(user_age, lit(18), lit(25), lit(30)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test EXISTS expressions
@@ -185,9 +184,7 @@ TEST_F(ConditionQueryTest, ExistsExpressions) {
                  .where(exists(subquery));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test SUBQUERY conditions
@@ -201,9 +198,7 @@ TEST_F(ConditionQueryTest, SubqueryConditions) {
                  .where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test complex nested conditions
@@ -214,7 +209,5 @@ TEST_F(ConditionQueryTest, ComplexNestedConditions) {
                         (user_active == lit(true) && user_age >= lit(65)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }

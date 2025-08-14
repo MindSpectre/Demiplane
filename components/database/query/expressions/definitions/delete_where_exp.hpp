@@ -6,7 +6,6 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    //TODO: maybe merge
     template <IsCondition Condition>
     class DeleteWhereExpr : public Expression<DeleteWhereExpr<Condition>> {
     public:

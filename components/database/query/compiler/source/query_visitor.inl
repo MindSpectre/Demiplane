@@ -11,6 +11,10 @@ namespace demiplane::db {
         visitor.visit(std::forward<decltype(self)>(self));
     }
 
+    void AllColumns::accept(this auto&& self, QueryVisitor& visitor) {
+        visitor.visit(std::forward<decltype(self)>(self));
+    }
+
     template <typename Derived>
     void Expression<Derived>::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self).self());

@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "db_table_schema.hpp"
-#include "group_by_exp.hpp"
 #include "../basic.hpp"
 
 namespace demiplane::db {
@@ -23,9 +21,8 @@ namespace demiplane::db {
             return std::forward<Self>(self).select_;
         }
 
-        template <typename Self>
-        [[nodiscard]] auto&& table(this Self&& self) {
-            return std::forward<Self>(self).table_;
+        [[nodiscard]] const TableSchemaPtr& table() const {
+            return table_;
         }
 
     private:
@@ -34,15 +31,15 @@ namespace demiplane::db {
     };
 
     // FromQueryExpr with proper inheritance order
-    template <IsQuery Select, IsQuery FromAnotherQuery>
-    class FromQueryExpr : public Expression<FromQueryExpr<Select, FromAnotherQuery>>,
-                          public QueryOperations<FromQueryExpr<Select, FromAnotherQuery>,
+    template <IsQuery Select, IsCteExpr CteQuery>
+    class FromCteExpr : public Expression<FromCteExpr<Select, CteQuery>>,
+                          public QueryOperations<FromCteExpr<Select, CteQuery>,
                                                  AllowGroupBy, AllowOrderBy, AllowLimit,
                                                  AllowJoin, AllowWhere> {
     public:
-        constexpr FromQueryExpr(Select select_q, FromAnotherQuery&& expr)
+        constexpr FromCteExpr(Select select_q, CteQuery&& expr)
             : select_(std::move(select_q)),
-              query_(std::forward<FromAnotherQuery>(expr)) {}
+              query_(std::forward<CteQuery>(expr)) {}
 
         template <typename Self>
         [[nodiscard]] auto&& select(this Self&& self) {
@@ -50,12 +47,12 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& query(this Self&& self) {
+        [[nodiscard]] auto&& cte_query(this Self&& self) {
             return std::forward<Self>(self).query_;
         }
 
     private:
         Select select_;
-        FromAnotherQuery query_;
+        CteQuery query_;
     };
 }

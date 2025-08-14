@@ -10,14 +10,24 @@
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
 
+#include <demiplane/scroll>
+
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for CASE operations
-class CaseQueryTest : public ::testing::Test {
+class CaseQueryTest : public ::testing::Test,
+                      public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
 protected:
     void SetUp() override {
+        demiplane::scroll::FileLoggerConfig cfg;
+        cfg.file = "query_test.log";
+        cfg.add_time_to_name = false;
+
+        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
+            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -61,9 +71,7 @@ TEST_F(CaseQueryTest, BasicCaseExpression) {
         .from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE without ELSE
@@ -74,9 +82,7 @@ TEST_F(CaseQueryTest, CaseWithoutElseExpression) {
         .from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE with multiple WHEN clauses
@@ -89,9 +95,7 @@ TEST_F(CaseQueryTest, MultipleWhenExpression) {
         .from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE with complex conditions
@@ -104,9 +108,7 @@ TEST_F(CaseQueryTest, CaseWithComplexConditionsExpression) {
         .from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE in WHERE clause
@@ -117,9 +119,7 @@ TEST_F(CaseQueryTest, CaseInWhereExpression) {
                         .else_(lit(0.0)) > lit(40000.0));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE with aggregates
@@ -147,9 +147,7 @@ TEST_F(CaseQueryTest, CaseWithGroupByExpression) {
                  .group_by(age_group);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test nested CASE expressions
@@ -163,9 +161,7 @@ TEST_F(CaseQueryTest, NestedCaseExpression) {
         .from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE with different data types
@@ -178,9 +174,7 @@ TEST_F(CaseQueryTest, CaseWithDifferentTypesExpression) {
         .from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test CASE with ORDER BY
@@ -195,7 +189,5 @@ TEST_F(CaseQueryTest, CaseWithOrderByExpression) {
                  .order_by(/*asc(priority),*/ asc(user_name));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
-    #endif
+    SCROLL_LOG_INF() << result.sql;
 }

@@ -31,17 +31,32 @@ namespace demiplane::db {
             return *this;
         }
 
+        InsertExpr& values(Record&& record) {
+            std::vector<FieldValue> row;
+            row.reserve(columns_.size());
+            for (const auto& col : columns_) {
+                row.push_back(std::move(record[col]).raw_value());
+            }
+            rows_.push_back(std::move(row));
+            return *this;
+        }
+
         InsertExpr& batch(const std::vector<Record>& records) {
-            //TODO: move
             for (const auto& record : records) {
                 values(record);
             }
             return *this;
         }
 
-        template <typename Self>
-        [[nodiscard]] auto&& table(this Self&& self) {
-            return std::forward<Self>(self).table_;
+        InsertExpr& batch(std::vector<Record>&& records) {
+            for (auto&& record : records) {
+                values(std::move(record));
+            }
+            return *this;
+        }
+
+        [[nodiscard]] const TableSchemaPtr& table() const {
+            return table_;
         }
 
         template <typename Self>
@@ -65,8 +80,7 @@ namespace demiplane::db {
         return InsertExpr{std::move(table)};
     }
 
-    inline auto insert_into(const std::string_view table_name) {
-        TableSchemaPtr schema = std::make_shared<TableSchema>(table_name);
-        return InsertExpr{std::move(schema)};
+    inline auto insert_into(std::string table_name) {
+        return InsertExpr{TableSchema::make_ptr(std::move(table_name))};
     }
 }

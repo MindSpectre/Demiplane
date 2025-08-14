@@ -41,7 +41,8 @@ namespace demiplane::db {
     }
 
     template <IsQuery Query, IsOrderBy... Orders>
-    class OrderByExpr : public Expression<OrderByExpr<Query, Orders...>> {
+    class OrderByExpr : public Expression<OrderByExpr<Query, Orders...>>,
+                        public QueryOperations<OrderByExpr<Query, Orders...>, AllowLimit> {
     public:
         constexpr explicit OrderByExpr(Query q, Orders... o)
             : query_(std::move(q)),
@@ -55,14 +56,6 @@ namespace demiplane::db {
         template <typename Self>
         [[nodiscard]] auto&& orders(this Self&& self) {
             return std::forward<Self>(self).orders_;
-        }
-
-        constexpr auto limit(std::size_t count) const {
-            return LimitExpr<OrderByExpr>{*this, count, 0};
-        }
-
-        constexpr auto limit(std::size_t count, std::size_t offset) const {
-            return LimitExpr<OrderByExpr>{*this, count, offset};
         }
 
     private:

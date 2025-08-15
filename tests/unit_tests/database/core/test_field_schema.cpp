@@ -81,7 +81,7 @@ TEST_F(FieldSchemaTest, AsColumnValidType) {
     const auto column = schema.as_column<int>("test_table");
 
     EXPECT_EQ(column.name(), "test_field");
-    EXPECT_EQ(column.view_table(), "test_table");
+    EXPECT_EQ(column.table_name(), "test_table");
     EXPECT_EQ(column.schema(), &schema);
 }
 

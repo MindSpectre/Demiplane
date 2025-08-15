@@ -9,14 +9,26 @@ namespace demiplane::db {
         : dialect_(std::move(dialect)),
           use_parameters_(use_params) {}
 
-    void SqlGeneratorVisitor::visit_column_impl(const FieldSchema* schema,
-                                                const std::shared_ptr<std::string>& table,
-                                                const std::optional<std::string>& alias) {
-        visit_table_impl(table);
+
+    void SqlGeneratorVisitor::visit_table_column_impl(const FieldSchema* schema,
+                                                      const std::shared_ptr<std::string>& table,
+                                                      const std::optional<std::string>& alias) {
+        if (table) {
+            visit_table_impl(table);
+            sql_ << ".";
+        }
         sql_ << dialect_->quote_identifier(schema->name);
         visit_alias_impl(alias);
     }
 
+    void SqlGeneratorVisitor::visit_dynamic_column_impl(const std::string& name,
+                                                        const std::optional<std::string>& table) {
+        if (table) {
+            visit_table_impl(table.value());
+            sql_ << ".";
+        }
+        sql_ << dialect_->quote_identifier(name);
+    }
 
     void SqlGeneratorVisitor::visit_value_impl(const FieldValue& value) {
         if (use_parameters_) {
@@ -44,7 +56,7 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_all_columns_impl(const std::shared_ptr<std::string>& table) {
         visit_table_impl(table);
-        sql_ << "*";
+        sql_ << ".*";
     }
 
 
@@ -52,9 +64,6 @@ namespace demiplane::db {
         sql_ << dialect_->quote_identifier(table->table_name());
     }
 
-    void SqlGeneratorVisitor::visit_table_impl(TableSchemaPtr&& table) {
-        sql_ << dialect_->quote_identifier(table->table_name());
-    }
 
     void SqlGeneratorVisitor::visit_table_impl(const std::string_view table_name) {
         sql_ << dialect_->quote_identifier(table_name);
@@ -62,10 +71,13 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_table_impl(const std::shared_ptr<std::string>& table) {
         if (table) {
-            sql_ << dialect_->quote_identifier(*table) << ".";
+            sql_ << dialect_->quote_identifier(*table);
         }
     }
 
+    void SqlGeneratorVisitor::visit_alias_impl(const std::string_view alias) {
+        sql_ << " AS " << dialect_->quote_identifier(alias);
+    }
 
     void SqlGeneratorVisitor::visit_alias_impl(const std::optional<std::string>& alias) {
         if (alias.has_value()) {

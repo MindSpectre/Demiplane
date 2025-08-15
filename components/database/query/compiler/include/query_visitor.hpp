@@ -11,14 +11,15 @@ namespace demiplane::db {
 
         // Column and literals - now with perfect forwarding
 
-        template <typename T>
-        void visit(const Column<T>& col) {
-            visit_column_impl(col.schema(), col.table(), col.alias());
+        void visit(const DynamicColumn& col) {
+            visit_dynamic_column_impl(col.name(), col.context());
         }
 
-        void visit(const Column<void>& col) {
-            visit_column_impl(col.schema(), col.table(), col.alias());
+        template <typename T>
+        void visit(const TableColumn<T>& col) {
+            visit_table_column_impl(col.schema(), col.table(), col.alias());
         }
+
 
         template <typename T>
         void visit(Literal<T>&& lit) {
@@ -142,58 +143,44 @@ namespace demiplane::db {
 
         // Aggregate functions - perfect forwarding
 
-        template <typename T>
-        void visit(const CountExpr<T>& expr) {
+        void visit(const CountExpr& expr) {
             visit_count_impl(expr.distinct());
-            if (expr.is_all_columns()) {
-                expr.all_columns().accept(*this);
-            } else {
-                expr.column().accept(*this);
-            }
+            expr.column().accept(*this);
+
             visit_aggregate_end(expr.alias());
         }
 
 
-        template <typename T>
-        void visit(const SumExpr<T>& expr) {
+        void visit(const SumExpr& expr) {
             visit_sum_impl();
             expr.column().accept(*this);
             visit_aggregate_end(expr.alias());
         }
 
 
-        template <typename T>
-        void visit(const AvgExpr<T>& expr) {
+        void visit(const AvgExpr& expr) {
             visit_avg_impl();
             expr.column().accept(*this);
             visit_aggregate_end(expr.alias());
         }
 
 
-        template <typename T>
-        void visit(const MaxExpr<T>& expr) {
+        void visit(const MaxExpr& expr) {
             visit_max_impl();
             expr.column().accept(*this);
             visit_aggregate_end(expr.alias());
         }
 
 
-        template <typename T>
-        void visit(const MinExpr<T>& expr) {
+        void visit(const MinExpr& expr) {
             visit_min_impl();
             expr.column().accept(*this);
             visit_aggregate_end(expr.alias());
         }
 
         // Order by - perfect forwarding
-        template <typename T>
-        void visit(OrderBy<T>&& order) {
-            std::move(order).column().accept(*this);
-            visit_order_direction_impl(order.direction());
-        }
 
-        template <typename T>
-        void visit(const OrderBy<T>& order) {
+        void visit(const OrderBy& order) {
             order.column().accept(*this);
             visit_order_direction_impl(order.direction());
         }
@@ -529,9 +516,11 @@ namespace demiplane::db {
 
     protected:
         // Virtual interface methods - now with move support for appropriate parameters
-        virtual void visit_column_impl(const FieldSchema* schema,
-                                       const std::shared_ptr<std::string>& table,
-                                       const std::optional<std::string>& alias) = 0;
+        virtual void visit_table_column_impl(const FieldSchema* schema,
+                                             const std::shared_ptr<std::string>& table,
+                                             const std::optional<std::string>& alias) = 0;
+        virtual void visit_dynamic_column_impl(const std::string& name,
+                                               const std::optional<std::string>& table) = 0;
         virtual void visit_value_impl(const FieldValue& value) = 0;
         virtual void visit_value_impl(FieldValue&& value) = 0;
         virtual void visit_null_impl() = 0;
@@ -539,11 +528,11 @@ namespace demiplane::db {
         virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
 
         virtual void visit_table_impl(const TableSchemaPtr& table) = 0;
-        virtual void visit_table_impl(TableSchemaPtr&& table) = 0;
         virtual void visit_table_impl(std::string_view table_name) = 0;
         virtual void visit_table_impl(const std::shared_ptr<std::string>& table) = 0;
 
         virtual void visit_alias_impl(const std::optional<std::string>& alias) = 0;
+        virtual void visit_alias_impl(std::string_view alias) = 0;
 
         // Expression helpers
         virtual void visit_binary_expr_start() {}

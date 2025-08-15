@@ -17,7 +17,7 @@ namespace demiplane::db {
 
     // Implementation of TableSchema::column
     template <typename T>
-    Column<T> TableSchema::column(const std::string_view field_name) const {
+    TableColumn<T> TableSchema::column(const std::string_view field_name) const {
         auto* field = get_field_schema(field_name);
         if (!field) {
             std::ostringstream ss;

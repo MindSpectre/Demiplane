@@ -47,10 +47,10 @@ protected:
 
     std::shared_ptr<TableSchema> users_schema;
 
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
 
     std::unique_ptr<QueryCompiler> compiler;
 };

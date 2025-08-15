@@ -6,7 +6,9 @@
 
 namespace demiplane::db {
     template <typename Left, typename Right>
-    class SetOpExpr : public Expression<SetOpExpr<Left, Right>> {
+    class SetOpExpr : public Expression<SetOpExpr<Left, Right>>,
+                      public QueryOperations<SetOpExpr<Left, Right>,
+                                             AllowOrderBy, AllowLimit> {
     public:
         SetOpExpr(Left l, Right r, const SetOperation o)
             : left_(std::move(l)),

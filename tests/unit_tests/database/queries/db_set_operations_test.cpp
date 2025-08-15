@@ -66,17 +66,17 @@ protected:
     std::shared_ptr<TableSchema> users_schema;
     std::shared_ptr<TableSchema> employees_schema;
 
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
-    Column<std::string> user_department{nullptr, ""};
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
+    TableColumn<std::string> user_department{nullptr, ""};
 
-    Column<int> emp_id{nullptr, ""};
-    Column<std::string> emp_name{nullptr, ""};
-    Column<int> emp_age{nullptr, ""};
-    Column<std::string> emp_department{nullptr, ""};
-    Column<double> emp_salary{nullptr, ""};
+    TableColumn<int> emp_id{nullptr, ""};
+    TableColumn<std::string> emp_name{nullptr, ""};
+    TableColumn<int> emp_age{nullptr, ""};
+    TableColumn<std::string> emp_department{nullptr, ""};
+    TableColumn<double> emp_salary{nullptr, ""};
 
     std::unique_ptr<QueryCompiler> compiler;
 };
@@ -169,37 +169,35 @@ TEST_F(SetOperationsTest, MultipleUnionExpression) {
 
 // Test SET operation with ORDER BY
 TEST_F(SetOperationsTest, SetOperationWithOrderByExpression) {
-    // auto active_users = select(user_name.as("name"), user_age.as("age"))
-    //                     .from(users_schema)
-    //                     .where(user_active == lit(true));
-    //
-    // auto employees = select(emp_name.as("name"), emp_age.as("age"))
-    //                  .from(employees_schema);
-    //
-    // auto query = union_all(active_users, employees)
-    //              .order_by(asc("name"), desc("age"));
-    // auto result = compiler->compile(query);
-    // EXPECT_FALSE(result.sql.empty());
-    // #ifdef MANUAL_CHECK
-    //     std::cout << result.sql << std::endl;
-    // 
+    auto active_users = select(user_name.as("name"), user_age.as("age"))
+                        .from(users_schema)
+                        .where(user_active == lit(true));
+
+    auto employees = select(emp_name.as("name"), emp_age.as("age"))
+        .from(employees_schema);
+
+    auto als_name = user_name.as_dynamic().set_name("name");
+    auto als_age  = user_age.as_dynamic().set_name("age");
+    auto query    = union_all(active_users, employees)
+        .order_by(asc(als_name), desc(als_age));
+    auto result = compiler->compile(query);
+    EXPECT_FALSE(result.sql.empty());
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test SET operation with LIMIT
 TEST_F(SetOperationsTest, SetOperationWithLimitExpression) {
-    // auto users = select(user_name.as("name"))
-    //              .from(users_schema);
-    //
-    // auto employees = select(emp_name.as("name"))
-    //                  .from(employees_schema);
-    //
-    // auto query = union_all(users, employees)
-    //              .limit(10);
-    // auto result = compiler->compile(query);
-    // EXPECT_FALSE(result.sql.empty());
-    // #ifdef MANUAL_CHECK
-    //     std::cout << result.sql << std::endl;
-    // 
+    auto users = select(user_name.as("name"))
+        .from(users_schema);
+
+    auto employees = select(emp_name.as("name"))
+        .from(employees_schema);
+
+    auto query = union_all(users, employees)
+        .limit(10);
+    auto result = compiler->compile(query);
+    EXPECT_FALSE(result.sql.empty());
+    SCROLL_LOG_INF() << result.sql;
 }
 
 // Test SET operation with different column counts (should match)

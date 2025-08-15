@@ -1,4 +1,3 @@
-
 // UPDATE query expression tests
 // Comprehensive tests for update operations
 
@@ -22,7 +21,7 @@ class UpdateQueryTest : public ::testing::Test,
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
+        cfg.file             = "query_test.log";
         cfg.add_time_to_name = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
@@ -37,9 +36,9 @@ protected:
                     .add_field<bool>("active", "BOOLEAN");
 
         // Create column references
-        user_id = users_schema->column<int>("id");
-        user_name = users_schema->column<std::string>("name");
-        user_age = users_schema->column<int>("age");
+        user_id     = users_schema->column<int>("id");
+        user_name   = users_schema->column<std::string>("name");
+        user_age    = users_schema->column<int>("age");
         user_active = users_schema->column<bool>("active");
 
         // Create compiler
@@ -47,12 +46,12 @@ protected:
     }
 
     std::shared_ptr<TableSchema> users_schema;
-    
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
-    
+
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
+
     std::unique_ptr<QueryCompiler> compiler;
 };
 
@@ -100,7 +99,7 @@ TEST_F(UpdateQueryTest, UpdateInitializerListSetExpression) {
 // Test UPDATE without WHERE clause
 TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
     auto update_query = update(users_schema).set("active", true);
-    auto result = compiler->compile(update_query);
+    auto result       = compiler->compile(update_query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -108,8 +107,8 @@ TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
 // Test UPDATE WHERE expression
 TEST_F(UpdateQueryTest, UpdateWhereExpression) {
     auto update_query = update(users_schema).set("active", false);
-    auto query = UpdateWhereExpr{update_query, user_age < lit(18)};
-    auto result = compiler->compile(query);
+    auto query        = UpdateWhereExpr{update_query, user_age < lit(18)};
+    auto result       = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -117,11 +116,11 @@ TEST_F(UpdateQueryTest, UpdateWhereExpression) {
 // Test UPDATE method chaining
 TEST_F(UpdateQueryTest, UpdateMethodChainingExpression) {
     auto query = update(users_schema);
-    
+
     // Test that methods return reference for chaining
     auto& query_ref = query.set("active", true);
     EXPECT_EQ(&query, &query_ref);
-    
+
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

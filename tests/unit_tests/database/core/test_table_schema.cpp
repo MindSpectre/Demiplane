@@ -265,9 +265,9 @@ TEST_F(TableSchemaTest, TypedColumnAccess) {
     const auto name_column = schema.column<std::string>("name");
 
     EXPECT_EQ(id_column.name(), "id");
-    EXPECT_EQ(id_column.view_table(), "users");
+    EXPECT_EQ(id_column.table_name(), "users");
     EXPECT_EQ(name_column.name(), "name");
-    EXPECT_EQ(name_column.view_table(), "users");
+    EXPECT_EQ(name_column.table_name(), "users");
 }
 
 TEST_F(TableSchemaTest, TableSchemaPtr) {

@@ -8,10 +8,10 @@ namespace demiplane::db {
     template <IsQuery Query>
     class LimitExpr : public Expression<LimitExpr<Query>> {
     public:
-        constexpr LimitExpr(Query q, std::size_t c, std::size_t o)
-            : query_(std::move(q)),
-              count_(c),
-              offset_(o) {}
+        constexpr LimitExpr(Query query, const std::size_t limit, const std::size_t offset)
+            : query_(std::move(query)),
+              count_(limit),
+              offset_(offset) {}
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -24,6 +24,11 @@ namespace demiplane::db {
 
         [[nodiscard]] std::size_t offset() const {
             return offset_;
+        }
+
+        template <typename Self>
+        [[nodiscard]] auto&& offset(this Self&& self, const std::size_t offset) {
+            return LimitExpr{std::forward<Self>(self).query_, std::forward<Self>(self).count_, offset};
         }
 
     private:

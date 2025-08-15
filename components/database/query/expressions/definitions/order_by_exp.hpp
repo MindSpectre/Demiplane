@@ -9,35 +9,37 @@ namespace demiplane::db {
         DESC
     };
 
-    template <typename T>
-    class OrderBy {
+    class OrderBy : public ColumnHolder {
     public:
-        explicit OrderBy(Column<T> col, const OrderDirection dir = OrderDirection::ASC)
-            : column_(col),
+        explicit OrderBy(DynamicColumn col, const OrderDirection dir = OrderDirection::ASC)
+            : ColumnHolder{std::move(col)},
               direction_(dir) {}
 
-        template <typename Self>
-        [[nodiscard]] auto&& column(this Self&& self) {
-            return std::forward<Self>(self).column_;
-        }
 
         [[nodiscard]] OrderDirection direction() const {
             return direction_;
         }
 
     private:
-        Column<T> column_;
         OrderDirection direction_;
     };
 
     template <typename T>
-    OrderBy<T> asc(const Column<T>& col) {
-        return OrderBy<T>{col, OrderDirection::ASC};
+    OrderBy asc(const TableColumn<T>& col) {
+        return OrderBy{col.as_dynamic(), OrderDirection::ASC};
     }
 
     template <typename T>
-    OrderBy<T> desc(const Column<T>& col) {
-        return OrderBy<T>{col, OrderDirection::DESC};
+    OrderBy desc(const TableColumn<T>& col) {
+        return OrderBy{col.as_dynamic(), OrderDirection::DESC};
+    }
+
+    inline OrderBy asc(DynamicColumn col) {
+        return OrderBy{std::move(col), OrderDirection::ASC};
+    }
+
+    inline OrderBy desc(DynamicColumn col) {
+        return OrderBy{std::move(col), OrderDirection::DESC};
     }
 
     template <IsQuery Query, IsOrderBy... Orders>

@@ -67,18 +67,18 @@ protected:
     std::shared_ptr<TableSchema> employees_schema;
     std::shared_ptr<TableSchema> sales_schema;
 
-    Column<int> emp_id{nullptr, ""};
-    Column<std::string> emp_name{nullptr, ""};
-    Column<int> emp_manager_id{nullptr, ""};
-    Column<std::string> emp_department{nullptr, ""};
-    Column<double> emp_salary{nullptr, ""};
-    Column<bool> emp_active{nullptr, ""};
+    TableColumn<int> emp_id{nullptr, ""};
+    TableColumn<std::string> emp_name{nullptr, ""};
+    TableColumn<int> emp_manager_id{nullptr, ""};
+    TableColumn<std::string> emp_department{nullptr, ""};
+    TableColumn<double> emp_salary{nullptr, ""};
+    TableColumn<bool> emp_active{nullptr, ""};
 
-    Column<int> sale_id{nullptr, ""};
-    Column<int> sale_employee_id{nullptr, ""};
-    Column<double> sale_amount{nullptr, ""};
-    Column<std::string> sale_region{nullptr, ""};
-    Column<std::string> sale_date{nullptr, ""};
+    TableColumn<int> sale_id{nullptr, ""};
+    TableColumn<int> sale_employee_id{nullptr, ""};
+    TableColumn<double> sale_amount{nullptr, ""};
+    TableColumn<std::string> sale_region{nullptr, ""};
+    TableColumn<std::string> sale_date{nullptr, ""};
 
     std::unique_ptr<QueryCompiler> compiler;
 };
@@ -119,7 +119,7 @@ TEST_F(CteQueryTest, CteUsedInMainQueryExpression) {
     // Use CTE in main query
     auto main_query = select(emp_name.as("employee_name"), sale_amount)
                       .from(high_earners)
-                      .join(sales_schema->table_name()).on(sale_employee_id == emp_id.clone("high_earners"))
+                      .join(sales_schema).on(sale_employee_id == (emp_id.as_dynamic().set_context("high_earners")))
                       .where(sale_amount > lit(10000.0));
 
     auto result = compiler->compile(main_query);

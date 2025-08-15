@@ -9,23 +9,57 @@
 #include "db_field_schema.hpp"
 
 namespace demiplane::db {
-    class QueryVisitor;
+    class DynamicColumn {
+    public:
+        DynamicColumn(std::string name, std::string table)
+            : name_{std::move(name)},
+              context_{std::move(table)} {}
+
+        explicit DynamicColumn(std::string name)
+            : name_{std::move(name)} {}
+
+        [[nodiscard]] const std::string& name() const {
+            return name_;
+        }
+
+        [[nodiscard]] const std::string& context() const {
+            return context_;
+        }
+
+        DynamicColumn& set_context(std::string table) {
+            context_ = std::move(table);
+            return *this;
+        }
+
+        DynamicColumn& set_name(std::string name) {
+            name_ = std::move(name);
+            return *this;
+        }
+
+
+        void accept(this auto&& self, QueryVisitor& visitor);
+
+    private:
+        std::string name_;
+        std::string context_;
+    };
+
 
     template <typename T>
-    class Column {
+    class TableColumn {
     public:
         using value_type = T;
 
-        constexpr Column(const FieldSchema* schema,
-                         std::shared_ptr<std::string> table,
-                         std::optional<std::string> alias = std::nullopt)
+        constexpr TableColumn(const FieldSchema* schema,
+                              std::shared_ptr<std::string> table,
+                              std::optional<std::string> alias = std::nullopt)
             : schema_(schema),
               table_(std::move(table)),
               alias_(std::move(alias)) {}
 
-        constexpr Column(const FieldSchema* schema,
-                         std::string table,
-                         std::optional<std::string> alias = std::nullopt)
+        constexpr TableColumn(const FieldSchema* schema,
+                              std::string table,
+                              std::optional<std::string> alias = std::nullopt)
             : schema_(schema),
               table_(std::make_shared<std::string>(std::move(table))),
               alias_(std::move(alias)) {}
@@ -38,7 +72,7 @@ namespace demiplane::db {
             return table_;
         }
 
-        [[nodiscard]] std::string_view view_table() const {
+        [[nodiscard]] const std::string& table_name() const {
             return *table_;
         }
 
@@ -50,17 +84,12 @@ namespace demiplane::db {
             return schema_->name;
         }
 
-        // Create aliased column
-        Column as(const std::string_view alias) const {
-            return Column{schema_, table_, std::string{alias}};
+        TableColumn as(std::string alias) const {
+            return TableColumn{schema_, table_, std::move(alias)};
         }
 
-        Column clone(std::string new_table) const {
-            return Column{schema_, std::move(new_table), alias_};
-        }
-
-        Column clone() const {
-            return Column{schema_, table_, alias_};
+        DynamicColumn as_dynamic() const & {
+            return DynamicColumn{schema_->name, *table_};
         }
 
         void accept(this auto&& self, QueryVisitor& visitor);
@@ -71,56 +100,6 @@ namespace demiplane::db {
         std::optional<std::string> alias_; // Optional table alias
     };
 
-    // Special column for untyped/dynamic queries
-    template <>
-    class Column<void> {
-    public:
-        Column(const FieldSchema* schema,
-               std::shared_ptr<std::string> table,
-               std::optional<std::string> alias = std::nullopt)
-            : schema_(schema),
-              table_(std::move(table)),
-              alias_(std::move(alias)) {}
-
-        Column(const FieldSchema* schema,
-               std::string table,
-               std::optional<std::string> alias = std::nullopt)
-            : schema_(schema),
-              table_(std::make_shared<std::string>(std::move(table))),
-              alias_(std::move(alias)) {}
-
-        explicit Column(const FieldSchema* schema)
-            : schema_(schema),
-              table_(nullptr),
-              alias_(std::nullopt) {}
-
-        [[nodiscard]] const FieldSchema* schema() const {
-            return schema_;
-        }
-
-        [[nodiscard]] const std::shared_ptr<std::string>& table() const {
-            return table_;
-        }
-
-        [[nodiscard]] std::string_view view_table() const {
-            return *table_;
-        }
-
-        [[nodiscard]] const std::optional<std::string>& alias() const {
-            return alias_;
-        }
-
-        [[nodiscard]] const std::string& name() const {
-            return schema_->name;
-        }
-
-        void accept(this auto&& self, QueryVisitor& visitor);
-
-    private:
-        const FieldSchema* schema_;
-        std::shared_ptr<std::string> table_;
-        std::optional<std::string> alias_;
-    };
 
     // All columns selector
     class AllColumns {
@@ -131,22 +110,29 @@ namespace demiplane::db {
         explicit AllColumns(std::string table)
             : table_(std::make_shared<std::string>(std::move(table))) {}
 
-        [[nodiscard]] std::string_view view_table() const {
+        [[nodiscard]] const std::string& table_name() const {
             return *table_;
         }
 
         [[nodiscard]] const std::shared_ptr<std::string>& table() const {
             return table_;
         }
+
+        DynamicColumn as_dynamic() const {
+            return DynamicColumn{"*", table_name()};
+        }
+
         void accept(this auto&& self, QueryVisitor& visitor);
+
     private:
         std::shared_ptr<std::string> table_;
     };
 
+
     // Column creation helpers
     template <typename T>
-    constexpr Column<T> col(const FieldSchema* schema, std::string table) {
-        return Column<T>{schema, table};
+    constexpr TableColumn<T> col(const FieldSchema* schema, std::string table) {
+        return TableColumn<T>{schema, table};
     }
 
     constexpr AllColumns all(std::string table) {

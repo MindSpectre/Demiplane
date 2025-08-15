@@ -1,4 +1,3 @@
-
 // JOIN query expression tests
 // Comprehensive tests for join operations and join types
 
@@ -23,7 +22,7 @@ class JoinQueryTest : public ::testing::Test,
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
+        cfg.file             = "query_test.log";
         cfg.add_time_to_name = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
@@ -75,20 +74,20 @@ protected:
     std::shared_ptr<TableSchema> posts_schema;
     std::shared_ptr<TableSchema> comments_schema;
 
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
 
-    Column<int> post_id{nullptr, ""};
-    Column<int> post_user_id{nullptr, ""};
-    Column<std::string> post_title{nullptr, ""};
-    Column<bool> post_published{nullptr, ""};
+    TableColumn<int> post_id{nullptr, ""};
+    TableColumn<int> post_user_id{nullptr, ""};
+    TableColumn<std::string> post_title{nullptr, ""};
+    TableColumn<bool> post_published{nullptr, ""};
 
-    Column<int> comment_id{nullptr, ""};
-    Column<int> comment_post_id{nullptr, ""};
-    Column<int> comment_user_id{nullptr, ""};
-    Column<std::string> comment_content{nullptr, ""};
+    TableColumn<int> comment_id{nullptr, ""};
+    TableColumn<int> comment_post_id{nullptr, ""};
+    TableColumn<int> comment_user_id{nullptr, ""};
+    TableColumn<std::string> comment_content{nullptr, ""};
 
     std::unique_ptr<QueryCompiler> compiler;
 };
@@ -101,7 +100,6 @@ TEST_F(JoinQueryTest, InnerJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test LEFT JOIN
@@ -112,7 +110,6 @@ TEST_F(JoinQueryTest, LeftJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test RIGHT JOIN
@@ -123,7 +120,6 @@ TEST_F(JoinQueryTest, RightJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test FULL OUTER JOIN
@@ -134,7 +130,6 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test CROSS JOIN (simplified - cross join typically doesn't need ON clause)
@@ -145,7 +140,6 @@ TEST_F(JoinQueryTest, CrossJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test multiple JOINs (simplified to single join for now)
@@ -156,7 +150,6 @@ TEST_F(JoinQueryTest, MultipleJoinsExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test JOIN with complex conditions
@@ -168,7 +161,6 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test JOIN with WHERE clause
@@ -180,7 +172,6 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test JOIN with aggregates (simplified without GROUP BY for now)
@@ -191,7 +182,6 @@ TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test JOIN with ORDER BY
@@ -203,5 +193,4 @@ TEST_F(JoinQueryTest, JoinWithOrderByExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }

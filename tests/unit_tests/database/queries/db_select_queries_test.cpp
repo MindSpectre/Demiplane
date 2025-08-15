@@ -1,4 +1,3 @@
-
 // SELECT query expression tests
 // Comprehensive tests for select operations and selectable types
 
@@ -22,7 +21,7 @@ class SelectQueryTest : public ::testing::Test,
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
+        cfg.file             = "query_test.log";
         cfg.add_time_to_name = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
@@ -44,14 +43,14 @@ protected:
                     .add_field<bool>("published", "BOOLEAN");
 
         // Create column references
-        user_id = users_schema->column<int>("id");
-        user_name = users_schema->column<std::string>("name");
-        user_age = users_schema->column<int>("age");
+        user_id     = users_schema->column<int>("id");
+        user_name   = users_schema->column<std::string>("name");
+        user_age    = users_schema->column<int>("age");
         user_active = users_schema->column<bool>("active");
 
-        post_id = posts_schema->column<int>("id");
-        post_user_id = posts_schema->column<int>("user_id");
-        post_title = posts_schema->column<std::string>("title");
+        post_id        = posts_schema->column<int>("id");
+        post_user_id   = posts_schema->column<int>("user_id");
+        post_title     = posts_schema->column<std::string>("title");
         post_published = posts_schema->column<bool>("published");
 
         // Create compiler
@@ -60,54 +59,50 @@ protected:
 
     std::shared_ptr<TableSchema> users_schema;
     std::shared_ptr<TableSchema> posts_schema;
-    
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
-    
-    Column<int> post_id{nullptr, ""};
-    Column<int> post_user_id{nullptr, ""};
-    Column<std::string> post_title{nullptr, ""};
-    Column<bool> post_published{nullptr, ""};
-    
+
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
+
+    TableColumn<int> post_id{nullptr, ""};
+    TableColumn<int> post_user_id{nullptr, ""};
+    TableColumn<std::string> post_title{nullptr, ""};
+    TableColumn<bool> post_published{nullptr, ""};
+
     std::unique_ptr<QueryCompiler> compiler;
 };
 
 // Test basic SELECT expression
 TEST_F(SelectQueryTest, BasicSelectExpression) {
-    auto query = select(user_id, user_name);
+    auto query  = select(user_id, user_name);
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with ALL columns
 TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
-    auto query = select(all("users"));
+    auto query  = select(all("users"));
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT DISTINCT
 TEST_F(SelectQueryTest, SelectDistinctExpression) {
-    auto query = select_distinct(user_name, user_age);
+    auto query  = select_distinct(user_name, user_age);
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with mixed types (columns, literals, aggregates)
 TEST_F(SelectQueryTest, SelectMixedTypesExpression) {
-    auto query = select(user_name, lit("constant"), count(user_id).as("total"));
+    auto query  = select(user_name, lit("constant"), count(user_id).as("total"));
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT from Record
@@ -115,30 +110,27 @@ TEST_F(SelectQueryTest, SelectFromRecordExpression) {
     Record test_record(users_schema);
     test_record["id"].set(1);
     test_record["name"].set(std::string("test"));
-    
-    auto query = select(user_name).from(test_record);
+
+    auto query  = select(user_name).from(test_record);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT from table name string
 TEST_F(SelectQueryTest, SelectFromTableNameExpression) {
-    auto query = select(lit(1)).from("test_table");
+    auto query  = select(lit(1)).from("test_table");
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with WHERE clause
 TEST_F(SelectQueryTest, SelectWithWhereExpression) {
-    auto query = select(user_name).from(users_schema).where(user_age > lit(18));
+    auto query  = select(user_name).from(users_schema).where(user_age > lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with JOIN
@@ -149,7 +141,6 @@ TEST_F(SelectQueryTest, SelectWithJoinExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with GROUP BY
@@ -160,7 +151,6 @@ TEST_F(SelectQueryTest, SelectWithGroupByExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with HAVING
@@ -172,7 +162,6 @@ TEST_F(SelectQueryTest, SelectWithHavingExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with ORDER BY
@@ -183,7 +172,6 @@ TEST_F(SelectQueryTest, SelectWithOrderByExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SELECT with LIMIT
@@ -194,5 +182,4 @@ TEST_F(SelectQueryTest, SelectWithLimitExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }

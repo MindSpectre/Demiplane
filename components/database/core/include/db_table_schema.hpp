@@ -11,7 +11,6 @@ namespace demiplane::db {
     // Enhanced TableSchema with type-safe column access
     class TableSchema {
     public:
-
         explicit TableSchema(std::string table_name);
         // Enhanced builder pattern with type information
         template <typename T>
@@ -22,7 +21,7 @@ namespace demiplane::db {
 
         // Type-safe column accessor
         template <typename T>
-        Column<T> column(std::string_view field_name) const;
+        TableColumn<T> column(std::string_view field_name) const;
 
 
         // Existing methods
@@ -48,7 +47,7 @@ namespace demiplane::db {
 
         [[nodiscard]] std::shared_ptr<TableSchema> clone();
 
-        [[nodiscard]]  static std::shared_ptr<TableSchema> make_ptr(std::string name);
+        [[nodiscard]] static std::shared_ptr<TableSchema> make_ptr(std::string name);
 
     private:
         std::string table_name_;

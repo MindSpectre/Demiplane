@@ -194,6 +194,20 @@ namespace demiplane::db {
         std::optional<std::string> right_alias_;
     };
 
+    class ColumnHolder {
+    public:
+        explicit ColumnHolder(DynamicColumn column)
+            : column_{std::move(column)} {}
+
+        const DynamicColumn& column() const {
+            return column_;
+        }
+
+    private:
+        DynamicColumn column_;
+    };
+
+
     template <typename Derived, typename... AllowedFeatures>
     class QueryOperations {
     public:
@@ -298,6 +312,8 @@ namespace demiplane::db {
             requires (has_feature<AllowLimit, AllowedFeatures...>) {
             return LimitExpr<Derived>{std::move(derived()), count, 0};
         }
+
+        // TODO: make chaining set operation(union, intersect, except, union_all)
 
     protected:
         // Helper to get derived instance

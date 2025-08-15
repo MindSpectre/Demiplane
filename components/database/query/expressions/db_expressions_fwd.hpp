@@ -66,45 +66,39 @@ namespace demiplane::db {
                           IsBetweenExpr<T>;
 
 
-    template <typename T>
     class CountExpr;
 
     template <typename T>
-    concept IsCountExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, CountExpr>;
+    concept IsCountExpr = std::is_same_v<std::remove_cvref_t<T>, CountExpr>;
 
-    template <typename T>
     class SumExpr;
 
     template <typename T>
-    concept IsSumExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, SumExpr>;
+    concept IsSumExpr = std::is_same_v<std::remove_cvref_t<T>, SumExpr>;
 
-    template <typename T>
     class AvgExpr;
 
     template <typename T>
-    concept IsAvgExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, AvgExpr>;
+    concept IsAvgExpr = std::is_same_v<std::remove_cvref_t<T>, AvgExpr>;
 
-    template <typename T>
     class MinExpr;
 
     template <typename T>
-    concept IsMinExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, MinExpr>;
+    concept IsMinExpr = std::is_same_v<std::remove_cvref_t<T>, MinExpr>;
 
-    template <typename T>
     class MaxExpr;
 
     template <typename T>
-    concept IsMaxExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, MaxExpr>;
+    concept IsMaxExpr = std::is_same_v<std::remove_cvref_t<T>, MaxExpr>;
 
     template <typename T>
     concept IsAggregate = IsCountExpr<T> || IsSumExpr<T> || IsAvgExpr<T> || IsMaxExpr<T> || IsMinExpr<T>;
 
     // OrderBy expression concept
-    template <typename T>
     class OrderBy;
 
     template <typename T>
-    concept IsOrderBy = gears::is_specialization_of_v<std::remove_cvref_t<T>, OrderBy>;
+    concept IsOrderBy = std::is_same_v<std::remove_cvref_t<T>, OrderBy>;
 
     template <IsCondition ConditionExpr, typename ValueExpr>
     struct WhenClause;

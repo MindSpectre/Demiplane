@@ -1,13 +1,12 @@
 #pragma once
 
 namespace demiplane::db {
-    template <typename T>
-    void Column<T>::accept(this auto&& self, QueryVisitor& visitor) {
+    void DynamicColumn::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }
 
-    // Specialization for Column<void>
-    void Column<void>::accept(this auto&& self, QueryVisitor& visitor) {
+    template <typename T>
+    void TableColumn<T>::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }
 

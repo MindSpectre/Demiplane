@@ -22,7 +22,7 @@ class CaseQueryTest : public ::testing::Test,
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
+        cfg.file             = "query_test.log";
         cfg.add_time_to_name = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
@@ -52,12 +52,12 @@ protected:
 
     std::shared_ptr<TableSchema> users_schema;
 
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<double> user_salary{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
-    Column<std::string> user_status{nullptr, ""};
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<double> user_salary{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
+    TableColumn<std::string> user_status{nullptr, ""};
 
     std::unique_ptr<QueryCompiler> compiler;
 };

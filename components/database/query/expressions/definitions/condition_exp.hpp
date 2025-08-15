@@ -177,12 +177,12 @@ namespace demiplane::db {
     }
 
     template <typename T>
-    constexpr auto in(const Column<T>& col, std::initializer_list<T> values) {
-        return BinaryExpr<Column<T>, std::vector<T>, OpIn>{col, std::vector<T>(values)};
+    constexpr auto in(const TableColumn<T>& col, std::initializer_list<T> values) {
+        return BinaryExpr<TableColumn<T>, std::vector<T>, OpIn>{col, std::vector<T>(values)};
     }
 
     template <typename T, IsQuery Query>
-    constexpr auto in(const Column<T>& col, const Subquery<Query>& sq) {
-        return BinaryExpr<Column<T>, Subquery<Query>, OpIn>{col, sq};
+    constexpr auto in(const TableColumn<T>& col, const Subquery<Query>& sq) {
+        return BinaryExpr<TableColumn<T>, Subquery<Query>, OpIn>{col, sq};
     }
 }

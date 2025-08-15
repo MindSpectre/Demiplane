@@ -68,18 +68,18 @@ protected:
     std::shared_ptr<TableSchema> users_schema;
     std::shared_ptr<TableSchema> orders_schema;
 
-    Column<int> user_id{nullptr, ""};
-    Column<std::string> user_name{nullptr, ""};
-    Column<int> user_age{nullptr, ""};
-    Column<bool> user_active{nullptr, ""};
-    Column<std::string> user_department{nullptr, ""};
-    Column<double> user_salary{nullptr, ""};
+    TableColumn<int> user_id{nullptr, ""};
+    TableColumn<std::string> user_name{nullptr, ""};
+    TableColumn<int> user_age{nullptr, ""};
+    TableColumn<bool> user_active{nullptr, ""};
+    TableColumn<std::string> user_department{nullptr, ""};
+    TableColumn<double> user_salary{nullptr, ""};
 
-    Column<int> order_id{nullptr, ""};
-    Column<int> order_user_id{nullptr, ""};
-    Column<double> order_amount{nullptr, ""};
-    Column<std::string> order_status{nullptr, ""};
-    Column<std::string> order_created_date{nullptr, ""};
+    TableColumn<int> order_id{nullptr, ""};
+    TableColumn<int> order_user_id{nullptr, ""};
+    TableColumn<double> order_amount{nullptr, ""};
+    TableColumn<std::string> order_status{nullptr, ""};
+    TableColumn<std::string> order_created_date{nullptr, ""};
 
     std::unique_ptr<QueryCompiler> compiler;
 };
@@ -274,7 +274,7 @@ TEST_F(ClauseQueryTest, ComplexQueryWithAllClausesExpression) {
                  .having(count(user_id) >= lit(3) && avg(user_salary) > lit(40000.0))
                  .order_by(desc(/*avg*/(user_salary)), asc(user_department))
                  .limit(10);
-
+    //todo: desc accept aggreagate
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << "Complex query: " << result.sql;

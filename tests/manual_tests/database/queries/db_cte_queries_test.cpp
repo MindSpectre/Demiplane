@@ -117,9 +117,9 @@ TEST_F(CteQueryTest, CteUsedInMainQueryExpression) {
                              .where(emp_salary > lit(80000.0)));
 
     // Use CTE in main query
-    auto main_query = select(emp_name.as("employee_name"), sale_amount)
+    auto main_query = select(emp_name.as("employee_name").as_dynamic().set_context(high_earners.name()), sale_amount)
                       .from(high_earners)
-                      .join(sales_schema).on(sale_employee_id == (emp_id.as_dynamic().set_context("high_earners")))
+                      .join(sales_schema).on(sale_employee_id == (emp_id.as_dynamic().set_context(high_earners.name())))
                       .where(sale_amount > lit(10000.0));
 
     auto result = compiler->compile(main_query);
@@ -140,67 +140,31 @@ TEST_F(CteQueryTest, MultipleCteExpression) {
                            .group_by(sale_employee_id)
                            .having(sum(sale_amount) > lit(50000.0)));
 
-    auto main_query = select(emp_name, emp_department, lit("total_sales"))
-            .from(active_employees);
+    auto main_query = select(emp_name.as_dynamic().set_context(high_sales.name()), emp_department, lit("total_sales"))
+        .from(active_employees);
     auto result = compiler->compile(main_query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << "Multiple CTE: " << result.sql;
 }
 
-// Test recursive CTE (hierarchical data)
-TEST_F(CteQueryTest, RecursiveCteExpression) {
-    // auto employee_hierarchy = with_recursive("employee_hierarchy",
-    //                                         select(emp_id, emp_name, emp_manager_id, lit(0).as("level"))
-    //                                         .from(employees_schema)
-    //                                         .where(is_null(emp_manager_id))
-    //                                         .union_all(
-    //                                             select(e.emp_id, e.emp_name, e.emp_manager_id, h.level + lit(1))
-    //                                             .from(employees_schema.as("e"))
-    //                                             .join("employee_hierarchy").as("h").on(e.emp_manager_id == h.emp_id)
-    //                                         ));
-    // auto result = compiler->compile(employee_hierarchy);
-    // EXPECT_FALSE(result.sql.empty());
-    // #ifdef MANUAL_CHECK
-    //     std::cout << result.sql << std::endl;
-    // #endif
-}
-
-// Test CTE with window functions
-TEST_F(CteQueryTest, CteWithWindowFunctionsExpression) {
-    // auto ranked_employees = with("ranked_employees",
-    //                             select(emp_id, emp_name, emp_department, emp_salary,
-    //                                   row_number().over(partition_by(emp_department).order_by(desc(emp_salary))).as("dept_rank"))
-    //                             .from(employees_schema)
-    //                             .where(emp_active == lit(true)));
-    //
-    // auto main_query = select(emp_name, emp_department, emp_salary)
-    //                   .from(ranked_employees)
-    //                   .where(col(nullptr, "dept_rank") <= lit(3));
-    //
-    // auto result = compiler->compile(main_query);
-    // EXPECT_FALSE(result.sql.empty());
-    // #ifdef MANUAL_CHECK
-    //     std::cout << result.sql << std::endl;
-    // #endif
-}
 
 // Test CTE with complex joins
-// TEST_F(CteQueryTest, CteWithComplexJoinsExpression) {
-//     auto employee_sales_summary = with("employee_sales_summary",
-//                                       select(emp_name, emp_department,
-//                                             sum(sale_amount).as("total_sales"),
-//                                             count(sale_id).as("sale_count"))
-//                                       .from(employees_schema)
-//                                       .left_join(sales_schema->table_name()).on(sale_employee_id == emp_id)
-//                                       .where(emp_active == lit(true))
-//                                       .group_by(emp_id, emp_name, emp_department));
-//
-//     auto result = compiler->compile(employee_sales_summary);
-//     EXPECT_FALSE(result.sql.empty());
-//     #ifdef MANUAL_CHECK
-//         std::cout << result.sql << std::endl;
-//     #endif
-// }
+TEST_F(CteQueryTest, CteWithComplexJoinsExpression) {
+    auto employee_sales_summary = with("employee_sales_summary",
+                                      select(emp_name, emp_department,
+                                            sum(sale_amount).as("total_sales"),
+                                            count(sale_id).as("sale_count"))
+                                      .from(employees_schema)
+                                      .join(sales_schema->table_name(), JoinType::LEFT).on(sale_employee_id == emp_id)
+                                      .where(emp_active == lit(true))
+                                      .group_by(emp_id, emp_name, emp_department));
+
+    auto result = compiler->compile(employee_sales_summary);
+    EXPECT_FALSE(result.sql.empty());
+    #ifdef MANUAL_CHECK
+        std::cout << result.sql << std::endl;
+    #endif
+}
 
 // Test CTE with subqueries
 TEST_F(CteQueryTest, CteWithSubqueriesExpression) {
@@ -217,24 +181,3 @@ TEST_F(CteQueryTest, CteWithSubqueriesExpression) {
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << "CTE with subqueries: " << result.sql;
 }
-
-// Test nested CTEs
-// TEST_F(CteQueryTest, NestedCteExpression) {
-//     auto dept_averages = with("dept_averages",
-//                              select(emp_department, avg(emp_salary).as("avg_salary"))
-//                              .from(employees_schema)
-//                              .where(emp_active == lit(true))
-//                              .group_by(emp_department));
-//
-//     auto above_average_employees = with("above_average_employees",
-//                                        select(emp_name, emp_department, emp_salary)
-//                                        .from(employees_schema.as("e"))
-//                                        .join(dept_averages.as("da")).on(e.emp_department == da.emp_department)
-//                                        .where(e.emp_salary > da.avg_salary));
-//
-//     auto result = compiler->compile(above_average_employees);
-//     EXPECT_FALSE(result.sql.empty());
-//     #ifdef MANUAL_CHECK
-//         std::cout << result.sql << std::endl;
-//     #endif
-// }

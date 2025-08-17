@@ -145,8 +145,12 @@ namespace demiplane::db {
 
         void visit(const CountExpr& expr) {
             visit_count_impl(expr.distinct());
-            expr.column().accept(*this);
-
+            if (expr.is_all_columns()) {
+                visit_all_columns_impl(nullptr);
+            }
+            else {
+                expr.column().accept(*this);
+            }
             visit_aggregate_end(expr.alias());
         }
 

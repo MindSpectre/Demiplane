@@ -7,26 +7,16 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <typename Derived, typename T>
-    class SingleColumnAggregateExpr : public AliasableExpression<Derived> {
-    public:
-        explicit SingleColumnAggregateExpr(TableColumn<T> column)
-            : column_{std::move(column)} {}
-
-        [[nodiscard]] const TableColumn<T>& column() const {
-            return column_;
-        }
-
-    protected:
-        TableColumn<T> column_;
-    };
-
     // Count expression with optional distinct support
     class CountExpr : public AliasableExpression<CountExpr>, public ColumnHolder {
     public:
         explicit CountExpr(DynamicColumn col, const bool dist)
             : ColumnHolder{std::move(col)},
               distinct_(dist) {}
+
+        explicit CountExpr(AllColumns col, const bool dist)
+            : ColumnHolder{std::move(col)},
+              distinct_{dist} {}
 
         [[nodiscard]] bool distinct() const {
             return distinct_;
@@ -76,12 +66,12 @@ namespace demiplane::db {
     }
 
     //todo: Count(table.*) will work?
-    inline CountExpr count_all(std::string table) {
-        return CountExpr{AllColumns{std::move(table)}.as_dynamic().set_context({}), false};
+    inline CountExpr count_all() {
+        return CountExpr{AllColumns{""}, false};
     }
 
-    inline CountExpr count_all_distinct(std::string table) {
-        return CountExpr{AllColumns{std::move(table)}.as_dynamic(), true};
+    inline CountExpr count_all_distinct() {
+        return CountExpr{AllColumns{""}, true};
     }
 
     template <typename T>
@@ -103,5 +93,4 @@ namespace demiplane::db {
     MinExpr min(const TableColumn<T>& col) {
         return MinExpr{col.as_dynamic()};
     }
-
 }

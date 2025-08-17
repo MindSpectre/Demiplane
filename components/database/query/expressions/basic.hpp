@@ -199,12 +199,23 @@ namespace demiplane::db {
         explicit ColumnHolder(DynamicColumn column)
             : column_{std::move(column)} {}
 
-        const DynamicColumn& column() const {
-            return column_;
+        explicit ColumnHolder(AllColumns column)
+            : column_{std::move(column)} {}
+
+        [[nodiscard]] const DynamicColumn& column() const {
+            return std::get<DynamicColumn>(column_);
+        }
+
+        [[nodiscard]] const AllColumns& all_columns() const {
+            return std::get<AllColumns>(column_);
+        }
+
+        [[nodiscard]] constexpr bool is_all_columns() const {
+            return std::holds_alternative<AllColumns>(column_);
         }
 
     private:
-        DynamicColumn column_;
+        std::variant<DynamicColumn, AllColumns> column_;
     };
 
 

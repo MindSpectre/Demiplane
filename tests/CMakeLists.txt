@@ -29,6 +29,7 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     add_subdirectory(unit_tests/database)
+    add_subdirectory(manual_tests/database)
 endif ()
 ##############################################################################
 

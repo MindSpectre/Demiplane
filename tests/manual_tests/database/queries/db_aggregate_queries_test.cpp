@@ -21,7 +21,7 @@ class AggregateQueryTest : public ::testing::Test,
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
+        cfg.file             = "query_test.log";
         cfg.add_time_to_name = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
@@ -118,7 +118,7 @@ TEST_F(AggregateQueryTest, CountDistinctExpression) {
 
 // Test COUNT ALL
 TEST_F(AggregateQueryTest, CountAllExpression) {
-    auto query  = select(count_all(users_schema->table_name())).from(users_schema);
+    auto query  = select(count_all()).from(users_schema);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
 

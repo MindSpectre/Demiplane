@@ -5,7 +5,6 @@ set(DMP_DATABASE ${DMP_COMPONENT}.Database)
 ##############################################################################
 add_library(${DMP_DATABASE}.Core STATIC
         core/include/db_field_schema.hpp
-        core/include/arena.hpp # TODO: exclude ARENA
         core/include/db_record.hpp
         core/include/db_field.hpp
         core/include/db_record_factory.hpp

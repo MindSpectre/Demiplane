@@ -324,7 +324,7 @@ namespace demiplane::db {
             return LimitExpr<Derived>{std::move(derived()), count, 0};
         }
 
-        // TODO: make chaining set operation(union, intersect, except, union_all)
+        // TODO: make chaining set operation(union, intersect, except, union_all) Issue#41
 
     protected:
         // Helper to get derived instance

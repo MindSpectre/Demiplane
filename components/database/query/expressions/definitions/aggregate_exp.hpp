@@ -65,7 +65,6 @@ namespace demiplane::db {
         return CountExpr{col.as_dynamic(), true};
     }
 
-    //todo: Count(table.*) will work?
     inline CountExpr count_all() {
         return CountExpr{AllColumns{""}, false};
     }

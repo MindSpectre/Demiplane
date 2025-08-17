@@ -20,7 +20,7 @@ namespace demiplane::db {
         // Type mapping
         [[nodiscard]] virtual std::string map_type(const std::string_view db_type) const {
             return std::string(db_type);
-            // TODO do proper mapping
+            // TODO do proper mapping Issue#40
         }
 
         // Feature support

@@ -15,7 +15,7 @@ add_subdirectory(unit_tests)
 
 add_subdirectory(integration_tests)
 
-
+add_subdirectory(codesandbox)
 ##############################################################################
 # Http component test
 ##############################################################################
@@ -29,6 +29,7 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     add_subdirectory(unit_tests/database)
+    add_subdirectory(manual_tests/database)
 endif ()
 ##############################################################################
 
@@ -39,12 +40,3 @@ if (BUILD_NEXUS)
     add_subdirectory(unit_tests/nexus)
 endif ()
 ##############################################################################
-
-
-add_executable(${PROJECT_NAME}.Tests.Sandbox
-        codesandbox/main.cpp
-)
-target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
-        PRIVATE
-        Demiplane::Common::Gears
-)

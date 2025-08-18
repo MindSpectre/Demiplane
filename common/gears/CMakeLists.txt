@@ -36,6 +36,7 @@ add_library(${DMP_GEARS}.Utilities INTERFACE
         utilities/include/gears_macros.hpp
         utilities/include/gears_utils.hpp
         utilities/include/gears_types.hpp
+        utilities/include/gears_hash.hpp
 )
 target_include_directories(${DMP_GEARS}.Utilities INTERFACE
         utilities/include

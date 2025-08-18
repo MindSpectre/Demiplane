@@ -8,3 +8,5 @@
 #include "gears_utils.hpp"
 #include "gears_macros.hpp"
 #include "gears_types.hpp"
+#include "gears_exceptions.hpp"
+#include "gears_hash.hpp"

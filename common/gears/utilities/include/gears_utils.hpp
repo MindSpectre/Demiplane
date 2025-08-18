@@ -9,17 +9,20 @@ namespace demiplane::gears {
     constexpr void unused_value(const V& value) {
         static_cast<void>(value);
     }
+
     template <typename V, typename... Rest>
     consteval void unused_value(const V& value, const Rest&... rest) {
         static_cast<void>(value);
         unused_value(rest...); // Recursively process remaining arguments
     }
+
     template <class T = void>
     constexpr void unreachable() {
         static_assert(dependent_false_v<T>, "Unreachable branch reached.");
     }
+
     template <typename CheckedType = void>
-    [[noreturn]] consteval auto unreachable() {
+    consteval void unreachable_c() {
         static_assert(dependent_false_v<CheckedType>, "Unreachable branch reached.");
         std::unreachable();
     }
@@ -36,5 +39,8 @@ namespace demiplane::gears {
     constexpr void enforce_non_const(T) {
         static_assert(!std::is_const_v<std::remove_pointer_t<T>>, "Function must not be const-qualified!");
     }
+
+
+
 
 } // namespace demiplane::gears

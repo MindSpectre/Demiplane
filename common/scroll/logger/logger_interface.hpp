@@ -25,6 +25,6 @@ namespace demiplane::scroll {
     };
 
     template <typename T>
-    concept LoggerConcept = demiplane::gears::derived_from_specialization_of_v<Logger, T>;
+    concept LoggerConcept = demiplane::gears::derived_from_specialization_of_v<T, Logger>;
     
 } // namespace demiplane::scroll

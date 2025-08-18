@@ -16,8 +16,8 @@
 #define SCROLL_LOG_ENTRY(logger_ptr, level, message) logger_ptr->log(level, message, std::source_location::current())
 #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level)   demiplane::scroll::StreamLogEntry(logger_ptr, level)
 #else
-#define LOG_ENTRY(logger_ptr, level, message) (void(0))
-#define LOG_STREAM_ENTRY(logger_ptr, level)   demiplane::scroll::DummyStreamLogEntry()
+#define SCROLL_LOG_ENTRY(logger_ptr, level, message) (void(0))
+#define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level)   demiplane::scroll::DummyStreamLogEntry()
 
 namespace demiplane::scroll {
     class DummyStreamLogEntry {

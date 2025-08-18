@@ -8,11 +8,11 @@
 
 namespace demiplane::scroll {
 
-    template <detail::EntryConcept EntryType>
     class StreamLogEntry {
     public:
-        StreamLogEntry(Logger<EntryType>* logger_ptr, const LogLevel level,
-            const std::source_location loc = std::source_location::current())
+        StreamLogEntry(Logger* logger_ptr,
+                       const LogLevel level,
+                       const std::source_location loc = std::source_location::current())
             : logger_ptr_(logger_ptr), level_(level), loc_(loc) {}
 
         ~StreamLogEntry() {
@@ -30,7 +30,7 @@ namespace demiplane::scroll {
         }
 
     private:
-        Logger<EntryType>* logger_ptr_;
+        Logger* logger_ptr_;
         LogLevel level_;
         std::source_location loc_;
         std::ostringstream stream_;

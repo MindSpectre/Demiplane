@@ -18,7 +18,7 @@ using namespace demiplane::db;
 
 // Test fixture for JOIN operations
 class JoinQueryTest : public ::testing::Test,
-                      public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                      public demiplane::scroll::FileLoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;

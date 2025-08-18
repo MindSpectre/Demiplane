@@ -17,7 +17,7 @@ using namespace demiplane::db;
 
 // Test fixture for aggregate operations
 class AggregateQueryTest : public ::testing::Test,
-                           public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                           public demiplane::scroll::FileLoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;

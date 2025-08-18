@@ -10,42 +10,42 @@
 
 
 namespace demiplane::scroll {
-    template <LoggerConcept LoggerType>
     class LoggerProvider {
     public:
         virtual ~LoggerProvider() = default;
 
         LoggerProvider() = default;
 
-        explicit LoggerProvider(const std::shared_ptr<LoggerType>& logger) : logger_(logger) {}
+        explicit LoggerProvider(const std::shared_ptr<Logger>& logger)
+            : logger_(logger) {}
 
-        [[nodiscard]] LoggerType* get_logger() noexcept {
+        [[nodiscard]] Logger* get_logger() noexcept {
             return logger_.get();
         }
 
-        [[nodiscard]] const LoggerType* get_logger() const noexcept {
+        [[nodiscard]] const Logger* get_logger() const noexcept {
             return logger_.get();
         }
 
-        void set_logger(std::shared_ptr<LoggerType> logger) noexcept {
+        void set_logger(std::shared_ptr<Logger> logger) noexcept {
             logger_ = std::move(logger);
         }
 
     private:
-        std::shared_ptr<LoggerType> logger_;
+        std::shared_ptr<Logger> logger_;
     };
 
 
-    template <detail::EntryConcept EntryType>
-    class ConsoleLoggerProvider : public LoggerProvider<ConsoleLogger<EntryType>> {};
+    class ConsoleLoggerProvider : public LoggerProvider {};
 
-    template <detail::EntryConcept EntryType>
-    class FileLoggerProvider : public LoggerProvider<FileLogger<EntryType>> {};
+    class FileLoggerProvider : public LoggerProvider {};
 
-    class TestLoggerProvider : public LoggerProvider<ConsoleLogger<DetailedEntry>> {
+    class TestLoggerProvider : public LoggerProvider {
     public:
         explicit TestLoggerProvider()
-            : LoggerProvider(
-                  std::make_shared<ConsoleLogger<DetailedEntry>>(ConsoleLoggerConfig{.flush_each_entry = true})) {}
+            : LoggerProvider(std::make_shared<ConsoleLogger<DetailedEntry>>(
+                ConsoleLoggerConfig{
+                    .flush_each_entry = true
+                })) {}
     };
 } // namespace demiplane::scroll

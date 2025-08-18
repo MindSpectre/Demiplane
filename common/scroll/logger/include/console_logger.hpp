@@ -12,37 +12,26 @@ namespace demiplane::scroll {
     };
 
     template <detail::EntryConcept EntryType>
-    class ConsoleLogger : public Logger<EntryType> {
+    class ConsoleLogger final : public Logger {
     public:
         explicit ConsoleLogger(const ConsoleLoggerConfig cfg) : config_{cfg} {}
 
         void log(LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
-            auto entry = make_entry<EntryType>(lvl, msg, loc);
-            log(entry);
-        }
-
-        void log(const EntryType& entry) override {
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+            if (static_cast<int8_t>(lvl) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
+            auto entry = make_entry<EntryType>(lvl, msg, loc);
             std::lock_guard lock{mutex_};
             std::cout << entry.to_string();
             if (config_.flush_each_entry) {
                 std::cout << std::flush;
             }
         }
-        void log(EntryType&& entry) override {
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
-                return;
-            }
-            std::lock_guard lock{mutex_};
-            std::cout << entry.to_string();
-        }
         ConsoleLoggerConfig& config() {
             return config_;
         }
     protected:
-        std::mutex mutex_;
+        mutable std::mutex mutex_;
         ConsoleLoggerConfig config_;
     };
 

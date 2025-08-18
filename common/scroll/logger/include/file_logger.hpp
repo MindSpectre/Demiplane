@@ -26,7 +26,7 @@ namespace demiplane::scroll {
     };
 
     template <detail::EntryConcept EntryType>
-    class FileLogger final : public Logger<EntryType> {
+    class FileLogger final : public Logger {
     public:
         explicit FileLogger(FileLoggerConfig cfg) : config_(std::move(cfg)) {
             init();
@@ -80,25 +80,6 @@ namespace demiplane::scroll {
             enqueue(std::move(entry));
         }
 
-        void log(const EntryType& entry) override {
-            if (!accepting_.load(std::memory_order_relaxed)) {
-                return;
-            }
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
-                return;
-            }
-            enqueue(entry);
-        }
-
-        void log(EntryType &&entry) override {
-            if (!accepting_.load(std::memory_order_relaxed)) {
-                return;
-            }
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
-                return;
-            }
-            enqueue(std::move(entry));
-        }
         FileLoggerConfig& config() {
             return config_;
         }

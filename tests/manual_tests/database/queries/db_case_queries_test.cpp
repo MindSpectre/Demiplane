@@ -18,7 +18,7 @@ using namespace demiplane::db;
 
 // Test fixture for CASE operations
 class CaseQueryTest : public ::testing::Test,
-                      public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                      public demiplane::scroll::FileLoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;

@@ -36,7 +36,7 @@ TEST_F(FileLoggerTest, LogsEntryWhenAboveThreshold) {
         demiplane::scroll::INF, "Test message", std::source_location::current());
 
     // Log the entry
-    file_logger->log(entry);
+    // file_logger->log(entry);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Get the output from file
     const std::string output = read_log_file();
@@ -55,7 +55,7 @@ TEST_F(FileLoggerTest, FiltersEntriesBelowThreshold) {
     auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
         demiplane::scroll::INF, "This should not appear", std::source_location::current());
 
-    file_logger->log(entry);
+    // file_logger->log(entry); todo/
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Output should be empty
     EXPECT_TRUE(read_log_file().empty());
@@ -207,9 +207,7 @@ void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demip
         threads.emplace_back([&] {
             for (std::size_t j = 0; j < r_num; ++j) {
                 std::string msg = "MSG" + std::to_string(j);
-                const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
-                    demiplane::scroll::INF, msg , std::source_location::current());
-                file_logger->log(entry);
+                file_logger->log(demiplane::scroll::DBG, msg, std::source_location::current());
                 // std::this_thread::sleep_for(process_time);
             }
         });

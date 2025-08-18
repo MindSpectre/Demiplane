@@ -1,4 +1,3 @@
-
 // SET operations tests
 // Comprehensive tests for UNION, INTERSECT, EXCEPT operations
 
@@ -19,11 +18,11 @@ using namespace demiplane::db;
 
 // Test fixture for SET operations
 class SetOperationsTest : public ::testing::Test,
-                          public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                          public demiplane::scroll::FileLoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
+        cfg.file             = "query_test.log";
         cfg.add_time_to_name = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
@@ -95,7 +94,6 @@ TEST_F(SetOperationsTest, UnionExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test UNION ALL operation
@@ -110,7 +108,6 @@ TEST_F(SetOperationsTest, UnionAllExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test INTERSECT operation
@@ -127,7 +124,6 @@ TEST_F(SetOperationsTest, IntersectExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test EXCEPT operation
@@ -143,7 +139,6 @@ TEST_F(SetOperationsTest, ExceptExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test multiple UNION operations
@@ -164,7 +159,6 @@ TEST_F(SetOperationsTest, MultipleUnionExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test SET operation with ORDER BY
@@ -217,7 +211,6 @@ TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }
 
 // Test complex SET operations with subqueries
@@ -235,5 +228,4 @@ TEST_F(SetOperationsTest, ComplexSetOperationsWithSubqueriesExpression) {
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
-    
 }

@@ -20,6 +20,11 @@ namespace demiplane::nexus {
         Nexus();
         ~Nexus();
 
+        static Nexus& instance() {
+            static Nexus instance;
+            return instance;
+        }
+
         // ───────── registration ─────────
         template <class T, class Factory>
         void register_factory(Factory&& f, Lifetime lt = Flex{}, std::uint32_t id = default_id_v<T>);

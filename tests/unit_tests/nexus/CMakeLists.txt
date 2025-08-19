@@ -6,7 +6,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Nexus
 )
 
 target_link_libraries(${UNIT_TESTING_TARGET}.Nexus
-        Demiplane::Component::Nexus
+        Demiplane::Common::Nexus
         ${TEST_LIBS}
 )
 ##############################################################################

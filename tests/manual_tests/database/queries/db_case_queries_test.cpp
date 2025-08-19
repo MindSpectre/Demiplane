@@ -23,7 +23,7 @@ protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
         cfg.file             = "query_test.log";
-        cfg.add_time_to_name = false;
+        cfg.add_time_to_filename = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
             demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));

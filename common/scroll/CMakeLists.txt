@@ -40,6 +40,7 @@ add_library(${DMP_SCROLL}.Logger STATIC
         logger/include/log_macros.hpp
         logger/include/file_logger.hpp
         logger/include/console_logger.hpp
+        logger/source/file_logger.inl
 )
 target_include_directories(${DMP_SCROLL}.Logger PUBLIC
         logger/include

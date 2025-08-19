@@ -18,14 +18,4 @@
 #else
 #define SCROLL_LOG_ENTRY(logger_ptr, level, message) (void(0))
 #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level)   demiplane::scroll::DummyStreamLogEntry()
-
-namespace demiplane::scroll {
-    class DummyStreamLogEntry {
-    public:
-        template <typename T>
-        DummyStreamLogEntry& operator<<(const T&) {
-            return *this;
-        }
-    };
-} // namespace demiplane::scroll
 #endif

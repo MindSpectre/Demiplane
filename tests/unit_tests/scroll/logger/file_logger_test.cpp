@@ -1,4 +1,3 @@
-
 #include <demiplane/scroll>
 #include <filesystem>
 #include <fstream>
@@ -6,9 +5,12 @@
 #include <sstream>
 
 class FileLoggerTest : public ::testing::Test {
-protected:
-    demiplane::scroll::FileLoggerConfig cfg{
-        .threshold = demiplane::scroll::DBG, .file = "test.log", .add_time_to_name = false, .safe_mode = true};
+    protected:
+    demiplane::scroll::FileLoggerConfig cfg{.threshold            = demiplane::scroll::DBG,
+                                            .file                 = "test.log",
+                                            .add_time_to_filename = true,
+                                            .sort_entries         = true,
+                                            .flush_each_batch     = true};
     std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> file_logger;
 
     void SetUp() override {
@@ -22,7 +24,7 @@ protected:
     }
 
     [[nodiscard]] std::string read_log_file() const {
-        std::ifstream file(cfg.file);
+        std::ifstream     file(this->file_logger->file_path());
         std::stringstream buffer;
         buffer << file.rdbuf();
         return buffer.str();
@@ -32,11 +34,12 @@ protected:
 // Test basic logging functionality with entry objects
 TEST_F(FileLoggerTest, LogsEntryWhenAboveThreshold) {
     // Create a mock entry
-    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
-        demiplane::scroll::INF, "Test message", std::source_location::current());
+    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(demiplane::scroll::INF,
+                                                                                       "Test message",
+                                                                                       std::source_location::current());
 
     // Log the entry
-    // file_logger->log(entry);
+    file_logger->log(entry);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Get the output from file
     const std::string output = read_log_file();
@@ -52,8 +55,9 @@ TEST_F(FileLoggerTest, FiltersEntriesBelowThreshold) {
     file_logger->config().threshold = (demiplane::scroll::ERR);
     file_logger->reload();
     // Create and log an INFO entry (below the threshold)
-    auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
-        demiplane::scroll::INF, "This should not appear", std::source_location::current());
+    auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(demiplane::scroll::INF,
+                                                                                 "This should not appear",
+                                                                                 std::source_location::current());
 
     // file_logger->log(entry); todo/
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -110,11 +114,15 @@ TEST_F(FileLoggerTest, ThresholdChangeAffectsLogging) {
 // Test all log levels
 TEST_F(FileLoggerTest, AllLogLevels) {
     // Test each log level
-    std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {{demiplane::scroll::DBG, "DEBUG"},
-        {demiplane::scroll::INF, "INFO"}, {demiplane::scroll::WRN, "WARNING"}, {demiplane::scroll::ERR, "ERROR"},
-        {demiplane::scroll::FAT, "FATAL"}};
+    std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {
+        {demiplane::scroll::DBG, "DEBUG"  },
+        {demiplane::scroll::INF, "INFO"   },
+        {demiplane::scroll::WRN, "WARNING"},
+        {demiplane::scroll::ERR, "ERROR"  },
+        {demiplane::scroll::FAT, "FATAL"  }
+    };
 
-    for (const auto& [level, levelName] : levels) {
+    for (const auto &[level, levelName] : levels) {
         // Clean up file before each level test
         std::filesystem::remove(cfg.file);
         file_logger->reload();
@@ -131,7 +139,6 @@ TEST_F(FileLoggerTest, AllLogLevels) {
         EXPECT_TRUE(output.find(message) != std::string::npos) << "Message for " << levelName << " not found in output";
     }
 }
-
 
 // Test file creation and appending
 TEST_F(FileLoggerTest, FileCreationAndAppending) {
@@ -152,7 +159,7 @@ TEST_F(FileLoggerTest, FileCreationAndAppending) {
 // Test file path handling
 TEST_F(FileLoggerTest, FilePathHandling) {
     // Create a logger with a path that includes directories
-    const std::string nested_path = "test_dir/nested/test_log.txt";
+    const std::filesystem::path nested_path = "test_dir/nested/test_log.txt";
 
     // Clean up any existing directories
     std::filesystem::remove_all("test_dir");
@@ -164,10 +171,11 @@ TEST_F(FileLoggerTest, FilePathHandling) {
     file_logger->log(demiplane::scroll::INF, "Test message in nested directory", std::source_location::current());
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Verify directory was created and file exists
-    EXPECT_TRUE(std::filesystem::exists(nested_path));
+    EXPECT_TRUE(std::filesystem::exists(file_logger->file_path()) &&
+                file_logger->file_path().string().contains(nested_path.parent_path().string()));
 
     // Read the file content
-    std::ifstream nested_file(nested_path);
+    std::ifstream     nested_file(file_logger->file_path());
     std::stringstream buffer;
     buffer << nested_file.rdbuf();
     std::string output = buffer.str();
@@ -177,27 +185,29 @@ TEST_F(FileLoggerTest, FilePathHandling) {
     // Clean up
     // std::filesystem::remove_all("test_dir");
 }
-inline std::chrono::milliseconds
-parse_sec_ms(std::string_view line)
-{
+
+inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
     // indexes for "… HH:MM:SS.mmmZ"
     //            012345678901234567890123
     //            ----------^  ^   ^
     //            pos 17      20  23 (Z)
 
-    if (line.size() < 23) return std::chrono::milliseconds{0};
+    if (line.size() < 23) {
+        return std::chrono::milliseconds{0};
+    }
 
-    int  sec = std::stoi(std::string{line.substr(17, 2)});
-    int  ms  = std::stoi(std::string{line.substr(20, 3)});
+    int sec = std::stoi(std::string{line.substr(17, 2)});
+    int ms  = std::stoi(std::string{line.substr(20, 3)});
     // std::cout << line << " " << sec << " " << ms << '\n';
     return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
 }
 
-void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> &file_logger) {
+void multithread_write(
+    const std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> &file_logger) {
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
-    std::size_t t_num = 20;
-    std::size_t r_num = 50000;
+    std::size_t               t_num = 20;
+    std::size_t               r_num = 50000;
     std::chrono::milliseconds process_time{1};
     demiplane::gears::unused_value(process_time);
     threads.reserve(t_num);
@@ -214,7 +224,7 @@ void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demip
     }
 
     // Join all threads
-    for (auto& thread : threads) {
+    for (auto &thread : threads) {
         thread.join();
     }
     file_logger->graceful_shutdown();
@@ -223,35 +233,38 @@ void multithread_write(const std::shared_ptr<demiplane::scroll::FileLogger<demip
     if (!in.is_open()) {
         std::cout << "File not found" << '\n';
     }
-    std::string   line;
+    std::string               line;
     std::chrono::milliseconds prev{};
-    bool first = true;
-    std::uint32_t monotonic_errors = 0;   // how many times we go backwards?
-    std::uint32_t total_lines = 0;
-    while (std::getline(in, line))
-    {
+    bool                      first            = true;
+    std::uint32_t             monotonic_errors = 0;  // how many times we go backwards?
+    std::uint32_t             total_lines      = 0;
+    while (std::getline(in, line)) {
         auto ts = parse_sec_ms(line);
 
         if (!first) {
             if (ts < prev) {
-                ++monotonic_errors;           // or store the offending line
+                ++monotonic_errors;  // or store the offending line
             }
-        } else {
+        }
+        else {
             first = false;
         }
         prev = ts;
         total_lines++;
     }
 
-    std::cout << "Non-monotonic lines: " << monotonic_errors <<  " " << total_lines << '\n';
-    std::cout << "Non-monotonic lines%: " << static_cast<double>(100*monotonic_errors)/(static_cast<double>(t_num) * static_cast<double>(r_num)) << '\n';
+    std::cout << "Non-monotonic lines: " << monotonic_errors << " " << total_lines << '\n';
+    std::cout << "Non-monotonic lines%: "
+              << static_cast<double>(100 * monotonic_errors) / (static_cast<double>(t_num) * static_cast<double>(r_num))
+              << '\n';
 }
 
 TEST_F(FileLoggerTest, MultithreadWrite) {
-    file_logger->config().safe_mode = false;
+    file_logger->config().sort_entries = false;
 
     multithread_write(file_logger);
 }
+
 TEST_F(FileLoggerTest, MultithreadWriteSafe) {
     multithread_write(file_logger);
 }

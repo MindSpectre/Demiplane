@@ -10,10 +10,7 @@ namespace demiplane::scroll {
     class Logger {
     public:
         virtual ~Logger() = default;
-        //TODO: add simple string support
 
-        // ──────────────────────────────────────────────────────────────
         virtual void log(LogLevel lvl, std::string_view msg, std::source_location loc) = 0;
-        // ──────────────────────────────────────────────────────────────
     };
 } // namespace demiplane::scroll

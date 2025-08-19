@@ -4,6 +4,7 @@
 class ConsoleLoggerTest : public ::testing::Test {
 protected:
     void TearDown() override {}
+
     void SetUp() override {
         demiplane::scroll::ConsoleLoggerConfig cfg{demiplane::scroll::DBG, false};
         console_logger = std::make_shared<demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(cfg);
@@ -21,7 +22,7 @@ TEST_F(ConsoleLoggerTest, LogsEntryWhenAboveThreshold) {
         demiplane::scroll::INF, "Test message", std::source_location::current());
 
     // Log the entry
-    // console_logger->log(entry);
+    console_logger->log(entry);
 
     // Get the output
     const std::string output = testing::internal::GetCapturedStdout();
@@ -41,7 +42,7 @@ TEST_F(ConsoleLoggerTest, FiltersEntriesBelowThreshold) {
     auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
         demiplane::scroll::INF, "This should not appear", std::source_location::current());
 
-    // console_logger->log(entry);
+    console_logger->log(entry);
 
     // Output should be empty
     EXPECT_TRUE(testing::internal::GetCapturedStdout().empty());
@@ -99,9 +100,13 @@ TEST_F(ConsoleLoggerTest, AllLogLevels) {
     console_logger->config().threshold = demiplane::scroll::DBG;
 
     // Test each log level
-    std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {{demiplane::scroll::DBG, "DEBUG"},
-        {demiplane::scroll::INF, "INFO"}, {demiplane::scroll::WRN, "WARNING"}, {demiplane::scroll::ERR, "ERROR"},
-        {demiplane::scroll::FAT, "FATAL"}};
+    std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {
+        {demiplane::scroll::DBG, "DEBUG"},
+        {demiplane::scroll::INF, "INFO"},
+        {demiplane::scroll::WRN, "WARNING"},
+        {demiplane::scroll::ERR, "ERROR"},
+        {demiplane::scroll::FAT, "FATAL"}
+    };
 
     for (const auto& [level, levelName] : levels) {
         // Recapture for each level

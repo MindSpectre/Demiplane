@@ -1,4 +1,4 @@
-set(DMP_NEXUS ${DMP_COMPONENT}.Nexus)
+set(DMP_NEXUS ${DMP_COMMON}.Nexus)
 ##############################################################################
 # Nexus policies classes
 ##############################################################################
@@ -56,7 +56,7 @@ add_combined_library(${DMP_NEXUS}
         LIBRARIES
         ${DMP_NEXUS}.Provider
 )
-add_library(Demiplane::Component::Nexus ALIAS  ${DMP_NEXUS})
+add_library(Demiplane::Common::Nexus ALIAS ${DMP_NEXUS})
 ##############################################################################
 
 

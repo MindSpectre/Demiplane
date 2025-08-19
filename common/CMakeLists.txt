@@ -2,7 +2,6 @@ set(DMP_COMMON ${PROJECT_NAME}.Common)
 
 ###############################################
 
-
 add_subdirectory(gears)
 
 add_subdirectory(crypto)
@@ -19,3 +18,4 @@ add_subdirectory(math)
 
 add_subdirectory(fsm)
 
+add_subdirectory(nexus)

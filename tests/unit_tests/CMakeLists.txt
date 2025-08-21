@@ -47,4 +47,18 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Scroll
 ##############################################################################
 
 
+##############################################################################
+#  Nexus uint test
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Nexus
+        nexus/test_nexus.cpp
+)
+
+target_link_libraries(${UNIT_TESTING_TARGET}.Nexus
+        Demiplane::Common::Nexus
+        ${TEST_LIBS}
+)
+##############################################################################
+
+
 

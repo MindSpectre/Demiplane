@@ -42,8 +42,6 @@ namespace demiplane::chrono {
 
     template <ClockType CT>
     class SpecClock : public Clock {
-
-
     public:
         // --- PUBLIC API -------------------------------------------------
         [[nodiscard]] static std::string current_time(const std::string_view fmt) {

@@ -1,6 +1,10 @@
 #pragma once
 
+#include <demiplane/nexus>
+#include <demiplane/scroll>
+
 #include "sql_generator_visitor.hpp"
+
 
 namespace demiplane::db {
     struct CompiledQuery {
@@ -19,9 +23,11 @@ namespace demiplane::db {
         CompiledQuery compile(Expr&& expr) {
             SqlGeneratorVisitor visitor(dialect_, use_parameters_);
             std::forward<Expr>(expr).accept(visitor);
-            std::cout << visitor.sql() << std::endl;
+            SCROLL_PARAMS(visitor.sql());
+            COMPONENT_LOG_DBG() <<;
             return {std::move(visitor).sql(), std::move(visitor).parameters()};
         }
+
         // Get dialect for feature checking
         [[nodiscard]] const SqlDialect& dialect() const {
             return *dialect_;

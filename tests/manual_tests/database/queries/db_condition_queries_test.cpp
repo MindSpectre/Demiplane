@@ -18,7 +18,7 @@ using namespace demiplane::db;
 
 // Test fixture for condition operations
 class ConditionQueryTest : public ::testing::Test,
-                           public demiplane::scroll::FileLoggerProvider {
+                           public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;

@@ -4,6 +4,7 @@ set(DMP_COMPONENT ${PROJECT_NAME}.Component)
 # Database components
 ##############################################################################
 if (BUILD_DATABASE)
+    message("Database core will be built")
     add_subdirectory(database)
 endif ()
 ##############################################################################
@@ -11,7 +12,8 @@ endif ()
 ##############################################################################
 # Http 1/1.1 components
 ##############################################################################
-if(BUILD_NEXUS)
+if (BUILD_HTTP)
+    message("Http handler will be built")
     add_subdirectory(http)
 endif ()
 ##############################################################################

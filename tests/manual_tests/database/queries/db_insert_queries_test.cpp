@@ -18,11 +18,11 @@ using namespace demiplane::db;
 
 // Test fixture for INSERT operations
 class InsertQueryTest : public ::testing::Test,
-                        public demiplane::scroll::FileLoggerProvider {
+                        public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file             = "query_test.log";
+        cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<

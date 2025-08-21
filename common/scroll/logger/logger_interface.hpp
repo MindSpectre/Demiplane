@@ -9,6 +9,8 @@
 namespace demiplane::scroll {
     class Logger {
     public:
+        static constexpr std::uint32_t nexus_id = 0xFFFF; // TODO: make real number
+
         virtual ~Logger() = default;
 
         virtual void log(LogLevel lvl, std::string_view msg, std::source_location loc) = 0;

@@ -7,6 +7,8 @@
 
 namespace demiplane::scroll {
     struct ConsoleLoggerConfig {
+        static constexpr std::uint32_t nexus_id = 0x405ADA4C;
+        // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLoggerConfig
         LogLevel threshold{LogLevel::Debug};
         bool flush_each_entry{false};
     };

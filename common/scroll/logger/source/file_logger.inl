@@ -44,17 +44,19 @@ namespace demiplane::scroll {
         if (static_cast<int8_t>(lvl) < static_cast<int8_t>(config_.threshold)) {
             return;
         }
-
+        if (!accepting_.load(std::memory_order_relaxed)) {
+            return;
+        }
         EntryType entry = make_entry<EntryType>(lvl, msg, loc);
         enqueue(std::move(entry));
     }
 
     template <detail::EntryConcept EntryType>
     void FileLogger<EntryType>::log(const EntryType& entry) {
-        if (!accepting_.load(std::memory_order_relaxed)) {
+        if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
             return;
         }
-        if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+        if (!accepting_.load(std::memory_order_relaxed)) {
             return;
         }
         enqueue(entry);
@@ -62,10 +64,10 @@ namespace demiplane::scroll {
 
     template <detail::EntryConcept EntryType>
     void FileLogger<EntryType>::log(EntryType&& entry) {
-        if (!accepting_.load(std::memory_order_relaxed)) {
+        if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
             return;
         }
-        if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
+        if (!accepting_.load(std::memory_order_relaxed)) {
             return;
         }
         enqueue(std::move(entry));

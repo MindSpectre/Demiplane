@@ -7,16 +7,14 @@
 
 
 namespace demiplane::scroll {
-#ifndef ENABLE_LOGGING
-    namespace demiplane::scroll {
-        class DummyStreamLogEntry {
-        public:
-            template <typename T>
-            DummyStreamLogEntry& operator<<(const T&) {
-                return *this;
-            }
-        };
-    } // namespace demiplane::scroll
+#if !defined(DMP_ENABLE_LOGGING) || !defined(DMP_ENABLE_COMPONENT_LOGGING)
+    class DummyStreamLogEntry {
+    public:
+        template <typename T>
+        DummyStreamLogEntry& operator<<(const T&) {
+            return *this;
+        }
+    };
 #endif
 
     class StreamLogEntry {
@@ -24,8 +22,9 @@ namespace demiplane::scroll {
         StreamLogEntry(Logger* logger_ptr,
                        const LogLevel level,
                        const std::source_location loc = std::source_location::current())
-            : logger_ptr_(logger_ptr), level_(level), loc_(loc) {
-        }
+            : logger_ptr_(logger_ptr),
+              level_(level),
+              loc_(loc) {}
 
         ~StreamLogEntry() {
             // In destructor, send the accumulated message to the logger

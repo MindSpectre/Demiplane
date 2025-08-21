@@ -14,21 +14,21 @@
 #include "../logger_interface.hpp"
 
 namespace demiplane::scroll {
-    //
+    /// @brief Config used in FileLogger
     struct FileLoggerConfig {
         LogLevel threshold = LogLevel::Debug;
         std::filesystem::path file;
-        /**
-         * @brief Add time to a file name. Current is iso8601
-         */
+
+        /// @brief Add time to a file name. Current is iso8601
         bool add_time_to_filename            = true;
         std::string time_format_in_file_name = chrono::clock_formats::iso8601;
+
         /**
          * @brief Ensures data correctness.
          * Sort entries in batch queries using entry comparator (most default by time).
-         * Disabled by default.
+         * Disabled by default. Extremely slow.
          */
-        bool sort_entries = false; // extremely slow
+        bool sort_entries = false;
         /**
          * @brief Ensures data correctness.
          * Enforces flush each batch, even if it is not fill buffer.
@@ -39,6 +39,7 @@ namespace demiplane::scroll {
 
         /// @brief The default size is 100 mb.
         std::uint64_t max_file_size = gears::literals::operator""_mb(100);
+        /// @brief The default size is 512.
         std::uint32_t batch_size    = 512;
     };
 

@@ -56,16 +56,19 @@ target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
 # Scroll logger provider
 ##############################################################################
 add_library(${DMP_SCROLL}.Logger.Provider STATIC
-        logger_provider/source/logger_provider.cpp
-        logger_provider/include/logger_provider.hpp
-        logger_provider/include/log_macros_adds.hpp
+        provider/source/logger_provider.cpp
+        provider/include/logger_provider.hpp
+        provider/include/log_macros_adds.hpp
 )
 target_include_directories(${DMP_SCROLL}.Logger.Provider PUBLIC
-        logger_provider/include
+        provider/include
 )
 
-target_link_libraries(${DMP_SCROLL}.Logger.Provider PUBLIC
+target_link_libraries(${DMP_SCROLL}.Logger.Provider
+        PUBLIC
         ${DMP_SCROLL}.Logger
+        PRIVATE
+        Demiplane::Common::Nexus
 )
 ##############################################################################
 
@@ -75,8 +78,11 @@ target_link_libraries(${DMP_SCROLL}.Logger.Provider PUBLIC
 add_combined_library(${DMP_SCROLL}
         DIRECTORIES
         export
+        SOURCES
+        export/demiplane/scroll
         LIBRARIES
         ${DMP_SCROLL}.Logger.Provider
 )
+
 add_library(Demiplane::Common::Scroll ALIAS ${DMP_SCROLL})
 ##############################################################################

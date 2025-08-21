@@ -24,3 +24,40 @@
 
 
 // Addons
+
+#define SCROLL_PARAMS(...) \
+    ([&]() { \
+    std::ostringstream oss; \
+    SCROLL_PARAMS_PROCESS(oss, __VA_ARGS__); \
+    return oss.str(); \
+})()
+
+#define SCROLL_PARAMS_PROCESS(stream, ...) \
+    SCROLL_PARAMS_HELPER(stream, __VA_ARGS__)
+
+#define SCROLL_PARAMS_HELPER(stream, param, ...) \
+    do { \
+    stream << #param "={" << param << "}"; \
+    SCROLL_PARAMS_CONTINUE(stream, __VA_ARGS__); \
+    } while(0)
+
+#define SCROLL_PARAMS_CONTINUE(stream, ...) \
+    SCROLL_PARAMS_IF_NOT_EMPTY(__VA_ARGS__)(SCROLL_PARAMS_NEXT(stream, __VA_ARGS__))
+
+#define SCROLL_PARAMS_IF_NOT_EMPTY(...) \
+    SCROLL_PARAMS_IF_NOT_EMPTY_IMPL(SCROLL_PARAMS_HAS_COMMA(__VA_ARGS__,))
+
+#define SCROLL_PARAMS_IF_NOT_EMPTY_IMPL(has_comma) \
+    CAT(SCROLL_PARAMS_IF_NOT_EMPTY_, has_comma)
+
+#define SCROLL_PARAMS_IF_NOT_EMPTY_0(...)
+#define SCROLL_PARAMS_IF_NOT_EMPTY_1(...) __VA_ARGS__
+
+#define SCROLL_PARAMS_NEXT(stream, param, ...) \
+    stream << " "; \
+    SCROLL_PARAMS_HELPER(stream, __VA_ARGS__)
+
+#define SCROLL_PARAMS_HAS_COMMA(...) \
+    SCROLL_PARAMS_HAS_COMMA_IMPL(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+#define SCROLL_PARAMS_HAS_COMMA_IMPL(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, ...) a10

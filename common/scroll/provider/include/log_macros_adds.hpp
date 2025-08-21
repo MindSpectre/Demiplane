@@ -24,40 +24,27 @@
 
 
 // Addons
+#define COUNT_ARGS(...) COUNT_ARGS_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#define COUNT_ARGS_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
 
-#define SCROLL_PARAMS(...) \
+// Individual parameter formatters
+#define FMT_1(p1) #p1 "=" << p1
+#define FMT_2(p1,p2) FMT_1(p1) << ", " << #p2 "=" << p2
+#define FMT_3(p1,p2,p3) FMT_2(p1,p2) << ", " << #p3 "=" << p3
+#define FMT_4(p1,p2,p3,p4) FMT_3(p1,p2,p3) << ", " << #p4 "=" << p4
+#define FMT_5(p1,p2,p3,p4,p5) FMT_4(p1,p2,p3,p4) << ", " << #p5 "=" << p5
+#define FMT_6(p1,p2,p3,p4,p5,p6) FMT_5(p1,p2,p3,p4,p5) << ", " << #p6 "=" << p6
+#define FMT_7(p1,p2,p3,p4,p5,p6,p7) FMT_6(p1,p2,p3,p4,p5,p6) << ", " << #p7 "=" << p7
+#define FMT_8(p1,p2,p3,p4,p5,p6,p7,p8) FMT_7(p1,p2,p3,p4,p5,p6,p7) << ", " << #p8 "=" << p8
+
+// Dispatcher macro
+#define DISPATCH_FMT(N) FMT_##N
+#define CALL_FMT(N, ...) DISPATCH_FMT(N)(__VA_ARGS__)
+
+// Main macro
+#define SCROLL_PARAMS_FINAL(...) \
     ([&]() { \
     std::ostringstream oss; \
-    SCROLL_PARAMS_PROCESS(oss, __VA_ARGS__); \
+    oss << CALL_FMT(COUNT_ARGS(__VA_ARGS__), __VA_ARGS__); \
     return oss.str(); \
 })()
-
-#define SCROLL_PARAMS_PROCESS(stream, ...) \
-    SCROLL_PARAMS_HELPER(stream, __VA_ARGS__)
-
-#define SCROLL_PARAMS_HELPER(stream, param, ...) \
-    do { \
-    stream << #param "={" << param << "}"; \
-    SCROLL_PARAMS_CONTINUE(stream, __VA_ARGS__); \
-    } while(0)
-
-#define SCROLL_PARAMS_CONTINUE(stream, ...) \
-    SCROLL_PARAMS_IF_NOT_EMPTY(__VA_ARGS__)(SCROLL_PARAMS_NEXT(stream, __VA_ARGS__))
-
-#define SCROLL_PARAMS_IF_NOT_EMPTY(...) \
-    SCROLL_PARAMS_IF_NOT_EMPTY_IMPL(SCROLL_PARAMS_HAS_COMMA(__VA_ARGS__,))
-
-#define SCROLL_PARAMS_IF_NOT_EMPTY_IMPL(has_comma) \
-    CAT(SCROLL_PARAMS_IF_NOT_EMPTY_, has_comma)
-
-#define SCROLL_PARAMS_IF_NOT_EMPTY_0(...)
-#define SCROLL_PARAMS_IF_NOT_EMPTY_1(...) __VA_ARGS__
-
-#define SCROLL_PARAMS_NEXT(stream, param, ...) \
-    stream << " "; \
-    SCROLL_PARAMS_HELPER(stream, __VA_ARGS__)
-
-#define SCROLL_PARAMS_HAS_COMMA(...) \
-    SCROLL_PARAMS_HAS_COMMA_IMPL(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
-
-#define SCROLL_PARAMS_HAS_COMMA_IMPL(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10, ...) a10

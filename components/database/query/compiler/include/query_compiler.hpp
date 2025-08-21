@@ -23,8 +23,7 @@ namespace demiplane::db {
         CompiledQuery compile(Expr&& expr) {
             SqlGeneratorVisitor visitor(dialect_, use_parameters_);
             std::forward<Expr>(expr).accept(visitor);
-            SCROLL_PARAMS(visitor.sql());
-            COMPONENT_LOG_DBG() <<;
+            COMPONENT_LOG_DBG() << SCROLL_PARAMS_FINAL(visitor.sql());
             return {std::move(visitor).sql(), std::move(visitor).parameters()};
         }
 

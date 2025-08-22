@@ -16,6 +16,8 @@
 namespace demiplane::scroll {
     /// @brief Config used in FileLogger
     struct FileLoggerConfig {
+        NEXUS_REGISTER(0x6B6D41CE, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::FileLoggerConfig
+
         LogLevel threshold = LogLevel::Debug;
         std::filesystem::path file;
 
@@ -40,12 +42,14 @@ namespace demiplane::scroll {
         /// @brief The default size is 100 mb.
         std::uint64_t max_file_size = gears::literals::operator""_mb(100);
         /// @brief The default size is 512.
-        std::uint32_t batch_size    = 512;
+        std::uint32_t batch_size = 512;
     };
 
     template <detail::EntryConcept EntryType>
     class FileLogger final : public Logger {
     public:
+        NEXUS_REGISTER(0xFCCE2FB1, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::FileLogger
+
         explicit FileLogger(FileLoggerConfig cfg);
 
         ~FileLogger() override {

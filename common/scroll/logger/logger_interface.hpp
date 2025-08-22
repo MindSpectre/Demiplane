@@ -3,13 +3,14 @@
 #include <source_location>
 #include <string_view>
 
+#include <demiplane/nexus>
 #include "../core/log_level.hpp"
 
 
 namespace demiplane::scroll {
     class Logger {
     public:
-        static constexpr std::uint32_t nexus_id = 0xFFFF; // TODO: make real number
+        NEXUS_REGISTER(0x8F8CA6F5, nexus::Immortal); // CRC32/ISO-HDLC of demiplane::scroll::Logger
 
         virtual ~Logger() = default;
 

@@ -7,8 +7,8 @@
 
 namespace demiplane::scroll {
     struct ConsoleLoggerConfig {
-        static constexpr std::uint32_t nexus_id = 0x405ADA4C;
-        // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLoggerConfig
+        NEXUS_REGISTER(0x405ADA4C, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLoggerConfig
+
         LogLevel threshold{LogLevel::Debug};
         bool flush_each_entry{false};
     };
@@ -16,6 +16,8 @@ namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
     class ConsoleLogger final : public Logger {
     public:
+        NEXUS_REGISTER(0xDCBA748C, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLogger
+
         explicit ConsoleLogger(const ConsoleLoggerConfig cfg)
             : config_{cfg} {}
 

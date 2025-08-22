@@ -24,6 +24,7 @@ target_include_directories(${DMP_SCROLL}.Core PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Core PUBLIC
         JsonCpp::JsonCpp
+        Demiplane::Common::Nexus
         Demiplane::Common::Chrono
         Demiplane::Common::Gears
         ${DMP_SCROLL}.Colors
@@ -67,8 +68,6 @@ target_include_directories(${DMP_SCROLL}.Logger.Provider PUBLIC
 target_link_libraries(${DMP_SCROLL}.Logger.Provider
         PUBLIC
         ${DMP_SCROLL}.Logger
-        PRIVATE
-        Demiplane::Common::Nexus
 )
 ##############################################################################
 

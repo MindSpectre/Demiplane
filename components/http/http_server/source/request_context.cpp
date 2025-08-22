@@ -1,13 +1,12 @@
-
 #include "request_context.hpp"
 
 #include <algorithm>
-#include <demiplane/gears>
-#include <json/json.h> // You'll need to add jsoncpp dependency
 #include <sstream>
-namespace demiplane::http {
+#include <demiplane/gears>
 
-    RequestContext::RequestContext(Request req) : request_(std::move(req)) {
+namespace demiplane::http {
+    RequestContext::RequestContext(Request req)
+        : request_(std::move(req)) {
         parse_headers();
     }
 
@@ -56,7 +55,8 @@ namespace demiplane::http {
         if (!cached_json_.has_value()) {
             try {
                 cached_json_ = parse_json_body();
-            } catch ([[maybe_unused]] const std::runtime_error& e) {
+            }
+            catch ([[maybe_unused]] const std::runtime_error& e) {
                 cached_json_ = std::nullopt;
             }
         }
@@ -71,7 +71,8 @@ namespace demiplane::http {
         const auto body_str = body();
         std::istringstream stream(body_str);
 
-        if (const Json::CharReaderBuilder builder; !Json::parseFromStream(builder, stream, &root, &errors)) {
+        if (const Json::CharReaderBuilder builder;
+            !Json::parseFromStream(builder, stream, &root, &errors)) {
             throw std::runtime_error("Failed to parse JSON: " + errors);
         }
 
@@ -87,7 +88,8 @@ namespace demiplane::http {
         if (!cached_form_data_.has_value()) {
             try {
                 cached_form_data_ = parse_form_data_body();
-            } catch (const std::exception&) {
+            }
+            catch (const std::exception&) {
                 cached_form_data_ = std::nullopt;
             }
         }
@@ -103,7 +105,8 @@ namespace demiplane::http {
         std::string pair;
 
         while (std::getline(stream, pair, '&')) {
-            if (const auto eq_pos = pair.find('='); eq_pos != std::string::npos) {
+            if (const auto eq_pos = pair.find('=');
+                eq_pos != std::string::npos) {
                 auto key         = pair.substr(0, eq_pos);
                 const auto value = pair.substr(eq_pos + 1);
 
@@ -125,7 +128,8 @@ namespace demiplane::http {
         if (!cached_multipart_data_.has_value()) {
             try {
                 cached_multipart_data_ = parse_multipart_body();
-            } catch (const std::exception&) {
+            }
+            catch (const std::exception&) {
                 cached_multipart_data_ = std::nullopt;
             }
         }
@@ -163,7 +167,7 @@ namespace demiplane::http {
     bool RequestContext::accepts_json() const {
         const auto accept = header("accept");
         return accept
-            && (accept->find("application/json") != std::string::npos || accept->find("*/*") != std::string::npos);
+               && (accept->find("application/json") != std::string::npos || accept->find("*/*") != std::string::npos);
     }
 
     bool RequestContext::accepts_html() const {
@@ -185,7 +189,8 @@ namespace demiplane::http {
         std::string lower_name{name};
         std::ranges::transform(lower_name, lower_name.begin(), ::tolower);
 
-        if (const auto it = headers_.find(lower_name); it != headers_.end()) {
+        if (const auto it = headers_.find(lower_name);
+            it != headers_.end()) {
             return it->second;
         }
         return std::nullopt;
@@ -211,7 +216,8 @@ namespace demiplane::http {
     std::optional<int> RequestContext::convert_string<int>(const std::string& value) const {
         try {
             return std::stoi(value);
-        } catch (...) {
+        }
+        catch (...) {
             return std::nullopt;
         }
     }
@@ -220,7 +226,8 @@ namespace demiplane::http {
     std::optional<long> RequestContext::convert_string<long>(const std::string& value) const {
         try {
             return std::stol(value);
-        } catch (...) {
+        }
+        catch (...) {
             return std::nullopt;
         }
     }
@@ -229,7 +236,8 @@ namespace demiplane::http {
     std::optional<double> RequestContext::convert_string<double>(const std::string& value) const {
         try {
             return std::stod(value);
-        } catch (...) {
+        }
+        catch (...) {
             return std::nullopt;
         }
     }
@@ -242,7 +250,8 @@ namespace demiplane::http {
     // Template method implementations
     template <typename T>
     std::optional<T> RequestContext::path(const std::string_view name) const {
-        if (const auto it = path_params_.find(std::string{name}); it != path_params_.end()) {
+        if (const auto it = path_params_.find(std::string{name});
+            it != path_params_.end()) {
             return convert_string<T>(it->second);
         }
         return std::nullopt;
@@ -258,7 +267,8 @@ namespace demiplane::http {
 
     template <typename T>
     std::optional<T> RequestContext::query(const std::string_view name) const {
-        if (const auto it = query_params_.find(std::string{name}); it != query_params_.end()) {
+        if (const auto it = query_params_.find(std::string{name});
+            it != query_params_.end()) {
             return convert_string<T>(it->second);
         }
         return std::nullopt;
@@ -292,5 +302,4 @@ namespace demiplane::http {
     template long RequestContext::query_or<long>(std::string_view, long) const;
     template double RequestContext::query_or<double>(std::string_view, double) const;
     template std::string RequestContext::query_or<std::string>(std::string_view, std::string) const;
-
 } // namespace demiplane::http

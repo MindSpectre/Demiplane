@@ -42,9 +42,9 @@
 #define CALL_FMT(N, ...) DISPATCH_FMT(N)(__VA_ARGS__)
 
 // Main macro
-#define SCROLL_PARAMS_FINAL(...) \
+#define SCROLL_PARAMS(...) \
     ([&]() { \
     std::ostringstream oss; \
-    oss << CALL_FMT(COUNT_ARGS(__VA_ARGS__), __VA_ARGS__); \
+    oss << " " << CALL_FMT(COUNT_ARGS(__VA_ARGS__), __VA_ARGS__); \
     return oss.str(); \
 })()

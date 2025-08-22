@@ -3,14 +3,15 @@
 
 #include <gtest/gtest.h>
 
-#include "query_expressions.hpp"
+#include <demiplane/nexus>
+#include <demiplane/scroll>
+
 #include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
-
-#include <demiplane/scroll>
+#include "query_expressions.hpp"
 
 using namespace demiplane::db;
 

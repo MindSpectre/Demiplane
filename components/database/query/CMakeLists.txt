@@ -31,6 +31,7 @@ target_link_libraries(${DMP_DB_QUERY}.Compiler PUBLIC
         ${DMP_DB_QUERY}.Expressions
         ${DMP_DATABASE}.Dialect.Interface
         Demiplane::Common::Scroll
+        PRIVATE
         Demiplane::Common::Nexus
 )
 ##############################################################################

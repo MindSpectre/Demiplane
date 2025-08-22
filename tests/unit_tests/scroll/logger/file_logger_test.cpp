@@ -8,7 +8,7 @@ class FileLoggerTest : public ::testing::Test {
     protected:
     demiplane::scroll::FileLoggerConfig cfg{.threshold            = demiplane::scroll::DBG,
                                             .file                 = "test.log",
-                                            .add_time_to_filename = true,
+                                            .add_time_to_filename = false,
                                             .sort_entries         = true,
                                             .flush_each_batch     = true};
     std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> file_logger;
@@ -59,7 +59,7 @@ TEST_F(FileLoggerTest, FiltersEntriesBelowThreshold) {
                                                                                  "This should not appear",
                                                                                  std::source_location::current());
 
-    // file_logger->log(entry); todo/
+    file_logger->log(entry);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Output should be empty
     EXPECT_TRUE(read_log_file().empty());
@@ -198,7 +198,7 @@ inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
 
     int sec = std::stoi(std::string{line.substr(17, 2)});
     int ms  = std::stoi(std::string{line.substr(20, 3)});
-    // std::cout << line << " " << sec << " " << ms << '\n';
+
     return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
 }
 
@@ -229,7 +229,7 @@ void multithread_write(
     }
     file_logger->graceful_shutdown();
     twp.finish();
-    std::ifstream in(file_logger->config().file);
+    std::ifstream in(file_logger->file_path());
     if (!in.is_open()) {
         std::cout << "File not found" << '\n';
     }
@@ -238,18 +238,21 @@ void multithread_write(
     bool                      first            = true;
     std::uint32_t             monotonic_errors = 0;  // how many times we go backwards?
     std::uint32_t             total_lines      = 0;
+    std::string prevl;
     while (std::getline(in, line)) {
         auto ts = parse_sec_ms(line);
 
         if (!first) {
             if (ts < prev) {
+                std::cout << "Non-monotonic line: " << prevl << "\n" << line << '\n';
                 ++monotonic_errors;  // or store the offending line
             }
         }
         else {
             first = false;
         }
-        prev = ts;
+        prev  = ts;
+        prevl = line;
         total_lines++;
     }
 
@@ -266,5 +269,10 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
 }
 
 TEST_F(FileLoggerTest, MultithreadWriteSafe) {
+    file_logger->config().sort_entries = true;
+    file_logger->config().batch_size   = 512;
+    //TODO: result out of order between batches
+    file_logger->reload();
+
     multithread_write(file_logger);
 }

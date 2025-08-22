@@ -1,6 +1,5 @@
 #pragma once
 
-#include <demiplane/nexus>
 #include <demiplane/scroll>
 
 #include "sql_generator_visitor.hpp"
@@ -23,7 +22,7 @@ namespace demiplane::db {
         CompiledQuery compile(Expr&& expr) {
             SqlGeneratorVisitor visitor(dialect_, use_parameters_);
             std::forward<Expr>(expr).accept(visitor);
-            COMPONENT_LOG_DBG() << SCROLL_PARAMS_FINAL(visitor.sql());
+            COMPONENT_LOG_DBG() << SCROLL_PARAMS(visitor.sql());
             return {std::move(visitor).sql(), std::move(visitor).parameters()};
         }
 

@@ -3,6 +3,7 @@ set(Query_LINK_LIBS
         Demiplane.Component.Database.Query.Compiler
         Demiplane.Component.Database.Dialect.PostgreSQL
         Demiplane::Common::Scroll
+        Demiplane::Common::Nexus
 )
 # Comprehensive query expression tests split into focused files
 add_custom_test(${MANUAL_TESTING_TARGET}.${DB_Query_Man_Check}.SelectTest

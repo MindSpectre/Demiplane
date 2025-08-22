@@ -18,25 +18,25 @@ namespace demiplane::nexus {
     public:
         Nexus();
         ~Nexus();
-
-
         // ───────── registration ─────────
         template <class T, class Factory>
-        void register_factory(Factory&& f, Lifetime lt = Resettable{}, std::uint32_t id = default_id_v<T>);
+        void register_factory(Factory&& f, Lifetime lt = get_nexus_policy<T>(), std::uint32_t id = get_nexus_id<T>());
 
         template <class T>
-        void register_shared(std::shared_ptr<T> sp, Lifetime lt = Resettable{}, std::uint32_t id = default_id_v<T>);
+        void register_shared(std::shared_ptr<T> sp,
+                             Lifetime lt      = get_nexus_policy<T>(),
+                             std::uint32_t id = get_nexus_id<T>());
 
         template <class T>
-        void register_instance(T value, Lifetime lt = Resettable{}, std::uint32_t id = default_id_v<T>);
+        void register_instance(T value, Lifetime lt = get_nexus_policy<T>(), std::uint32_t id = get_nexus_id<T>());
 
         // ───────── access ─────────
         template <class T>
-        std::shared_ptr<T> spawn(std::uint32_t id = default_id_v<T>);
+        std::shared_ptr<T> spawn(std::uint32_t id = get_nexus_id<T>());
 
         // ───────── management ────────
         template <class T>
-        void reset(std::uint32_t id = default_id_v<T>); // only Flex
+        void reset(std::uint32_t id = get_nexus_id<T>()); // only Flex
 
         std::size_t size() const noexcept;
         void clear();
@@ -91,4 +91,10 @@ namespace demiplane::nexus {
         return instance;
     }
 } // namespace demiplane::nexus
+
+#define NEXUS_REGISTER(id, Policy) \
+    static constexpr std::uint32_t nexus_id = id; \
+    static constexpr Policy nexus_policy{}
+
+
 #include "../source/nexus.inl"

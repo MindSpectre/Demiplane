@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <source_location>
 #include <thread>
 
 #include <demiplane/gears>
@@ -13,16 +14,12 @@ namespace demiplane::scroll::detail {
     struct MetaNone {}; // 0-B
 
     struct MetaSource {
-        const char* source_file;
-        const char* source_func;
-        uint32_t source_line;
+        std::source_location location;
 
         MetaSource() = default;
 
-        MetaSource(const char* f, const char* fn, uint32_t l)
-            : source_file(f),
-              source_func(fn),
-              source_line(l) {}
+        explicit constexpr MetaSource(std::source_location loc)
+            : location{std::move(loc)} {}
     };
 
     struct ThreadLocalCache {

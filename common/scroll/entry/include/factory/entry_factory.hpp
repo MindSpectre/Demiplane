@@ -9,12 +9,12 @@ namespace demiplane::scroll {
     template <class EntryT, class... Extra>
     EntryT make_entry(LogLevel lvl,
                       const std::string_view msg,
-                      const detail::MetaSource& loc,
+                      std::source_location loc,
                       Extra&&... extra) {
         // Use cached thread-local values
         auto available = std::tuple{
             detail::MetaTimePoint{chrono::Clock::now()},
-            loc,
+            detail::MetaSource{std::move(loc)},
             // Already lightweight
             detail::MetaThread{},
             // Uses cached values

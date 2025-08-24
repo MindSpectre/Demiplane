@@ -13,28 +13,14 @@
 
 
 #ifdef DMP_ENABLE_LOGGING
-    #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level)   demiplane::scroll::StreamLogEntry(logger_ptr, level, \
-        ::demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__})
 
-// Fast macro using compile-time source location
+    #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level) \
+        demiplane::scroll::StreamLogEntry(logger_ptr, level, std::source_location::current())
+
+
     #define SCROLL_LOG_ENTRY(logger_ptr, level, message) \
-        do { \
-            logger_ptr->log(level, message, ::demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});\
-        } while(0)
+           logger_ptr->log(level, message, std::source_location::current());
 
-// Even faster with builtin (if available)
-    #ifdef __has_builtin
-        #if __has_builtin(__builtin_FILE) && __has_builtin(__builtin_FUNCTION) && __has_builtin(__builtin_LINE)
-            #define SCROLL_LOG_ENTRYv3(logger_ptr, level, message) \
-                do { \
-                    logger_ptr->log(level, message,::demiplane::scroll::detail::MetaSource{__builtin_FILE(), __builtin_FUNCTION(), __builtin_LINE()});\
-                } while(0)
-        #else
-            #define SCROLL_LOG_ENTRYv3 SCROLL_LOG_ENTRYv2
-        #endif
-    #else
-        #define SCROLL_LOG_ENTRYv3 SCROLL_LOG_ENTRYv2
-    #endif
 
 #else
     #define SCROLL_LOG_ENTRY(logger_ptr, level, message) (void(0))

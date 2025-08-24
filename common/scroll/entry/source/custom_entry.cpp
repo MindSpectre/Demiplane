@@ -127,9 +127,9 @@ namespace demiplane::scroll {
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
         if (config_->add_location) {
-            log_entry << "[" << source_file << ":" << source_line;
+            log_entry << "[" << location.file_name() << ":" << location.line();
             if (config_->add_pretty_function) {
-                log_entry << " " << source_func;
+                log_entry << " " << location.function_name();
             }
             log_entry << "] ";
         }

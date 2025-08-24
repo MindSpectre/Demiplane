@@ -29,7 +29,7 @@ void multithread_write(
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
     std::size_t t_num = 10;
-    std::size_t r_num = 10'000'000;
+    std::size_t r_num = 1'000'000;
     std::chrono::nanoseconds process_time{1};
     demiplane::math::random::RandomTimeGenerator time_generator;
     demiplane::gears::unused_value(process_time);
@@ -39,7 +39,7 @@ void multithread_write(
     for (std::size_t i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {
             for (std::size_t j = 0; j < r_num; ++j) {
-                SCROLL_LOG_ENTRYv3(file_logger, demiplane::scroll::DBG, "asdasd");
+                SCROLL_LOG_ENTRY(file_logger, demiplane::scroll::DBG, "asdasd");
                 // std::this_thread::sleep_for(process_time);
             }
         });

@@ -1,5 +1,5 @@
 #pragma once
-#include <cstring>
+
 #include <string>
 
 #include "../entry_interface.hpp"
@@ -19,13 +19,6 @@ namespace demiplane::scroll {
                 return lhs.time_point < rhs.time_point;
             }
             return lhs.level() < rhs.level();
-        }
-
-    private:
-        static void append_number(std::string& buf, uint32_t value) {
-            char temp[16];
-            snprintf(temp, sizeof(temp), "%u", value);
-            buf.append(temp);
         }
     };
 

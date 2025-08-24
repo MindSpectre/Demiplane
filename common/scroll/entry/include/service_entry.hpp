@@ -18,7 +18,7 @@ namespace demiplane::scroll {
             os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::eu_dmy_hms) << " ["
                 << log_level_to_string(level_) << "] "
                 << "[" << Service::name << "] "
-                << "[" << source_file << ':' << source_line << " " << source_func << "] "
+                << "[" << location.file_name() << ':' << location.line() << " " << location.function_name() << "] "
                 << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
             return os.str();
         }

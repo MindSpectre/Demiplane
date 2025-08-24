@@ -1,11 +1,20 @@
 #include "detailed_entry.hpp"
 
+#include <cstring>
 #include <demiplane/chrono>
+
+namespace {
+    void append_number(std::string& buf, uint32_t value) {
+        char temp[16];
+        snprintf(temp, sizeof(temp), "%u", value);
+        buf.append(temp);
+    }
+}
 
 namespace demiplane::scroll {
     std::string DetailedEntry::to_string() const {
         // Reuse thread-local buffer
-        auto& tl_string_buffer = get_tl_buffer();
+        std::string& tl_string_buffer = get_tl_buffer();
         tl_string_buffer.clear();
         tl_string_buffer.clear();
         tl_string_buffer.reserve(256 + message_.size());
@@ -17,19 +26,15 @@ namespace demiplane::scroll {
         tl_string_buffer.append(level_cstr());
         tl_string_buffer.append("] [");
 
-        // Already have just filename in MetaSourceFast
-        if (source_file) {
-            const char* fname = source_file;
-            if (const char* last_slash = std::strrchr(fname, '/')) fname = last_slash + 1;
-            tl_string_buffer.append(fname);
+        // Already have just filename in MetaSourceF
+        const char* fname = location.file_name();
+        if (const char* last_slash = std::strrchr(fname, '/')) {
+            fname = last_slash + 1;
         }
-        tl_string_buffer.push_back(':');
-        append_number(tl_string_buffer, source_line);
-        tl_string_buffer.push_back(' ');
+        tl_string_buffer.append(fname);
 
-        if (source_func) {
-            tl_string_buffer.append(source_func);
-        }
+        tl_string_buffer.push_back(':');
+        append_number(tl_string_buffer, location.line());
 
         // Use pre-formatted strings
         tl_string_buffer.append("] [tid ");

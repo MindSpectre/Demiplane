@@ -22,8 +22,8 @@ namespace demiplane::scroll {
             : config_{cfg} {}
 
 
-        void log(LogLevel lvl, std::string_view msg, const detail::MetaSource& loc) override {
-            auto entry = make_entry<EntryType>(lvl, msg, loc);
+        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override {
+            auto entry = make_entry<EntryType>(lvl, msg, std::move(loc));
             log(entry);
         }
 

@@ -5,6 +5,7 @@ set(DMP_SCROLL ${DMP_COMMON}.Scroll)
 ##############################################################################
 add_library(${DMP_SCROLL}.Colors INTERFACE
         colors/colors.hpp
+        core/include/entry/fast_detailed_entry.hpp
 )
 target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
 
@@ -18,6 +19,7 @@ add_library(${DMP_SCROLL}.Core STATIC
         core/source/custom_entry.cpp
         core/log_level.hpp
         core/include/entry/factory/entry_factory.hpp
+        core/include/entry/fast_detailed_entry.hpp
 )
 target_include_directories(${DMP_SCROLL}.Core PUBLIC
         core/include
@@ -48,6 +50,7 @@ target_include_directories(${DMP_SCROLL}.Logger PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
         Demiplane::3rdParty::ConcurrentQueue
+        Demiplane::Common::Algorithms
         ${DMP_SCROLL}.Core
 )
 ##############################################################################

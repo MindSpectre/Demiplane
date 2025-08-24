@@ -19,7 +19,8 @@ TEST_F(ConsoleLoggerTest, LogsEntryWhenAboveThreshold) {
     // Create a mock entry
     testing::internal::CaptureStdout();
     const auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
-        demiplane::scroll::INF, "Test message", std::source_location::current());
+        demiplane::scroll::INF, "Test message",
+        demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     // Log the entry
     console_logger->log(entry);
@@ -40,7 +41,8 @@ TEST_F(ConsoleLoggerTest, FiltersEntriesBelowThreshold) {
 
     // Create and log an INFO entry (below the threshold)
     auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
-        demiplane::scroll::INF, "This should not appear", std::source_location::current());
+        demiplane::scroll::INF, "This should not appear",
+        demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     console_logger->log(entry);
 
@@ -52,7 +54,7 @@ TEST_F(ConsoleLoggerTest, FiltersEntriesBelowThreshold) {
 TEST_F(ConsoleLoggerTest, DirectLoggingWithSourceLocation) {
     // Log directly with a message
     testing::internal::CaptureStdout();
-    console_logger->log(demiplane::scroll::WRN, "Warning message", std::source_location::current());
+    console_logger->log(demiplane::scroll::WRN, "Warning message", demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     std::string output = testing::internal::GetCapturedStdout();
 
@@ -65,7 +67,7 @@ TEST_F(ConsoleLoggerTest, DirectLoggingWithSourceLocation) {
 TEST_F(ConsoleLoggerTest, ThresholdChangeAffectsLogging) {
     // First log with a DEBUG threshold
     testing::internal::CaptureStdout();
-    console_logger->log(demiplane::scroll::DBG, "Debug message", std::source_location::current());
+    console_logger->log(demiplane::scroll::DBG, "Debug message", demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     // Verify debug message is logged
     std::string output1 = testing::internal::GetCapturedStdout();
@@ -78,7 +80,7 @@ TEST_F(ConsoleLoggerTest, ThresholdChangeAffectsLogging) {
     console_logger->config().threshold = demiplane::scroll::WRN;
 
     // Try to log the DEBUG message again
-    console_logger->log(demiplane::scroll::DBG, "Another debug message", std::source_location::current());
+    console_logger->log(demiplane::scroll::DBG, "Another debug message", demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     // Verify nothing was logged
     EXPECT_TRUE(testing::internal::GetCapturedStdout().empty());
@@ -87,7 +89,7 @@ TEST_F(ConsoleLoggerTest, ThresholdChangeAffectsLogging) {
     testing::internal::CaptureStdout();
 
     // Log WARNING message which should appear
-    console_logger->log(demiplane::scroll::WRN, "Warning message", std::source_location::current());
+    console_logger->log(demiplane::scroll::WRN, "Warning message", demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     // Verify warning is logged
     std::string output2 = testing::internal::GetCapturedStdout();
@@ -114,7 +116,7 @@ TEST_F(ConsoleLoggerTest, AllLogLevels) {
 
         // Log a message at this level
         std::string message = levelName + " test message";
-        console_logger->log(level, message, std::source_location::current());
+        console_logger->log(level, message, demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
         // Get output
         std::string output = testing::internal::GetCapturedStdout();

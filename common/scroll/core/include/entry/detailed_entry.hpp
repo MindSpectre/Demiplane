@@ -17,7 +17,7 @@ namespace demiplane::scroll {
             std::ostringstream os;
             os << chrono::UTCClock::format_time_iso_ms(time_point)<< " ["
                << log_level_to_string(level_) << "] "
-               << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
+               << "[" << source_file << ':' << source_line << " " << source_func << "] "
                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
             return os.str();
         }

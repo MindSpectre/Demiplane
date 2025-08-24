@@ -21,10 +21,10 @@ namespace demiplane::scroll {
     public:
         StreamLogEntry(Logger* logger_ptr,
                        const LogLevel level,
-                       const std::source_location loc = std::source_location::current())
+                       detail::MetaSource&& loc)
             : logger_ptr_(logger_ptr),
               level_(level),
-              loc_(loc) {}
+              loc_(std::move(loc)) {}
 
         ~StreamLogEntry() {
             // In destructor, send the accumulated message to the logger
@@ -43,7 +43,7 @@ namespace demiplane::scroll {
     private:
         Logger* logger_ptr_;
         LogLevel level_;
-        std::source_location loc_;
+        detail::MetaSource loc_;
         std::ostringstream stream_;
     };
 } // namespace demiplane::scroll

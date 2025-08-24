@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 
-#include <gears_templates.hpp>
 #include "../entry_interface.hpp"
 
 namespace demiplane::scroll {

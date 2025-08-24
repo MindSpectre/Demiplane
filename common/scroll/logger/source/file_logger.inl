@@ -1,4 +1,7 @@
 #pragma once
+
+#include <demiplane/algorithms>
+
 namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
     FileLogger<EntryType>::FileLogger(FileLoggerConfig cfg)
@@ -40,7 +43,7 @@ namespace demiplane::scroll {
     }
 
     template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::log(LogLevel lvl, std::string_view msg, std::source_location loc) {
+    void FileLogger<EntryType>::log(LogLevel lvl, std::string_view msg, const detail::MetaSource& loc) {
         if (static_cast<int8_t>(lvl) < static_cast<int8_t>(config_.threshold)) {
             return;
         }
@@ -50,6 +53,7 @@ namespace demiplane::scroll {
         EntryType entry = make_entry<EntryType>(lvl, msg, loc);
         enqueue(std::move(entry));
     }
+
 
     template <detail::EntryConcept EntryType>
     void FileLogger<EntryType>::log(const EntryType& entry) {
@@ -121,7 +125,7 @@ namespace demiplane::scroll {
             if (batch.empty()) {
                 std::unique_lock lk(m_);
                 // wait 100 ms or when logger will be stopped or reloaded after skip iteration
-                cv_.wait_for(lk, std::chrono::milliseconds(100), [&] {
+                cv_.wait_for(lk, std::chrono::milliseconds(40), [&] {
                     return reload_requested_.load(std::memory_order_acquire)
                            || !running_.load(std::memory_order_acquire);
                 });
@@ -137,9 +141,13 @@ namespace demiplane::scroll {
             }
             /* write batch */
 
+            // Better approach - single write syscall
+            std::string buffer;
+            buffer.reserve(batch.size() * 512); // Estimate avg entry size
             for (auto& e : batch) {
-                file_stream_ << e.to_string();
+                buffer += e.to_string();
             }
+            file_stream_ << buffer;
             if (config_.flush_each_batch) {
                 file_stream_.flush();
             }

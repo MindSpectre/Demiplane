@@ -60,5 +60,18 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Nexus
 )
 ##############################################################################
 
+##############################################################################
+# Test Containers
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Containers
+        containers/test_sliding_window_sorter.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Containers
+        PRIVATE
+        Demiplane::Common::Algorithms
+        ${TEST_LIBS}
+)
+##############################################################################
+
 
 

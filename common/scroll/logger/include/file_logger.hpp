@@ -65,8 +65,7 @@ namespace demiplane::scroll {
 
         /*---------------- logging API ----------------------------------------*/
 
-        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override;
-
+        void log(LogLevel lvl, std::string_view msg, const detail::MetaSource& loc) override;
         void log(const EntryType& entry);
 
         void log(EntryType&& entry);

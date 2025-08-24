@@ -8,7 +8,6 @@
 // For test logger provider
 #include "entry/detailed_entry.hpp"
 
-
 namespace demiplane::scroll {
     class LoggerProvider {
     public:

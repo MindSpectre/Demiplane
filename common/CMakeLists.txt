@@ -19,3 +19,5 @@ add_subdirectory(math)
 add_subdirectory(fsm)
 
 add_subdirectory(nexus)
+
+add_subdirectory(algorithms)

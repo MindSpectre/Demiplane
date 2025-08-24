@@ -15,9 +15,9 @@ public:
 };
 
 
-void check_location_meta(const std::string& data, const std::source_location& loc) {
-    if (data.contains(loc.file_name()) && data.contains(loc.function_name())
-        && data.contains(std::to_string(loc.line()))) {
+void check_location_meta(const std::string& data, const detail::MetaSource& loc) {
+    if (data.contains(loc.source_file) && data.contains(loc.source_func)
+        && data.contains(std::to_string(loc.source_line))) {
         return;
     }
     throw std::runtime_error("Some location meta not found");
@@ -39,8 +39,8 @@ void check_level(const std::string& data, const LogLevel level) {
 
 TEST(TestEntries, DetailedEntry) {
     constexpr auto message             = "Hello Detailed";
-    constexpr std::source_location loc = std::source_location::current();
-    const auto entry                   = demiplane::scroll::make_entry<DetailedEntry>(INF, message, loc);
+    auto loc = detail::MetaSource{__FILE__, __PRETTY_FUNCTION__, __LINE__};
+    const auto entry                   = demiplane::scroll::make_entry<DetailedEntry>(INF, message, detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
     std::string output;
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;
@@ -48,13 +48,13 @@ TEST(TestEntries, DetailedEntry) {
         check_message(output, message);
         check_level(output, INF);
         check_location_meta(output, loc);
-    });
+        });
 }
 
 TEST(TestEntries, LightEntry) {
     constexpr auto message             = "Hello light";
-    constexpr std::source_location loc = std::source_location::current();
-    const auto entry                   = demiplane::scroll::make_entry<LightEntry>(INF, message, loc);
+    auto loc = detail::MetaSource{__FILE__, __FUNCTION__, __LINE__};
+    const auto entry                   = demiplane::scroll::make_entry<LightEntry>(INF, message, detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
     std::string output;
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;
@@ -62,15 +62,15 @@ TEST(TestEntries, LightEntry) {
     EXPECT_NO_THROW({
         check_message(output, message);
         check_level(output, INF);
-    });
+        });
     EXPECT_THROW(check_location_meta(output, loc), std::runtime_error);
 }
 
 TEST(TestEntries, ServiceEntry) {
     constexpr auto message             = "Hello service";
-    constexpr std::source_location loc = std::source_location::current();
+    auto loc = detail::MetaSource{__FILE__, __FUNCTION__, __LINE__};
 
-    const auto entry = demiplane::scroll::make_entry<ServiceEntry<ServiceTest>>(INF, message, loc);
+    const auto entry = demiplane::scroll::make_entry<ServiceEntry<ServiceTest>>(INF, message, detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
     std::string output;
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;
@@ -79,16 +79,16 @@ TEST(TestEntries, ServiceEntry) {
         check_message(output, message);
         check_level(output, INF);
         check_location_meta(output, loc);
-    });
+        });
     EXPECT_TRUE(output.contains(ServiceTest::name));
 }
 
 TEST(TestEntries, CustomEntry) {
     constexpr auto message             = "Hello custom";
-    constexpr std::source_location loc = std::source_location::current();
     auto cfg_ptr                       = std::make_shared<CustomEntryConfig>(CustomEntryConfig{});
 
     std::string output;
+    auto loc = detail::MetaSource{__FILE__, __FUNCTION__, __LINE__};
     auto mk_entry = [&] { return demiplane::scroll::make_entry<CustomEntry>(INF, message, loc, cfg_ptr); };
 
     auto entry = mk_entry();

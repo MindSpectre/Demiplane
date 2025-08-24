@@ -126,10 +126,9 @@ namespace demiplane::scroll {
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
         if (config_->add_location) {
-
-            log_entry << "[" << loc.file_name() << ":" << loc.line();
+            log_entry << "[" << source_file << ":" << source_line;
             if (config_->add_pretty_function) {
-                log_entry << " " << loc.function_name();
+                log_entry << " " << source_func;
             }
             log_entry << "] ";
         }
@@ -141,7 +140,8 @@ namespace demiplane::scroll {
 
         std::string uncolored_entry = log_entry.str();
         switch (level_) {
-        case LogLevel::Debug:
+            case LogLevel::Trace:
+            case LogLevel::Debug:
             if (config_->enable_colors) {
                 return colors::make_white(uncolored_entry);
             }

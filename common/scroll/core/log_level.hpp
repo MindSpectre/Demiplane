@@ -16,8 +16,9 @@ namespace demiplane::scroll {
      * - Error: Used for error messages indicating failures.
      * - Fatal: Used for critical errors requiring immediate attention.
      */
-    enum class LogLevel : uint8_t {
-        Debug = 0,
+    enum class LogLevel : std::uint8_t {
+        Trace = 0,
+        Debug,
         Info,
         Warning,
         Error,
@@ -42,6 +43,8 @@ namespace demiplane::scroll {
             return "ERROR";
         case LogLevel::Fatal:
             return "FATAL";
+        case LogLevel::Trace:
+            return "TRACE";
         }
         return "UNKNOWN";
     }

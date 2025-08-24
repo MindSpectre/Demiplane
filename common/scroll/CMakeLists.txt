@@ -5,30 +5,31 @@ set(DMP_SCROLL ${DMP_COMMON}.Scroll)
 ##############################################################################
 add_library(${DMP_SCROLL}.Colors INTERFACE
         colors/colors.hpp
-        core/include/entry/fast_detailed_entry.hpp
 )
 target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
 
 ##############################################################################
 
 ##############################################################################
-# Scroll Core
+# Scroll Entry
 ##############################################################################
-add_library(${DMP_SCROLL}.Core STATIC
-        core/entry_interface.hpp
-        core/source/custom_entry.cpp
-        core/log_level.hpp
-        core/include/entry/factory/entry_factory.hpp
-        core/include/entry/fast_detailed_entry.hpp
+add_library(${DMP_SCROLL}.Entry STATIC
+        entry/entry_interface.hpp
+        entry/log_level.hpp
+        entry/include/factory/entry_factory.hpp
+        entry/include/detailed_entry.hpp
+        entry/source/detailed_entry.cpp
+        entry/source/custom_entry.cpp
 )
-target_include_directories(${DMP_SCROLL}.Core PUBLIC
-        core/include
+target_include_directories(${DMP_SCROLL}.Entry PUBLIC
+        entry/include
 )
-target_link_libraries(${DMP_SCROLL}.Core PUBLIC
+target_link_libraries(${DMP_SCROLL}.Entry PUBLIC
         JsonCpp::JsonCpp
         Demiplane::Common::Nexus
-        Demiplane::Common::Chrono
         Demiplane::Common::Gears
+        Demiplane::Common::Chrono
+        PRIVATE
         ${DMP_SCROLL}.Colors
 )
 
@@ -51,7 +52,7 @@ target_include_directories(${DMP_SCROLL}.Logger PUBLIC
 target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
         Demiplane::3rdParty::ConcurrentQueue
         Demiplane::Common::Algorithms
-        ${DMP_SCROLL}.Core
+        ${DMP_SCROLL}.Entry
 )
 ##############################################################################
 

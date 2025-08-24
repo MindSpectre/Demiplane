@@ -5,8 +5,8 @@
 
 #include <demiplane/nexus>
 
-#include "../core/entry_interface.hpp"
-#include "../core/log_level.hpp"
+#include "../entry/entry_interface.hpp"
+#include "../entry/log_level.hpp"
 
 
 namespace demiplane::scroll {

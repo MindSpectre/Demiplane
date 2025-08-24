@@ -4,11 +4,8 @@
 #include <thread>
 #include <demiplane/nexus>
 #include <demiplane/scroll>
-
+#include <printing_stopwatch.hpp>
 #include <demiplane/math>
-#include "gears_utils.hpp"
-#include "printing_stopwatch.hpp"
-#include "entry/fast_detailed_entry.hpp"
 
 inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
     // indexes for "… HH:MM:SS.mmmZ"
@@ -31,7 +28,7 @@ void multithread_write(
     const T& file_logger) {
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
-    std::size_t t_num = 18;
+    std::size_t t_num = 10;
     std::size_t r_num = 10'000'000;
     std::chrono::nanoseconds process_time{1};
     demiplane::math::random::RandomTimeGenerator time_generator;
@@ -111,10 +108,10 @@ int main() {
         .sort_entries = true,
         .flush_each_batch = true
     };
-    std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::FastDetailedEntry>> file_logger = std::make_shared<
-        demiplane::scroll::FileLogger<demiplane::scroll::FastDetailedEntry>>(cfg);
+    std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> file_logger = std::make_shared<
+        demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
     safe_write(file_logger);
     // unsafe_write(file_logger);
-    std::filesystem::remove(cfg.file);
+    // std::filesystem::remove(cfg.file);
     return 0;
 }

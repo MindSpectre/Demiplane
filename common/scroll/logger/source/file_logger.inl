@@ -1,7 +1,5 @@
 #pragma once
 
-#include <demiplane/algorithms>
-
 namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
     FileLogger<EntryType>::FileLogger(FileLoggerConfig cfg)

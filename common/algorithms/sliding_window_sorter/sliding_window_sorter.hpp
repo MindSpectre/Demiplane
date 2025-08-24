@@ -119,7 +119,7 @@ namespace demiplane::algorithms {
         }
 
     private:
-        bool should_process() const {
+        [[nodiscard]] bool should_process() const {
             return new_entries_.size() >= config_.batch_size;
         }
 
@@ -190,7 +190,7 @@ namespace demiplane::algorithms {
             new_entries_.clear();
         }
 
-        bool can_use_inplace_merge() const {
+        [[nodiscard]] bool can_use_inplace_merge() const {
             // Check if in-place merge would be beneficial
             return sorted_window_.capacity() >= sorted_window_.size() + new_entries_.size();
         }
@@ -222,7 +222,7 @@ namespace demiplane::algorithms {
             merge_buffer_.clear();
         }
 
-        size_t calculate_output_count() const {
+        [[nodiscard]] size_t calculate_output_count() const {
             if (sorted_window_.size() < config_.window_size) {
                 return 0; // Window not exceeded, keep everything
             }

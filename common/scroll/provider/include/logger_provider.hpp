@@ -6,7 +6,7 @@
 #include "file_logger.hpp"
 
 // For test logger provider
-#include "entry/detailed_entry.hpp"
+#include <factory/entry_factory.hpp>
 
 namespace demiplane::scroll {
     class LoggerProvider {

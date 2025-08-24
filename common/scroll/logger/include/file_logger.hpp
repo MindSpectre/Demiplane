@@ -8,6 +8,9 @@
 #include <string>
 #include <thread>
 #include <demiplane/chrono>
+#include <demiplane/algorithms>
+
+#include "factory/entry_factory.hpp"
 
 #include <concurrent_queue.hpp> // moodycamel
 #include <gears_types.hpp>

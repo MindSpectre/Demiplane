@@ -1,12 +1,13 @@
-#include "entry/custom_entry.hpp"
+#include "custom_entry.hpp"
 
-#include <demiplane/chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
+#include <demiplane/chrono>
 
-#include "colors.hpp"
+#include <colors.hpp>
+
 // namespace
 namespace demiplane::scroll {
     /**

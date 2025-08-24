@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "../logger_interface.hpp"
-#include "entry/factory/entry_factory.hpp"
+
 
 namespace demiplane::scroll {
     struct ConsoleLoggerConfig {

@@ -54,7 +54,8 @@ TEST_F(ConsoleLoggerTest, FiltersEntriesBelowThreshold) {
 TEST_F(ConsoleLoggerTest, DirectLoggingWithSourceLocation) {
     // Log directly with a message
     testing::internal::CaptureStdout();
-    console_logger->log(demiplane::scroll::WRN, "Warning message", demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
+    console_logger->log(demiplane::scroll::WRN, "Warning message",
+                        demiplane::scroll::detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
 
     std::string output = testing::internal::GetCapturedStdout();
 

@@ -38,9 +38,14 @@ void check_level(const std::string& data, const LogLevel level) {
 }
 
 TEST(TestEntries, DetailedEntry) {
-    constexpr auto message             = "Hello Detailed";
-    auto loc = detail::MetaSource{__FILE__, __PRETTY_FUNCTION__, __LINE__};
-    const auto entry                   = demiplane::scroll::make_entry<DetailedEntry>(INF, message, detail::MetaSource{__FILE__, __FUNCTION__, __LINE__});
+    constexpr auto message = "Hello Detailed";
+    auto loc               = detail::MetaSource{__FILE__, __PRETTY_FUNCTION__, __LINE__};
+    const auto entry       = demiplane::scroll::make_entry<DetailedEntry>(INF, message,
+                                                                          detail::MetaSource{
+                                                                              __FILE__,
+                                                                              __FUNCTION__,
+                                                                              __LINE__
+                                                                          });
     std::string output;
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;

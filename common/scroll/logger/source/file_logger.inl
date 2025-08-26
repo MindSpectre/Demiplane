@@ -1,4 +1,5 @@
 #pragma once
+#include <ranges>
 
 namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
@@ -106,20 +107,16 @@ namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
     void FileLogger<EntryType>::writer_loop() {
         std::vector<EntryType> batch;
-        batch.reserve(config_.batch_size);
-
         while (running_.load(std::memory_order_acquire) || pending_entries_.load(std::memory_order_acquire) > 0) {
             EntryType item;
             while (batch.size() < config_.batch_size && queue_.try_dequeue(item)) {
                 batch.emplace_back(std::move(item));
             }
-
             /* handle reload request before writing */
             if (reload_requested_.load(std::memory_order_acquire)) {
                 flush_and_reopen();
                 continue;
             }
-
             if (batch.empty()) {
                 std::unique_lock lk(m_);
                 // wait 100 ms or when logger will be stopped or reloaded after skip iteration
@@ -127,9 +124,9 @@ namespace demiplane::scroll {
                     return reload_requested_.load(std::memory_order_acquire)
                            || !running_.load(std::memory_order_acquire);
                 });
+
                 continue;
             }
-
 
             if (config_.sort_entries) {
                 static_assert(gears::HasStaticComparator<EntryType>, "This entry type does not support comparison");
@@ -137,11 +134,12 @@ namespace demiplane::scroll {
                     return EntryType::comp(a, b);
                 });
             }
+
             /* write batch */
 
             // Better approach - single write syscall
             std::string buffer;
-            buffer.reserve(batch.size() * 512); // Estimate avg entry size
+            buffer.reserve(batch.size() * 128); // Estimate avg entry size
             for (auto& e : batch) {
                 buffer += e.to_string();
             }

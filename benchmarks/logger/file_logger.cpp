@@ -29,8 +29,8 @@ void multithread_write(
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
     std::size_t t_num = 10;
-    std::size_t r_num = 1'000'000;
-    std::chrono::nanoseconds process_time{1};
+    std::size_t r_num = 10'000;
+    std::chrono::nanoseconds process_time{50};
     demiplane::math::random::RandomTimeGenerator time_generator;
     demiplane::gears::unused_value(process_time);
     threads.reserve(t_num);
@@ -39,8 +39,8 @@ void multithread_write(
     for (std::size_t i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {
             for (std::size_t j = 0; j < r_num; ++j) {
-                SCROLL_LOG_ENTRY(file_logger, demiplane::scroll::DBG, "asdasd");
-                // std::this_thread::sleep_for(process_time);
+                SCROLL_LOG_DIRECT_STREAM_DBG(file_logger.get()) << "asdasd";
+                std::this_thread::sleep_for(process_time);
             }
         });
     }
@@ -68,6 +68,7 @@ void multithread_write(
             if (ts < prev) {
                 // std::cout << "Non-monotonic line: " << prevl << "\n" << line << '\n';
                 ++monotonic_errors; // or store the offending line
+                std::cout << total_lines << '\n';
             }
         }
         else {
@@ -112,6 +113,6 @@ int main() {
         demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
     safe_write(file_logger);
     // unsafe_write(file_logger);
-    // std::filesystem::remove(cfg.file);
+    std::filesystem::remove(cfg.file);
     return 0;
 }

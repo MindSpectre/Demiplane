@@ -18,6 +18,9 @@ add_library(${DMP_SCROLL}.Entry STATIC
         entry/log_level.hpp
         entry/include/factory/entry_factory.hpp
         entry/include/detailed_entry.hpp
+        entry/include/light_entry.hpp
+        entry/include/service_entry.hpp
+        entry/include/custom_entry.hpp
         entry/source/detailed_entry.cpp
         entry/source/custom_entry.cpp
 )
@@ -54,6 +57,7 @@ target_link_libraries(${DMP_SCROLL}.Logger PUBLIC
         Demiplane::Common::Algorithms
         ${DMP_SCROLL}.Entry
 )
+
 ##############################################################################
 
 

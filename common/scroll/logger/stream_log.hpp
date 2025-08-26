@@ -21,7 +21,7 @@ namespace demiplane::scroll {
     public:
         StreamLogEntry(Logger* logger_ptr,
                        const LogLevel level,
-                       const std::source_location& loc)
+                       std::source_location loc)
             : logger_ptr_(logger_ptr),
               level_(level),
               loc_(std::move(loc)) {}

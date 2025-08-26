@@ -17,7 +17,7 @@ namespace demiplane::scroll {
         std::string& tl_string_buffer = get_tl_buffer();
         tl_string_buffer.clear();
         tl_string_buffer.clear();
-        tl_string_buffer.reserve(256 + message_.size());
+        tl_string_buffer.reserve(128 + message_.size());
 
         // Fast timestamp
         chrono::UTCClock::format_time_iso_ms(time_point, tl_string_buffer);

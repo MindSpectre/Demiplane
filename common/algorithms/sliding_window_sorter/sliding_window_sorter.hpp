@@ -103,7 +103,9 @@ namespace demiplane::algorithms {
                 total_processed_,
                 merge_operations_,
                 sort_operations_,
-                sort_operations_ > 0 ? static_cast<double>(merge_operations_) / sort_operations_ : 0.0
+                sort_operations_ > 0
+                    ? static_cast<double>(merge_operations_) / static_cast<double>(sort_operations_)
+                    : 0.0
             };
         }
 
@@ -197,14 +199,14 @@ namespace demiplane::algorithms {
 
         void perform_inplace_merge() {
             // Append new entries to sorted window
-            std::size_t old_size = sorted_window_.size();
+            const std::size_t old_size = sorted_window_.size();
             sorted_window_.insert(sorted_window_.end(),
                                   std::make_move_iterator(new_entries_.begin()),
                                   std::make_move_iterator(new_entries_.end()));
 
             // In-place merge
             std::inplace_merge(sorted_window_.begin(),
-                               sorted_window_.begin() + old_size,
+                               sorted_window_.begin() + static_cast<long>(old_size),
                                sorted_window_.end(),
                                config_.comparator);
         }
@@ -241,7 +243,7 @@ namespace demiplane::algorithms {
             std::vector<T> output;
             output.reserve(count);
 
-            auto end_it = sorted_window_.begin() + std::min(count, sorted_window_.size());
+            auto end_it = sorted_window_.begin() + static_cast<long>(std::min(count, sorted_window_.size()));
             output.insert(output.end(),
                           std::make_move_iterator(sorted_window_.begin()),
                           std::make_move_iterator(end_it));
@@ -250,14 +252,15 @@ namespace demiplane::algorithms {
             sorted_window_.erase(sorted_window_.begin(), end_it);
 
             // Call consumer
-            consumer_(output);
-            total_processed_ += output.size();
+            const std::size_t output_size = output.size();
+            consumer_(std::move(output));
+            total_processed_ += output_size;
         }
 
         void maintain_window_size() {
             if (sorted_window_.size() > config_.window_size) {
-                std::size_t excess = sorted_window_.size() - config_.window_size;
-                sorted_window_.erase(sorted_window_.begin(), sorted_window_.begin() + excess);
+                const std::size_t excess = sorted_window_.size() - config_.window_size;
+                sorted_window_.erase(sorted_window_.begin(), sorted_window_.begin() + static_cast<long>(excess));
             }
         }
 

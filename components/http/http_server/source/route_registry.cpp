@@ -1,6 +1,7 @@
 #include "route_registry.hpp"
 
 #include <regex>
+#include <demiplane/scroll>
 
 namespace demiplane::http {
 
@@ -62,8 +63,10 @@ namespace demiplane::http {
 
     void RouteRegistry::add_route(const boost::beast::http::verb method, std::string path, ContextHandler handler) {
         if (is_parametric_path(path)) {
+            COMPONENT_LOG_INF() << "Adding parametric route" << SCROLL_PARAMS(method, path);
             parametric_routes_.push_back(create_parametric_route(method, std::move(path), std::move(handler)));
         } else {
+            COMPONENT_LOG_INF() << "Adding route" << SCROLL_PARAMS(method, path);
             const auto key     = make_route_key(method, path);
             exact_routes_[key] = std::move(handler);
         }
@@ -74,6 +77,7 @@ namespace demiplane::http {
         // Try exact match first
         const auto key = make_route_key(method, path);
         if (const auto it = exact_routes_.find(key); it != exact_routes_.end()) {
+            COMPONENT_LOG_DBG() << "Found exact route" << SCROLL_PARAMS(method, path);
             return std::make_pair(it->second, std::unordered_map<std::string, std::string>{});
         }
 
@@ -88,10 +92,11 @@ namespace demiplane::http {
                 for (size_t i = 0; i < route.param_names.size() && i + 1 < match.size(); ++i) {
                     params[route.param_names[i]] = match[i + 1].str();
                 }
+                COMPONENT_LOG_DBG() << "Found parametric route" << SCROLL_PARAMS(method, path);
                 return std::make_pair(route.handler, params);
             }
         }
-
+        COMPONENT_LOG_WRN() << "No route found for" << SCROLL_PARAMS(method, path);
         throw std::out_of_range("No route found for " + std::to_string(static_cast<int>(method)) + " " + path);
     }
 
@@ -100,6 +105,7 @@ namespace demiplane::http {
     }
 
     void RouteRegistry::clear() {
+        COMPONENT_LOG_DBG() << "Clearing routes";
         exact_routes_.clear();
         parametric_routes_.clear();
     }
@@ -114,6 +120,7 @@ namespace demiplane::http {
 
     RouteInfo RouteRegistry::create_parametric_route(
         const boost::beast::http::verb method, std::string path, ContextHandler handler) {
+        COMPONENT_LOG_DBG() << "Creating parametric route" << SCROLL_PARAMS(method, path);
         RouteInfo info;
         info.method        = method;
         info.path          = path;
@@ -133,7 +140,7 @@ namespace demiplane::http {
         pattern             = std::regex_replace(pattern, param_regex, "([^/]+)");
         info.pattern        = "^" + pattern + "$";
         info.compiled_regex = std::make_shared<std::regex>(info.pattern);
-
+        COMPONENT_LOG_DBG() << "Parametric route created" << SCROLL_PARAMS(info.pattern);
         return info;
     }
 

@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <demiplane/gears>
+#include <demiplane/nexus>
 
 #include "aliases.hpp"
-#include "gears_utils.hpp"
 #include "request_context.hpp"
 #include "route_registry.hpp"
 
@@ -15,7 +16,9 @@ namespace demiplane::http {
 
     class HttpController : public std::enable_shared_from_this<HttpController> {
     public:
-        virtual ~HttpController()       = default;
+        NEXUS_REGISTER(0x4E711AF1, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::http::HttpController
+
+        virtual ~HttpController() = default;
         virtual void configure_routes() = 0;
         virtual void initialize() {}
         virtual void shutdown() {}
@@ -145,13 +148,17 @@ namespace demiplane::http {
         ContextHandler bind_sync_method(Response (Controller::*method)(RequestContext)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
             return [self, method](
-                       RequestContext ctx) -> AsyncResponse { co_return (self.get()->*method)(std::move(ctx)); };
+                RequestContext ctx) -> AsyncResponse {
+                co_return (self.get()->*method)(std::move(ctx));
+            };
         }
 
         template <IsController Controller>
         ContextHandler bind_sync_method_const_ref(Response (Controller::*method)(const RequestContext&)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
-            return [self, method](RequestContext ctx) -> AsyncResponse { co_return (self.get()->*method)(ctx); };
+            return [self, method](RequestContext ctx) -> AsyncResponse {
+                co_return (self.get()->*method)(ctx);
+            };
         }
 
         template <IsController Controller>
@@ -166,7 +173,9 @@ namespace demiplane::http {
         ContextHandler bind_async_method_const_ref(AsyncResponse (Controller::*method)(const RequestContext&)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
             return
-                [self, method](RequestContext ctx) -> AsyncResponse { co_return co_await (self.get()->*method)(ctx); };
+                [self, method](RequestContext ctx) -> AsyncResponse {
+                co_return co_await (self.get()->*method)(ctx);
+            };
         }
 
         // Generic wrapper for free functions and lambdas
@@ -175,25 +184,32 @@ namespace demiplane::http {
             if constexpr (std::is_invocable_r_v<Response, F, RequestContext>) {
                 // Sync handler taking RequestContext by value
                 return [handler = std::forward<F>(handler)](
-                           RequestContext ctx) -> AsyncResponse { co_return handler(std::move(ctx)); };
-            } else if constexpr (std::is_invocable_r_v<Response, F, const RequestContext&>) {
+                    RequestContext ctx) -> AsyncResponse {
+                    co_return handler(std::move(ctx));
+                };
+            }
+            else if constexpr (std::is_invocable_r_v<Response, F, const RequestContext&>) {
                 // Sync handler taking RequestContext by const reference
                 return [handler = std::forward<F>(handler)](
-                           RequestContext ctx) -> AsyncResponse { co_return handler(ctx); };
-            } else if constexpr (std::is_invocable_r_v<AsyncResponse, F, RequestContext>) {
+                    RequestContext ctx) -> AsyncResponse {
+                    co_return handler(ctx);
+                };
+            }
+            else if constexpr (std::is_invocable_r_v<AsyncResponse, F, RequestContext>) {
                 // Async handler taking RequestContext by value
                 return [handler = std::forward<F>(handler)](
-                           RequestContext ctx) -> AsyncResponse { co_return co_await handler(std::move(ctx)); };
-            } else if constexpr (std::is_invocable_r_v<AsyncResponse, F, const RequestContext&>) {
+                    RequestContext ctx) -> AsyncResponse {
+                    co_return co_await handler(std::move(ctx));
+                };
+            }
+            else if constexpr (std::is_invocable_r_v<AsyncResponse, F, const RequestContext&>) {
                 // Async handler taking RequestContext by const reference
                 return [handler = std::forward<F>(handler)](
-                           RequestContext ctx) -> AsyncResponse { co_return co_await handler(ctx); };
-            } else {
-                static_assert(false, "Handler must be callable with RequestContext or const RequestContext& and return "
-                                     "Response or AsyncResponse");
-                gears::unreachable<F>();
+                    RequestContext ctx) -> AsyncResponse {
+                    co_return co_await handler(ctx);
+                };
             }
+            return gears::unreachable_c<F>();
         }
     };
-
 } // namespace demiplane::http

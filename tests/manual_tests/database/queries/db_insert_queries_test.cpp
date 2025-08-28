@@ -1,4 +1,3 @@
-
 // INSERT query expression tests
 // Comprehensive tests for insert operations
 
@@ -19,12 +18,12 @@ using namespace demiplane::db;
 
 // Test fixture for INSERT operations
 class InsertQueryTest : public ::testing::Test,
-                        public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                        public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file = "query_test.log";
-        cfg.add_time_to_name = false;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
             demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
@@ -71,7 +70,7 @@ TEST_F(InsertQueryTest, InsertWithRecordExpression) {
     test_record["name"].set(std::string("Bob Smith"));
     test_record["age"].set(35);
     test_record["active"].set(true);
-    
+
     auto query = insert_into(users_schema)
                  .into({"name", "age", "active"})
                  .values(test_record);
@@ -86,14 +85,14 @@ TEST_F(InsertQueryTest, InsertBatchExpression) {
     record1["name"].set(std::string("User1"));
     record1["age"].set(25);
     record1["active"].set(true);
-    
+
     Record record2(users_schema);
     record2["name"].set(std::string("User2"));
     record2["age"].set(30);
     record2["active"].set(false);
-    
+
     std::vector<Record> records = {record1, record2};
-    
+
     auto query = insert_into(users_schema)
                  .into({"name", "age", "active"})
                  .batch(records);
@@ -123,12 +122,12 @@ TEST_F(InsertQueryTest, InsertEmptyColumnsExpression) {
 // Test INSERT method chaining
 TEST_F(InsertQueryTest, InsertMethodChainingExpression) {
     auto query = insert_into(users_schema)
-                 .into({"name", "age", "active"});
-    
+        .into({"name", "age", "active"});
+
     // Test that methods return reference for chaining
     auto& query_ref = query.values({"Test User", 40, true});
     EXPECT_EQ(&query, &query_ref);
-    
+
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

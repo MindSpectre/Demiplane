@@ -4,9 +4,7 @@
 //#include "custom_entry.hpp"
 
 #include "logger_provider.hpp"
-#include "log_macros.hpp"
-
 #include "../stream_log.hpp"
 
-
+#include "log_macros.hpp"
 #include "log_macros_adds.hpp"

@@ -17,6 +17,7 @@ add_library(${DMP_NEXUS}.Core STATIC
         core/source/nexus.cpp
         core/include/nexus.hpp
         core/details.hpp
+        core/source/nexus.inl
 )
 target_include_directories(${DMP_NEXUS}.Core
         PUBLIC
@@ -27,22 +28,8 @@ target_include_directories(${DMP_NEXUS}.Core
 target_link_libraries(${DMP_NEXUS}.Core PUBLIC
         Boost::thread
         ${DMP_NEXUS}.Policies
-
-)
-##############################################################################
-
-##############################################################################
-# Nexus provider
-##############################################################################
-add_library(${DMP_NEXUS}.Provider INTERFACE
-    provider/nexus_provider.hpp
-)
-target_include_directories(${DMP_NEXUS}.Provider INTERFACE
-    provider/
-)
-
-target_link_libraries(${DMP_NEXUS}.Provider INTERFACE
-    ${DMP_NEXUS}.Core
+        PRIVATE
+        Demiplane::Common::Chrono
 )
 ##############################################################################
 
@@ -53,8 +40,10 @@ target_link_libraries(${DMP_NEXUS}.Provider INTERFACE
 add_combined_library(${DMP_NEXUS}
         DIRECTORIES
         export
+        SOURCES
+        export/demiplane/nexus
         LIBRARIES
-        ${DMP_NEXUS}.Provider
+        ${DMP_NEXUS}.Core
 )
 add_library(Demiplane::Common::Nexus ALIAS ${DMP_NEXUS})
 ##############################################################################

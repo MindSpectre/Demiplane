@@ -16,8 +16,11 @@ public:
 
 
 void check_location_meta(const std::string& data, const std::source_location& loc) {
-    if (data.contains(loc.file_name()) && data.contains(loc.function_name())
-        && data.contains(std::to_string(loc.line()))) {
+    const char* fname = loc.file_name();
+    if (const char* last_slash = std::strrchr(fname, '/')) {
+        fname = last_slash + 1;
+    }
+    if (data.contains(fname) && data.contains(std::to_string(loc.line()))) {
         return;
     }
     throw std::runtime_error("Some location meta not found");
@@ -79,6 +82,8 @@ TEST(TestEntries, ServiceEntry) {
         check_message(output, message);
         check_level(output, INF);
         check_location_meta(output, loc);
+    
+    
     });
     EXPECT_TRUE(output.contains(ServiceTest::name));
 }
@@ -89,18 +94,20 @@ TEST(TestEntries, CustomEntry) {
     auto cfg_ptr                       = std::make_shared<CustomEntryConfig>(CustomEntryConfig{});
 
     std::string output;
-    auto mk_entry = [&] { return demiplane::scroll::make_entry<CustomEntry>(INF, message, loc, cfg_ptr); };
+    auto mk_entry = [&] {
+        return demiplane::scroll::make_entry<CustomEntry>(INF, message, loc, cfg_ptr);
+    };
 
-    auto entry = mk_entry();
+    auto entry             = mk_entry();
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;
     check_message(output, message);
     check_level(output, INF);
-    EXPECT_THROW(check_location_meta(output, loc), std::runtime_error);
+    EXPECT_FALSE(output.contains(loc.function_name()));
 
     cfg_ptr->add_pretty_function = true;
     entry                        = mk_entry();
-    EXPECT_NO_THROW(output = entry.to_string());
+    EXPECT_NO_THROW(output       = entry.to_string());
     std::cout << output;
-    EXPECT_NO_THROW(check_location_meta(output, loc));
+    EXPECT_TRUE(output.contains(loc.function_name()));
 }

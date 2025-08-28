@@ -2,8 +2,6 @@
 #include <utility>
 #include <json/json.h>
 
-#include <gears_templates.hpp>
-#include <gears_utils.hpp>
 #include "../entry_interface.hpp"
 
 namespace demiplane::scroll {

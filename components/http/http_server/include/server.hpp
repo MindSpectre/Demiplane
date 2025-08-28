@@ -4,16 +4,19 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <boost/asio/io_context.hpp>
+#include <demiplane/nexus>
 
 #include "aliases.hpp"
 #include "controller.hpp"
 #include "route_registry.hpp"
-#include <boost/asio/io_context.hpp>
 
 namespace demiplane::http {
 
     class Server {
     public:
+        NEXUS_REGISTER(0xA0702D11, nexus::Immortal); // CRC32/ISO-HDLC of demiplane::http::Server
+
         explicit Server(std::size_t threads = 1);
         ~Server();
 

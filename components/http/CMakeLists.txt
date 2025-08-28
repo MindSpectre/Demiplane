@@ -34,11 +34,15 @@ target_include_directories(${DMP_HTTP}.Handler PUBLIC
         http_server/include
 )
 
-target_link_libraries(${DMP_HTTP}.Handler PUBLIC
+target_link_libraries(${DMP_HTTP}.Handler
+        PUBLIC
         Demiplane::Common::Gears
         Boost::beast
         Boost::asio
         JsonCpp::JsonCpp
+        Demiplane::Common::Nexus
+        PRIVATE
+        Demiplane::Common::Scroll
 )
 ##############################################################################
 

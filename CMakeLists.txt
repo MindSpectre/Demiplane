@@ -32,9 +32,15 @@ add_compile_options(
 include(cmake/togglers.cmake)
 
 # Add compile definitions based on options
-if(ENABLE_LOGGING)
-    add_compile_definitions(ENABLE_LOGGING)
-endif()
+if (DMP_ENABLE_LOGGING)
+    message("Scroll logging is enabled")
+    add_compile_definitions(DMP_ENABLE_LOGGING)
+endif ()
+
+if (DMP_COMPONENT_LOGGING)
+    message("Component logging is enabled")
+    add_compile_definitions(DMP_COMPONENT_LOGGING)
+endif ()
 
 #custom directives
 include(cmake/tests.cmake)
@@ -80,7 +86,7 @@ add_subdirectory(common)
 # Components
 ##############################################################################
 if (BUILD_COMPONENTS)
-    message("Components will be builded")
+    message("Components will be built")
     add_subdirectory(components)
 endif ()
 ##############################################################################

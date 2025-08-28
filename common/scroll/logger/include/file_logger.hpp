@@ -10,7 +10,6 @@
 
 #include <demiplane/chrono>
 
-#include "factory/entry_factory.hpp"
 
 #include <concurrent_queue.hpp> // moodycamel
 #include <gears_types.hpp>
@@ -68,7 +67,7 @@ namespace demiplane::scroll {
 
         /*---------------- logging API ----------------------------------------*/
 
-        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override;
+        void log(LogLevel lvl, std::string_view msg, const std::source_location& loc) override;
         void log(const EntryType& entry);
 
         void log(EntryType&& entry);

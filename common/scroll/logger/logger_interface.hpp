@@ -16,6 +16,6 @@ namespace demiplane::scroll {
 
         virtual ~Logger() = default;
 
-        virtual void log(LogLevel lvl, std::string_view msg, std::source_location loc) = 0;
+        virtual void log(LogLevel lvl, std::string_view msg, const std::source_location& loc) = 0;
     };
 } // namespace demiplane::scroll

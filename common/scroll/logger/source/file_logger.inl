@@ -1,5 +1,5 @@
 #pragma once
-#include <ranges>
+#include "factory/entry_factory.hpp"
 
 namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
@@ -42,14 +42,14 @@ namespace demiplane::scroll {
     }
 
     template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::log(LogLevel lvl, std::string_view msg, std::source_location loc) {
+    void FileLogger<EntryType>::log(LogLevel lvl, const std::string_view msg, const std::source_location& loc) {
         if (static_cast<int8_t>(lvl) < static_cast<int8_t>(config_.threshold)) {
             return;
         }
         if (!accepting_.load(std::memory_order_relaxed)) {
             return;
         }
-        EntryType entry = make_entry<EntryType>(lvl, msg, std::move(loc));
+        EntryType entry = make_entry<EntryType>(lvl, msg, loc);
         enqueue(std::move(entry));
     }
 

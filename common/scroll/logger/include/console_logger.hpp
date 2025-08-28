@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "../logger_interface.hpp"
+#include "factory/entry_factory.hpp"
 
 
 namespace demiplane::scroll {
@@ -22,8 +23,8 @@ namespace demiplane::scroll {
             : config_{cfg} {}
 
 
-        void log(LogLevel lvl, std::string_view msg, std::source_location loc) override {
-            auto entry = make_entry<EntryType>(lvl, msg, std::move(loc));
+        void log(const LogLevel lvl, const std::string_view msg, const std::source_location& loc) override {
+            auto entry = make_entry<EntryType>(lvl, msg, loc);
             log(entry);
         }
 

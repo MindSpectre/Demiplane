@@ -3,25 +3,32 @@
 #include <iostream>
 
 #include "../logger_interface.hpp"
-#include "entry/factory/entry_factory.hpp"
-namespace demiplane::scroll {
+#include "factory/entry_factory.hpp"
 
-    struct ConsoleLoggerConfig  {
+
+namespace demiplane::scroll {
+    struct ConsoleLoggerConfig {
+        NEXUS_REGISTER(0x405ADA4C, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLoggerConfig
+
         LogLevel threshold{LogLevel::Debug};
         bool flush_each_entry{false};
     };
 
     template <detail::EntryConcept EntryType>
-    class ConsoleLogger : public Logger<EntryType> {
+    class ConsoleLogger final : public Logger {
     public:
-        explicit ConsoleLogger(const ConsoleLoggerConfig cfg) : config_{cfg} {}
+        NEXUS_REGISTER(0xDCBA748C, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLogger
 
-        void log(LogLevel lvl, const std::string_view msg, const std::source_location loc) override {
+        explicit ConsoleLogger(const ConsoleLoggerConfig cfg)
+            : config_{cfg} {}
+
+
+        void log(const LogLevel lvl, const std::string_view msg, const std::source_location& loc) override {
             auto entry = make_entry<EntryType>(lvl, msg, loc);
             log(entry);
         }
 
-        void log(const EntryType& entry) override {
+        void log(const EntryType& entry) {
             if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
                 return;
             }
@@ -31,19 +38,13 @@ namespace demiplane::scroll {
                 std::cout << std::flush;
             }
         }
-        void log(EntryType&& entry) override {
-            if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
-                return;
-            }
-            std::lock_guard lock{mutex_};
-            std::cout << entry.to_string();
-        }
+
         ConsoleLoggerConfig& config() {
             return config_;
         }
+
     protected:
-        std::mutex mutex_;
+        mutable std::mutex mutex_;
         ConsoleLoggerConfig config_;
     };
-
 } // namespace demiplane::scroll

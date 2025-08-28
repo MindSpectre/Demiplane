@@ -3,30 +3,38 @@
 
 #include <gtest/gtest.h>
 
-#include "query_expressions.hpp"
+#include <demiplane/nexus>
+#include <demiplane/scroll>
+
 #include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
-
-#include <demiplane/scroll>
+#include "query_expressions.hpp"
 
 using namespace demiplane::db;
 
 
 // Test fixture for aggregate operations
 class AggregateQueryTest : public ::testing::Test,
-                           public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                           public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file             = "query_test.log";
-        cfg.add_time_to_name = false;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        demiplane::nexus::instance().register_factory<demiplane::scroll::Logger>([]() {
+            return std::make_shared<
+                demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(
+                *demiplane::nexus::instance().spawn<demiplane::scroll::ConsoleLoggerConfig>()
+            );
+        });
+        demiplane::nexus::instance().register_factory<demiplane::scroll::ConsoleLoggerConfig>([]() {
+            return std::make_shared<demiplane::scroll::ConsoleLoggerConfig>();
+        });
+        set_logger(demiplane::nexus::instance().spawn<demiplane::scroll::Logger>());
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")

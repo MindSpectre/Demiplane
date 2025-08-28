@@ -1,4 +1,3 @@
-#define ENABLE_LOGGING
 #define DMP_LOG_LEVEL WRN
 #include <demiplane/scroll>
 #include <gtest/gtest.h>
@@ -11,8 +10,6 @@ public:
         std::vector<std::string> expected_messages;
         testing::internal::CaptureStdout();
         auto mk_message = [](const std::size_t n) { return "TestMessage" + std::to_string(n); };
-        SCROLL_LOG() << mk_message(i);
-        expected_messages.emplace_back(mk_message(i++));
         SCROLL_LOG_DBG() << mk_message(i);
         expected_messages.emplace_back(mk_message(i++));
         SCROLL_LOG_INF() << mk_message(i);
@@ -23,19 +20,7 @@ public:
         expected_messages.emplace_back(mk_message(i++));
         SCROLL_LOG_FAT() << mk_message(i);
         expected_messages.emplace_back(mk_message(i++));
-        SCROLL_LOG_MESSAGE(mk_message(i));
-        expected_messages.emplace_back(mk_message(i++));
-        SCROLL_LOG_MESSAGE_DBG(mk_message(i));
-        expected_messages.emplace_back(mk_message(i++));
-        SCROLL_LOG_MESSAGE_INF(mk_message(i));
-        expected_messages.emplace_back(mk_message(i++));
-        SCROLL_LOG_MESSAGE_WRN(mk_message(i));
-        expected_messages.emplace_back(mk_message(i++));
-        SCROLL_LOG_MESSAGE_ERR(mk_message(i));
-        expected_messages.emplace_back(mk_message(i++));
-        SCROLL_LOG_MESSAGE_FAT(mk_message(i));
-        expected_messages.emplace_back(mk_message(i++));
-        EXPECT_EQ(i, 13);
+        EXPECT_EQ(i, 6);
 
         const std::string output = testing::internal::GetCapturedStdout();
         for (const auto& msg : expected_messages) {

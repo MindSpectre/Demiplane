@@ -88,7 +88,7 @@ namespace demiplane::db {
             return TableColumn{schema_, table_, std::move(alias)};
         }
 
-        DynamicColumn as_dynamic() const & {
+        [[nodiscard]] DynamicColumn as_dynamic() const & {
             return DynamicColumn{schema_->name, *table_};
         }
 
@@ -118,7 +118,7 @@ namespace demiplane::db {
             return table_;
         }
 
-        DynamicColumn as_dynamic() const {
+        [[nodiscard]] DynamicColumn as_dynamic() const {
             return DynamicColumn{"*", table_name()};
         }
 

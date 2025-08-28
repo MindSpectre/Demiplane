@@ -4,9 +4,10 @@
 #include <regex>
 #include <string>
 #include <vector>
+#include <boost/unordered/unordered_flat_map.hpp>
+#include <demiplane/nexus>
 
 #include "aliases.hpp"
-#include <boost/unordered/unordered_flat_map.hpp>
 
 namespace demiplane::http {
 
@@ -22,6 +23,8 @@ namespace demiplane::http {
 
     class RouteRegistry {
     public:
+        NEXUS_REGISTER(0xF6A865A4, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::http::RouteRegistry
+
         void add_route(boost::beast::http::verb method, std::string path, ContextHandler handler);
 
         // Merge another registry into this one

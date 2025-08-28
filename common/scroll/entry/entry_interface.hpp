@@ -18,8 +18,8 @@ namespace demiplane::scroll::detail {
 
         MetaSource() = default;
 
-        explicit constexpr MetaSource(std::source_location loc)
-            : location{std::move(loc)} {}
+        explicit constexpr MetaSource(const std::source_location& loc)
+            : location{loc} {}
     };
 
     struct ThreadLocalCache {

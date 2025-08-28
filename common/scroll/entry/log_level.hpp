@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace demiplane::scroll {
     /**
      * @enum LogLevel
@@ -25,6 +27,7 @@ namespace demiplane::scroll {
         Fatal
         // Extend with additional levels if needed.
     };
+
     inline constexpr auto DBG = LogLevel::Debug;
     inline constexpr auto INF = LogLevel::Info;
     inline constexpr auto WRN = LogLevel::Warning;
@@ -33,18 +36,18 @@ namespace demiplane::scroll {
 
     constexpr const char* log_level_to_string(const LogLevel level) {
         switch (level) {
-        case LogLevel::Debug:
-            return "DEBUG";
-        case LogLevel::Info:
-            return "INFO";
-        case LogLevel::Warning:
-            return "WARNING";
-        case LogLevel::Error:
-            return "ERROR";
-        case LogLevel::Fatal:
-            return "FATAL";
-        case LogLevel::Trace:
-            return "TRACE";
+            case LogLevel::Debug:
+                return "DBG";
+            case LogLevel::Info:
+                return "INF";
+            case LogLevel::Warning:
+                return "WRN";
+            case LogLevel::Error:
+                return "ERR";
+            case LogLevel::Fatal:
+                return "FAT";
+            case LogLevel::Trace:
+                return "TRC";
         }
         return "UNKNOWN";
     }

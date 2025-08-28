@@ -48,7 +48,7 @@ TEST_F(FileLoggerTest, LogsEntryWhenAboveThreshold) {
 
     // Verify output contains the message
     EXPECT_TRUE(output.find("Test message") != std::string::npos);
-    EXPECT_TRUE(output.find("INFO") != std::string::npos);
+    EXPECT_TRUE(output.find(demiplane::scroll::log_level_to_string(demiplane::scroll::INF)) != std::string::npos);
 }
 
 // Test that messages below the threshold are not logged
@@ -76,7 +76,7 @@ TEST_F(FileLoggerTest, DirectLoggingWithSourceLocation) {
 
     // Verify output
     EXPECT_TRUE(output.find("Warning message") != std::string::npos);
-    EXPECT_TRUE(output.find("WARNING") != std::string::npos);
+    EXPECT_TRUE(output.find(log_level_to_string(demiplane::scroll::WRN)) != std::string::npos);
 }
 
 // Test threshold changes
@@ -240,13 +240,11 @@ void multithread_write(
     bool first                     = true;
     std::uint32_t monotonic_errors = 0; // how many times we go backwards?
     std::uint32_t total_lines      = 0;
-    std::string prevl;
     while (std::getline(in, line)) {
         auto ts = parse_sec_ms(line);
 
         if (!first) {
             if (ts < prev) {
-                std::cout << "Non-monotonic line: " << prevl << "\n" << line << '\n';
                 ++monotonic_errors; // or store the offending line
             }
         }
@@ -254,7 +252,6 @@ void multithread_write(
             first = false;
         }
         prev  = ts;
-        prevl = line;
         total_lines++;
     }
 

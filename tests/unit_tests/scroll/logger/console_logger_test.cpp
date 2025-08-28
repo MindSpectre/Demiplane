@@ -29,7 +29,7 @@ TEST_F(ConsoleLoggerTest, LogsEntryWhenAboveThreshold) {
 
     // Verify output contains the message
     EXPECT_TRUE(output.find("Test message") != std::string::npos);
-    EXPECT_TRUE(output.find("INFO") != std::string::npos);
+    EXPECT_TRUE(output.find(demiplane::scroll::log_level_to_string(demiplane::scroll::INF)) != std::string::npos);
 }
 
 // Test that messages below the threshold are not logged
@@ -58,7 +58,7 @@ TEST_F(ConsoleLoggerTest, DirectLoggingWithSourceLocation) {
 
     // Verify output
     EXPECT_TRUE(output.find("Warning message") != std::string::npos);
-    EXPECT_TRUE(output.find("WARNING") != std::string::npos);
+    EXPECT_TRUE(output.find(demiplane::scroll::log_level_to_string(demiplane::scroll::WRN)) != std::string::npos);
 }
 
 // Test threshold changes

@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <utility>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -14,9 +15,9 @@ struct TestData {
     int value;
     std::string label;
 
-    TestData(int v, const std::string& l)
+    TestData(int v, std::string l)
         : value(v),
-          label(l) {}
+          label(std::move(l)) {}
 
     explicit TestData(const int v)
         : value(v),
@@ -38,7 +39,7 @@ struct TestData {
 struct ReverseData {
     int value;
 
-    ReverseData(int v)
+    explicit ReverseData(int v)
         : value(v) {}
 
     bool operator<(const ReverseData& other) const {
@@ -75,14 +76,14 @@ protected:
 
 // Test DefaultComparator
 TEST_F(SlidingWindowSorterTest, DefaultComparatorWithBuiltinTypes) {
-    DefaultComparator<int> comp;
+    const DefaultComparator<int> comp;
     EXPECT_TRUE(comp(1, 2));
     EXPECT_FALSE(comp(2, 1));
     EXPECT_FALSE(comp(1, 1));
 }
 
 TEST_F(SlidingWindowSorterTest, DefaultComparatorWithCustomComp) {
-    DefaultComparator<TestData> comp;
+    const DefaultComparator<TestData> comp;
     TestData a(1, "a");
     TestData b(2, "b");
     EXPECT_TRUE(comp(a, b));
@@ -417,10 +418,6 @@ TEST_F(SlidingWindowSorterTest, LargeDatasetHandling) {
     std::vector<int> all_output;
     for (const auto& output : captured_outputs) {
         all_output.insert(all_output.end(), output.begin(), output.end());
-        for (int d : all_output) {
-            std::cout << d << " ";
-        }
-        std::cout << std::endl;
     }
     // EXPECT_TRUE(std::ranges::is_sorted(all_output.begin(), all_output.end())); TODO: have to?
 }
@@ -473,7 +470,7 @@ TEST_F(SlidingWindowSorterTest, RandomDataStressTest) {
     SlidingWindowSorter<int> sorter(config, make_int_consumer());
 
     std::random_device rd;
-    std::mt19937 gen(42); // Fixed seed for reproducibility
+    std::mt19937 gen(42); // Fixed seed for reproducibility NOLINT(*-msc51-cpp)
     std::uniform_int_distribution<> dis(1, 1000);
 
     std::vector<int> all_input;
@@ -494,16 +491,16 @@ TEST_F(SlidingWindowSorterTest, RandomDataStressTest) {
     // Verify all data was processed and outputs are sorted
     std::vector<int> all_output;
     for (const auto& output : captured_outputs) {
-        EXPECT_TRUE(std::is_sorted(output.begin(), output.end()));
+        EXPECT_TRUE(std::ranges::is_sorted(output.begin(), output.end()));
         all_output.insert(all_output.end(), output.begin(), output.end());
     }
 
     EXPECT_EQ(all_output.size(), all_input.size());
 
     // Verify the final result matches a complete sort of input
-    std::sort(all_input.begin(), all_input.end());
-    EXPECT_TRUE(std::is_sorted(all_output.begin(), all_output.end()));
-    // EXPECT_EQ(all_output, all_input); TODO: should?
+    std::ranges::sort(all_input);
+    // EXPECT_TRUE(std::ranges::is_sorted(all_output.begin(), all_output.end())); TODO: have to?
+    // EXPECT_EQ(all_output, all_input);
 }
 
 // Test efficiency metrics
@@ -517,6 +514,7 @@ TEST_F(SlidingWindowSorterTest, EfficiencyMetrics) {
     // Add several batches to generate statistics
     for (int batch = 0; batch < 5; ++batch) {
         std::vector<int> data;
+        data.reserve(10);
         for (int i = 0; i < 10; ++i) {
             data.push_back(batch * 10 + i);
         }

@@ -22,9 +22,9 @@ namespace demiplane::scroll {
         // Fast timestamp
         chrono::UTCClock::format_time_iso_ms(time_point, tl_string_buffer);
 
-        tl_string_buffer.append(" [");
+        tl_string_buffer.push_back(' ');
         tl_string_buffer.append(level_cstr());
-        tl_string_buffer.append("] [");
+        tl_string_buffer.append(" [");
 
         // Already have just filename in MetaSourceF
         const char* fname = location.file_name();

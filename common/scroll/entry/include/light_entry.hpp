@@ -14,7 +14,7 @@ namespace demiplane::scroll {
 
         [[nodiscard]] std::string to_string() const override {
             std::ostringstream formatter;
-            formatter << "[" << log_level_to_string(level_) << "] " << message_ << "\n";
+            formatter << log_level_to_string(level_) << " " << message_ << "\n";
             return formatter.str();
         }
         static bool comp(const LightEntry& lhs, const LightEntry& rhs) {

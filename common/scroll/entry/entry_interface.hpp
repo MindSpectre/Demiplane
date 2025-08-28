@@ -91,12 +91,12 @@ namespace demiplane::scroll::detail {
         LogLevel level_{LogLevel::Debug};
         std::string message_;
         static constexpr std::array<const char*, 6> level_strings = {
-            "TRACE",
-            "DEBUG",
-            "INFO ",
-            "WARN ",
-            "ERROR",
-            "FATAL"
+            "TRC",
+            "DBG",
+            "INF",
+            "WRN",
+            "ERR",
+            "FAT"
         };
 
         [[nodiscard]] const char* level_cstr() const {

@@ -119,8 +119,7 @@ namespace demiplane::scroll {
             log_entry << chrono::UTCClock::format_time(time_point, config_->time_fmt) << " ";
         }
         if (config_->add_level) {
-
-            log_entry << "[" << scroll::log_level_to_string(level_) << "] ";
+            log_entry << log_level_to_string(level_) << " ";
         }
         if (config_->add_thread) {
 

@@ -1,12 +1,13 @@
-#include "entry/custom_entry.hpp"
+#include "custom_entry.hpp"
 
-#include <demiplane/chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
+#include <demiplane/chrono>
 
-#include "colors.hpp"
+#include <colors.hpp>
+
 // namespace
 namespace demiplane::scroll {
     /**
@@ -118,18 +119,16 @@ namespace demiplane::scroll {
             log_entry << chrono::UTCClock::format_time(time_point, config_->time_fmt) << " ";
         }
         if (config_->add_level) {
-
-            log_entry << "[" << scroll::log_level_to_string(level_) << "] ";
+            log_entry << log_level_to_string(level_) << " ";
         }
         if (config_->add_thread) {
 
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
         if (config_->add_location) {
-
-            log_entry << "[" << loc.file_name() << ":" << loc.line();
+            log_entry << "[" << location.file_name() << ":" << location.line();
             if (config_->add_pretty_function) {
-                log_entry << " " << loc.function_name();
+                log_entry << " " << location.function_name();
             }
             log_entry << "] ";
         }
@@ -141,7 +140,8 @@ namespace demiplane::scroll {
 
         std::string uncolored_entry = log_entry.str();
         switch (level_) {
-        case LogLevel::Debug:
+            case LogLevel::Trace:
+            case LogLevel::Debug:
             if (config_->enable_colors) {
                 return colors::make_white(uncolored_entry);
             }

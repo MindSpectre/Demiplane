@@ -2,34 +2,37 @@
 
 #include <sstream>
 #include <string>
-
+//todo: make private
 #include <clock.hpp>
-#include <gears_templates.hpp>
 #include "../entry_interface.hpp"
 
 namespace demiplane::scroll {
-    class DetailedEntry final
+    template <gears::HasStaticNameMember Service>
+    class ServiceEntry final
         : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
     public:
         using EntryBase::EntryBase;
 
         [[nodiscard]] std::string to_string() const override {
             std::ostringstream os;
-            os << chrono::UTCClock::format_time_iso_ms(time_point)<< " ["
-               << log_level_to_string(level_) << "] "
-               << "[" << loc.file_name() << ':' << loc.line() << " " << loc.function_name() << "] "
-               << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
+            os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::iso8601) << " "
+                << log_level_to_string(level_) << " "
+                << "[" << Service::name << "] "
+                << "[" << location.file_name() << ':' << location.line() << " " << location.function_name() << "] "
+                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
             return os.str();
         }
-        static bool comp(const DetailedEntry& lhs, const DetailedEntry& rhs) {
+
+        static bool comp(const ServiceEntry& lhs, const ServiceEntry& rhs) {
             if (lhs.time_point == rhs.time_point) {
                 return lhs.level() < rhs.level();
             }
             return lhs.time_point < rhs.time_point;
         }
     };
-    template <>
-    struct detail::entry_traits<DetailedEntry> {
+
+    template <class Service>
+    struct detail::entry_traits<ServiceEntry<Service>> {
         using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess>;
     };
 } // namespace demiplane::scroll

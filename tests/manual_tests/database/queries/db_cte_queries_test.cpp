@@ -18,12 +18,12 @@ using namespace demiplane::db;
 
 // Test fixture for CTE operations
 class CteQueryTest : public ::testing::Test,
-                     public demiplane::scroll::FileLoggerProvider<demiplane::scroll::DetailedEntry> {
+                     public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file             = "query_test.log";
-        cfg.add_time_to_name = false;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
 
         std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
             demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
@@ -151,18 +151,18 @@ TEST_F(CteQueryTest, MultipleCteExpression) {
 // Test CTE with complex joins
 TEST_F(CteQueryTest, CteWithComplexJoinsExpression) {
     auto employee_sales_summary = with("employee_sales_summary",
-                                      select(emp_name, emp_department,
-                                            sum(sale_amount).as("total_sales"),
-                                            count(sale_id).as("sale_count"))
-                                      .from(employees_schema)
-                                      .join(sales_schema->table_name(), JoinType::LEFT).on(sale_employee_id == emp_id)
-                                      .where(emp_active == lit(true))
-                                      .group_by(emp_id, emp_name, emp_department));
+                                       select(emp_name, emp_department,
+                                              sum(sale_amount).as("total_sales"),
+                                              count(sale_id).as("sale_count"))
+                                       .from(employees_schema)
+                                       .join(sales_schema->table_name(), JoinType::LEFT).on(sale_employee_id == emp_id)
+                                       .where(emp_active == lit(true))
+                                       .group_by(emp_id, emp_name, emp_department));
 
     auto result = compiler->compile(employee_sales_summary);
     EXPECT_FALSE(result.sql.empty());
     #ifdef MANUAL_CHECK
-        std::cout << result.sql << std::endl;
+    std::cout << result.sql << std::endl;
     #endif
 }
 

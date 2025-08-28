@@ -47,4 +47,31 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Scroll
 ##############################################################################
 
 
+##############################################################################
+#  Nexus uint test
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Nexus
+        nexus/test_nexus.cpp
+)
+
+target_link_libraries(${UNIT_TESTING_TARGET}.Nexus
+        Demiplane::Common::Nexus
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test Algorithms
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Algorithms
+        algorithms/test_sliding_window_sorter.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Algorithms
+        PRIVATE
+        Demiplane::Common::Algorithms
+        ${TEST_LIBS}
+)
+##############################################################################
+
+
 

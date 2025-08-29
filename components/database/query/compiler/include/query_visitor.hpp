@@ -3,7 +3,7 @@
 #include "db_core_fwd.hpp"
 #include "gears_utils.hpp"
 #include "query_expressions.hpp"
-
+// NOLINTBEGIN(bugprone-use-after-move)
 namespace demiplane::db {
     class QueryVisitor {
         public:
@@ -674,3 +674,4 @@ namespace demiplane::db {
 }  // namespace demiplane::db
 
 #include "../source/query_visitor.inl"
+// NOLINTEND(bugprone-use-after-move)

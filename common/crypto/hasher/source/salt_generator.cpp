@@ -21,7 +21,7 @@ std::vector<std::uint8_t> demiplane::crypto::SaltGenerator::generate_bytes(const
     return salt;
 }
 std::string demiplane::crypto::SaltGenerator::generate_hex(const std::size_t size) {
-    auto saltBytes = generate_bytes(size);
+    const auto saltBytes = generate_bytes(size);
 
     // Each byte becomes two hex characters.
     std::string hex_string;

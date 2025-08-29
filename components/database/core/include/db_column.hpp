@@ -9,7 +9,7 @@
 
 namespace demiplane::db {
     class DynamicColumn {
-        public:
+    public:
         DynamicColumn(std::string name, std::string table)
             : name_{std::move(name)},
               context_{std::move(table)} {
@@ -40,7 +40,7 @@ namespace demiplane::db {
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
-        private:
+    private:
         std::string name_;
         std::string context_;
     };
@@ -48,7 +48,7 @@ namespace demiplane::db {
 
     template <typename T>
     class TableColumn {
-        public:
+    public:
         using value_type = T;
 
         constexpr TableColumn(const FieldSchema* schema,
@@ -87,7 +87,7 @@ namespace demiplane::db {
             return schema_->name;
         }
 
-        TableColumn as(std::string alias) const {
+        [[nodiscard]] TableColumn as(std::string alias) const {
             return TableColumn{schema_, table_, std::move(alias)};
         }
 
@@ -97,7 +97,7 @@ namespace demiplane::db {
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
-        private:
+    private:
         const FieldSchema* schema_;
         std::shared_ptr<std::string> table_;
         std::optional<std::string> alias_;  // Optional table alias
@@ -106,7 +106,7 @@ namespace demiplane::db {
 
     // All columns selector
     class AllColumns {
-        public:
+    public:
         explicit AllColumns(std::shared_ptr<std::string> table)
             : table_(std::move(table)) {
         }
@@ -129,7 +129,7 @@ namespace demiplane::db {
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
-        private:
+    private:
         std::shared_ptr<std::string> table_;
     };
 

@@ -18,8 +18,6 @@ protected:
     void TearDown() override {
         // Teardown after each test
     }
-
-public:
 };
 
 // Test basic functionality: starting, resetting, and flagging

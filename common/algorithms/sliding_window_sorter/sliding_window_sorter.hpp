@@ -97,7 +97,7 @@ namespace demiplane::algorithms {
             double avg_merge_efficiency;
         };
 
-        Statistics get_statistics() const {
+        [[nodiscard]] Statistics get_statistics() const {
             return {total_processed_,
                     merge_operations_,
                     sort_operations_,
@@ -262,7 +262,7 @@ namespace demiplane::algorithms {
 
         // Optimized insertion sort for small sequences
         template <typename Iterator, typename Compare>
-        void insertion_sort(Iterator first, Iterator last, Compare comp) {
+        void insertion_sort(Iterator first, Iterator last, const Compare& comp) {
             for (auto it = first + 1; it != last; ++it) {
                 auto key = std::move(*it);
                 auto pos = std::upper_bound(first, it, key, comp);

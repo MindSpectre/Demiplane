@@ -39,7 +39,7 @@ namespace demiplane::scroll {
             }
             if (jsons[field].isString()) {
                 std::string status = jsons[field].asString();
-                std::transform(status.begin(), status.end(), status.begin(), tolower);
+                std::ranges::transform(status, status.begin(), tolower);
                 if (status == "true" || status == "enabled" || status == "enable") {
                     return true;
                 }

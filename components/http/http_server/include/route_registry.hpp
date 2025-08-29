@@ -13,7 +13,7 @@
 namespace demiplane::http {
 
     struct RouteInfo {
-        boost::beast::http::verb method;
+        boost::beast::http::verb method = boost::beast::http::verb::unknown;
         std::string path;
         std::string pattern;
         std::vector<std::string> param_names;
@@ -23,7 +23,7 @@ namespace demiplane::http {
     };
 
     class RouteRegistry {
-        public:
+    public:
         NEXUS_REGISTER(0xF6A865A4, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::RouteRegistry
 
         void add_route(boost::beast::http::verb method, std::string path, ContextHandler handler);
@@ -47,7 +47,7 @@ namespace demiplane::http {
         RouteRegistry(const RouteRegistry& other);
         RouteRegistry& operator=(const RouteRegistry& other);
 
-        private:
+    private:
         boost::unordered::unordered_flat_map<std::string, ContextHandler> exact_routes_;
         std::vector<RouteInfo> parametric_routes_;
 

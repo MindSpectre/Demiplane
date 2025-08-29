@@ -4,7 +4,7 @@
 #include <demiplane/chrono>
 
 namespace {
-    void append_number(std::string& buf, uint32_t value) {
+    void append_number(std::string& buf, const uint32_t value) {
         char temp[16];
         snprintf(temp, sizeof(temp), "%u", value);
         buf.append(temp);

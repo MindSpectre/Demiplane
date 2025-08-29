@@ -24,7 +24,7 @@ IndentExternBlock: AfterExternBlock
 IndentWrappedFunctionNames: false
 NamespaceIndentation: All
 IndentAccessModifiers: false
-AccessModifierOffset: 0
+AccessModifierOffset: -4
 ConstructorInitializerIndentWidth: 4
 IndentRequiresClause: true
 
@@ -164,7 +164,6 @@ DerivePointerAlignment: false
 BitFieldColonSpacing: Both
 
 # Comments
-ReflowComments: Never
 CommentPragmas: '^ IWYU pragma:'
 FixNamespaceComments: true
 

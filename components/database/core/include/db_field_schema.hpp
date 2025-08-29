@@ -6,7 +6,6 @@
 
 #include <boost/container/flat_map.hpp>
 #include <gears_types.hpp>
-#include <gears_utils.hpp>
 
 #include "db_core_fwd.hpp"
 

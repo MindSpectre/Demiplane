@@ -1,11 +1,12 @@
+#include <demiplane/math>
+#include <demiplane/nexus>
+#include <demiplane/scroll>
 #include <iostream>
 #include <memory>
 #include <source_location>
 #include <thread>
-#include <demiplane/nexus>
-#include <demiplane/scroll>
+
 #include <printing_stopwatch.hpp>
-#include <demiplane/math>
 
 inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
     // indexes for "… HH:MM:SS.mmmZ"
@@ -17,15 +18,14 @@ inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
         return std::chrono::milliseconds{0};
     }
 
-    int sec = std::stoi(std::string{line.substr(17, 2)});
-    int ms  = std::stoi(std::string{line.substr(20, 3)});
+    const int sec = std::stoi(std::string{line.substr(17, 2)});
+    const int ms  = std::stoi(std::string{line.substr(20, 3)});
 
     return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
 }
 
 template <typename T>
-void multithread_write(
-    const T& file_logger) {
+void multithread_write(const T& file_logger) {
     std::vector<std::thread> threads;
     // Launch multiple threads to acquire and release objects
     std::size_t t_num = 10;
@@ -58,7 +58,7 @@ void multithread_write(
     std::string line;
     std::chrono::milliseconds prev{};
     bool first                     = true;
-    std::uint32_t monotonic_errors = 0; // how many times we go backwards?
+    std::uint32_t monotonic_errors = 0;  // how many times we go backwards?
     std::uint32_t total_lines      = 0;
     std::string prevl;
     while (std::getline(in, line)) {
@@ -67,11 +67,10 @@ void multithread_write(
         if (!first) {
             if (ts < prev) {
                 // std::cout << "Non-monotonic line: " << prevl << "\n" << line << '\n';
-                ++monotonic_errors; // or store the offending line
+                ++monotonic_errors;  // or store the offending line
                 std::cout << total_lines << '\n';
             }
-        }
-        else {
+        } else {
             first = false;
         }
         prev = ts;
@@ -81,8 +80,8 @@ void multithread_write(
 
     std::cout << "Non-monotonic lines: " << monotonic_errors << " " << total_lines << '\n';
     std::cout << "Non-monotonic lines%: "
-        << static_cast<double>(100 * monotonic_errors) / (static_cast<double>(t_num) * static_cast<double>(r_num))
-        << '\n';
+              << static_cast<double>(100 * monotonic_errors) / (static_cast<double>(t_num) * static_cast<double>(r_num))
+              << '\n';
 }
 
 template <typename T>
@@ -96,21 +95,18 @@ template <typename T>
 void safe_write(const T& file_logger) {
     file_logger->config().sort_entries = true;
     file_logger->config().batch_size   = 1 << 10;
-    //TODO: result out of order between batches
+    // TODO: result out of order between batches
     file_logger->reload();
     multithread_write(file_logger);
 }
 
 int main() {
-    demiplane::scroll::FileLoggerConfig cfg{
-        .threshold = demiplane::scroll::DBG,
-        .file = "test.log",
-        .add_time_to_filename = false,
-        .sort_entries = true,
-        .flush_each_batch = true
-    };
-    std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> file_logger = std::make_shared<
-        demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
+    demiplane::scroll::FileLoggerConfig cfg{.threshold            = demiplane::scroll::DBG,
+                                            .file                 = "test.log",
+                                            .add_time_to_filename = false,
+                                            .sort_entries         = true,
+                                            .flush_each_batch     = true};
+    const auto file_logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
     safe_write(file_logger);
     // unsafe_write(file_logger);
     std::filesystem::remove(cfg.file);

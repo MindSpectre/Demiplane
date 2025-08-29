@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace demiplane::http {
     struct tls_settings {
         std::string cert_file;  // PEM

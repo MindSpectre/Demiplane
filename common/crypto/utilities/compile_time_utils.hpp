@@ -4,7 +4,7 @@
 
 namespace demiplane::utilities::compile_time {
     template <std::size_t N>
-    static constexpr std::size_t strlen_constexpr(const char (&w)[N]) {
+    static constexpr std::size_t strlen_constexpr([[maybe_unused]] const char (&w)[N]) {
         return N - 1;  // Exclude the null terminator
     }
 

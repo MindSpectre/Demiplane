@@ -25,8 +25,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -273,7 +272,7 @@ TEST_F(ClauseQueryTest, ComplexQueryWithAllClausesExpression) {
                  .having(count(user_id) >= lit(3) && avg(user_salary) > lit(40000.0))
                  .order_by(desc(/*avg*/(user_salary)), asc(user_department))
                  .limit(10);
-    //todo: desc accept aggreagate
+    // todo: desc accept aggregate
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << "Complex query: " << result.sql;

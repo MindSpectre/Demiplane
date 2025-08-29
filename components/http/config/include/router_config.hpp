@@ -3,6 +3,7 @@
 
 #include <boost/unordered/unordered_flat_map.hpp>
 
+#include "firewall_config.hpp"
 #include "tls_config.hpp"
 namespace demiplane::http {
 

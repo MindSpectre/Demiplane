@@ -24,8 +24,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
@@ -106,8 +105,8 @@ TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
 
 // Test UPDATE WHERE expression
 TEST_F(UpdateQueryTest, UpdateWhereExpression) {
-    auto update_query = update(users_schema).set("active", false);
-    auto query        = UpdateWhereExpr{update_query, user_age < lit(18)};
+    const auto update_query = update(users_schema).set("active", false);
+    auto query              = UpdateWhereExpr{update_query, user_age < lit(18)};
     auto result       = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

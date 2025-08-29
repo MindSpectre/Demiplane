@@ -10,8 +10,8 @@
 namespace demiplane::db {
     template <IsSelectable... Columns>
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
-        public:
-        constexpr explicit SelectExpr(Columns... cols)
+    public:
+        constexpr explicit SelectExpr(Columns&&... cols)
             : columns_(std::forward<Columns>(cols)...) {
         }
 
@@ -46,19 +46,19 @@ namespace demiplane::db {
             return FromCteExpr<SelectExpr, Query>{*this, std::forward<Query>(query)};
         }
 
-        private:
+    private:
         std::tuple<Columns...> columns_;
         bool distinct_{false};
     };
 
     template <IsSelectable... Columns>
-    constexpr auto select(Columns... columns) {
-        return SelectExpr<Columns...>{columns...};
+    constexpr auto select(Columns&&... columns) {
+        return SelectExpr<Columns...>{std::forward<Columns>(columns)...};
     }
 
     template <IsSelectable... Columns>
-    constexpr auto select_distinct(Columns... columns) {
-        return SelectExpr<Columns...>{columns...}.set_distinct(true);
+    constexpr auto select_distinct(Columns&&... columns) {
+        return SelectExpr<Columns...>{std::forward<Columns>(columns)...}.set_distinct(true);
     }
 
     inline auto select_from_schema(TableSchemaPtr schema) {

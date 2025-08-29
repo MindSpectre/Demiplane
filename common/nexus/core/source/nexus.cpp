@@ -16,7 +16,6 @@ Nexus::~Nexus() {
     if (janitor_.joinable())
         janitor_.join();  // graceful
     std::cout << "[Nexus] Destructed\t" << chrono::LocalClock::current_time(chrono::clock_formats::iso8601) << "\n";
-    ;
     // Todo: replace with logger
 }
 
@@ -50,7 +49,7 @@ void Nexus::sweep() {
                         return true;  // Will erase the slot
                     }
                 } else if constexpr (std::is_same_v<Tag, Timed>) {
-                    if ((now - it->second.last_touch) > tag.idle) {
+                    if (now - it->second.last_touch > tag.idle) {
                         // Just clear the object, keep the factory
                         it->second.obj.reset();
                         // Don't erase slot, just clear object for re-creation

@@ -5,7 +5,7 @@ namespace demiplane::db {
         : table_name_(std::move(table_name)) {
     }
 
-    TableSchema& TableSchema::add_field(std::string name, std::string db_type, std::type_index cpp_type) {
+    TableSchema& TableSchema::add_field(std::string name, std::string db_type, const std::type_index cpp_type) {
         auto field      = std::make_unique<FieldSchema>();
         field->name     = std::move(name);
         field->db_type  = std::move(db_type);
@@ -25,7 +25,7 @@ namespace demiplane::db {
         return *this;
     }
 
-    TableSchema& TableSchema::nullable(const std::string_view field_name, bool is_null) {
+    TableSchema& TableSchema::nullable(const std::string_view field_name, const bool is_null) {
         if (auto* field = get_field_schema(field_name)) {
             field->is_nullable = is_null;
         }

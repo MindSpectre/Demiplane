@@ -38,11 +38,9 @@ namespace demiplane::nexus {
                 throw std::runtime_error("Nexus::spawn – not registered");
             }
 
-            auto& sl = it->second;
-
             // Check for expired Timed objects
-            if (std::holds_alternative<Timed>(sl.lt) && sl.expired_flag &&
-                sl.expired_flag->load(std::memory_order_acquire)) {
+            if (auto& sl = it->second; std::holds_alternative<Timed>(sl.lt) && sl.expired_flag &&
+                                       sl.expired_flag->load(std::memory_order_acquire)) {
                 // Object has expired, need to recreate
                 // Fall through to construction path
             } else if (sl.obj) {
@@ -70,18 +68,15 @@ namespace demiplane::nexus {
 
         // Lock the construction mutex for this specific slot
         // This allows other threads to construct different types concurrently
-        std::lock_guard<std::mutex> construct_lock(*construction_mtx);
+        std::lock_guard construct_lock(*construction_mtx);
 
         // Double-check after acquiring construction lock
         {
             boost::shared_lock r_lock{mtx_};
-            const auto it = map_.find(k);
-            if (it != map_.end()) {
-                auto& sl = it->second;
-
+            if (const auto it = map_.find(k); it != map_.end()) {
                 // Check again if object was constructed by another thread
-                if (std::holds_alternative<Timed>(sl.lt) && sl.expired_flag &&
-                    sl.expired_flag->load(std::memory_order_acquire)) {
+                if (auto& sl = it->second; std::holds_alternative<Timed>(sl.lt) && sl.expired_flag &&
+                                           sl.expired_flag->load(std::memory_order_acquire)) {
                     // Still expired, continue with construction
                 } else if (sl.obj) {
                     return build_handle<T>(sl);

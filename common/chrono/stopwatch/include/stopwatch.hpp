@@ -8,8 +8,8 @@ namespace demiplane::chrono {
 
     template <typename duration = std::chrono::milliseconds, typename clock = std::chrono::high_resolution_clock>
     class Stopwatch {
-        public:
-        using time_point = typename clock::time_point;
+    public:
+        using time_point = clock::time_point;
 
         explicit Stopwatch(std::size_t reserve_flags = 20) {
             flags_.reserve(reserve_flags);
@@ -82,7 +82,7 @@ namespace demiplane::chrono {
             return std::chrono::duration_cast<duration>(end_time - start_time);
         }
 
-        private:
+    private:
         std::vector<time_point> flags_;
     };
 

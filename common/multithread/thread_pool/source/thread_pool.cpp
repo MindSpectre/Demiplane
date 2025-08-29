@@ -29,20 +29,20 @@ void demiplane::multithread::ThreadPool::create_worker() {
                     has_task      = true;
                     last_activity = std::chrono::steady_clock::now();
                 } else {
-                    /*TODO:
-                     *  Issue#33
+                    /*
+                     TODO: Issue#33
                         doesnt consider minimum amount of threads
                         (so pool can be exhausted (leave 0 workers))
                     */
                     // No tasks available - check if we should exit due to idle timeout
-                    const bool should_terminate = [this, last_activity]() {
+                    const bool should_terminate = [this, last_activity] {
                         const auto current_size = size();
                         const auto idle_time    = std::chrono::steady_clock::now() - last_activity;
 
                         // Only terminate if:
                         // 1. We have more than minimum threads (excluding this one)
                         // 2. This worker has been idle long enough
-                        return (current_size > min_threads()) && (idle_time > idle_timeout());
+                        return current_size > min_threads() && idle_time > idle_timeout();
                     }();
 
                     if (should_terminate) {
@@ -65,7 +65,7 @@ void demiplane::multithread::ThreadPool::create_worker() {
 }
 
 void demiplane::multithread::ThreadPool::start_cleanup_thread() {
-    cleanup_thread_ = std::jthread([this]() {
+    cleanup_thread_ = std::jthread([this] {
         while (!stop_) {
             // Wait for cleanup interval or stop request
             std::unique_lock lock(cleanup_mutex_);

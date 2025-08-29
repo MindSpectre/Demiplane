@@ -24,8 +24,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -75,15 +74,15 @@ protected:
 
 // Test basic SELECT expression
 TEST_F(SelectQueryTest, BasicSelectExpression) {
-    auto query  = select(user_id, user_name);
-    auto result = compiler->compile(query.from(users_schema));
+    const auto query = select(user_id, user_name);
+    auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
 
 // Test SELECT with ALL columns
 TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
-    auto query  = select(all("users"));
+    const auto query = select(all("users"));
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -91,7 +90,7 @@ TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
 
 // Test SELECT DISTINCT
 TEST_F(SelectQueryTest, SelectDistinctExpression) {
-    auto query  = select_distinct(user_name, user_age);
+    const auto query = select_distinct(user_name, user_age);
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -99,7 +98,7 @@ TEST_F(SelectQueryTest, SelectDistinctExpression) {
 
 // Test SELECT with mixed types (columns, literals, aggregates)
 TEST_F(SelectQueryTest, SelectMixedTypesExpression) {
-    auto query  = select(user_name, lit("constant"), count(user_id).as("total"));
+    const auto query = select(user_name, lit("constant"), count(user_id).as("total"));
     auto result = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

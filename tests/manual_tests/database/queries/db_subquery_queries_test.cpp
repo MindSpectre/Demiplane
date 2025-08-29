@@ -25,8 +25,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -136,8 +135,7 @@ TEST_F(SubqueryTest, NotExistsExpression) {
 
 // Test basic subquery compilation
 TEST_F(SubqueryTest, BasicSubqueryCompilationExpression) {
-    auto post_count_subquery = select(count(post_id))
-                               .from(posts_schema)
+    const auto post_count_subquery = select(count(post_id)).from(posts_schema)
                                .where(post_user_id == user_id);
 
     auto query  = subquery(post_count_subquery);
@@ -148,9 +146,7 @@ TEST_F(SubqueryTest, BasicSubqueryCompilationExpression) {
 
 // Test subquery structure
 TEST_F(SubqueryTest, SubqueryStructureExpression) {
-    auto user_post_count = select(count(post_id))
-                           .from(posts_schema)
-                           .where(post_user_id == user_id);
+    const auto user_post_count = select(count(post_id)).from(posts_schema).where(post_user_id == user_id);
 
     auto sub    = subquery(user_post_count);
     auto result = compiler->compile(sub);
@@ -160,10 +156,10 @@ TEST_F(SubqueryTest, SubqueryStructureExpression) {
 
 // Test IN with multiple values subquery
 TEST_F(SubqueryTest, InSubqueryMultipleValuesExpression) {
-    auto high_value_users = select(user_id)
+    const auto high_value_users = select(user_id)
                             .from(orders_schema)
-                            .where(order_amount > lit(1000.0))
-                            .group_by(order_user_id)
+                                      .where(order_amount > lit(1000.0))
+                                      .group_by(order_user_id)
                             .having(sum(order_amount) > lit(5000.0));
 
     auto query = select(user_name)
@@ -194,9 +190,7 @@ TEST_F(SubqueryTest, NestedSubqueriesExpression) {
 
 // Test subquery with aggregates
 TEST_F(SubqueryTest, SubqueryWithAggregatesExpression) {
-    auto avg_order_amount = select(avg(order_amount))
-                            .from(orders_schema)
-                            .where(order_completed == lit(true));
+    const auto avg_order_amount = select(avg(order_amount)).from(orders_schema).where(order_completed == lit(true));
 
     auto query = select(user_name, order_amount)
                  .from(users_schema)

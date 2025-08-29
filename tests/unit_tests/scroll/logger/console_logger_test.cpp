@@ -10,7 +10,6 @@ protected:
         console_logger = std::make_shared<demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(cfg);
     }
 
-protected:
     std::shared_ptr<demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>> console_logger;
 };
 
@@ -39,7 +38,7 @@ TEST_F(ConsoleLoggerTest, FiltersEntriesBelowThreshold) {
     console_logger->config().threshold = demiplane::scroll::ERR;
 
     // Create and log an INFO entry (below the threshold)
-    auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
+    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::LightEntry>(
         demiplane::scroll::INF, "This should not appear", std::source_location::current());
 
     console_logger->log(entry);
@@ -54,7 +53,7 @@ TEST_F(ConsoleLoggerTest, DirectLoggingWithSourceLocation) {
     testing::internal::CaptureStdout();
     console_logger->log(demiplane::scroll::WRN, "Warning message", std::source_location::current());
 
-    std::string output = testing::internal::GetCapturedStdout();
+    const std::string output = testing::internal::GetCapturedStdout();
 
     // Verify output
     EXPECT_TRUE(output.find("Warning message") != std::string::npos);
@@ -68,7 +67,7 @@ TEST_F(ConsoleLoggerTest, ThresholdChangeAffectsLogging) {
     console_logger->log(demiplane::scroll::DBG, "Debug message", std::source_location::current());
 
     // Verify debug message is logged
-    std::string output1 = testing::internal::GetCapturedStdout();
+    const std::string output1 = testing::internal::GetCapturedStdout();
     EXPECT_TRUE(output1.find("Debug message") != std::string::npos);
 
     // Recapture for next test
@@ -90,7 +89,7 @@ TEST_F(ConsoleLoggerTest, ThresholdChangeAffectsLogging) {
     console_logger->log(demiplane::scroll::WRN, "Warning message", std::source_location::current());
 
     // Verify warning is logged
-    std::string output2 = testing::internal::GetCapturedStdout();
+    const std::string output2 = testing::internal::GetCapturedStdout();
     EXPECT_TRUE(output2.find("Warning message") != std::string::npos);
 }
 

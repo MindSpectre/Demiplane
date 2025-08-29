@@ -22,7 +22,7 @@ namespace demiplane::db {
 
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr : public Expression<BinaryExpr<Left, Right, Op>> {
-        public:
+    public:
         constexpr BinaryExpr(Left l, Right r)
             : left_(std::move(l)),
               right_(std::move(r)) {
@@ -38,14 +38,14 @@ namespace demiplane::db {
             return std::forward<Self>(self).right_;
         }
 
-        private:
+    private:
         Left left_;
         Right right_;
     };
 
     template <typename Operand, IsOperator Op>
     class UnaryExpr : public Expression<UnaryExpr<Operand, Op>> {
-        public:
+    public:
         constexpr explicit UnaryExpr(Operand op)
             : operand_(std::move(op)) {
         }
@@ -55,7 +55,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).operand_;
         }
 
-        private:
+    private:
         Operand operand_;
     };
 

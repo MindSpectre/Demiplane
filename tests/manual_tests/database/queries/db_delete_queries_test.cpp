@@ -25,8 +25,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
@@ -84,8 +83,8 @@ TEST_F(DeleteQueryTest, DeleteWithoutWhereExpression) {
 
 // Test DELETE WHERE expression
 TEST_F(DeleteQueryTest, DeleteWhereExpression) {
-    auto delete_query = delete_from(users_schema);
-    auto query        = DeleteWhereExpr{delete_query, user_active == lit(false)};
+    const auto delete_query = delete_from(users_schema);
+    auto query              = DeleteWhereExpr{delete_query, user_active == lit(false)};
     auto result       = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

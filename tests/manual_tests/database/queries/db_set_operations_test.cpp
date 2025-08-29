@@ -25,8 +25,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -82,13 +81,12 @@ protected:
 
 // Test UNION operation
 TEST_F(SetOperationsTest, UnionExpression) {
-    auto active_users = select(user_name.as("name"), user_age.as("age"))
-                        .from(users_schema)
+    const auto active_users =
+        select(user_name.as("name"), user_age.as("age")).from(users_schema)
                         .where(user_active == lit(true));
 
-    auto young_employees = select(emp_name.as("name"), emp_age.as("age"))
-                           .from(employees_schema)
-                           .where(emp_age < lit(30));
+    const auto young_employees =
+        select(emp_name.as("name"), emp_age.as("age")).from(employees_schema).where(emp_age < lit(30));
 
     auto query  = union_query(active_users, young_employees);
     auto result = compiler->compile(query);
@@ -143,17 +141,14 @@ TEST_F(SetOperationsTest, ExceptExpression) {
 
 // Test multiple UNION operations
 TEST_F(SetOperationsTest, MultipleUnionExpression) {
-    auto young_users = select(user_name.as("name"), lit("User").as("type"))
-                       .from(users_schema)
-                       .where(user_age < lit(25));
+    const auto young_users = select(user_name.as("name"), lit("User").as("type")).from(users_schema).where(user_age < lit(25));
 
-    auto senior_employees = select(emp_name.as("name"), lit("Employee").as("type"))
-                            .from(employees_schema)
-                            .where(emp_age > lit(50));
+    const auto senior_employees = select(emp_name.as("name"), lit("Employee").as("type"))
+                            .from(employees_schema).where(emp_age > lit(50));
 
-    auto high_salary_employees = select(emp_name.as("name"), lit("High Earner").as("type"))
+    const auto high_salary_employees = select(emp_name.as("name"), lit("High Earner").as("type"))
                                  .from(employees_schema)
-                                 .where(emp_salary > lit(75000.0));
+                                           .where(emp_salary > lit(75000.0));
 
     auto query  = union_all(union_all(young_users, senior_employees), high_salary_employees);
     auto result = compiler->compile(query);
@@ -163,18 +158,16 @@ TEST_F(SetOperationsTest, MultipleUnionExpression) {
 
 // Test SET operation with ORDER BY
 TEST_F(SetOperationsTest, SetOperationWithOrderByExpression) {
-    auto active_users = select(user_name.as("name"), user_age.as("age"))
-                        .from(users_schema)
-                        .where(user_active == lit(true));
+    const auto active_users = select(user_name.as("name"), user_age.as("age"))
+                        .from(users_schema).where(user_active == lit(true));
 
-    auto employees = select(emp_name.as("name"), emp_age.as("age"))
+    const auto employees = select(emp_name.as("name"), emp_age.as("age"))
         .from(employees_schema);
 
-    auto als_name = user_name.as_dynamic().set_name("name");
-    auto als_age  = user_age.as_dynamic().set_name("age");
-    auto query    = union_all(active_users, employees)
-        .order_by(asc(als_name), desc(als_age));
-    auto result = compiler->compile(query);
+    const auto als_name = user_name.as_dynamic().set_name("name");
+    const auto als_age  = user_age.as_dynamic().set_name("age");
+    auto query    = union_all(active_users, employees).order_by(asc(als_name), desc(als_age));
+    auto result         = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -196,16 +189,14 @@ TEST_F(SetOperationsTest, SetOperationWithLimitExpression) {
 
 // Test SET operation with different column counts (should match)
 TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
-    auto user_summary = select(user_name.as("name"),
+    const auto user_summary = select(user_name.as("name"),
                                user_department.as("dept"),
                                lit("Active User").as("status"))
-                        .from(users_schema)
-                        .where(user_active == lit(true));
+                                  .from(users_schema)
+                                  .where(user_active == lit(true));
 
-    auto employee_summary = select(emp_name.as("name"),
-                                   emp_department.as("dept"),
-                                   lit("Employee").as("status"))
-        .from(employees_schema);
+    const auto employee_summary = select(emp_name.as("name"),
+                                   emp_department.as("dept"), lit("Employee").as("status")).from(employees_schema);
 
     auto query  = union_all(user_summary, employee_summary);
     auto result = compiler->compile(query);
@@ -215,12 +206,12 @@ TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
 
 // Test complex SET operations with subqueries
 TEST_F(SetOperationsTest, ComplexSetOperationsWithSubqueriesExpression) {
-    auto dept_users = select(user_department.as("department"), count(user_id).as("count"))
+    const auto dept_users = select(user_department.as("department"), count(user_id).as("count"))
                       .from(users_schema)
                       .where(user_active == lit(true))
-                      .group_by(user_department);
+                                .group_by(user_department);
 
-    auto dept_employees = select(emp_department.as("department"), count(emp_id).as("count"))
+    const auto dept_employees = select(emp_department.as("department"), count(emp_id).as("count"))
                           .from(employees_schema)
                           .group_by(emp_department);
 

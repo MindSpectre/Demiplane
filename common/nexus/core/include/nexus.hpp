@@ -16,7 +16,7 @@
 
 namespace demiplane::nexus {
     class Nexus {  //  ─── public façade ───
-        public:
+    public:
         Nexus();
         ~Nexus();
         // ───────── registration ─────────
@@ -46,7 +46,7 @@ namespace demiplane::nexus {
             sweep_interval_.store(sweep_interval);
         }
 
-        private:
+    private:
         using Key     = detail::Key;
         using KeyHash = detail::KeyHash;
 
@@ -67,7 +67,7 @@ namespace demiplane::nexus {
         // helpers
         template <class F>
         static auto to_void_factory(F&& f) {
-            return [fn = std::forward<F>(f)]() { return std::shared_ptr<void>(fn()); };
+            return [fn = std::forward<F>(f)] { return std::shared_ptr<void>(fn()); };
         }
 
         template <class T>

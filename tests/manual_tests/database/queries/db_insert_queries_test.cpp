@@ -1,16 +1,15 @@
 // INSERT query expression tests
 // Comprehensive tests for insert operations
 
-#include <gtest/gtest.h>
+#include <demiplane/scroll>
 
-#include "query_expressions.hpp"
-#include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
+#include "query_expressions.hpp"
 
-#include <demiplane/scroll>
+#include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
@@ -25,8 +24,7 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
@@ -91,9 +89,9 @@ TEST_F(InsertQueryTest, InsertBatchExpression) {
     record2["age"].set(30);
     record2["active"].set(false);
 
-    std::vector<Record> records = {record1, record2};
+    const std::vector records = {record1, record2};
 
-    auto query = insert_into(users_schema)
+    auto query  = insert_into(users_schema)
                  .into({"name", "age", "active"})
                  .batch(records);
     auto result = compiler->compile(query);

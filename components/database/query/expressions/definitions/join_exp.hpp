@@ -14,14 +14,17 @@ namespace demiplane::db {
                                             AllowLimit,
                                             AllowWhere,
                                             AllowGroupBy> {
-        public:
-        constexpr JoinExpr(
-            Query q, TableSchemaPtr jt, Condition c, JoinType t, std::optional<std::string> alias = std::nullopt)
+    public:
+        constexpr JoinExpr(Query parent_query,
+                           TableSchemaPtr joined_table,
+                           Condition condition,
+                           const JoinType join_type,
+                           std::optional<std::string> alias = std::nullopt)
             : AliasableExpression<JoinExpr>{std::move(alias)},
-              query_(std::move(q)),
-              joined_table_(std::move(jt)),
-              on_condition_(std::move(c)),
-              type_(t) {
+              query_(std::move(parent_query)),
+              joined_table_(std::move(joined_table)),
+              on_condition_(std::move(condition)),
+              type_(join_type) {
         }
 
         template <typename Self>
@@ -42,7 +45,7 @@ namespace demiplane::db {
             return type_;
         }
 
-        private:
+    private:
         Query query_;
         TableSchemaPtr joined_table_;
         Condition on_condition_;

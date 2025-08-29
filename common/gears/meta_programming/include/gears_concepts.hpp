@@ -18,7 +18,7 @@ namespace demiplane::gears {
     };
 
     template <typename T>
-    concept Interface = std::is_abstract_v<T>;
+    concept IsInterface = std::is_abstract_v<T>;
 
     template <typename T>
     concept IsDuration = std::chrono::__is_duration_v<T>;

@@ -12,6 +12,7 @@ target_include_directories(${DMP_CHRONO}.Utilities
 )
 target_link_libraries(${DMP_CHRONO}.Utilities INTERFACE
         Demiplane::Common::Gears
+        Boost::asio
 )
 ##############################################################################
 

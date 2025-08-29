@@ -8,12 +8,12 @@ auto demiplane::chrono::Timer::execute_polite_vanish(const std::chrono::millisec
                                                      Callable&& fn,
                                                      Args&&... args) {
     // Extract the token reference from arguments
-    static_assert(gears::has_exact_arg_type<CancellationToken&, Args...>(),
+    static_assert(gears::has_arg_type<std::shared_ptr<CancellationToken>, Args...>(),
                   "No task properties found in arguments");
 
     // Extract the token reference using the generic get_arg function
-    CancellationToken& ext_tok = gears::get_arg<CancellationToken&>(args...);
-
+    const std::shared_ptr<CancellationToken>& ext_tok = gears::get_arg<std::shared_ptr<CancellationToken>&>(args...);
+    auto owned_ext_tok                                = ext_tok; // copy to avoid aliasing
 
     using result_t = std::invoke_result_t<Callable, Args...>;
 
@@ -32,11 +32,11 @@ auto demiplane::chrono::Timer::execute_polite_vanish(const std::chrono::millisec
     });
 
     // watchdog - fixed
-    spawn([&ext_tok, deadline]() mutable {
-        while (!ext_tok.stop_requested() && clock::now() < deadline) {
+    spawn([owned_ext_tok, deadline]() mutable {
+        while (!owned_ext_tok->stop_requested() && clock::now() < deadline) {
             std::this_thread::sleep_for(std::chrono::milliseconds{10});
         }
-        ext_tok.cancel(); // polite request to worker
+        owned_ext_tok->cancel(); // polite request to worker
     });
 
     return fut;
@@ -45,7 +45,7 @@ auto demiplane::chrono::Timer::execute_polite_vanish(const std::chrono::millisec
 template <typename... Args, typename Callable>
     requires std::invocable<Callable, Args...>
 auto demiplane::chrono::Timer::execute_violent_kill(const std::chrono::milliseconds timeout,
-                                                    CancellationToken& token,
+                                                    const std::shared_ptr<CancellationToken>& token,
                                                     Callable&& fn,
                                                     Args&&... args) {
     using result_t = std::invoke_result_t<Callable, Args...>;
@@ -58,16 +58,16 @@ auto demiplane::chrono::Timer::execute_violent_kill(const std::chrono::milliseco
     auto th = std::thread(std::move(task));
 
     // watchdog
-    spawn([&deadline, &token, &th, h = th.native_handle()]() mutable {
-        while (clock::now() < deadline && !token.stop_requested()) {
+    spawn([deadline, token, &th, h = th.native_handle()]() mutable {
+        while (clock::now() < deadline && !token->stop_requested()) {
             std::this_thread::sleep_for(std::chrono::milliseconds{10});
         }
 
-        #if defined(_WIN32)
-            ::TerminateThread(h, 1); // dangerous!
-        #elif defined(__linux__)
+#if defined(_WIN32)
+        ::TerminateThread(h, 1); // dangerous!
+#elif defined(__linux__)
         ::pthread_cancel(h); // UB if locks held
-        #endif
+#endif
 
         if (th.joinable()) th.detach();
     });

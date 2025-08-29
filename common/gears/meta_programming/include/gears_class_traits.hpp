@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gears_templates.hpp"
+#include "gears_concepts.hpp"
 
 namespace demiplane::gears {
     struct NonCopyable {
@@ -29,7 +29,7 @@ namespace demiplane::gears {
     };
 
 
-    template <Interface... Interfaces>
+    template <IsInterface... Interfaces>
     struct InterfaceBundle : Interfaces... {
         using Interfaces::Interfaces...;
         InterfaceBundle()           = default;

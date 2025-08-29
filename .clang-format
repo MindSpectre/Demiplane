@@ -164,7 +164,7 @@ DerivePointerAlignment: false
 BitFieldColonSpacing: Both
 
 # Comments
-ReflowComments: true
+ReflowComments: Never
 CommentPragmas: '^ IWYU pragma:'
 FixNamespaceComments: true
 

@@ -1,8 +1,9 @@
 #pragma once
 #include <utility>
-#include <json/json.h>
 
 #include "../entry_interface.hpp"
+
+#include <json/json.h>
 
 namespace demiplane::scroll {
     /**
@@ -19,17 +20,17 @@ namespace demiplane::scroll {
      * Inherits from the `gears::Immovable` class to restrict its copy or move semantics.
      */
     class CustomEntryConfig {
-    public:
-        bool                      add_time            = true;
-        bool                      add_level           = true;
-        bool                      add_location        = true;
-        bool                      add_pretty_function = false;
-        bool                      add_thread          = false;
-        bool                      add_message         = true;
-        bool                      enable_header       = false;
-        bool                      enable_colors       = true;
-        const char*               time_fmt            = "%d-%m-%Y %X";
-        bool                      load_config(const std::string& config_file_path);
+        public:
+        bool add_time            = true;
+        bool add_level           = true;
+        bool add_location        = true;
+        bool add_pretty_function = false;
+        bool add_thread          = false;
+        bool add_message         = true;
+        bool enable_header       = false;
+        bool enable_colors       = true;
+        const char* time_fmt     = "%d-%m-%Y %X";
+        bool load_config(const std::string& config_file_path);
         [[nodiscard]] std::string make_header() const;
 
         [[nodiscard]] Json::Value dump_config() const {
@@ -39,15 +40,16 @@ namespace demiplane::scroll {
     };
 
     class CustomEntry final : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread> {
-    public:
-        CustomEntry(const LogLevel                     lvl,
-                    const std::string_view&            msg,
-                    const MetaTimePoint&               meta_time_point,
-                    const MetaSource&                  meta_source,
-                    const MetaThread&                  meta_thread,
+        public:
+        CustomEntry(const LogLevel lvl,
+                    const std::string_view& msg,
+                    const MetaTimePoint& meta_time_point,
+                    const MetaSource& meta_source,
+                    const MetaThread& meta_thread,
                     std::shared_ptr<CustomEntryConfig> config)
             : EntryBase(lvl, msg, meta_time_point, meta_source, meta_thread),
-              config_(std::move(config)) {}
+              config_(std::move(config)) {
+        }
 
         [[nodiscard]] std::string to_string() const override;
 
@@ -58,7 +60,7 @@ namespace demiplane::scroll {
             return lhs.time_point < rhs.time_point;
         }
 
-    private:
+        private:
         std::shared_ptr<CustomEntryConfig> config_;
     };
 
@@ -66,4 +68,4 @@ namespace demiplane::scroll {
     struct detail::entry_traits<CustomEntry> {
         using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, std::shared_ptr<CustomEntryConfig>>;
     };
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll

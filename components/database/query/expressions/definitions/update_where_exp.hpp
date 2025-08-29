@@ -1,16 +1,18 @@
 #pragma once
 
 #include <algorithm>
-#include "update_exp.hpp"
+
 #include "../basic.hpp"
+#include "update_exp.hpp"
 
 namespace demiplane::db {
     template <IsCondition Condition>
     class UpdateWhereExpr : public Expression<UpdateWhereExpr<Condition>> {
-    public:
+        public:
         UpdateWhereExpr(UpdateExpr u, Condition c)
             : update_(std::move(u)),
-              condition_(std::move(c)) {}
+              condition_(std::move(c)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& update(this Self&& self) {
@@ -23,8 +25,8 @@ namespace demiplane::db {
             return std::forward<Self>(self).condition_;
         }
 
-    private:
+        private:
         UpdateExpr update_;
         Condition condition_;
     };
-}
+}  // namespace demiplane::db

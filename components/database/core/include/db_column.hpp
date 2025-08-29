@@ -1,8 +1,7 @@
 #pragma once
-#include <string>
-
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "db_core_fwd.hpp"
@@ -10,13 +9,15 @@
 
 namespace demiplane::db {
     class DynamicColumn {
-    public:
+        public:
         DynamicColumn(std::string name, std::string table)
             : name_{std::move(name)},
-              context_{std::move(table)} {}
+              context_{std::move(table)} {
+        }
 
         explicit DynamicColumn(std::string name)
-            : name_{std::move(name)} {}
+            : name_{std::move(name)} {
+        }
 
         [[nodiscard]] const std::string& name() const {
             return name_;
@@ -39,7 +40,7 @@ namespace demiplane::db {
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
-    private:
+        private:
         std::string name_;
         std::string context_;
     };
@@ -47,7 +48,7 @@ namespace demiplane::db {
 
     template <typename T>
     class TableColumn {
-    public:
+        public:
         using value_type = T;
 
         constexpr TableColumn(const FieldSchema* schema,
@@ -55,14 +56,16 @@ namespace demiplane::db {
                               std::optional<std::string> alias = std::nullopt)
             : schema_(schema),
               table_(std::move(table)),
-              alias_(std::move(alias)) {}
+              alias_(std::move(alias)) {
+        }
 
         constexpr TableColumn(const FieldSchema* schema,
                               std::string table,
                               std::optional<std::string> alias = std::nullopt)
             : schema_(schema),
               table_(std::make_shared<std::string>(std::move(table))),
-              alias_(std::move(alias)) {}
+              alias_(std::move(alias)) {
+        }
 
         [[nodiscard]] const FieldSchema* schema() const {
             return schema_;
@@ -88,27 +91,29 @@ namespace demiplane::db {
             return TableColumn{schema_, table_, std::move(alias)};
         }
 
-        [[nodiscard]] DynamicColumn as_dynamic() const & {
+        [[nodiscard]] DynamicColumn as_dynamic() const& {
             return DynamicColumn{schema_->name, *table_};
         }
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
-    private:
+        private:
         const FieldSchema* schema_;
         std::shared_ptr<std::string> table_;
-        std::optional<std::string> alias_; // Optional table alias
+        std::optional<std::string> alias_;  // Optional table alias
     };
 
 
     // All columns selector
     class AllColumns {
-    public:
+        public:
         explicit AllColumns(std::shared_ptr<std::string> table)
-            : table_(std::move(table)) {}
+            : table_(std::move(table)) {
+        }
 
         explicit AllColumns(std::string table)
-            : table_(std::make_shared<std::string>(std::move(table))) {}
+            : table_(std::make_shared<std::string>(std::move(table))) {
+        }
 
         [[nodiscard]] const std::string& table_name() const {
             return *table_;
@@ -124,7 +129,7 @@ namespace demiplane::db {
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
-    private:
+        private:
         std::shared_ptr<std::string> table_;
     };
 
@@ -142,4 +147,4 @@ namespace demiplane::db {
     constexpr AllColumns all(std::shared_ptr<std::string> table = nullptr) {
         return AllColumns{std::move(table)};
     }
-}
+}  // namespace demiplane::db

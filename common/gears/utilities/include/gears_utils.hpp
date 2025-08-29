@@ -13,7 +13,7 @@ namespace demiplane::gears {
     template <typename V, typename... Rest>
     consteval void unused_value(const V& value, const Rest&... rest) {
         static_cast<void>(value);
-        unused_value(rest...); // Recursively process remaining arguments
+        unused_value(rest...);  // Recursively process remaining arguments
     }
 
     template <class T = void>
@@ -41,6 +41,4 @@ namespace demiplane::gears {
     }
 
 
-
-
-} // namespace demiplane::gears
+}  // namespace demiplane::gears

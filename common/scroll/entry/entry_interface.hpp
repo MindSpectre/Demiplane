@@ -1,9 +1,9 @@
 #pragma once
 #include <cstdint>
+#include <demiplane/gears>
 #include <source_location>
 #include <thread>
 
-#include <demiplane/gears>
 #include "log_level.hpp"
 
 namespace demiplane::scroll::detail {
@@ -11,7 +11,7 @@ namespace demiplane::scroll::detail {
     struct entry_traits;
 
 
-    struct MetaNone {}; // 0-B
+    struct MetaNone {};  // 0-B
 
     struct MetaSource {
         std::source_location location;
@@ -19,7 +19,8 @@ namespace demiplane::scroll::detail {
         MetaSource() = default;
 
         explicit constexpr MetaSource(const std::source_location& loc)
-            : location{loc} {}
+            : location{loc} {
+        }
     };
 
     struct ThreadLocalCache {
@@ -44,7 +45,8 @@ namespace demiplane::scroll::detail {
 
         MetaThread()
             : tid{tl_cache.tid},
-              tid_str{tl_cache.tid_str} {}
+              tid_str{tl_cache.tid_str} {
+        }
     };
 
     struct MetaProcess {
@@ -53,7 +55,8 @@ namespace demiplane::scroll::detail {
 
         MetaProcess()
             : pid{tl_cache.pid},
-              pid_str{tl_cache.pid_str} {}
+              pid_str{tl_cache.pid_str} {
+        }
     };
 
     struct MetaTimePoint {
@@ -62,13 +65,14 @@ namespace demiplane::scroll::detail {
 
     template <class... Metas>
     class EntryBase : public Metas... {
-    public:
+        public:
         EntryBase(const LogLevel lvl,
                   const std::string_view msg,
-                  Metas... metas) // perfect-forward meta-packs
+                  Metas... metas)  // perfect-forward meta-packs
             : Metas{metas}...,
               level_{lvl},
-              message_{msg} {}
+              message_{msg} {
+        }
 
         [[nodiscard]] LogLevel level() const {
             return level_;
@@ -78,11 +82,11 @@ namespace demiplane::scroll::detail {
             return message_;
         }
 
-        virtual ~EntryBase() = default;
-        EntryBase()          = default;
+        virtual ~EntryBase()                                = default;
+        EntryBase()                                         = default;
         [[nodiscard]] virtual std::string to_string() const = 0;
 
-    protected:
+        protected:
         static std::string& get_tl_buffer() {
             thread_local std::string buffer;
             return buffer;
@@ -90,14 +94,7 @@ namespace demiplane::scroll::detail {
 
         LogLevel level_{LogLevel::Debug};
         std::string message_;
-        static constexpr std::array<const char*, 6> level_strings = {
-            "TRC",
-            "DBG",
-            "INF",
-            "WRN",
-            "ERR",
-            "FAT"
-        };
+        static constexpr std::array<const char*, 6> level_strings = {"TRC", "DBG", "INF", "WRN", "ERR", "FAT"};
 
         [[nodiscard]] const char* level_cstr() const {
             return level_strings[static_cast<std::size_t>(level_)];
@@ -110,4 +107,4 @@ namespace demiplane::scroll::detail {
         { entry.message() } -> std::same_as<std::string_view>;
         { entry.to_string() } -> std::same_as<std::string>;
     };
-} // namespace demiplane::scroll::detail
+}  // namespace demiplane::scroll::detail

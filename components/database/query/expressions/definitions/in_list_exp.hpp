@@ -7,10 +7,11 @@
 namespace demiplane::db {
     template <typename Operand, typename... Values>
     class InListExpr : public Expression<InListExpr<Operand, Values...>> {
-    public:
+        public:
         constexpr explicit InListExpr(Operand op, Values... vals)
             : operand_(std::move(op)),
-              values_(vals...) {}
+              values_(vals...) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& operand(this Self&& self) {
@@ -22,7 +23,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).values_;
         }
 
-    private:
+        private:
         Operand operand_;
         std::tuple<Values...> values_;
     };
@@ -31,4 +32,4 @@ namespace demiplane::db {
     constexpr auto in(O operand, Values... values) {
         return InListExpr<O, Values...>{std::move(operand), values...};
     }
-}
+}  // namespace demiplane::db

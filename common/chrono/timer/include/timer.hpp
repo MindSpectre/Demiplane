@@ -7,17 +7,19 @@
 #include <utility>
 
 #include <thread_pool.hpp>
+
 #include "../cancellation_token.hpp"
 
 namespace demiplane::chrono {
     class Timer : gears::NonCopyable {
-    public:
+        public:
         explicit Timer(const multithread::ThreadPoolConfig& config) {
             pool_ = std::make_shared<multithread::ThreadPool>(config);
         }
 
         explicit Timer(std::shared_ptr<multithread::ThreadPool> pool)
-            : pool_(std::move(pool)) {}
+            : pool_(std::move(pool)) {
+        }
 
         using clock = std::chrono::steady_clock;
 
@@ -32,7 +34,7 @@ namespace demiplane::chrono {
                                   Callable&& fn,
                                   Args&&... args);
 
-    private:
+        private:
         std::shared_ptr<multithread::ThreadPool> pool_;
 
         // helper - default spawns a jthread; replace with thread-pool later
@@ -43,6 +45,6 @@ namespace demiplane::chrono {
 
         // type-trait: does first arg look like a cancellation token?
     };
-}
+}  // namespace demiplane::chrono
 
 #include "../source/timer.inl"

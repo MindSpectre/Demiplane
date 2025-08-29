@@ -2,23 +2,22 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <demiplane/chrono>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <string>
 #include <thread>
 
-#include <demiplane/chrono>
-
-
-#include <concurrent_queue.hpp> // moodycamel
+#include <concurrent_queue.hpp>  // moodycamel
 #include <gears_types.hpp>
+
 #include "../logger_interface.hpp"
 
 namespace demiplane::scroll {
     /// @brief Config used in FileLogger
     struct FileLoggerConfig {
-        NEXUS_REGISTER(0x6B6D41CE, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::FileLoggerConfig
+        NEXUS_REGISTER(0x6B6D41CE, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLoggerConfig
 
         LogLevel threshold = LogLevel::Debug;
         std::filesystem::path file;
@@ -32,7 +31,7 @@ namespace demiplane::scroll {
          * Sort entries in batch queries using entry comparator (most default by time).
          * Disabled by default. Extremely slow.
          */
-        bool sort_entries = false;
+        bool sort_entries     = false;
         /**
          * @brief Ensures data correctness.
          * Enforces flush each batch, even if it is not fill buffer.
@@ -44,13 +43,13 @@ namespace demiplane::scroll {
         /// @brief The default size is 100 mb.
         std::uint64_t max_file_size = gears::literals::operator""_mb(100);
         /// @brief The default size is 512.
-        std::uint32_t batch_size = 512;
+        std::uint32_t batch_size    = 512;
     };
 
     template <detail::EntryConcept EntryType>
     class FileLogger final : public Logger {
-    public:
-        NEXUS_REGISTER(0xFCCE2FB1, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::scroll::FileLogger
+        public:
+        NEXUS_REGISTER(0xFCCE2FB1, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLogger
 
         explicit FileLogger(FileLoggerConfig cfg);
 
@@ -83,7 +82,7 @@ namespace demiplane::scroll {
         /* Reload (unchanged, still works) */
         void reload();
 
-    private:
+        private:
         /*---------------- enqueue helper (lock-free) --------------------------*/
         void enqueue(const EntryType& entry) noexcept;
 
@@ -108,14 +107,14 @@ namespace demiplane::scroll {
         std::filesystem::path file_path_;
         moodycamel::ConcurrentQueue<EntryType> queue_;
 
-        std::atomic<std::size_t> pending_entries_{0}; // entries enqueued but not yet written
-        std::atomic<bool> accepting_{true};           // producers allowed to enqueue?
-        std::atomic<bool> running_{true};             // writer loop keeps spinning?
+        std::atomic<std::size_t> pending_entries_{0};  // entries enqueued but not yet written
+        std::atomic<bool> accepting_{true};            // producers allowed to enqueue?
+        std::atomic<bool> running_{true};              // writer loop keeps spinning?
 
         // entry collectors
         std::thread worker_;
         std::condition_variable cv_;
-        std::mutex m_; // for cv_ sleep
+        std::mutex m_;  // for cv_ sleep
 
         /* reload handshake */
         std::atomic<bool> reload_requested_{false};
@@ -127,6 +126,6 @@ namespace demiplane::scroll {
         std::mutex shutdown_mtx_;
         std::condition_variable shutdown_cv_;
     };
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll
 
 #include "../source/file_logger.inl"

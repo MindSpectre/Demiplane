@@ -12,7 +12,7 @@ namespace demiplane::chrono {
      */
     template <typename T = std::chrono::milliseconds>
     class PrintingStopwatch {
-    public:
+        public:
         /**
          * @brief Checks if time is counted from the previous flag.
          *
@@ -186,16 +186,16 @@ namespace demiplane::chrono {
          * @param name The name of the flag.
          */
         template <typename string_mv>
-        std::enable_if_t<std::is_same_v<std::remove_cvref_t<string_mv>, std::string>
-                             || std::is_convertible_v<string_mv, std::string>,
-            void>
-            flag(string_mv&& name) {
+        std::enable_if_t<std::is_same_v<std::remove_cvref_t<string_mv>, std::string> ||
+                             std::is_convertible_v<string_mv, std::string>,
+                         void>
+        flag(string_mv&& name) {
             flags_.emplace_back(std::forward<string_mv>(name), now());
         }
 
         // Overload -- operator to remove the last flag
 
-    private:
+        private:
         bool countdown_from_prev_  = true;
         bool countdown_from_start_ = true;
         std::string running_name_;
@@ -205,10 +205,14 @@ namespace demiplane::chrono {
             std::chrono::time_point<std::chrono::high_resolution_clock> point_;
 
             Flag(std::string&& name, const std::chrono::time_point<std::chrono::high_resolution_clock> point)
-                : name_(std::move(name)), point_(point) {}
+                : name_(std::move(name)),
+                  point_(point) {
+            }
 
             Flag(const std::string& name, const std::chrono::time_point<std::chrono::high_resolution_clock> point)
-                : name_(name), point_(point) {}
+                : name_(name),
+                  point_(point) {
+            }
         };
 
         /**
@@ -263,4 +267,4 @@ namespace demiplane::chrono {
         std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
         std::vector<Flag> flags_;
     };
-} // namespace demiplane::chrono
+}  // namespace demiplane::chrono

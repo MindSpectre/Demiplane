@@ -1,10 +1,10 @@
 #include "custom_entry.hpp"
 
+#include <demiplane/chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
-#include <demiplane/chrono>
 
 #include <colors.hpp>
 
@@ -93,20 +93,16 @@ namespace demiplane::scroll {
             header_stream << "DATE ";
         }
         if (add_level) {
-
             header_stream << "LEVEL ";
         }
         if (add_thread) {
-
             header_stream << "THREAD ID ";
         }
         if (add_location) {
-
             header_stream << "LOCATION ";
         }
 
         if (add_message) {
-
             header_stream << "MESSAGE ";
         }
 
@@ -122,7 +118,6 @@ namespace demiplane::scroll {
             log_entry << log_level_to_string(level_) << " ";
         }
         if (config_->add_thread) {
-
             log_entry << "[Thread id: " << std::this_thread::get_id() << "] ";
         }
         if (config_->add_location) {
@@ -134,7 +129,6 @@ namespace demiplane::scroll {
         }
 
         if (config_->add_message) {
-
             log_entry << message_ << "\n";
         }
 
@@ -142,32 +136,32 @@ namespace demiplane::scroll {
         switch (level_) {
             case LogLevel::Trace:
             case LogLevel::Debug:
-            if (config_->enable_colors) {
-                return colors::make_white(uncolored_entry);
-            }
-            break;
-        case LogLevel::Info:
-            if (config_->enable_colors) {
-                return colors::make_green(uncolored_entry);
-            }
-            break;
-        case LogLevel::Warning:
-            if (config_->enable_colors) {
-                return colors::make_yellow(uncolored_entry);
-            }
-            break;
-        case LogLevel::Error:
-            if (config_->enable_colors) {
-                return colors::make_red(uncolored_entry);
-            }
-            break;
-        case LogLevel::Fatal:
-            if (config_->enable_colors) {
-                return colors::make_bold_red(uncolored_entry);
-            }
-            break;
+                if (config_->enable_colors) {
+                    return colors::make_white(uncolored_entry);
+                }
+                break;
+            case LogLevel::Info:
+                if (config_->enable_colors) {
+                    return colors::make_green(uncolored_entry);
+                }
+                break;
+            case LogLevel::Warning:
+                if (config_->enable_colors) {
+                    return colors::make_yellow(uncolored_entry);
+                }
+                break;
+            case LogLevel::Error:
+                if (config_->enable_colors) {
+                    return colors::make_red(uncolored_entry);
+                }
+                break;
+            case LogLevel::Fatal:
+                if (config_->enable_colors) {
+                    return colors::make_bold_red(uncolored_entry);
+                }
+                break;
         }
         return uncolored_entry;
     }
 
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll

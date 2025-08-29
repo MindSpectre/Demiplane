@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <type_traits>
+
 #include "policies.hpp"
 
 namespace demiplane::nexus {
@@ -24,8 +25,7 @@ namespace demiplane::nexus {
     constexpr std::uint32_t get_nexus_id() {
         if constexpr (has_nexus_id<T>::value) {
             return T::nexus_id;
-        }
-        else {
+        } else {
             return 0u;
         }
     }
@@ -34,9 +34,8 @@ namespace demiplane::nexus {
     constexpr Lifetime get_nexus_policy() {
         if constexpr (has_nexus_policy<T>::value) {
             return T::nexus_policy;
-        }
-        else {
+        } else {
             return Resettable{};
         }
     }
-}
+}  // namespace demiplane::nexus

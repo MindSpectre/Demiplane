@@ -1,10 +1,11 @@
 #include "salt_generator.hpp"
 
-#include <openssl/bio.h> // for BIO_* base64
-#include <openssl/buffer.h>
-#include <openssl/evp.h> // for EVP_*
-#include <openssl/rand.h>
 #include <stdexcept>
+
+#include <openssl/bio.h>  // for BIO_* base64
+#include <openssl/buffer.h>
+#include <openssl/evp.h>  // for EVP_*
+#include <openssl/rand.h>
 
 std::vector<std::uint8_t> demiplane::crypto::SaltGenerator::generate_bytes(const std::size_t size) {
     if (size == 0) {

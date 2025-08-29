@@ -12,12 +12,12 @@
 #include <gears_class_traits.hpp>
 #include <thread_safe_resource.hpp>
 
-#include "thread_pool_config.hpp"
 #include "../enqueued_task.hpp"
+#include "thread_pool_config.hpp"
 
 namespace demiplane::multithread {
     class ThreadPool : gears::Immutable {
-    public:
+        public:
         using TaskPriority = uint32_t;
 
         explicit ThreadPool(const ThreadPoolConfig& config) {
@@ -82,31 +82,31 @@ namespace demiplane::multithread {
             return config_.cleanup_interval;
         }
 
-    private:
+        private:
         struct safe_thread {
             std::atomic<bool> valid{true};
-            std::jthread      thread;
+            std::jthread thread;
         };
 
-        void                                                  create_worker();
-        void                                                  start_cleanup_thread();
-        void                                                  cleanup_invalid_workers();
-        ThreadSafeResource<std::list<safe_thread>>            workers_;
+        void create_worker();
+        void start_cleanup_thread();
+        void cleanup_invalid_workers();
+        ThreadSafeResource<std::list<safe_thread>> workers_;
         ThreadSafeResource<std::priority_queue<EnqueuedTask>> tasks_;
 
-        std::mutex              task_queue_mutex_;
+        std::mutex task_queue_mutex_;
         std::condition_variable task_condition_;
 
-        std::jthread            cleanup_thread_;
+        std::jthread cleanup_thread_;
         std::condition_variable cleanup_condition_;
-        std::mutex              cleanup_mutex_;
+        std::mutex cleanup_mutex_;
 
         std::atomic<bool> stop_{false};
 
-        ThreadPoolConfig    config_{};
+        ThreadPoolConfig config_{};
         std::atomic<size_t> active_threads_{0};
     };
-} // namespace demiplane::multithread
+}  // namespace demiplane::multithread
 
 template <class Func, class... Args>
 std::future<std::invoke_result_t<Func, Args...>>
@@ -124,9 +124,7 @@ demiplane::multithread::ThreadPool::enqueue(Func&& f, TaskPriority task_priority
         if (stop_) {
             throw std::runtime_error("ThreadPool is stopped");
         }
-        tasks_.write()->emplace([task] {
-            (*task)();
-        }, task_priority);
+        tasks_.write()->emplace([task] { (*task)(); }, task_priority);
 
         cleanup_invalid_workers();
         // Create worker if needed and we haven't reached max threads

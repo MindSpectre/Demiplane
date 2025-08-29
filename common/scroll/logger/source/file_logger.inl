@@ -6,7 +6,7 @@ namespace demiplane::scroll {
     FileLogger<EntryType>::FileLogger(FileLoggerConfig cfg)
         : config_(std::move(cfg)) {
         init();
-        running_.store(true, std::memory_order_release); // open first file
+        running_.store(true, std::memory_order_release);  // open first file
         worker_ = std::thread(&FileLogger::writer_loop, this);
     }
 
@@ -27,9 +27,7 @@ namespace demiplane::scroll {
 
         /* Wait until pending_ becomes 0 */
         std::unique_lock lk(shutdown_mtx_);
-        shutdown_cv_.wait(lk, [&] {
-            return pending_entries_.load(std::memory_order_acquire) == 0;
-        });
+        shutdown_cv_.wait(lk, [&] { return pending_entries_.load(std::memory_order_acquire) == 0; });
 
         /* Now ask the writer to exit */
         running_.store(false, std::memory_order_release);
@@ -85,14 +83,12 @@ namespace demiplane::scroll {
         }
         cv_.notify_one();
         std::unique_lock lk(reload_mtx_);
-        reload_cv_.wait(lk, [&] {
-            return reload_done_;
-        });
+        reload_cv_.wait(lk, [&] { return reload_done_; });
     }
 
     template <detail::EntryConcept EntryType>
     void FileLogger<EntryType>::enqueue(const EntryType& entry) noexcept {
-        queue_.enqueue(entry); // copy or move as needed
+        queue_.enqueue(entry);  // copy or move as needed
         pending_entries_.fetch_add(1, std::memory_order_relaxed);
         cv_.notify_one();
     }
@@ -121,8 +117,8 @@ namespace demiplane::scroll {
                 std::unique_lock lk(m_);
                 // wait 100 ms or when logger will be stopped or reloaded after skip iteration
                 cv_.wait_for(lk, std::chrono::milliseconds(40), [&] {
-                    return reload_requested_.load(std::memory_order_acquire)
-                           || !running_.load(std::memory_order_acquire);
+                    return reload_requested_.load(std::memory_order_acquire) ||
+                           !running_.load(std::memory_order_acquire);
                 });
 
                 continue;
@@ -130,16 +126,15 @@ namespace demiplane::scroll {
 
             if (config_.sort_entries) {
                 static_assert(gears::HasStaticComparator<EntryType>, "This entry type does not support comparison");
-                std::sort(batch.begin(), batch.end(), [](const auto& a, const auto& b) {
-                    return EntryType::comp(a, b);
-                });
+                std::sort(
+                    batch.begin(), batch.end(), [](const auto& a, const auto& b) { return EntryType::comp(a, b); });
             }
 
             /* write batch */
 
             // Better approach - single write syscall
             std::string buffer;
-            buffer.reserve(batch.size() * 128); // Estimate avg entry size
+            buffer.reserve(batch.size() * 128);  // Estimate avg entry size
             for (auto& e : batch) {
                 buffer += e.to_string();
             }
@@ -169,15 +164,12 @@ namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
     bool FileLogger<EntryType>::should_rotate() {
         std::uint64_t sz = 0;
-        if (const auto pos = file_stream_.tellp();
-            pos >= 0) {
+        if (const auto pos = file_stream_.tellp(); pos >= 0) {
             sz = static_cast<std::uint64_t>(pos);
-        }
-        else {
+        } else {
             try {
                 sz = std::filesystem::file_size(config_.file);
-            }
-            catch (...) {
+            } catch (...) {
                 sz = 0;
             }
         }
@@ -225,4 +217,4 @@ namespace demiplane::scroll {
 
         file_path_ = full_path;
     }
-}
+}  // namespace demiplane::scroll

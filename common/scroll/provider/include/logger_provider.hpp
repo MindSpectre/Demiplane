@@ -10,13 +10,14 @@
 
 namespace demiplane::scroll {
     class LoggerProvider {
-    public:
+        public:
         virtual ~LoggerProvider() = default;
 
         LoggerProvider() = default;
 
         explicit LoggerProvider(const std::shared_ptr<Logger>& logger)
-            : logger_(logger) {}
+            : logger_(logger) {
+        }
 
         [[nodiscard]] Logger* get_logger() noexcept {
             return logger_.get();
@@ -30,12 +31,12 @@ namespace demiplane::scroll {
             logger_ = std::move(logger);
         }
 
-    private:
+        private:
         std::shared_ptr<Logger> logger_;
     };
 
     class ComponentLoggerManager {
-    public:
+        public:
         static constexpr Logger* get() {
             // Lazy initialization on first use
             if (!logger_) {
@@ -51,16 +52,15 @@ namespace demiplane::scroll {
             logger_ = logger;
         }
 
-    private:
+        private:
         static inline std::shared_ptr<Logger> logger_ = nullptr;
     };
 
     class TestLoggerProvider : public LoggerProvider {
-    public:
+        public:
         explicit TestLoggerProvider()
-            : LoggerProvider(std::make_shared<ConsoleLogger<DetailedEntry>>(
-                ConsoleLoggerConfig{
-                    .flush_each_entry = true
-                })) {}
+            : LoggerProvider(
+                  std::make_shared<ConsoleLogger<DetailedEntry>>(ConsoleLoggerConfig{.flush_each_entry = true})) {
+        }
     };
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll

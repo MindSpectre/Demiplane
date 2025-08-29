@@ -3,7 +3,7 @@
 
 namespace demiplane::monitor {
     class MainMonitor {
-    public:
-    private:
+        public:
+        private:
     };
-} // namespace demiplane::monitor
+}  // namespace demiplane::monitor

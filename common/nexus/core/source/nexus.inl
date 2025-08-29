@@ -4,7 +4,7 @@ namespace demiplane::nexus {
     void Nexus::register_factory(Factory&& f, const Lifetime lt, const std::uint32_t id) {
         boost::unique_lock lk{mtx_};
         Slot& s   = map_[Key{typeid(T), id}];
-        s.obj     = nullptr; // lazy
+        s.obj     = nullptr;  // lazy
         s.factory = to_void_factory(std::forward<Factory>(f));
         s.lt      = lt;
     }
@@ -45,8 +45,7 @@ namespace demiplane::nexus {
                 sl.expired_flag->load(std::memory_order_acquire)) {
                 // Object has expired, need to recreate
                 // Fall through to construction path
-            }
-            else if (sl.obj) {
+            } else if (sl.obj) {
                 // Object exists and is valid
                 return build_handle<T>(sl);
             }
@@ -84,8 +83,7 @@ namespace demiplane::nexus {
                 if (std::holds_alternative<Timed>(sl.lt) && sl.expired_flag &&
                     sl.expired_flag->load(std::memory_order_acquire)) {
                     // Still expired, continue with construction
-                }
-                else if (sl.obj) {
+                } else if (sl.obj) {
                     return build_handle<T>(sl);
                 }
             }
@@ -96,8 +94,7 @@ namespace demiplane::nexus {
         std::shared_ptr<void> new_obj;
         if (factory_copy) {
             new_obj = factory_copy();
-        }
-        else {
+        } else {
             throw std::runtime_error("Nexus::spawn – no factory available");
         }
 
@@ -151,4 +148,4 @@ namespace demiplane::nexus {
         boost::shared_lock lk{mtx_};
         return map_.size();
     }
-}
+}  // namespace demiplane::nexus

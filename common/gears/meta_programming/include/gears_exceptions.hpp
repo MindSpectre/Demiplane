@@ -19,15 +19,13 @@ namespace demiplane::gears {
     bool try_catch_specific(const std::exception_ptr e_ptr) {
         try {
             std::rethrow_exception(e_ptr);
-        }
-        catch (const First& e) {
+        } catch (const First& e) {
             return true;
-        }
-        catch (...) {
+        } catch (...) {
             if constexpr (sizeof...(Rest) > 0) {
                 return try_catch_specific<Rest...>(e_ptr);
             }
             return false;
         }
     }
-}
+}  // namespace demiplane::gears

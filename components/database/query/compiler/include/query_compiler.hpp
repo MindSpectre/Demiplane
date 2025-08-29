@@ -12,10 +12,11 @@ namespace demiplane::db {
     };
 
     class QueryCompiler {
-    public:
+        public:
         explicit QueryCompiler(std::shared_ptr<SqlDialect> dialect, const bool use_params = true)
             : dialect_(std::move(dialect)),
-              use_parameters_(use_params) {}
+              use_parameters_(use_params) {
+        }
 
         // Compile any expression to SQL
         template <IsQuery Expr>
@@ -31,8 +32,8 @@ namespace demiplane::db {
             return *dialect_;
         }
 
-    private:
+        private:
         std::shared_ptr<SqlDialect> dialect_;
         bool use_parameters_;
     };
-}
+}  // namespace demiplane::db

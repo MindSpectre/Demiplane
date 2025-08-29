@@ -7,7 +7,7 @@
 
 namespace demiplane::crypto {
     class PBKDF2Hash final : HashInterface {
-    public:
+        public:
         PBKDF2Hash()           = default;
         ~PBKDF2Hash() override = default;
 
@@ -17,4 +17,4 @@ namespace demiplane::crypto {
         /// @return A hexadecimal string representing the PBKDF2 hash
         std::string hash_function(std::string_view password, std::string_view salt) override;
     };
-} // namespace demiplane::crypto
+}  // namespace demiplane::crypto

@@ -9,7 +9,7 @@
 namespace demiplane::gears {
     template <typename T>
     class Result {
-    public:
+        public:
         /* ───── state ────────────────────────────────────────────── */
         [[nodiscard]] bool has_value() const noexcept {
             return value_.has_value();
@@ -24,7 +24,7 @@ namespace demiplane::gears {
         }
 
         /* ───── value access (unchecked) ─────────────────────────── */
-        const T& value() const & {
+        const T& value() const& {
             return *value_;
         }
 
@@ -36,7 +36,7 @@ namespace demiplane::gears {
             return std::move(*value_);
         }
 
-        const T& operator*() const & {
+        const T& operator*() const& {
             return value();
         }
 
@@ -46,13 +46,15 @@ namespace demiplane::gears {
 
         /* ───── error access / rethrow ───────────────────────────── */
         void rethrow() const {
-            if (error_) std::rethrow_exception(error_);
+            if (error_)
+                std::rethrow_exception(error_);
         }
 
         /* ───── factory helpers (optional) ───────────────────────── */
         template <typename... Args>
         static Result success(Args&&... args)
-            requires std::is_constructible_v<T, Args&&...> {
+            requires std::is_constructible_v<T, Args&&...>
+        {
             Result r;
             r.value_.emplace(std::forward<Args>(args)...);
             return r;
@@ -64,14 +66,14 @@ namespace demiplane::gears {
         ----------------------------------------------------------------*/
         template <typename... Catch, typename F>
         void capture(F&& f) {
-            static_assert(sizeof...(Catch) > 0,
-                          "capture<E...>() needs at least one exception type");
+            static_assert(sizeof...(Catch) > 0, "capture<E...>() needs at least one exception type");
 
             try {
-                if constexpr (std::is_void_v<std::invoke_result_t<F>>) std::forward<F>(f)();
-                else value_ = std::forward<F>(f)();
-            }
-            catch (...) {
+                if constexpr (std::is_void_v<std::invoke_result_t<F>>)
+                    std::forward<F>(f)();
+                else
+                    value_ = std::forward<F>(f)();
+            } catch (...) {
                 // Use fold expression to generate individual catch blocks at compile time
                 const std::exception_ptr e_ptr = std::current_exception();
                 if (!try_catch_specific<Catch...>(e_ptr)) {
@@ -82,14 +84,14 @@ namespace demiplane::gears {
             }
         }
 
-    private:
-        std::optional<T>   value_;
+        private:
+        std::optional<T> value_;
         std::exception_ptr error_;
     };
 
     template <>
     class Result<void> {
-    public:
+        public:
         [[nodiscard]] bool has_value() const noexcept {
             return !error_;
         }
@@ -103,7 +105,8 @@ namespace demiplane::gears {
         }
 
         void rethrow() const {
-            if (error_) std::rethrow_exception(error_);
+            if (error_)
+                std::rethrow_exception(error_);
         }
 
         template <typename... Catch, typename Function>
@@ -111,8 +114,7 @@ namespace demiplane::gears {
             static_assert(sizeof...(Catch) > 0, "capture<E...>() needs at least one exception type");
             try {
                 std::forward<Function>(f)();
-            }
-            catch (...) {
+            } catch (...) {
                 // Use fold expression to generate individual catch blocks at compile time
                 const std::exception_ptr e_ptr = std::current_exception();
                 if (!try_catch_specific<Catch...>(e_ptr)) {
@@ -123,7 +125,7 @@ namespace demiplane::gears {
             }
         }
 
-    private:
+        private:
         std::exception_ptr error_;
     };
-} // namespace demiplane::gears
+}  // namespace demiplane::gears

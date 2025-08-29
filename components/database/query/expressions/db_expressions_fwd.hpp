@@ -59,11 +59,8 @@ namespace demiplane::db {
     concept IsInListExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, InListExpr>;
 
     template <typename T>
-    concept IsCondition = IsBinaryOperator<T> ||
-                          IsUnaryOperator<T> ||
-                          IsExistExpr<T> ||
-                          IsInListExpr<T> ||
-                          IsBetweenExpr<T>;
+    concept IsCondition =
+        IsBinaryOperator<T> || IsUnaryOperator<T> || IsExistExpr<T> || IsInListExpr<T> || IsBetweenExpr<T>;
 
 
     class CountExpr;
@@ -228,4 +225,4 @@ namespace demiplane::db {
 
     template <typename T>
     concept IsSelectExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, SelectExpr>;
-}
+}  // namespace demiplane::db

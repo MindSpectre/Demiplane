@@ -1,23 +1,24 @@
 #include "server.hpp"
 
+#include <demiplane/gears>
+#include <demiplane/scroll>
 #include <iostream>
 #include <sstream>
 #include <thread>
+
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/beast/core.hpp>
-#include <demiplane/gears>
-#include <demiplane/scroll>
 
 #include "request_context.hpp"
 #include "response_factory.hpp"
 
 namespace demiplane::http {
     namespace beast = boost::beast;
-    namespace asio = boost::asio;
-    using tcp = asio::ip::tcp;
+    namespace asio  = boost::asio;
+    using tcp       = asio::ip::tcp;
 
     Server::Server(const std::size_t threads)
         : ioc_(static_cast<int>(threads)),
@@ -108,15 +109,11 @@ namespace demiplane::http {
 
     void Server::run() {
         asio::signal_set signals(ioc_, SIGINT, SIGTERM);
-        signals.async_wait([this](auto, auto) {
-            stop();
-        });
+        signals.async_wait([this](auto, auto) { stop(); });
 
         std::vector<std::thread> threads;
         for (std::size_t i = 1; i < thread_count_; ++i) {
-            threads.emplace_back([this] {
-                ioc_.run();
-            });
+            threads.emplace_back([this] { ioc_.run(); });
         }
         COMPONENT_LOG_INF() << "Server started";
         ioc_.run();
@@ -162,10 +159,8 @@ namespace demiplane::http {
 
                 keep_alive = res.keep_alive();
                 co_await beast::http::async_write(stream, res, asio::use_awaitable);
-            }
-            while (keep_alive);
-        }
-        catch (const std::exception& e) {
+            } while (keep_alive);
+        } catch (const std::exception& e) {
             trigger_error_callbacks(e);
         }
 
@@ -186,8 +181,7 @@ namespace demiplane::http {
             auto [fst, snd] = registry_.find_handler(request.method(), path);
             handler         = std::move(fst);
             path_params     = std::move(snd);
-        }
-        catch ([[maybe_unused]] std::out_of_range& e) {
+        } catch ([[maybe_unused]] std::out_of_range& e) {
             auto response = ResponseFactory::not_found("404 Not Found", request.version());
             trigger_response_callbacks(response);
             co_return response;
@@ -219,8 +213,7 @@ namespace demiplane::http {
         std::string pair;
 
         while (std::getline(iss, pair, '&')) {
-            if (const auto eq_pos = pair.find('=');
-                eq_pos != std::string::npos) {
+            if (const auto eq_pos = pair.find('='); eq_pos != std::string::npos) {
                 auto key    = pair.substr(0, eq_pos);
                 auto value  = pair.substr(eq_pos + 1);
                 params[key] = std::move(value);
@@ -236,8 +229,7 @@ namespace demiplane::http {
         for (const auto& callback : start_callbacks_) {
             try {
                 callback();
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 trigger_error_callbacks(e);
             }
         }
@@ -249,8 +241,7 @@ namespace demiplane::http {
                 [this, callback]() -> AsyncVoid {
                     try {
                         co_await callback();
-                    }
-                    catch (const std::exception& e) {
+                    } catch (const std::exception& e) {
                         trigger_error_callbacks(e);
                     }
                 },
@@ -262,8 +253,7 @@ namespace demiplane::http {
         for (const auto& callback : stop_callbacks_) {
             try {
                 callback();
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 COMPONENT_LOG_ERR() << "Error in stop callback";
                 trigger_error_callbacks(e);
             }
@@ -276,8 +266,7 @@ namespace demiplane::http {
                 [this, callback]() -> AsyncVoid {
                     try {
                         co_await callback();
-                    }
-                    catch (const std::exception& e) {
+                    } catch (const std::exception& e) {
                         COMPONENT_LOG_ERR() << "Error in async stop callback";
                         trigger_error_callbacks(e);
                     }
@@ -291,8 +280,7 @@ namespace demiplane::http {
         for (const auto& callback : request_callbacks_) {
             try {
                 callback(req);
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 COMPONENT_LOG_ERR() << "Error in request callback";
                 trigger_error_callbacks(e);
             }
@@ -305,8 +293,7 @@ namespace demiplane::http {
                 [this, callback, req]() -> AsyncVoid {
                     try {
                         co_await callback(req);
-                    }
-                    catch (const std::exception& e) {
+                    } catch (const std::exception& e) {
                         COMPONENT_LOG_ERR() << "Error in async request callback";
                         trigger_error_callbacks(e);
                     }
@@ -320,8 +307,7 @@ namespace demiplane::http {
         for (const auto& callback : response_callbacks_) {
             try {
                 callback(res);
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 COMPONENT_LOG_ERR() << "Error in response callback";
                 trigger_error_callbacks(e);
             }
@@ -334,8 +320,7 @@ namespace demiplane::http {
                 [this, callback, res]() -> AsyncVoid {
                     try {
                         co_await callback(res);
-                    }
-                    catch (const std::exception& e) {
+                    } catch (const std::exception& e) {
                         COMPONENT_LOG_ERR() << "Error in async response callback";
                         trigger_error_callbacks(e);
                     }
@@ -349,8 +334,7 @@ namespace demiplane::http {
         for (const auto& callback : error_callbacks_) {
             try {
                 callback(e);
-            }
-            catch (...) {
+            } catch (...) {
                 // If error callback itself fails, just log to stderr
                 // Don't trigger more error callbacks to avoid infinite recursion
                 COMPONENT_LOG_ERR() << "Error in error callback";
@@ -364,8 +348,7 @@ namespace demiplane::http {
                 [callback, &e]() -> AsyncVoid {
                     try {
                         co_await callback(e);
-                    }
-                    catch (...) {
+                    } catch (...) {
                         // Same logic - just log, don't recurse
                         COMPONENT_LOG_ERR() << "Error in async error callback";
                     }
@@ -373,4 +356,4 @@ namespace demiplane::http {
                 asio::detached);
         }
     }
-} // namespace demiplane::http
+}  // namespace demiplane::http

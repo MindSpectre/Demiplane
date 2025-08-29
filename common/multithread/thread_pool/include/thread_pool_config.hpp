@@ -3,11 +3,11 @@
 namespace demiplane::multithread {
 
     struct ThreadPoolConfig {
-        std::size_t               min_threads{2};
-        std::size_t               max_threads{4};
+        std::size_t min_threads{2};
+        std::size_t max_threads{4};
         std::chrono::milliseconds idle_timeout{std::chrono::seconds{30}};
         std::chrono::milliseconds cleanup_interval{std::chrono::seconds{15}};
-        bool                      enable_cleanup_thread{true};
+        bool enable_cleanup_thread{true};
 
         [[nodiscard]] bool ok() const {
             return min_threads > 0 && max_threads > 0 && min_threads <= max_threads;
@@ -29,4 +29,4 @@ namespace demiplane::multithread {
             return ThreadPoolConfig{2, 8, std::chrono::milliseconds{200}, std::chrono::milliseconds{500}, true};
         }
     };
-} // namespace demiplane::multithread
+}  // namespace demiplane::multithread

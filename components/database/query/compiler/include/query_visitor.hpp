@@ -6,7 +6,7 @@
 
 namespace demiplane::db {
     class QueryVisitor {
-    public:
+        public:
         virtual ~QueryVisitor() = default;
 
         // Column and literals - now with perfect forwarding
@@ -147,8 +147,7 @@ namespace demiplane::db {
             visit_count_impl(expr.distinct());
             if (expr.is_all_columns()) {
                 visit_all_columns_impl(nullptr);
-            }
-            else {
+            } else {
                 expr.column().accept(*this);
             }
             visit_aggregate_end(expr.alias());
@@ -442,39 +441,48 @@ namespace demiplane::db {
         template <typename... WhenClauses>
         void visit(CaseExpr<WhenClauses...>&& expr) {
             visit_case_start();
-            std::apply([this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
-                (..., (visit_when_start(),
-                       std::forward<WhenClauseT>(when_clauses).condition.accept(*this),
-                       visit_when_then(),
-                       std::forward<WhenClauseT>(when_clauses).value.accept(*this),
-                       visit_when_end()));
-            }, std::move(expr).when_clauses());
+            std::apply(
+                [this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
+                    (...,
+                     (visit_when_start(),
+                      std::forward<WhenClauseT>(when_clauses).condition.accept(*this),
+                      visit_when_then(),
+                      std::forward<WhenClauseT>(when_clauses).value.accept(*this),
+                      visit_when_end()));
+                },
+                std::move(expr).when_clauses());
             visit_case_end();
         }
 
         template <typename... WhenClauses>
         void visit(const CaseExpr<WhenClauses...>& expr) {
             visit_case_start();
-            std::apply([this](const auto&... when_clauses) {
-                (..., (visit_when_start(),
-                       when_clauses.condition.accept(*this),
-                       visit_when_then(),
-                       when_clauses.value.accept(*this),
-                       visit_when_end()));
-            }, expr.when_clauses());
+            std::apply(
+                [this](const auto&... when_clauses) {
+                    (...,
+                     (visit_when_start(),
+                      when_clauses.condition.accept(*this),
+                      visit_when_then(),
+                      when_clauses.value.accept(*this),
+                      visit_when_end()));
+                },
+                expr.when_clauses());
             visit_case_end();
         }
 
         template <typename ElseExpr, typename... WhenClauses>
         void visit(CaseExprWithElse<ElseExpr, WhenClauses...>&& expr) {
             visit_case_start();
-            std::apply([this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
-                (..., (visit_when_start(),
-                       std::forward<WhenClauseT>(when_clauses).condition.accept(*this),
-                       visit_when_then(),
-                       std::forward<WhenClauseT>(when_clauses).value.accept(*this),
-                       visit_when_end()));
-            }, std::move(expr).when_clauses());
+            std::apply(
+                [this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
+                    (...,
+                     (visit_when_start(),
+                      std::forward<WhenClauseT>(when_clauses).condition.accept(*this),
+                      visit_when_then(),
+                      std::forward<WhenClauseT>(when_clauses).value.accept(*this),
+                      visit_when_end()));
+                },
+                std::move(expr).when_clauses());
             visit_else_start();
             std::move(expr).else_clause().accept(*this);
             visit_else_end();
@@ -484,13 +492,16 @@ namespace demiplane::db {
         template <typename ElseExpr, typename... WhenClauses>
         void visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
             visit_case_start();
-            std::apply([this](const auto&... when_clauses) {
-                (..., (visit_when_start(),
-                       when_clauses.condition.accept(*this),
-                       visit_when_then(),
-                       when_clauses.value.accept(*this),
-                       visit_when_end()));
-            }, expr.when_clauses());
+            std::apply(
+                [this](const auto&... when_clauses) {
+                    (...,
+                     (visit_when_start(),
+                      when_clauses.condition.accept(*this),
+                      visit_when_then(),
+                      when_clauses.value.accept(*this),
+                      visit_when_end()));
+                },
+                expr.when_clauses());
             visit_else_start();
             expr.else_clause().accept(*this);
             visit_else_end();
@@ -518,129 +529,132 @@ namespace demiplane::db {
             visit_cte_end();
         }
 
-    protected:
+        protected:
         // Virtual interface methods - now with move support for appropriate parameters
         virtual void visit_table_column_impl(const FieldSchema* schema,
                                              const std::shared_ptr<std::string>& table,
-                                             const std::optional<std::string>& alias) = 0;
-        virtual void visit_dynamic_column_impl(const std::string& name,
-                                               const std::optional<std::string>& table) = 0;
-        virtual void visit_value_impl(const FieldValue& value) = 0;
-        virtual void visit_value_impl(FieldValue&& value) = 0;
-        virtual void visit_null_impl() = 0;
+                                             const std::optional<std::string>& alias)                            = 0;
+        virtual void visit_dynamic_column_impl(const std::string& name, const std::optional<std::string>& table) = 0;
+        virtual void visit_value_impl(const FieldValue& value)                                                   = 0;
+        virtual void visit_value_impl(FieldValue&& value)                                                        = 0;
+        virtual void visit_null_impl()                                                                           = 0;
 
         virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
 
-        virtual void visit_table_impl(const TableSchemaPtr& table) = 0;
-        virtual void visit_table_impl(std::string_view table_name) = 0;
+        virtual void visit_table_impl(const TableSchemaPtr& table)               = 0;
+        virtual void visit_table_impl(std::string_view table_name)               = 0;
         virtual void visit_table_impl(const std::shared_ptr<std::string>& table) = 0;
 
         virtual void visit_alias_impl(const std::optional<std::string>& alias) = 0;
-        virtual void visit_alias_impl(std::string_view alias) = 0;
+        virtual void visit_alias_impl(std::string_view alias)                  = 0;
 
         // Expression helpers
-        virtual void visit_binary_expr_start() {}
-        virtual void visit_binary_expr_end() {}
-        virtual void visit_unary_expr_start() {}
-        virtual void visit_unary_expr_end() {}
+        virtual void visit_binary_expr_start() {
+        }
+        virtual void visit_binary_expr_end() {
+        }
+        virtual void visit_unary_expr_start() {
+        }
+        virtual void visit_unary_expr_end() {
+        }
         virtual void visit_subquery_start() = 0;
-        virtual void visit_subquery_end() = 0;
-        virtual void visit_exists_start() = 0;
-        virtual void visit_exists_end() = 0;
+        virtual void visit_subquery_end()   = 0;
+        virtual void visit_exists_start()   = 0;
+        virtual void visit_exists_end()     = 0;
 
         // Binary operators
-        virtual void visit_binary_op_impl(OpEqual) = 0;
-        virtual void visit_binary_op_impl(OpNotEqual) = 0;
-        virtual void visit_binary_op_impl(OpLess) = 0;
-        virtual void visit_binary_op_impl(OpLessEqual) = 0;
-        virtual void visit_binary_op_impl(OpGreater) = 0;
+        virtual void visit_binary_op_impl(OpEqual)        = 0;
+        virtual void visit_binary_op_impl(OpNotEqual)     = 0;
+        virtual void visit_binary_op_impl(OpLess)         = 0;
+        virtual void visit_binary_op_impl(OpLessEqual)    = 0;
+        virtual void visit_binary_op_impl(OpGreater)      = 0;
         virtual void visit_binary_op_impl(OpGreaterEqual) = 0;
-        virtual void visit_binary_op_impl(OpAnd) = 0;
-        virtual void visit_binary_op_impl(OpOr) = 0;
-        virtual void visit_binary_op_impl(OpLike) = 0;
-        virtual void visit_binary_op_impl(OpIn) = 0;
-        virtual void visit_binary_op_impl(OpNotLike) = 0;
+        virtual void visit_binary_op_impl(OpAnd)          = 0;
+        virtual void visit_binary_op_impl(OpOr)           = 0;
+        virtual void visit_binary_op_impl(OpLike)         = 0;
+        virtual void visit_binary_op_impl(OpIn)           = 0;
+        virtual void visit_binary_op_impl(OpNotLike)      = 0;
 
         // Unary operators
-        virtual void visit_unary_op_impl(OpNot) = 0;
-        virtual void visit_unary_op_impl(OpIsNull) = 0;
+        virtual void visit_unary_op_impl(OpNot)       = 0;
+        virtual void visit_unary_op_impl(OpIsNull)    = 0;
         virtual void visit_unary_op_impl(OpIsNotNull) = 0;
 
         // Special operators
-        virtual void visit_between_impl() = 0;
-        virtual void visit_and_impl() = 0;
-        virtual void visit_in_list_start() = 0;
-        virtual void visit_in_list_end() = 0;
+        virtual void visit_between_impl()      = 0;
+        virtual void visit_and_impl()          = 0;
+        virtual void visit_in_list_start()     = 0;
+        virtual void visit_in_list_end()       = 0;
         virtual void visit_in_list_separator() = 0;
 
         // Aggregate functions
-        virtual void visit_count_impl(bool distinct) = 0;
-        virtual void visit_sum_impl() = 0;
-        virtual void visit_avg_impl() = 0;
-        virtual void visit_max_impl() = 0;
-        virtual void visit_min_impl() = 0;
+        virtual void visit_count_impl(bool distinct)                              = 0;
+        virtual void visit_sum_impl()                                             = 0;
+        virtual void visit_avg_impl()                                             = 0;
+        virtual void visit_max_impl()                                             = 0;
+        virtual void visit_min_impl()                                             = 0;
         virtual void visit_aggregate_end(const std::optional<std::string>& alias) = 0;
 
         // Query parts
-        virtual void visit_select_start(bool distinct) = 0;
-        virtual void visit_select_end() = 0;
-        virtual void visit_from_start() = 0;
-        virtual void visit_from_end() = 0;
-        virtual void visit_where_start() = 0;
-        virtual void visit_where_end() = 0;
-        virtual void visit_group_by_start() = 0;
-        virtual void visit_group_by_end() = 0;
-        virtual void visit_having_start() = 0;
-        virtual void visit_having_end() = 0;
-        virtual void visit_order_by_start() = 0;
-        virtual void visit_order_by_end() = 0;
-        virtual void visit_order_direction_impl(OrderDirection dir) = 0;
+        virtual void visit_select_start(bool distinct)                       = 0;
+        virtual void visit_select_end()                                      = 0;
+        virtual void visit_from_start()                                      = 0;
+        virtual void visit_from_end()                                        = 0;
+        virtual void visit_where_start()                                     = 0;
+        virtual void visit_where_end()                                       = 0;
+        virtual void visit_group_by_start()                                  = 0;
+        virtual void visit_group_by_end()                                    = 0;
+        virtual void visit_having_start()                                    = 0;
+        virtual void visit_having_end()                                      = 0;
+        virtual void visit_order_by_start()                                  = 0;
+        virtual void visit_order_by_end()                                    = 0;
+        virtual void visit_order_direction_impl(OrderDirection dir)          = 0;
         virtual void visit_limit_impl(std::size_t limit, std::size_t offset) = 0;
 
         // Joins
         virtual void visit_join_start(JoinType type) = 0;
-        virtual void visit_join_on() = 0;
-        virtual void visit_join_end() = 0;
+        virtual void visit_join_on()                 = 0;
+        virtual void visit_join_end()                = 0;
 
         // DML - now with move support
-        virtual void visit_insert_start() = 0;
-        virtual void visit_insert_columns(const std::vector<std::string>& columns) = 0;
-        virtual void visit_insert_columns(std::vector<std::string>&& columns) = 0;
+        virtual void visit_insert_start()                                                  = 0;
+        virtual void visit_insert_columns(const std::vector<std::string>& columns)         = 0;
+        virtual void visit_insert_columns(std::vector<std::string>&& columns)              = 0;
         virtual void visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) = 0;
-        virtual void visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) = 0;
-        virtual void visit_insert_end() = 0;
+        virtual void visit_insert_values(std::vector<std::vector<FieldValue>>&& rows)      = 0;
+        virtual void visit_insert_end()                                                    = 0;
 
-        virtual void visit_update_start() = 0;
+        virtual void visit_update_start()                                                                 = 0;
         virtual void visit_update_set(const std::vector<std::pair<std::string, FieldValue>>& assignments) = 0;
-        virtual void visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) = 0;
-        virtual void visit_update_end() = 0;
+        virtual void visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments)      = 0;
+        virtual void visit_update_end()                                                                   = 0;
 
         virtual void visit_delete_start() = 0;
-        virtual void visit_delete_end() = 0;
+        virtual void visit_delete_end()   = 0;
 
         // Set operations
         virtual void visit_set_op_impl(SetOperation op) = 0;
 
         // Case/When/Else
         virtual void visit_case_start() = 0;
-        virtual void visit_case_end() = 0;
+        virtual void visit_case_end()   = 0;
         virtual void visit_when_start() = 0;
-        virtual void visit_when_then() = 0;
-        virtual void visit_when_end() = 0;
+        virtual void visit_when_then()  = 0;
+        virtual void visit_when_end()   = 0;
         virtual void visit_else_start() = 0;
-        virtual void visit_else_end() = 0;
+        virtual void visit_else_end()   = 0;
 
         // CTE (Common Table Expression)
-        virtual void visit_cte_start(bool recursive) = 0;
+        virtual void visit_cte_start(bool recursive)            = 0;
         virtual void visit_cte_name_impl(std::string_view name) = 0;
-        virtual void visit_cte_as_start() = 0;
-        virtual void visit_cte_as_end() = 0;
-        virtual void visit_cte_end() = 0;
+        virtual void visit_cte_as_start()                       = 0;
+        virtual void visit_cte_as_end()                         = 0;
+        virtual void visit_cte_end()                            = 0;
 
         // Column separator
         virtual void visit_column_separator() = 0;
 
-    private:
+        private:
         // Helper to visit tuple elements with perfect forwarding
         template <typename Tuple, std::size_t... Is>
         void visit_tuple_elements(Tuple&& t, std::index_sequence<Is...>) {
@@ -657,6 +671,6 @@ namespace demiplane::db {
             visit(std::forward<T>(elem));
         }
     };
-}
+}  // namespace demiplane::db
 
 #include "../source/query_visitor.inl"

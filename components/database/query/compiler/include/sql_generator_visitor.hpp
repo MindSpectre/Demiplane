@@ -6,7 +6,7 @@ namespace demiplane::db {
     class SqlDialect;
 
     class SqlGeneratorVisitor final : public QueryVisitor {
-    public:
+        public:
         explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, bool use_params = true);
 
         // Get results
@@ -20,7 +20,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).parameters_;
         }
 
-    protected:
+        protected:
         // Column and value implementations
         void visit_table_column_impl(const FieldSchema* schema,
                                      const std::shared_ptr<std::string>& table,
@@ -192,10 +192,10 @@ namespace demiplane::db {
         // Column separator
         void visit_column_separator() override;
 
-    private:
+        private:
         std::shared_ptr<SqlDialect> dialect_;
         std::ostringstream sql_;
         std::vector<FieldValue> parameters_;
         bool use_parameters_;
     };
-}
+}  // namespace demiplane::db

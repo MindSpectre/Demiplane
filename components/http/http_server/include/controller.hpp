@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <demiplane/gears>
 #include <demiplane/nexus>
+#include <memory>
 
 #include "aliases.hpp"
 #include "request_context.hpp"
@@ -15,19 +15,21 @@ namespace demiplane::http {
     concept IsController = std::is_base_of_v<HttpController, Controller>;
 
     class HttpController : public std::enable_shared_from_this<HttpController> {
-    public:
-        NEXUS_REGISTER(0x4E711AF1, nexus::Resettable); // CRC32/ISO-HDLC of demiplane::http::HttpController
+        public:
+        NEXUS_REGISTER(0x4E711AF1, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::HttpController
 
-        virtual ~HttpController() = default;
+        virtual ~HttpController()       = default;
         virtual void configure_routes() = 0;
-        virtual void initialize() {}
-        virtual void shutdown() {}
+        virtual void initialize() {
+        }
+        virtual void shutdown() {
+        }
 
         // Transfer routes to server registry - no longer expose internal registry
         void transfer_routes_to(RouteRegistry& target_registry);
         size_t route_count() const;
 
-    protected:
+        protected:
         // Member function binding - RequestContext by value
         template <IsController Controller>
         void Get(std::string path, Response (Controller::*method)(RequestContext)) {
@@ -115,40 +117,39 @@ namespace demiplane::http {
 
         // Free function/callable binding with perfect forwarding
         template <typename F>
-            requires (!std::is_member_function_pointer_v<std::decay_t<F>>)
+            requires(!std::is_member_function_pointer_v<std::decay_t<F>>)
         void Get(std::string path, F&& handler) {
             registry_.add_route(boost::beast::http::verb::get, std::move(path), wrap_handler(std::forward<F>(handler)));
         }
 
         template <typename F>
-            requires (!std::is_member_function_pointer_v<std::decay_t<F>>)
+            requires(!std::is_member_function_pointer_v<std::decay_t<F>>)
         void Post(std::string path, F&& handler) {
             registry_.add_route(
                 boost::beast::http::verb::post, std::move(path), wrap_handler(std::forward<F>(handler)));
         }
 
         template <typename F>
-            requires (!std::is_member_function_pointer_v<std::decay_t<F>>)
+            requires(!std::is_member_function_pointer_v<std::decay_t<F>>)
         void Put(std::string path, F&& handler) {
             registry_.add_route(boost::beast::http::verb::put, std::move(path), wrap_handler(std::forward<F>(handler)));
         }
 
         template <typename F>
-            requires (!std::is_member_function_pointer_v<std::decay_t<F>>)
+            requires(!std::is_member_function_pointer_v<std::decay_t<F>>)
         void Delete(std::string path, F&& handler) {
             registry_.add_route(
                 boost::beast::http::verb::delete_, std::move(path), wrap_handler(std::forward<F>(handler)));
         }
 
-    private:
+        private:
         RouteRegistry registry_;
 
         // Binding helpers for member functions
         template <IsController Controller>
         ContextHandler bind_sync_method(Response (Controller::*method)(RequestContext)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
-            return [self, method](
-                RequestContext ctx) -> AsyncResponse {
+            return [self, method](RequestContext ctx) -> AsyncResponse {
                 co_return (self.get()->*method)(std::move(ctx));
             };
         }
@@ -156,9 +157,7 @@ namespace demiplane::http {
         template <IsController Controller>
         ContextHandler bind_sync_method_const_ref(Response (Controller::*method)(const RequestContext&)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
-            return [self, method](RequestContext ctx) -> AsyncResponse {
-                co_return (self.get()->*method)(ctx);
-            };
+            return [self, method](RequestContext ctx) -> AsyncResponse { co_return (self.get()->*method)(ctx); };
         }
 
         template <IsController Controller>
@@ -173,9 +172,7 @@ namespace demiplane::http {
         ContextHandler bind_async_method_const_ref(AsyncResponse (Controller::*method)(const RequestContext&)) {
             auto self = std::static_pointer_cast<Controller>(shared_from_this());
             return
-                [self, method](RequestContext ctx) -> AsyncResponse {
-                co_return co_await (self.get()->*method)(ctx);
-            };
+                [self, method](RequestContext ctx) -> AsyncResponse { co_return co_await (self.get()->*method)(ctx); };
         }
 
         // Generic wrapper for free functions and lambdas
@@ -183,33 +180,26 @@ namespace demiplane::http {
         ContextHandler wrap_handler(F&& handler) {
             if constexpr (std::is_invocable_r_v<Response, F, RequestContext>) {
                 // Sync handler taking RequestContext by value
-                return [handler = std::forward<F>(handler)](
-                    RequestContext ctx) -> AsyncResponse {
+                return [handler = std::forward<F>(handler)](RequestContext ctx) -> AsyncResponse {
                     co_return handler(std::move(ctx));
                 };
-            }
-            else if constexpr (std::is_invocable_r_v<Response, F, const RequestContext&>) {
+            } else if constexpr (std::is_invocable_r_v<Response, F, const RequestContext&>) {
                 // Sync handler taking RequestContext by const reference
-                return [handler = std::forward<F>(handler)](
-                    RequestContext ctx) -> AsyncResponse {
+                return [handler = std::forward<F>(handler)](RequestContext ctx) -> AsyncResponse {
                     co_return handler(ctx);
                 };
-            }
-            else if constexpr (std::is_invocable_r_v<AsyncResponse, F, RequestContext>) {
+            } else if constexpr (std::is_invocable_r_v<AsyncResponse, F, RequestContext>) {
                 // Async handler taking RequestContext by value
-                return [handler = std::forward<F>(handler)](
-                    RequestContext ctx) -> AsyncResponse {
+                return [handler = std::forward<F>(handler)](RequestContext ctx) -> AsyncResponse {
                     co_return co_await handler(std::move(ctx));
                 };
-            }
-            else if constexpr (std::is_invocable_r_v<AsyncResponse, F, const RequestContext&>) {
+            } else if constexpr (std::is_invocable_r_v<AsyncResponse, F, const RequestContext&>) {
                 // Async handler taking RequestContext by const reference
-                return [handler = std::forward<F>(handler)](
-                    RequestContext ctx) -> AsyncResponse {
+                return [handler = std::forward<F>(handler)](RequestContext ctx) -> AsyncResponse {
                     co_return co_await handler(ctx);
                 };
             }
             return gears::unreachable_c<F>();
         }
     };
-} // namespace demiplane::http
+}  // namespace demiplane::http

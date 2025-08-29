@@ -7,16 +7,17 @@
 namespace demiplane::db {
     template <IsQuery Query>
     class ExistsExpr : public Expression<ExistsExpr<Query>> {
-    public:
+        public:
         constexpr explicit ExistsExpr(Query sq)
-            : query_(std::move(sq)) {}
+            : query_(std::move(sq)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
             return std::forward<Self>(self).query_;
         }
 
-    private:
+        private:
         Query query_;
     };
 
@@ -24,4 +25,4 @@ namespace demiplane::db {
     constexpr auto exists(Query query) {
         return ExistsExpr<Query>{std::move(query)};
     }
-}
+}  // namespace demiplane::db

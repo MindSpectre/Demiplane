@@ -6,7 +6,7 @@
 
 namespace demiplane::db {
     class Field final {
-    public:
+        public:
         explicit Field(const FieldSchema* schema);
 
         // Copy constructor - safe copying
@@ -37,17 +37,17 @@ namespace demiplane::db {
         // Convenience getters
         [[nodiscard]] bool is_null() const;
 
-        [[nodiscard]] const FieldValue& raw_value() const &;
+        [[nodiscard]] const FieldValue& raw_value() const&;
         [[nodiscard]] FieldValue raw_value() &&;
 
         [[nodiscard]] const FieldSchema& schema() const;
 
         [[nodiscard]] const std::string& name() const;
 
-    private:
+        private:
         FieldValue value_;
-        const FieldSchema* schema_; // Non-owning, guaranteed to outlive this field
+        const FieldSchema* schema_;  // Non-owning, guaranteed to outlive this field
     };
-}
+}  // namespace demiplane::db
 
 #include "../source/db_field.inl"

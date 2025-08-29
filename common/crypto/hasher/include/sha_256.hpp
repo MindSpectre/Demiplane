@@ -6,7 +6,7 @@
 
 namespace demiplane::crypto {
     class SHA256Hash final : HashInterface {
-    public:
+        public:
         SHA256Hash()           = default;
         ~SHA256Hash() override = default;
 
@@ -22,7 +22,7 @@ namespace demiplane::crypto {
             this->key_ = std::move(key);
         }
 
-    private:
+        private:
         std::string key_;
     };
-} // namespace demiplane::crypto
+}  // namespace demiplane::crypto

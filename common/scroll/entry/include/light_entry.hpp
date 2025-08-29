@@ -6,11 +6,13 @@
 #include "../entry_interface.hpp"
 
 namespace demiplane::scroll {
-    class LightEntry final : public detail::EntryBase<detail::MetaNone> // only level+msg
+    class LightEntry final : public detail::EntryBase<detail::MetaNone>  // only level+msg
     {
-    public:
+        public:
         using EntryBase::EntryBase;
-        LightEntry(const LogLevel lvl, const std::string_view msg) : EntryBase(lvl, msg, MetaNone{}) {}
+        LightEntry(const LogLevel lvl, const std::string_view msg)
+            : EntryBase(lvl, msg, MetaNone{}) {
+        }
 
         [[nodiscard]] std::string to_string() const override {
             std::ostringstream formatter;
@@ -27,4 +29,4 @@ namespace demiplane::scroll {
     struct detail::entry_traits<LightEntry> {
         using wants = gears::type_list<>;
     };
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll

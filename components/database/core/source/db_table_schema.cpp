@@ -2,7 +2,8 @@
 
 namespace demiplane::db {
     TableSchema::TableSchema(std::string table_name)
-        : table_name_(std::move(table_name)) {}
+        : table_name_(std::move(table_name)) {
+    }
 
     TableSchema& TableSchema::add_field(std::string name, std::string db_type, std::type_index cpp_type) {
         auto field      = std::make_unique<FieldSchema>();
@@ -109,4 +110,4 @@ namespace demiplane::db {
     }
 
     // Implementation of FieldSchema::as_column
-}
+}  // namespace demiplane::db

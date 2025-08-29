@@ -6,9 +6,8 @@
 
 namespace demiplane::scroll {
     class DetailedEntry final
-        : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread,
-                                   detail::MetaProcess> {
-    public:
+        : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
+        public:
         using EntryBase::EntryBase;
 
         [[nodiscard]] std::string to_string() const override;
@@ -27,4 +26,4 @@ namespace demiplane::scroll {
     struct detail::entry_traits<DetailedEntry> {
         using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess>;
     };
-}
+}  // namespace demiplane::scroll

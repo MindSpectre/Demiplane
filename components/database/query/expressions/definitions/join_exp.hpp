@@ -9,19 +9,20 @@ namespace demiplane::db {
     template <IsQuery Query, IsCondition Condition>
     class JoinExpr : public AliasableExpression<JoinExpr<Query, Condition>>,
                      public QueryOperations<JoinExpr<Query, Condition>,
-                                            AllowJoin, AllowOrderBy, AllowLimit,
-                                            AllowWhere, AllowGroupBy> {
-    public:
-        constexpr JoinExpr(Query q,
-                           TableSchemaPtr jt,
-                           Condition c,
-                           JoinType t,
-                           std::optional<std::string> alias = std::nullopt)
+                                            AllowJoin,
+                                            AllowOrderBy,
+                                            AllowLimit,
+                                            AllowWhere,
+                                            AllowGroupBy> {
+        public:
+        constexpr JoinExpr(
+            Query q, TableSchemaPtr jt, Condition c, JoinType t, std::optional<std::string> alias = std::nullopt)
             : AliasableExpression<JoinExpr>{std::move(alias)},
               query_(std::move(q)),
               joined_table_(std::move(jt)),
               on_condition_(std::move(c)),
-              type_(t) {}
+              type_(t) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -41,10 +42,10 @@ namespace demiplane::db {
             return type_;
         }
 
-    private:
+        private:
         Query query_;
         TableSchemaPtr joined_table_;
         Condition on_condition_;
         JoinType type_;
     };
-}
+}  // namespace demiplane::db

@@ -5,7 +5,7 @@
 
 namespace demiplane::db {
     class SqlDialect {
-    public:
+        public:
         virtual ~SqlDialect() = default;
 
         // Identifier quoting
@@ -43,4 +43,4 @@ namespace demiplane::db {
         // Value formatting
         [[nodiscard]] virtual std::string format_value(const FieldValue& value) = 0;
     };
-}
+}  // namespace demiplane::db

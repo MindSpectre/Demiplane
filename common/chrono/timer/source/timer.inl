@@ -13,7 +13,7 @@ auto demiplane::chrono::Timer::execute_polite_vanish(const std::chrono::millisec
 
     // Extract the token reference using the generic get_arg function
     const std::shared_ptr<CancellationToken>& ext_tok = gears::get_arg<std::shared_ptr<CancellationToken>&>(args...);
-    auto owned_ext_tok                                = ext_tok; // copy to avoid aliasing
+    auto owned_ext_tok                                = ext_tok;  // copy to avoid aliasing
 
     using result_t = std::invoke_result_t<Callable, Args...>;
 
@@ -27,16 +27,14 @@ auto demiplane::chrono::Timer::execute_polite_vanish(const std::chrono::millisec
     auto deadline = clock::now() + timeout;
 
     // worker
-    auto worker = pool_->enqueue([t = std::move(task)]() mutable {
-        t();
-    });
+    auto worker = pool_->enqueue([t = std::move(task)]() mutable { t(); });
 
     // watchdog - fixed
     spawn([owned_ext_tok, deadline]() mutable {
         while (!owned_ext_tok->stop_requested() && clock::now() < deadline) {
             std::this_thread::sleep_for(std::chrono::milliseconds{10});
         }
-        owned_ext_tok->cancel(); // polite request to worker
+        owned_ext_tok->cancel();  // polite request to worker
     });
 
     return fut;
@@ -64,12 +62,13 @@ auto demiplane::chrono::Timer::execute_violent_kill(const std::chrono::milliseco
         }
 
 #if defined(_WIN32)
-        ::TerminateThread(h, 1); // dangerous!
+        ::TerminateThread(h, 1);  // dangerous!
 #elif defined(__linux__)
-        ::pthread_cancel(h); // UB if locks held
+        ::pthread_cancel(h);  // UB if locks held
 #endif
 
-        if (th.joinable()) th.detach();
+        if (th.joinable())
+            th.detach();
     });
 
     return fut;

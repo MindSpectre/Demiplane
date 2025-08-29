@@ -8,7 +8,7 @@ namespace demiplane::chrono {
 
     template <typename duration = std::chrono::milliseconds, typename clock = std::chrono::high_resolution_clock>
     class Stopwatch {
-    public:
+        public:
         using time_point = typename clock::time_point;
 
         explicit Stopwatch(std::size_t reserve_flags = 20) {
@@ -43,7 +43,7 @@ namespace demiplane::chrono {
             const duration since_start = std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
             duration since_prev;
             if (i >= 1) {
-                since_prev = std::chrono::duration_cast<duration>(flags_[i] - flags_[i-1]);
+                since_prev = std::chrono::duration_cast<duration>(flags_[i] - flags_[i - 1]);
             }
 
             return {since_prev, since_start};
@@ -53,7 +53,7 @@ namespace demiplane::chrono {
             return std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
         }
         duration from_prev(const std::size_t i) const {
-            return std::chrono::duration_cast<duration>(flags_[i] - flags_[i-1]);
+            return std::chrono::duration_cast<duration>(flags_[i] - flags_[i - 1]);
         }
 
         duration total_time() const {
@@ -67,23 +67,23 @@ namespace demiplane::chrono {
         duration average_delta() const {
             duration total = duration::zero();
             for (std::size_t i = 1; i < flags_.size(); ++i) {
-                auto d = flags_[i] - flags_[i-1];
-                total += std::chrono::duration_cast<duration>(d);
+                auto d  = flags_[i] - flags_[i - 1];
+                total  += std::chrono::duration_cast<duration>(d);
             }
-            return total / (flags_.size()-1);
+            return total / (flags_.size() - 1);
         }
-        
+
         // Function to measure execution time of a lambda function
         template <typename Func>
         duration measure(Func&& func) {
             auto start_time = clock::now();
-            std::forward<Func>(func)(); // Execute the lambda function
+            std::forward<Func>(func)();  // Execute the lambda function
             auto end_time = clock::now();
             return std::chrono::duration_cast<duration>(end_time - start_time);
         }
-        
-    private:
+
+        private:
         std::vector<time_point> flags_;
     };
 
-} // namespace demiplane::chrono
+}  // namespace demiplane::chrono

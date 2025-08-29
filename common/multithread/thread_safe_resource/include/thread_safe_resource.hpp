@@ -5,11 +5,13 @@
 namespace demiplane::multithread {
     template <typename T>
     class ThreadSafeResource {
-    public:
+        public:
         // Read-only proxy (shared lock)
         class ReadProxy {
-        public:
-            ReadProxy(std::shared_mutex& mutex, const T& resource) : lock_(mutex), resource_(resource) {
+            public:
+            ReadProxy(std::shared_mutex& mutex, const T& resource)
+                : lock_(mutex),
+                  resource_(resource) {
             }
 
             const T* operator->() const {
@@ -19,15 +21,17 @@ namespace demiplane::multithread {
                 return &resource_;
             }
 
-        private:
+            private:
             std::shared_lock<std::shared_mutex> lock_;
-            const T&                            resource_;
+            const T& resource_;
         };
 
         // Write proxy (exclusive lock)
         class WriteProxy {
-        public:
-            WriteProxy(std::shared_mutex& mutex, T& resource) : lock_(mutex), resource_(resource) {
+            public:
+            WriteProxy(std::shared_mutex& mutex, T& resource)
+                : lock_(mutex),
+                  resource_(resource) {
             }
 
             T* operator->() {
@@ -44,14 +48,15 @@ namespace demiplane::multithread {
                 return &resource_;
             }
 
-        private:
+            private:
             std::unique_lock<std::shared_mutex> lock_;
-            T&                                  resource_;
+            T& resource_;
         };
 
         // Constructors
         template <typename... Args>
-        explicit ThreadSafeResource(Args&&... args) : resource_(std::forward<Args>(args)...) {
+        explicit ThreadSafeResource(Args&&... args)
+            : resource_(std::forward<Args>(args)...) {
         }
 
         // Write access (exclusive lock)
@@ -74,25 +79,25 @@ namespace demiplane::multithread {
 
         // Functional access for complex operations
         template <typename Func>
-    requires std::is_invocable_v<Func, T&>
-    auto with_lock(Func&& func) -> std::invoke_result_t<Func, T&> {
+            requires std::is_invocable_v<Func, T&>
+        auto with_lock(Func&& func) -> std::invoke_result_t<Func, T&> {
             std::unique_lock lock(mutex_);
             return func(resource_);
         }
 
         // Read access - checks const T& invocability
         template <typename Func>
-        requires std::is_invocable_v<Func, const T&>
+            requires std::is_invocable_v<Func, const T&>
         auto with_read_lock(Func&& func) const -> std::invoke_result_t<Func, const T&> {
             std::shared_lock lock(mutex_);
             return func(resource_);
         }
 
 
-    private:
-        mutable std::shared_mutex mutex_; // Allow reader-writer locks
-        T                         resource_;
+        private:
+        mutable std::shared_mutex mutex_;  // Allow reader-writer locks
+        T resource_;
     };
 
 
-} // namespace demiplane::multithread
+}  // namespace demiplane::multithread

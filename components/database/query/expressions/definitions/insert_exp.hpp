@@ -2,14 +2,15 @@
 
 #include <algorithm>
 
-#include "db_record.hpp"
 #include "../basic.hpp"
+#include "db_record.hpp"
 
 namespace demiplane::db {
     class InsertExpr : public Expression<InsertExpr> {
-    public:
+        public:
         explicit InsertExpr(TableSchemaPtr t)
-            : table_(std::move(t)) {}
+            : table_(std::move(t)) {
+        }
 
         InsertExpr& into(std::initializer_list<std::string> cols) {
             columns_ = cols;
@@ -69,7 +70,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).rows_;
         }
 
-    private:
+        private:
         TableSchemaPtr table_{nullptr};
         std::vector<std::string> columns_;
         std::vector<std::vector<FieldValue>> rows_;
@@ -83,4 +84,4 @@ namespace demiplane::db {
     inline auto insert_into(std::string table_name) {
         return InsertExpr{TableSchema::make_ptr(std::move(table_name))};
     }
-}
+}  // namespace demiplane::db

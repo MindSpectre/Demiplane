@@ -1,12 +1,13 @@
 #include "route_registry.hpp"
 
-#include <regex>
 #include <demiplane/scroll>
+#include <regex>
 
 namespace demiplane::http {
 
     RouteRegistry::RouteRegistry(const RouteRegistry& other)
-        : exact_routes_(other.exact_routes_), parametric_routes_(other.parametric_routes_) {
+        : exact_routes_(other.exact_routes_),
+          parametric_routes_(other.parametric_routes_) {
         // Re-compile regex patterns for parametric routes
         for (auto& route : parametric_routes_) {
             if (route.is_parametric) {
@@ -72,8 +73,8 @@ namespace demiplane::http {
         }
     }
 
-    std::pair<ContextHandler, std::unordered_map<std::string, std::string>> RouteRegistry::find_handler(
-        const boost::beast::http::verb method, const std::string& path) const {
+    std::pair<ContextHandler, std::unordered_map<std::string, std::string>>
+    RouteRegistry::find_handler(const boost::beast::http::verb method, const std::string& path) const {
         // Try exact match first
         const auto key = make_route_key(method, path);
         if (const auto it = exact_routes_.find(key); it != exact_routes_.end()) {
@@ -118,8 +119,9 @@ namespace demiplane::http {
         return path.find('{') != std::string::npos;
     }
 
-    RouteInfo RouteRegistry::create_parametric_route(
-        const boost::beast::http::verb method, std::string path, ContextHandler handler) {
+    RouteInfo RouteRegistry::create_parametric_route(const boost::beast::http::verb method,
+                                                     std::string path,
+                                                     ContextHandler handler) {
         COMPONENT_LOG_DBG() << "Creating parametric route" << SCROLL_PARAMS(method, path);
         RouteInfo info;
         info.method        = method;
@@ -144,4 +146,4 @@ namespace demiplane::http {
         return info;
     }
 
-} // namespace demiplane::http
+}  // namespace demiplane::http

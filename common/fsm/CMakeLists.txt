@@ -4,8 +4,8 @@ set(DMP_FSM ${DMP_COMMON}.FSM)
 # FSM Parsers
 ##############################################################################
 add_library(${DMP_FSM}.Core INTERFACE
-    core/state.hpp
-    core/transition.hpp
+        core/state.hpp
+        core/transition.hpp
 )
 
 target_include_directories(${DMP_FSM}.Core
@@ -31,7 +31,7 @@ target_include_directories(${DMP_FSM}.Parser
         parser/
 )
 target_link_libraries(${DMP_FSM}.Parser
-    INTERFACE
+        INTERFACE
         JsonCpp::JsonCpp
         ${DMP_FSM}.Core
 )

@@ -28,7 +28,7 @@ namespace demiplane::gears {
 
     template <typename Derived, template <typename...> class BaseTemplate>
     struct derived_from_specialization_of {
-    private:
+        private:
         // First, check if Derived is itself a specialization of BaseTemplate
         template <typename T>
         static constexpr bool is_specialization() {
@@ -49,17 +49,16 @@ namespace demiplane::gears {
         static constexpr bool is_convertible_to_specialization =
             decltype(test_inheritance(std::declval<Derived*>()))::value;
 
-    public:
+        public:
         // True only if it's convertible to a specialization AND not itself a specialization
         static constexpr bool value =
-            is_convertible_to_specialization &&
-            !is_specialization<std::remove_cv_t<Derived>>();
+            is_convertible_to_specialization && !is_specialization<std::remove_cv_t<Derived>>();
     };
 
     // Concept for cleaner use
     template <typename Derived, template <typename...> class BaseTemplate>
-    inline constexpr bool derived_from_specialization_of_v = derived_from_specialization_of<
-        Derived, BaseTemplate>::value;
+    inline constexpr bool derived_from_specialization_of_v =
+        derived_from_specialization_of<Derived, BaseTemplate>::value;
 
 
     template <class...>
@@ -112,4 +111,4 @@ namespace demiplane::gears {
     constexpr bool has_exact_arg_type() {
         return (std::is_same_v<Args, T> || ...);
     }
-} // namespace demiplane::gears
+}  // namespace demiplane::gears

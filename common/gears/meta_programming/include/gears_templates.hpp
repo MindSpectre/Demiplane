@@ -75,8 +75,6 @@ namespace demiplane::gears {
     template <typename T>
     inline constexpr bool is_vector_v = is_vector<T>::value;
 
-    template <typename T>
-    concept Interface = std::is_abstract_v<T>;
 
     // ── tiny type-list ────────────────────────────────────────────────
     template <class... Ts>
@@ -98,4 +96,20 @@ namespace demiplane::gears {
             return std::tuple<decltype(pick<Ts>(tup))...>(pick<Ts>(tup)...);
         }
     };
+    // Generic function to extract any type T from arguments using existing gears::pick
+    template <typename T, typename... Args>
+    decltype(auto) get_arg(Args&&... args) {
+        auto args_tuple = std::forward_as_tuple(args...);
+        return gears::pick<T>(args_tuple);
+    }
+
+    // Check if arguments contain type T
+    template <typename T, typename... Args>
+    constexpr bool has_arg_type() {
+        return (std::is_same_v<std::remove_cvref_t<Args>, T> || ...);
+    }
+    template <typename T, typename... Args>
+    constexpr bool has_exact_arg_type() {
+        return (std::is_same_v<Args, T> || ...);
+    }
 } // namespace demiplane::gears

@@ -5,7 +5,7 @@
 namespace demiplane::multithread {
     class ThreadPool;
     class EnqueuedTask {
-        public:
+    public:
         void execute() const {
             if (task) {
                 task();
@@ -17,7 +17,7 @@ namespace demiplane::multithread {
               priority_{priority} {
         }
 
-        private:
+    private:
         std::function<void()> task;
         uint32_t priority_{1};
 

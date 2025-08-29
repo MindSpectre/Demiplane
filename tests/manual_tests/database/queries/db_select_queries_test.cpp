@@ -1,23 +1,22 @@
 // SELECT query expression tests
 // Comprehensive tests for select operations and selectable types
 
-#include <gtest/gtest.h>
+#include <demiplane/scroll>
 
-#include "query_expressions.hpp"
 #include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
+#include "query_expressions.hpp"
 
-#include <demiplane/scroll>
+#include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
 
 // Test fixture for SELECT operations
-class SelectQueryTest : public ::testing::Test,
-                        public demiplane::scroll::LoggerProvider {
+class SelectQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
@@ -29,17 +28,17 @@ protected:
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<std::string>("name", "VARCHAR(255)")
-                    .add_field<int>("age", "INTEGER")
-                    .add_field<bool>("active", "BOOLEAN");
+            .primary_key("id")
+            .add_field<std::string>("name", "VARCHAR(255)")
+            .add_field<int>("age", "INTEGER")
+            .add_field<bool>("active", "BOOLEAN");
 
         posts_schema = std::make_shared<TableSchema>("posts");
         posts_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<int>("user_id", "INTEGER")
-                    .add_field<std::string>("title", "VARCHAR(255)")
-                    .add_field<bool>("published", "BOOLEAN");
+            .primary_key("id")
+            .add_field<int>("user_id", "INTEGER")
+            .add_field<std::string>("title", "VARCHAR(255)")
+            .add_field<bool>("published", "BOOLEAN");
 
         // Create column references
         user_id     = users_schema->column<int>("id");
@@ -83,7 +82,7 @@ TEST_F(SelectQueryTest, BasicSelectExpression) {
 // Test SELECT with ALL columns
 TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
     const auto query = select(all("users"));
-    auto result = compiler->compile(query.from(users_schema));
+    auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -91,7 +90,7 @@ TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
 // Test SELECT DISTINCT
 TEST_F(SelectQueryTest, SelectDistinctExpression) {
     const auto query = select_distinct(user_name, user_age);
-    auto result = compiler->compile(query.from(users_schema));
+    auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -99,7 +98,7 @@ TEST_F(SelectQueryTest, SelectDistinctExpression) {
 // Test SELECT with mixed types (columns, literals, aggregates)
 TEST_F(SelectQueryTest, SelectMixedTypesExpression) {
     const auto query = select(user_name, lit("constant"), count(user_id).as("total"));
-    auto result = compiler->compile(query.from(users_schema));
+    auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -134,9 +133,8 @@ TEST_F(SelectQueryTest, SelectWithWhereExpression) {
 
 // Test SELECT with JOIN
 TEST_F(SelectQueryTest, SelectWithJoinExpression) {
-    auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema->table_name()).on(post_user_id == user_id);
+    auto query =
+        select(user_name, post_title).from(users_schema).join(posts_schema->table_name()).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -144,9 +142,7 @@ TEST_F(SelectQueryTest, SelectWithJoinExpression) {
 
 // Test SELECT with GROUP BY
 TEST_F(SelectQueryTest, SelectWithGroupByExpression) {
-    auto query = select(user_active, count(user_id).as("user_count"))
-                 .from(users_schema)
-                 .group_by(user_active);
+    auto query  = select(user_active, count(user_id).as("user_count")).from(users_schema).group_by(user_active);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -155,9 +151,9 @@ TEST_F(SelectQueryTest, SelectWithGroupByExpression) {
 // Test SELECT with HAVING
 TEST_F(SelectQueryTest, SelectWithHavingExpression) {
     auto query = select(user_active, count(user_id).as("user_count"))
-                 .from(users_schema)
-                 .group_by(user_active)
-                 .having(count(user_id) > lit(5));
+                     .from(users_schema)
+                     .group_by(user_active)
+                     .having(count(user_id) > lit(5));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -165,9 +161,7 @@ TEST_F(SelectQueryTest, SelectWithHavingExpression) {
 
 // Test SELECT with ORDER BY
 TEST_F(SelectQueryTest, SelectWithOrderByExpression) {
-    auto query = select(user_name)
-                 .from(users_schema)
-                 .order_by(asc(user_name));
+    auto query  = select(user_name).from(users_schema).order_by(asc(user_name));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -175,9 +169,7 @@ TEST_F(SelectQueryTest, SelectWithOrderByExpression) {
 
 // Test SELECT with LIMIT
 TEST_F(SelectQueryTest, SelectWithLimitExpression) {
-    auto query = select(user_name)
-                 .from(users_schema)
-                 .limit(10);
+    auto query  = select(user_name).from(users_schema).limit(10);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

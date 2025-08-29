@@ -7,7 +7,7 @@
 namespace demiplane::math::random {
 
     class RandomTimeGenerator final : public BaseRandomGenerator {
-        public:
+    public:
         RandomTimeGenerator() = default;
         explicit RandomTimeGenerator(const std::mt19937& r_generator)
             : BaseRandomGenerator(r_generator) {
@@ -41,7 +41,7 @@ namespace demiplane::math::random {
         [[nodiscard]] std::pair<std::chrono::year_month_day, std::chrono::year_month_day>
         generate_time_period_to(const std::chrono::year_month_day& to) const;
 
-        private:
+    private:
         static constexpr std::chrono::year_month_day start_of_last_century_{
             std::chrono::year{1925}, std::chrono::month{7}, std::chrono::day{25}};
     };

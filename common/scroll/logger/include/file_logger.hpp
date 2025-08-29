@@ -48,7 +48,7 @@ namespace demiplane::scroll {
 
     template <detail::EntryConcept EntryType>
     class FileLogger final : public Logger {
-        public:
+    public:
         NEXUS_REGISTER(0xFCCE2FB1, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLogger
 
         explicit FileLogger(FileLoggerConfig cfg);
@@ -82,7 +82,7 @@ namespace demiplane::scroll {
         /* Reload (unchanged, still works) */
         void reload();
 
-        private:
+    private:
         /*---------------- enqueue helper (lock-free) --------------------------*/
         void enqueue(const EntryType& entry) noexcept;
 

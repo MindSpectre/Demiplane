@@ -7,7 +7,7 @@
 
 namespace demiplane::fsm {
     class State : gears::NonCopyable {
-        public:
+    public:
         // Constructor
         explicit State(const uint32_t id)
             : id_(id) {
@@ -27,7 +27,7 @@ namespace demiplane::fsm {
         std::function<void()> on_exit;
 
 
-        protected:
+    protected:
         std::string name_;
         uint32_t id_;
     };

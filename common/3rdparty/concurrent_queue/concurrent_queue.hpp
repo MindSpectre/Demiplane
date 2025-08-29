@@ -116,8 +116,8 @@ namespace moodycamel {
         static const thread_id_t invalid_thread_id =
             0;  // See http://blogs.msdn.com/b/oldnewthing/archive/2004/02/23/78395.aspx
         static const thread_id_t invalid_thread_id2 =
-            0xFFFFFFFFU;  // Not technically guaranteed to be invalid, but is never used in practice. Note that all Win32
-                          // thread IDs are presently multiples of 4.
+            0xFFFFFFFFU;  // Not technically guaranteed to be invalid, but is never used in practice. Note that all
+                          // Win32 thread IDs are presently multiples of 4.
         static inline thread_id_t thread_id() {
             return static_cast<thread_id_t>(::GetCurrentThreadId());
         }
@@ -171,7 +171,7 @@ namespace moodycamel {
     }
 }
 #else
-    // Use a nice trick from this answer: http://stackoverflow.com/a/8438730/21475
+   // Use a nice trick from this answer: http://stackoverflow.com/a/8438730/21475
     // In order to get a numeric thread ID in a platform-independent way, we use a thread-local
     // static variable's address as a thread identifier :-)
     #if defined(__GNUC__) || defined(__INTEL_COMPILER)
@@ -179,7 +179,7 @@ namespace moodycamel {
     #elif defined(_MSC_VER)
         #define MOODYCAMEL_THREADLOCAL __declspec(thread)
     #else
-        // Assume C++11 compliant compiler
+   // Assume C++11 compliant compiler
         #define MOODYCAMEL_THREADLOCAL thread_local
     #endif
 namespace moodycamel {
@@ -232,7 +232,7 @@ namespace moodycamel {
         #define MOODYCAMEL_NOEXCEPT_CTOR(type, valueType, expr) true
         #define MOODYCAMEL_NOEXCEPT_ASSIGN(type, valueType, expr) true
     #elif defined(_MSC_VER) && defined(_NOEXCEPT) && _MSC_VER < 1800
-        // VS2012's std::is_nothrow_[move_]constructible is broken and returns true when it shouldn't :-(
+   // VS2012's std::is_nothrow_[move_]constructible is broken and returns true when it shouldn't :-(
         // We have to assume *all* non-trivial constructors may throw on VS2012!
         #define MOODYCAMEL_NOEXCEPT _NOEXCEPT
         #define MOODYCAMEL_NOEXCEPT_CTOR(type, valueType, expr)                                                        \
@@ -268,17 +268,17 @@ namespace moodycamel {
     #ifdef MCDBGQ_USE_RELACY
         #define MOODYCAMEL_CPP11_THREAD_LOCAL_SUPPORTED
     #else
-        // VS2013 doesn't support `thread_local`, and MinGW-w64 w/ POSIX threading has a crippling bug:
-        // http://sourceforge.net/p/mingw-w64/bugs/445 g++ <=4.7 doesn't support thread_local either. Finally, iOS/ARM doesn't
-        // have support for it either, and g++/ARM allows it to compile but it's unconfirmed to actually work
+   // VS2013 doesn't support `thread_local`, and MinGW-w64 w/ POSIX threading has a crippling bug:
+        // http://sourceforge.net/p/mingw-w64/bugs/445 g++ <=4.7 doesn't support thread_local either. Finally, iOS/ARM
+        // doesn't have support for it either, and g++/ARM allows it to compile but it's unconfirmed to actually work
         #if (!defined(_MSC_VER) || _MSC_VER >= 1900) &&                                                                \
             (!defined(__MINGW32__) && !defined(__MINGW64__) || !defined(__WINPTHREADS_VERSION)) &&                     \
             (!defined(__GNUC__) || __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)) &&                          \
             (!defined(__APPLE__) || !TARGET_OS_IPHONE) && !defined(__arm__) && !defined(_M_ARM) &&                     \
             !defined(__aarch64__) && !defined(__MVS__)
-            // Assume `thread_local` is fully supported in all other C++11 compilers/platforms
-            #define MOODYCAMEL_CPP11_THREAD_LOCAL_SUPPORTED  // tentatively enabled for now; years ago several users report having
-                                                             // problems with it on
+   // Assume `thread_local` is fully supported in all other C++11 compilers/platforms
+            #define MOODYCAMEL_CPP11_THREAD_LOCAL_SUPPORTED  // tentatively enabled for now; years ago several users
+                                                             // report having problems with it on
         #endif
     #endif
 #endif
@@ -686,7 +686,7 @@ namespace moodycamel {
         };
 
         class ThreadExitNotifier {
-            public:
+        public:
             static void subscribe(ThreadExitListener* listener) {
                 auto& tlsInst = instance();
                 std::lock_guard<std::mutex> guard(mutex());
@@ -712,7 +712,7 @@ namespace moodycamel {
                 }
             }
 
-            private:
+        private:
             ThreadExitNotifier()
                 : tail(nullptr) {
             }
@@ -743,7 +743,7 @@ namespace moodycamel {
                 return mutex;
             }
 
-            private:
+        private:
             ThreadExitListener* tail;
         };
     #endif
@@ -838,12 +838,12 @@ namespace moodycamel {
         ProducerToken(ProducerToken const&) MOODYCAMEL_DELETE_FUNCTION;
         ProducerToken& operator=(ProducerToken const&) MOODYCAMEL_DELETE_FUNCTION;
 
-        private:
+    private:
         template <typename T, typename Traits>
         friend class ConcurrentQueue;
         friend class ConcurrentQueueTests;
 
-        protected:
+    protected:
         details::ConcurrentQueueProducerTypelessBase* producer;
     };
 
@@ -880,12 +880,12 @@ namespace moodycamel {
         ConsumerToken(ConsumerToken const&) MOODYCAMEL_DELETE_FUNCTION;
         ConsumerToken& operator=(ConsumerToken const&) MOODYCAMEL_DELETE_FUNCTION;
 
-        private:
+    private:
         template <typename T, typename Traits>
         friend class ConcurrentQueue;
         friend class ConcurrentQueueTests;
 
-        private:  // but shared with ConcurrentQueue
+    private:  // but shared with ConcurrentQueue
         std::uint32_t initialOffset;
         std::uint32_t lastKnownGlobalOffset;
         std::uint32_t itemsConsumedFromCurrent;
@@ -903,7 +903,7 @@ namespace moodycamel {
 
     template <typename T, typename Traits = ConcurrentQueueDefaultTraits>
     class ConcurrentQueue {
-        public:
+    public:
         typedef ::moodycamel::ProducerToken producer_token_t;
         typedef ::moodycamel::ConsumerToken consumer_token_t;
 
@@ -955,7 +955,7 @@ namespace moodycamel {
             INITIAL_IMPLICIT_PRODUCER_HASH_SIZE == 0 || INITIAL_IMPLICIT_PRODUCER_HASH_SIZE >= 1,
             "Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE must be at least 1 (or 0 to disable implicit enqueueing)");
 
-        public:
+    public:
         // Creates a queue with at least `capacity` element slots; note that the
         // actual number of elements that can be inserted without additional memory
         // allocation depends on the number of producers and the block size (e.g. if
@@ -1108,7 +1108,7 @@ namespace moodycamel {
             swap_internal(other);
         }
 
-        private:
+    private:
         ConcurrentQueue& swap_internal(ConcurrentQueue& other) {
             if (this == &other) {
                 return *this;
@@ -1136,7 +1136,7 @@ namespace moodycamel {
             return *this;
         }
 
-        public:
+    public:
         // Enqueues a single item (by copying it).
         // Allocates memory if required. Only fails if memory allocation fails (or implicit
         // production is disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE is 0,
@@ -1481,7 +1481,7 @@ namespace moodycamel {
         }
 
 
-        private:
+    private:
         friend struct ProducerToken;
         friend struct ConsumerToken;
         struct ExplicitProducer;
@@ -1658,7 +1658,7 @@ namespace moodycamel {
                 return freeListHead.load(std::memory_order_relaxed);
             }
 
-            private:
+        private:
             inline void add_knowing_refcount_is_zero(N* node) {
                 // Since the refcount is zero, and nobody can increase it once it's zero (except us, and we run
                 // only one copy of this method per node at a time, i.e. the single thread case), then we know
@@ -1683,7 +1683,7 @@ namespace moodycamel {
                 }
             }
 
-            private:
+        private:
             // Implemented like a stack, but where node order doesn't matter (nodes are inserted out of order under
             // contention)
             std::atomic<N*> freeListHead;
@@ -1824,17 +1824,17 @@ namespace moodycamel {
                        static_cast<size_t>(idx & static_cast<index_t>(BLOCK_SIZE - 1));
             }
 
-            private:
+        private:
             static_assert(std::alignment_of<T>::value <= sizeof(T),
                           "The queue does not support types with an alignment greater than their size at this time");
             MOODYCAMEL_ALIGNED_TYPE_LIKE(char[sizeof(T) * BLOCK_SIZE], T) elements;
 
-            public:
+        public:
             Block* next;
             std::atomic<size_t> elementsCompletelyDequeued;
             std::atomic<bool> emptyFlags[BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD ? BLOCK_SIZE : 1];
 
-            public:
+        public:
             std::atomic<std::uint32_t> freeListRefs;
             std::atomic<Block*> freeListNext;
             bool dynamicallyAllocated;  // Perhaps a better name for this would be 'isNotPartOfInitialBlockPool'
@@ -1848,10 +1848,10 @@ namespace moodycamel {
 
 
 #ifdef MCDBGQ_TRACKMEM
-        public:
+    public:
         struct MemStats;
 
-        private:
+    private:
 #endif
 
         ///////////////////////////
@@ -1904,7 +1904,7 @@ namespace moodycamel {
                 return tailIndex.load(std::memory_order_relaxed);
             }
 
-            protected:
+        protected:
             std::atomic<index_t> tailIndex;  // Where to enqueue to next
             std::atomic<index_t> headIndex;  // Where to dequeue from next
 
@@ -1913,11 +1913,11 @@ namespace moodycamel {
 
             Block* tailBlock;
 
-            public:
+        public:
             bool isExplicit;
             ConcurrentQueue* parent;
 
-            protected:
+        protected:
 #ifdef MCDBGQ_TRACKMEM
             friend struct MemStats;
 #endif
@@ -2553,7 +2553,7 @@ namespace moodycamel {
                 return 0;
             }
 
-            private:
+        private:
             struct BlockIndexEntry {
                 index_t base;
                 Block* block;
@@ -2608,7 +2608,7 @@ namespace moodycamel {
                 return true;
             }
 
-            private:
+        private:
             std::atomic<BlockIndexHeader*> blockIndex;
 
             // To be used by producer only -- consumer must use the ones in referenced by blockIndex
@@ -2619,10 +2619,10 @@ namespace moodycamel {
             void* pr_blockIndexRaw;
 
 #ifdef MOODYCAMEL_QUEUE_INTERNAL_DEBUG
-            public:
+        public:
             ExplicitProducer* nextExplicitProducer;
 
-            private:
+        private:
 #endif
 
 #ifdef MCDBGQ_TRACKMEM
@@ -3124,7 +3124,7 @@ namespace moodycamel {
                 return 0;
             }
 
-            private:
+        private:
             // The block size must be > 1, so any number with the low bit set is an invalid block base index
             static const index_t INVALID_BLOCK_BASE = 1;
 
@@ -3255,22 +3255,22 @@ namespace moodycamel {
                 return true;
             }
 
-            private:
+        private:
             size_t nextBlockIndexCapacity;
             std::atomic<BlockIndexHeader*> blockIndex;
 
 #ifdef MOODYCAMEL_CPP11_THREAD_LOCAL_SUPPORTED
-            public:
+        public:
             details::ThreadExitListener threadExitListener;
 
-            private:
+        private:
 #endif
 
 #ifdef MOODYCAMEL_QUEUE_INTERNAL_DEBUG
-            public:
+        public:
             ImplicitProducer* nextImplicitProducer;
 
-            private:
+        private:
 #endif
 
 #ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
@@ -3358,7 +3358,7 @@ namespace moodycamel {
 
 
 #ifdef MCDBGQ_TRACKMEM
-        public:
+    public:
         struct MemStats {
             size_t allocatedBlocks;
             size_t usedBlocks;
@@ -3375,7 +3375,7 @@ namespace moodycamel {
 
             friend class ConcurrentQueue;
 
-            private:
+        private:
             static MemStats getFor(ConcurrentQueue* q) {
                 MemStats stats = {0};
 
@@ -3395,11 +3395,11 @@ namespace moodycamel {
                     stats.explicitProducers += implicit ? 0 : 1;
 
                     if (implicit) {
-                        auto prod               = static_cast<ImplicitProducer*>(ptr);
+                        auto prod              = static_cast<ImplicitProducer*>(ptr);
                         stats.queueClassBytes += sizeof(ImplicitProducer);
-                        auto head                = prod->headIndex.load(std::memory_order_relaxed);
-                        auto tail                = prod->tailIndex.load(std::memory_order_relaxed);
-                        auto hash                = prod->blockIndex.load(std::memory_order_relaxed);
+                        auto head              = prod->headIndex.load(std::memory_order_relaxed);
+                        auto tail              = prod->tailIndex.load(std::memory_order_relaxed);
+                        auto hash              = prod->blockIndex.load(std::memory_order_relaxed);
                         if (hash != nullptr) {
                             for (size_t i = 0; i != hash->capacity; ++i) {
                                 if (hash->index[i]->key.load(std::memory_order_relaxed) !=
@@ -3422,10 +3422,10 @@ namespace moodycamel {
                             ++stats.usedBlocks;
                         }
                     } else {
-                        auto prod               = static_cast<ExplicitProducer*>(ptr);
+                        auto prod              = static_cast<ExplicitProducer*>(ptr);
                         stats.queueClassBytes += sizeof(ExplicitProducer);
-                        auto tailBlock           = prod->tailBlock;
-                        bool wasNonEmpty         = false;
+                        auto tailBlock         = prod->tailBlock;
+                        bool wasNonEmpty       = false;
                         if (tailBlock != nullptr) {
                             auto block = tailBlock;
                             do {
@@ -3468,7 +3468,7 @@ namespace moodycamel {
             return MemStats::getFor(this);
         }
 
-        private:
+    private:
         friend struct MemStats;
 #endif
 
@@ -3914,7 +3914,7 @@ namespace moodycamel {
             aligned_free<U>(p);
         }
 
-        private:
+    private:
         std::atomic<ProducerBase*> producerListTail;
         std::atomic<std::uint32_t> producerCount;
 

@@ -8,7 +8,7 @@
 namespace demiplane::db {
     template <IsQuery Query>
     class CteExpr : public Expression<CteExpr<Query>> {
-        public:
+    public:
         CteExpr(std::string name, Query q, const bool r = false)
             : cte_name_(std::move(name)),
               query_(std::move(q)),
@@ -29,7 +29,7 @@ namespace demiplane::db {
             return recursive_;
         }
 
-        private:
+    private:
         std::string cte_name_;
         Query query_;
         bool recursive_{false};

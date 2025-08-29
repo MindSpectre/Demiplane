@@ -11,7 +11,7 @@ namespace demiplane::scroll {
     template <gears::HasStaticNameMember Service>
     class ServiceEntry final
         : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
-        public:
+    public:
         using EntryBase::EntryBase;
 
         [[nodiscard]] std::string to_string() const override {

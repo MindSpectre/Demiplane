@@ -9,7 +9,7 @@ namespace demiplane::db {
     template <typename Derived, typename PreGroupQuery>
     class GroupByExprBase : public Expression<Derived>,
                             public QueryOperations<Derived, AllowHaving, AllowOrderBy, AllowLimit> {
-        public:
+    public:
         constexpr explicit GroupByExprBase(PreGroupQuery q)
             : query_(std::move(q)) {
         }
@@ -19,7 +19,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).query_;
         }
 
-        protected:
+    protected:
         PreGroupQuery query_;
     };
 
@@ -28,7 +28,7 @@ namespace demiplane::db {
     class GroupByColumnExpr : public GroupByExprBase<GroupByColumnExpr<PreGroupQuery, GroupColumns...>, PreGroupQuery> {
         using Base = GroupByExprBase<GroupByColumnExpr, PreGroupQuery>;
 
-        public:
+    public:
         constexpr explicit GroupByColumnExpr(PreGroupQuery q, GroupColumns... cols)
             : Base(std::move(q)),
               columns_(cols...) {
@@ -39,7 +39,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).columns_;
         }
 
-        private:
+    private:
         std::tuple<GroupColumns...> columns_;
     };
 
@@ -48,7 +48,7 @@ namespace demiplane::db {
     class GroupByQueryExpr : public GroupByExprBase<GroupByQueryExpr<PreGroupQuery, GroupingCriteria>, PreGroupQuery> {
         using Base = GroupByExprBase<GroupByQueryExpr, PreGroupQuery>;
 
-        public:
+    public:
         constexpr GroupByQueryExpr(PreGroupQuery q, GroupingCriteria&& criteria)
             : Base(std::move(q)),
               grouping_criteria_(std::forward<GroupingCriteria>(criteria)) {
@@ -59,7 +59,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).grouping_criteria_;
         }
 
-        private:
+    private:
         GroupingCriteria grouping_criteria_;
     };
 }  // namespace demiplane::db

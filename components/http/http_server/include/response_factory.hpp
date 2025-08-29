@@ -9,7 +9,7 @@
 namespace demiplane::http {
 
     class ResponseFactory {
-        public:
+    public:
         static Response
         ok(std::string body = "", std::string_view content_type = "text/plain", std::uint32_t version = 11);
         static Response json(std::string body, std::uint32_t version = 11);

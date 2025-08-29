@@ -7,7 +7,7 @@
 namespace demiplane::monitor {
     // TODO: template supposed to be json
     class Stats {
-        public:
+    public:
         explicit Stats(std::string name) {
             instance_   = std::move(name);
             time_point_ = std::chrono::system_clock::now();
@@ -27,13 +27,13 @@ namespace demiplane::monitor {
             time_point_ = time_point;
         }
 
-        protected:
+    protected:
         std::string instance_;
         std::chrono::time_point<std::chrono::system_clock> time_point_;
     };
 
     class JsonStats final : public Stats {
-        public:
+    public:
         ~JsonStats() override;
         explicit JsonStats(std::string name)
             : Stats(std::move(name)) {
@@ -52,7 +52,7 @@ namespace demiplane::monitor {
             }
         }
 
-        private:
+    private:
         Json::Value data;
     };
 }  // namespace demiplane::monitor

@@ -5,7 +5,7 @@
 
 namespace demiplane::db {
     class SqlDialect {
-        public:
+    public:
         virtual ~SqlDialect() = default;
 
         // Identifier quoting

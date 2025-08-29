@@ -15,7 +15,7 @@ namespace demiplane::http {
     concept IsController = std::is_base_of_v<HttpController, Controller>;
 
     class HttpController : public std::enable_shared_from_this<HttpController> {
-        public:
+    public:
         NEXUS_REGISTER(0x4E711AF1, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::HttpController
 
         virtual ~HttpController()       = default;
@@ -29,7 +29,7 @@ namespace demiplane::http {
         void transfer_routes_to(RouteRegistry& target_registry);
         size_t route_count() const;
 
-        protected:
+    protected:
         // Member function binding - RequestContext by value
         template <IsController Controller>
         void Get(std::string path, Response (Controller::*method)(RequestContext)) {
@@ -142,7 +142,7 @@ namespace demiplane::http {
                 boost::beast::http::verb::delete_, std::move(path), wrap_handler(std::forward<F>(handler)));
         }
 
-        private:
+    private:
         RouteRegistry registry_;
 
         // Binding helpers for member functions

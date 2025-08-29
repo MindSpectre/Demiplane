@@ -7,7 +7,7 @@
 namespace demiplane::scroll {
     class DetailedEntry final
         : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
-        public:
+    public:
         using EntryBase::EntryBase;
 
         [[nodiscard]] std::string to_string() const override;

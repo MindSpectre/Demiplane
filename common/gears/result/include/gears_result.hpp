@@ -9,7 +9,7 @@
 namespace demiplane::gears {
     template <typename T>
     class Result {
-        public:
+    public:
         /* ───── state ────────────────────────────────────────────── */
         [[nodiscard]] bool has_value() const noexcept {
             return value_.has_value();
@@ -84,14 +84,14 @@ namespace demiplane::gears {
             }
         }
 
-        private:
+    private:
         std::optional<T> value_;
         std::exception_ptr error_;
     };
 
     template <>
     class Result<void> {
-        public:
+    public:
         [[nodiscard]] bool has_value() const noexcept {
             return !error_;
         }
@@ -125,7 +125,7 @@ namespace demiplane::gears {
             }
         }
 
-        private:
+    private:
         std::exception_ptr error_;
     };
 }  // namespace demiplane::gears

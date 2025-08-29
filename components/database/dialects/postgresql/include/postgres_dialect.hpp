@@ -6,7 +6,7 @@
 
 namespace demiplane::db {
     class PostgresDialect final : public SqlDialect {
-        public:
+    public:
         [[nodiscard]] std::string quote_identifier(std::string_view name) const override;
 
         [[nodiscard]] std::string placeholder(std::size_t index) const override;
@@ -23,7 +23,7 @@ namespace demiplane::db {
 
         [[nodiscard]] std::string format_value(const FieldValue& value) override;
 
-        private:
+    private:
         // Helper methods for formatting
         static std::string escape_string(const std::string& str);
 

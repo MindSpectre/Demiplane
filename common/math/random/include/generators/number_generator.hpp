@@ -2,7 +2,7 @@
 #include "../base_random_generator.hpp"
 namespace demiplane::math::random {
     class NumberGenerator final : BaseRandomGenerator {
-        public:
+    public:
         NumberGenerator() = default;
         explicit NumberGenerator(const std::mt19937& r_generator)
             : BaseRandomGenerator(r_generator) {

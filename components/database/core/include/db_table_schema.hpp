@@ -12,7 +12,7 @@
 namespace demiplane::db {
     // Enhanced TableSchema with type-safe column access
     class TableSchema {
-        public:
+    public:
         explicit TableSchema(std::string table_name);
         // Enhanced builder pattern with type information
         template <typename T>
@@ -49,7 +49,7 @@ namespace demiplane::db {
 
         [[nodiscard]] static std::shared_ptr<TableSchema> make_ptr(std::string name);
 
-        private:
+    private:
         std::string table_name_;
         std::vector<std::unique_ptr<FieldSchema>> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;

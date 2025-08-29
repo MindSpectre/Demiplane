@@ -7,7 +7,7 @@
 
 namespace demiplane::crypto {
     class PBKDF2Hash final : HashInterface {
-        public:
+    public:
         PBKDF2Hash()           = default;
         ~PBKDF2Hash() override = default;
 

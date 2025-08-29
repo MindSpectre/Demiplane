@@ -65,7 +65,7 @@ namespace demiplane::scroll::detail {
 
     template <class... Metas>
     class EntryBase : public Metas... {
-        public:
+    public:
         EntryBase(const LogLevel lvl,
                   const std::string_view msg,
                   Metas... metas)  // perfect-forward meta-packs
@@ -86,7 +86,7 @@ namespace demiplane::scroll::detail {
         EntryBase()                                         = default;
         [[nodiscard]] virtual std::string to_string() const = 0;
 
-        protected:
+    protected:
         static std::string& get_tl_buffer() {
             thread_local std::string buffer;
             return buffer;

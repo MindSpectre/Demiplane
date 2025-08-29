@@ -8,7 +8,7 @@
 namespace demiplane::db {
     template <IsCondition Condition>
     class UpdateWhereExpr : public Expression<UpdateWhereExpr<Condition>> {
-        public:
+    public:
         UpdateWhereExpr(UpdateExpr u, Condition c)
             : update_(std::move(u)),
               condition_(std::move(c)) {
@@ -25,7 +25,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).condition_;
         }
 
-        private:
+    private:
         UpdateExpr update_;
         Condition condition_;
     };

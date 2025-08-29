@@ -5,10 +5,10 @@
 namespace demiplane::multithread {
     template <typename T>
     class ThreadSafeResource {
-        public:
+    public:
         // Read-only proxy (shared lock)
         class ReadProxy {
-            public:
+        public:
             ReadProxy(std::shared_mutex& mutex, const T& resource)
                 : lock_(mutex),
                   resource_(resource) {
@@ -21,14 +21,14 @@ namespace demiplane::multithread {
                 return &resource_;
             }
 
-            private:
+        private:
             std::shared_lock<std::shared_mutex> lock_;
             const T& resource_;
         };
 
         // Write proxy (exclusive lock)
         class WriteProxy {
-            public:
+        public:
             WriteProxy(std::shared_mutex& mutex, T& resource)
                 : lock_(mutex),
                   resource_(resource) {
@@ -48,7 +48,7 @@ namespace demiplane::multithread {
                 return &resource_;
             }
 
-            private:
+        private:
             std::unique_lock<std::shared_mutex> lock_;
             T& resource_;
         };
@@ -94,7 +94,7 @@ namespace demiplane::multithread {
         }
 
 
-        private:
+    private:
         mutable std::shared_mutex mutex_;  // Allow reader-writer locks
         T resource_;
     };

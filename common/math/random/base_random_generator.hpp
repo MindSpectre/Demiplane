@@ -4,7 +4,7 @@
 
 namespace demiplane::math::random {
     class BaseRandomGenerator {
-        public:
+    public:
         BaseRandomGenerator()
             : generator_(std::random_device{}()) {
         }
@@ -13,7 +13,7 @@ namespace demiplane::math::random {
         }
         virtual ~BaseRandomGenerator() = default;
 
-        protected:
+    protected:
         mutable std::mt19937 generator_;
     };
 }  // namespace demiplane::math::random

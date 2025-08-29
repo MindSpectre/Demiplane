@@ -1,23 +1,22 @@
 // UPDATE query expression tests
 // Comprehensive tests for update operations
 
-#include <gtest/gtest.h>
+#include <demiplane/scroll>
 
-#include "query_expressions.hpp"
 #include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
+#include "query_expressions.hpp"
 
-#include <demiplane/scroll>
+#include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
 
 // Test fixture for UPDATE operations
-class UpdateQueryTest : public ::testing::Test,
-                        public demiplane::scroll::LoggerProvider {
+class UpdateQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
@@ -29,10 +28,10 @@ protected:
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<std::string>("name", "VARCHAR(255)")
-                    .add_field<int>("age", "INTEGER")
-                    .add_field<bool>("active", "BOOLEAN");
+            .primary_key("id")
+            .add_field<std::string>("name", "VARCHAR(255)")
+            .add_field<int>("age", "INTEGER")
+            .add_field<bool>("active", "BOOLEAN");
 
         // Create column references
         user_id     = users_schema->column<int>("id");
@@ -56,9 +55,7 @@ protected:
 
 // Test basic UPDATE expression
 TEST_F(UpdateQueryTest, BasicUpdateExpression) {
-    auto query = update(users_schema)
-                 .set("active", false)
-                 .where(user_age < lit(18));
+    auto query  = update(users_schema).set("active", false).where(user_age < lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -66,9 +63,7 @@ TEST_F(UpdateQueryTest, BasicUpdateExpression) {
 
 // Test UPDATE with table name string
 TEST_F(UpdateQueryTest, UpdateWithTableNameExpression) {
-    auto query = update("users")
-                 .set("active", true)
-                 .where(user_id > lit(0));
+    auto query  = update("users").set("active", true).where(user_id > lit(0));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -76,10 +71,7 @@ TEST_F(UpdateQueryTest, UpdateWithTableNameExpression) {
 
 // Test UPDATE with multiple set operations
 TEST_F(UpdateQueryTest, UpdateMultipleSetExpression) {
-    auto query = update(users_schema)
-                 .set("active", false)
-                 .set("age", 21)
-                 .where(user_age < lit(18));
+    auto query  = update(users_schema).set("active", false).set("age", 21).where(user_age < lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -88,8 +80,11 @@ TEST_F(UpdateQueryTest, UpdateMultipleSetExpression) {
 // Test UPDATE with initializer list set
 TEST_F(UpdateQueryTest, UpdateInitializerListSetExpression) {
     auto query = update(users_schema)
-                 .set({{"active", false}, {"age", 21}})
-                 .where(user_age < lit(18));
+                     .set({
+                         {"active", false},
+                         {"age",    21   }
+    })
+                     .where(user_age < lit(18));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -107,7 +102,7 @@ TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
 TEST_F(UpdateQueryTest, UpdateWhereExpression) {
     const auto update_query = update(users_schema).set("active", false);
     auto query              = UpdateWhereExpr{update_query, user_age < lit(18)};
-    auto result       = compiler->compile(query);
+    auto result             = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
 }
@@ -128,10 +123,10 @@ TEST_F(UpdateQueryTest, UpdateMethodChainingExpression) {
 // Test UPDATE with various field value types
 TEST_F(UpdateQueryTest, UpdateVariousValueTypesExpression) {
     auto query = update(users_schema)
-                 .set("name", std::string("New Name"))
-                 .set("age", 30)
-                 .set("active", true)
-                 .where(user_id == lit(1));
+                     .set("name", std::string("New Name"))
+                     .set("age", 30)
+                     .set("active", true)
+                     .where(user_id == lit(1));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

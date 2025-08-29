@@ -6,7 +6,7 @@
 namespace demiplane::chrono {
     // ─────────────── Base clock (parse & now) ───────────────
     class Clock {
-        public:
+    public:
         using sys_tp = std::chrono::time_point<std::chrono::system_clock>;
 
         [[nodiscard]] static sys_tp now() noexcept {
@@ -40,7 +40,7 @@ namespace demiplane::chrono {
 
     template <ClockType CT>
     class SpecClock : public Clock {
-        public:
+    public:
         // --- PUBLIC API -------------------------------------------------
         [[nodiscard]] static std::string current_time(const std::string_view fmt) {
             return format_time(now(), fmt);

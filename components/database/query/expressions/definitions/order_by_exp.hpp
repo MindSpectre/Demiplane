@@ -7,7 +7,7 @@ namespace demiplane::db {
     enum class OrderDirection { ASC, DESC };
 
     class OrderBy : public ColumnHolder {
-        public:
+    public:
         explicit OrderBy(DynamicColumn col, const OrderDirection dir = OrderDirection::ASC)
             : ColumnHolder{std::move(col)},
               direction_(dir) {
@@ -18,7 +18,7 @@ namespace demiplane::db {
             return direction_;
         }
 
-        private:
+    private:
         OrderDirection direction_;
     };
 
@@ -43,7 +43,7 @@ namespace demiplane::db {
     template <IsQuery Query, IsOrderBy... Orders>
     class OrderByExpr : public Expression<OrderByExpr<Query, Orders...>>,
                         public QueryOperations<OrderByExpr<Query, Orders...>, AllowLimit> {
-        public:
+    public:
         constexpr explicit OrderByExpr(Query q, Orders... o)
             : query_(std::move(q)),
               orders_(o...) {
@@ -59,7 +59,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).orders_;
         }
 
-        private:
+    private:
         Query query_;
         std::tuple<Orders...> orders_;
     };

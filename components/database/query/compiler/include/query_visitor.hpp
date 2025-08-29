@@ -6,7 +6,7 @@
 // NOLINTBEGIN(bugprone-use-after-move)
 namespace demiplane::db {
     class QueryVisitor {
-        public:
+    public:
         virtual ~QueryVisitor() = default;
 
         // Column and literals - now with perfect forwarding
@@ -529,7 +529,7 @@ namespace demiplane::db {
             visit_cte_end();
         }
 
-        protected:
+    protected:
         // Virtual interface methods - now with move support for appropriate parameters
         virtual void visit_table_column_impl(const FieldSchema* schema,
                                              const std::shared_ptr<std::string>& table,
@@ -654,7 +654,7 @@ namespace demiplane::db {
         // Column separator
         virtual void visit_column_separator() = 0;
 
-        private:
+    private:
         // Helper to visit tuple elements with perfect forwarding
         template <typename Tuple, std::size_t... Is>
         void visit_tuple_elements(Tuple&& t, std::index_sequence<Is...>) {

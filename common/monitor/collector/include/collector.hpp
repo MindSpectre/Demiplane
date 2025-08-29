@@ -10,7 +10,7 @@
 namespace demiplane::monitor {
     template <typename T>
     class Collector {
-        public:
+    public:
         void observe(T& pobject) {
             object = pobject;
         }
@@ -27,7 +27,7 @@ namespace demiplane::monitor {
             timeout_ = timeout;
         }
 
-        private:
+    private:
         void collection() {
             while (true) {
                 std::unique_lock lock(mutex_);

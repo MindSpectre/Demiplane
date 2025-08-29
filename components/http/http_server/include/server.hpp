@@ -15,7 +15,7 @@
 namespace demiplane::http {
 
     class Server {
-        public:
+    public:
         NEXUS_REGISTER(0xA0702D11, nexus::Immortal);  // CRC32/ISO-HDLC of demiplane::http::Server
 
         explicit Server(std::size_t threads = 1);
@@ -48,7 +48,7 @@ namespace demiplane::http {
         void run();
         void stop();
 
-        private:
+    private:
         mutable boost::asio::io_context ioc_;
         std::size_t thread_count_;
         RouteRegistry registry_;  // Single registry for all routes

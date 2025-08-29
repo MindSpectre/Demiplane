@@ -8,7 +8,7 @@
 namespace demiplane::db {
     template <IsCondition Condition>
     class DeleteWhereExpr : public Expression<DeleteWhereExpr<Condition>> {
-        public:
+    public:
         DeleteWhereExpr(DeleteExpr d, Condition c)
             : del_(std::move(d)),
               condition_(std::move(c)) {
@@ -24,7 +24,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).condition_;
         }
 
-        private:
+    private:
         DeleteExpr del_;
         Condition condition_;
     };

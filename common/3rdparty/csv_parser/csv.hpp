@@ -92,7 +92,7 @@ namespace rapidcsv {
      *            is not supported by the Converter class.
      */
     class no_converter final : public std::exception {
-        public:
+    public:
         /**
          * @brief   Provides details about the exception
          * @returns an explanatory string
@@ -109,7 +109,7 @@ namespace rapidcsv {
      */
     template <typename T>
     class Converter {
-        public:
+    public:
         /**
          * @brief   Constructor
          * @param   pConverterParams      specifies how conversion of non-numerical values to
@@ -227,7 +227,7 @@ namespace rapidcsv {
             }
         }
 
-        private:
+    private:
         const ConverterParams& mConverterParams;
     };
 
@@ -396,7 +396,7 @@ namespace rapidcsv {
      * @brief     Class representing a CSV document.
      */
     class Document {
-        public:
+    public:
         /**
          * @brief   Constructor
          * @param   pPath                 specifies the path of an existing CSV-file to populate the Document
@@ -1293,7 +1293,7 @@ namespace rapidcsv {
             return row_names;
         }
 
-        private:
+    private:
         void ReadCsv() {
             std::ifstream stream;
             stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -1625,7 +1625,7 @@ namespace rapidcsv {
             }
         }
 
-        private:
+    private:
         std::string mPath;
         LabelParams mLabelParams;
         SeparatorParams mSeparatorParams;

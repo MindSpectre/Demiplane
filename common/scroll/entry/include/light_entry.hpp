@@ -8,7 +8,7 @@
 namespace demiplane::scroll {
     class LightEntry final : public detail::EntryBase<detail::MetaNone>  // only level+msg
     {
-        public:
+    public:
         using EntryBase::EntryBase;
         LightEntry(const LogLevel lvl, const std::string_view msg)
             : EntryBase(lvl, msg, MetaNone{}) {

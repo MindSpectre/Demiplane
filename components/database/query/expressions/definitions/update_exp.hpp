@@ -6,7 +6,7 @@
 
 namespace demiplane::db {
     class UpdateExpr : public Expression<UpdateExpr> {
-        public:
+    public:
         explicit UpdateExpr(TableSchemaPtr t)
             : table_(std::move(t)) {
         }
@@ -38,7 +38,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).assignments_;
         }
 
-        private:
+    private:
         TableSchemaPtr table_{nullptr};
         std::vector<std::pair<std::string, FieldValue>> assignments_;
     };

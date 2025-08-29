@@ -7,7 +7,7 @@
 namespace demiplane::db {
     template <IsQuery Query>
     class Subquery : public AliasableExpression<Subquery<Query>> {
-        public:
+    public:
         constexpr explicit Subquery(Query q)
             : query_(std::move(q)) {
         }
@@ -17,7 +17,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).query_;
         }
 
-        private:
+    private:
         Query query_;
     };
 

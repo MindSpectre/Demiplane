@@ -16,7 +16,7 @@ namespace demiplane::scroll {
 
     template <detail::EntryConcept EntryType>
     class ConsoleLogger final : public Logger {
-        public:
+    public:
         NEXUS_REGISTER(0xDCBA748C, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLogger
 
         explicit ConsoleLogger(const ConsoleLoggerConfig cfg)
@@ -44,7 +44,7 @@ namespace demiplane::scroll {
             return config_;
         }
 
-        protected:
+    protected:
         mutable std::mutex mutex_;
         ConsoleLoggerConfig config_;
     };

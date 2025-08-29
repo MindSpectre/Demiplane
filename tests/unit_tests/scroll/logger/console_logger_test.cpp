@@ -1,9 +1,11 @@
 #include <demiplane/scroll>
+
 #include <gtest/gtest.h>
 
 class ConsoleLoggerTest : public ::testing::Test {
 protected:
-    void TearDown() override {}
+    void TearDown() override {
+    }
 
     void SetUp() override {
         demiplane::scroll::ConsoleLoggerConfig cfg{demiplane::scroll::DBG, false};
@@ -100,11 +102,11 @@ TEST_F(ConsoleLoggerTest, AllLogLevels) {
 
     // Test each log level
     std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {
-        {demiplane::scroll::DBG, "DEBUG"},
-        {demiplane::scroll::INF, "INFO"},
+        {demiplane::scroll::DBG, "DEBUG"  },
+        {demiplane::scroll::INF, "INFO"   },
         {demiplane::scroll::WRN, "WARNING"},
-        {demiplane::scroll::ERR, "ERROR"},
-        {demiplane::scroll::FAT, "FATAL"}
+        {demiplane::scroll::ERR, "ERROR"  },
+        {demiplane::scroll::FAT, "FATAL"  }
     };
 
     for (const auto& [level, levelName] : levels) {

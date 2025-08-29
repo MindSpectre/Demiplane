@@ -10,7 +10,7 @@
 
 namespace demiplane::scroll {
     class LoggerProvider {
-        public:
+    public:
         virtual ~LoggerProvider() = default;
 
         LoggerProvider() = default;
@@ -31,12 +31,12 @@ namespace demiplane::scroll {
             logger_ = std::move(logger);
         }
 
-        private:
+    private:
         std::shared_ptr<Logger> logger_;
     };
 
     class ComponentLoggerManager {
-        public:
+    public:
         static constexpr Logger* get() {
             // Lazy initialization on first use
             if (!logger_) {
@@ -52,12 +52,12 @@ namespace demiplane::scroll {
             logger_ = logger;
         }
 
-        private:
+    private:
         static inline std::shared_ptr<Logger> logger_ = nullptr;
     };
 
     class TestLoggerProvider : public LoggerProvider {
-        public:
+    public:
         explicit TestLoggerProvider()
             : LoggerProvider(
                   std::make_shared<ConsoleLogger<DetailedEntry>>(ConsoleLoggerConfig{.flush_each_entry = true})) {

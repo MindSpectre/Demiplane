@@ -10,7 +10,7 @@ namespace demiplane::db {
     class FromTableExpr
         : public AliasableExpression<FromTableExpr<Select>>,
           public QueryOperations<FromTableExpr<Select>, AllowGroupBy, AllowOrderBy, AllowLimit, AllowJoin, AllowWhere> {
-        public:
+    public:
         constexpr FromTableExpr(Select select_q, TableSchemaPtr table)
             : select_(std::move(select_q)),
               table_(std::move(table)) {
@@ -25,7 +25,7 @@ namespace demiplane::db {
             return table_;
         }
 
-        private:
+    private:
         Select select_;
         TableSchemaPtr table_;
     };
@@ -39,7 +39,7 @@ namespace demiplane::db {
                                                AllowLimit,
                                                AllowJoin,
                                                AllowWhere> {
-        public:
+    public:
         constexpr FromCteExpr(Select select_q, CteQuery&& expr)
             : select_(std::move(select_q)),
               query_(std::forward<CteQuery>(expr)) {
@@ -55,7 +55,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).query_;
         }
 
-        private:
+    private:
         Select select_;
         CteQuery query_;
     };

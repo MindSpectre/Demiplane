@@ -1,9 +1,9 @@
+#include <demiplane/chrono>
 #include <functional>
 #include <random>
 #include <thread>
-#include <gtest/gtest.h>
 
-#include <demiplane/chrono>
+#include <gtest/gtest.h>
 
 
 using namespace demiplane::chrono;
@@ -21,7 +21,6 @@ protected:
     void TearDown() override {
         // Clean up after each test if needed
     }
-
 };
 
 // Test basic functionality - start, add flag, stop
@@ -100,8 +99,7 @@ TEST_F(StopwatchTest, AverageDelta) {
 // Test the new measure function
 TEST_F(StopwatchTest, MeasureLambda) {
     // Measure a lambda that sleeps for 50ms
-    const auto duration = stopwatch.measure([] { sleep_for(50ms);
-    });
+    const auto duration = stopwatch.measure([] { sleep_for(50ms); });
 
     // Check that the duration is approximately 50ms
     EXPECT_GE(duration.count(), 45);
@@ -144,8 +142,7 @@ TEST_F(StopwatchTest, MeasureFunctionReference) {
 // Test measure with multiple calls
 TEST_F(StopwatchTest, MeasureMultipleCalls) {
     // Measure multiple different durations
-    const auto d1 = stopwatch.measure([] { sleep_for(10ms);
-    });
+    const auto d1 = stopwatch.measure([] { sleep_for(10ms); });
     const auto d2 = stopwatch.measure([] { sleep_for(20ms); });
     const auto d3 = stopwatch.measure([] { sleep_for(30ms); });
 

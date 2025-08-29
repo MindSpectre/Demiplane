@@ -10,7 +10,7 @@
 
 namespace demiplane::scroll {
     class Logger {
-        public:
+    public:
         NEXUS_REGISTER(0x8F8CA6F5, nexus::Immortal);  // CRC32/ISO-HDLC of demiplane::scroll::Logger
 
         virtual ~Logger() = default;

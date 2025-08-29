@@ -8,7 +8,7 @@
 
 namespace demiplane::db {
     class Record final {
-        public:
+    public:
         explicit Record(TableSchemaPtr schema);
 
         // Copy and move constructors are automatically generated and safe
@@ -43,7 +43,7 @@ namespace demiplane::db {
 
         [[nodiscard]] std::vector<Field>::const_iterator end() const;
 
-        private:
+    private:
         TableSchemaPtr schema_;
         std::vector<Field> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;

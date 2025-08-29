@@ -14,7 +14,7 @@
 namespace demiplane::http {
 
     class RequestContext {
-        public:
+    public:
         explicit RequestContext(Request req);
 
         // Path parameter access with type safety
@@ -77,7 +77,7 @@ namespace demiplane::http {
         void set_path_params(std::unordered_map<std::string, std::string> params);
         void set_query_params(std::unordered_map<std::string, std::string> params);
 
-        private:
+    private:
         Request request_;
 
         // Cached parsed data

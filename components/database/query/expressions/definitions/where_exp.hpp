@@ -8,7 +8,7 @@ namespace demiplane::db {
     template <IsQuery Query, IsCondition Condition>
     class WhereExpr : public Expression<WhereExpr<Query, Condition>>,
                       public QueryOperations<WhereExpr<Query, Condition>, AllowGroupBy, AllowOrderBy, AllowLimit> {
-        public:
+    public:
         constexpr WhereExpr(Query q, Condition c)
             : query_(std::move(q)),
               condition_(std::move(c)) {
@@ -24,7 +24,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).condition_;
         }
 
-        private:
+    private:
         Query query_;
         Condition condition_;
     };

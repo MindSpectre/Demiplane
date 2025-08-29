@@ -17,7 +17,7 @@
 
 namespace demiplane::multithread {
     class ThreadPool : gears::Immutable {
-        public:
+    public:
         using TaskPriority = uint32_t;
 
         explicit ThreadPool(const ThreadPoolConfig& config) {
@@ -82,7 +82,7 @@ namespace demiplane::multithread {
             return config_.cleanup_interval;
         }
 
-        private:
+    private:
         struct safe_thread {
             std::atomic<bool> valid{true};
             std::jthread thread;

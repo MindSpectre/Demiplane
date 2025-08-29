@@ -17,7 +17,7 @@ namespace demiplane::db {
     // Base class with common functionality
     template <typename Derived, IsWhenClause... WhenClauses>
     class CaseExprBase : public AliasableExpression<Derived> {
-        public:
+    public:
         constexpr explicit CaseExprBase(std::tuple<WhenClauses...> clauses)
             : when_clauses_(std::move(clauses)) {
         }
@@ -37,7 +37,7 @@ namespace demiplane::db {
                 NewWhenClause(std::forward<ConditionExpr>(condition), std::forward<ValueExpr>(value)));
         }
 
-        protected:
+    protected:
         std::tuple<WhenClauses...> when_clauses_;
     };
 
@@ -46,7 +46,7 @@ namespace demiplane::db {
     class CaseExpr : public CaseExprBase<CaseExpr<WhenClauses...>, WhenClauses...> {
         using Base = CaseExprBase<CaseExpr, WhenClauses...>;
 
-        public:
+    public:
         using Base::Base;  // Inherit constructors
 
         template <typename ElseExpr>
@@ -68,7 +68,7 @@ namespace demiplane::db {
     class CaseExprWithElse : public CaseExprBase<CaseExprWithElse<ElseExpr, WhenClauses...>, WhenClauses...> {
         using Base = CaseExprBase<CaseExprWithElse, WhenClauses...>;
 
-        public:
+    public:
         constexpr CaseExprWithElse(const std::tuple<WhenClauses...>& when_clauses, ElseExpr else_expr)
             : Base(when_clauses),
               else_clause_(std::move(else_expr)) {
@@ -86,7 +86,7 @@ namespace demiplane::db {
                 else_clause_);
         }
 
-        private:
+    private:
         ElseExpr else_clause_;
     };
 

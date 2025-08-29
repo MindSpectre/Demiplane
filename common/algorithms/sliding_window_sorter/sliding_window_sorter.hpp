@@ -32,12 +32,12 @@ namespace demiplane::algorithms {
 
     template <typename T>
     class SlidingWindowSorter {
-        public:
+    public:
         using value_type        = T;
         using comparator_type   = std::function<bool(const T&, const T&)>;
         using consumer_function = std::function<void(const std::vector<T>&)>;
 
-        private:
+    private:
         SlidingWindowConfig<T> config_;
         std::vector<T> sorted_window_;
         std::vector<T> new_entries_;
@@ -49,7 +49,7 @@ namespace demiplane::algorithms {
         std::size_t merge_operations_ = 0;
         std::size_t sort_operations_  = 0;
 
-        public:
+    public:
         explicit SlidingWindowSorter(SlidingWindowConfig<T> config, consumer_function consumer)
             : config_(std::move(config)),
               consumer_(std::move(consumer)) {
@@ -117,7 +117,7 @@ namespace demiplane::algorithms {
             merge_buffer_.reserve(config_.window_size + config_.batch_size);
         }
 
-        private:
+    private:
         [[nodiscard]] bool should_process() const {
             return new_entries_.size() >= config_.batch_size;
         }

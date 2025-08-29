@@ -1,12 +1,13 @@
 #include <atomic>
 #include <chrono>
+#include <demiplane/nexus>
 #include <future>
 #include <memory>
 #include <random>
 #include <thread>
 #include <utility>
 #include <vector>
-#include <demiplane/nexus>
+
 #include <gtest/gtest.h>
 
 using namespace demiplane::nexus;
@@ -56,7 +57,8 @@ struct ServiceWithDeps {
     std::shared_ptr<Service> dep;
 
     explicit ServiceWithDeps(std::shared_ptr<Service> s)
-        : dep(std::move(s)) {}
+        : dep(std::move(s)) {
+    }
 };
 
 struct ExpensiveService {
@@ -65,7 +67,7 @@ struct ExpensiveService {
 
     ExpensiveService() {
         ++creation_count;
-        std::this_thread::sleep_for(10ms); // Simulate expensive construction
+        std::this_thread::sleep_for(10ms);  // Simulate expensive construction
     }
 };
 
@@ -93,12 +95,11 @@ struct Application {
     std::shared_ptr<LoggerService> logger;
     std::shared_ptr<ConfigService> config;
 
-    Application(std::shared_ptr<DatabaseService> d,
-                std::shared_ptr<LoggerService> l,
-                std::shared_ptr<ConfigService> c)
+    Application(std::shared_ptr<DatabaseService> d, std::shared_ptr<LoggerService> l, std::shared_ptr<ConfigService> c)
         : db(std::move(d)),
           logger(std::move(l)),
-          config(std::move(c)) {}
+          config(std::move(c)) {
+    }
 };
 
 struct SessionManager {
@@ -142,8 +143,7 @@ protected:
 class BasicOperationsTest : public NexusTestFixture {};
 
 TEST_F(BasicOperationsTest, RegisterFactory_LazyCreation) {
-    nexus.register_factory<Service>([] { return std::make_shared<Service>();
-    });
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); });
 
     EXPECT_EQ(nexus.size(), 1);
 
@@ -153,14 +153,13 @@ TEST_F(BasicOperationsTest, RegisterFactory_LazyCreation) {
 }
 
 TEST_F(BasicOperationsTest, RegisterFactory_SingletonBehavior) {
-    nexus.register_factory<Service>([] { return std::make_shared<Service>();
-    });
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); });
 
     const auto service1 = nexus.spawn<Service>();
     const auto service2 = nexus.spawn<Service>();
 
     EXPECT_EQ(service1.get(), service2.get());
-    EXPECT_EQ(service1.use_count(), 3); // nexus + service1 + service2
+    EXPECT_EQ(service1.use_count(), 3);  // nexus + service1 + service2
 }
 
 TEST_F(BasicOperationsTest, RegisterShared_PreExistingObject) {
@@ -185,10 +184,8 @@ TEST_F(BasicOperationsTest, RegisterInstance_ValueSemantics) {
 }
 
 TEST_F(BasicOperationsTest, MultipleTypes_IndependentLifecycles) {
-    nexus.register_factory<Service>([] { return std::make_shared<Service>();
-    });
-    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(1);
-    });
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); });
+    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(1); });
 
     const auto service = nexus.spawn<Service>();
     const auto tracker = nexus.spawn<LifecycleTracker>();
@@ -211,18 +208,22 @@ TEST_F(BasicOperationsTest, CustomIds_SameTypeMultipleInstances) {
     nexus.register_factory<LoggerService>(
         [] {
             auto logger   = std::make_shared<LoggerService>();
-        logger->level = "DEBUG";
-        return logger;
-    }, Resettable{}, DEBUG_LOGGER_ID);
+            logger->level = "DEBUG";
+            return logger;
+        },
+        Resettable{},
+        DEBUG_LOGGER_ID);
 
     // Register Logger with another specific ID for error handling
     constexpr uint32_t ERROR_LOGGER_ID = 0x2222;
     nexus.register_factory<LoggerService>(
         [] {
             auto logger   = std::make_shared<LoggerService>();
-        logger->level = "ERROR";
-        return logger;
-    }, Resettable{}, ERROR_LOGGER_ID);
+            logger->level = "ERROR";
+            return logger;
+        },
+        Resettable{},
+        ERROR_LOGGER_ID);
 
     const auto general_logger = nexus.spawn<LoggerService>();  // Uses default nexus_id
     const auto debug_logger   = nexus.spawn<LoggerService>(DEBUG_LOGGER_ID);
@@ -244,12 +245,10 @@ TEST_F(BasicOperationsTest, CustomIds_SameTypeMultipleInstances) {
 class DependencyInjectionTest : public NexusTestFixture {};
 
 TEST_F(DependencyInjectionTest, SimpleDependency_AutoResolution) {
-    nexus.register_factory<Service>([] { return std::make_shared<Service>();
-    });
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); });
 
     nexus.register_factory<ServiceWithDeps>(
-        [this] { return std::make_shared<ServiceWithDeps>(nexus.spawn<Service>());
-    });
+        [this] { return std::make_shared<ServiceWithDeps>(nexus.spawn<Service>()); });
 
     const auto service_with_deps = nexus.spawn<ServiceWithDeps>();
     EXPECT_NE(service_with_deps, nullptr);
@@ -258,12 +257,10 @@ TEST_F(DependencyInjectionTest, SimpleDependency_AutoResolution) {
 }
 
 TEST_F(DependencyInjectionTest, SharedDependency_SameInstance) {
-    nexus.register_factory<Service>([] { return std::make_shared<Service>();
-    });
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); });
 
     nexus.register_factory<ServiceWithDeps>(
-        [this] { return std::make_shared<ServiceWithDeps>(nexus.spawn<Service>());
-    });
+        [this] { return std::make_shared<ServiceWithDeps>(nexus.spawn<Service>()); });
 
     const auto service1       = nexus.spawn<ServiceWithDeps>();
     const auto service2       = nexus.spawn<ServiceWithDeps>();
@@ -280,8 +277,7 @@ TEST_F(DependencyInjectionTest, SharedDependency_SameInstance) {
 class LifetimePolicyTest : public NexusTestFixture {};
 
 TEST_F(LifetimePolicyTest, Resettable_ResetBehavior) {
-    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(1);
-    }, Resettable{});
+    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(1); }, Resettable{});
 
     {
         auto tracker = nexus.spawn<LifecycleTracker>();
@@ -293,8 +289,7 @@ TEST_F(LifetimePolicyTest, Resettable_ResetBehavior) {
 }
 
 TEST_F(LifetimePolicyTest, Immortal_NoReset) {
-    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(2);
-    }, Immortal{});
+    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(2); }, Immortal{});
 
     auto tracker = nexus.spawn<LifecycleTracker>();
     EXPECT_EQ(LifecycleTracker::live_count.load(), 1);
@@ -303,8 +298,7 @@ TEST_F(LifetimePolicyTest, Immortal_NoReset) {
 }
 
 TEST_F(LifetimePolicyTest, Scoped_AutoCleanup) {
-    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(3);
-    }, Scoped{});
+    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(3); }, Scoped{});
 
     {
         auto tracker = nexus.spawn<LifecycleTracker>();
@@ -317,8 +311,7 @@ TEST_F(LifetimePolicyTest, Scoped_AutoCleanup) {
 }
 
 TEST_F(LifetimePolicyTest, Timed_ExpirationBehavior) {
-    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(4);
-    }, Timed{1s});
+    nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(4); }, Timed{1s});
     {
         auto tracker = nexus.spawn<LifecycleTracker>();
         EXPECT_EQ(LifecycleTracker::live_count.load(), 1);
@@ -336,7 +329,7 @@ TEST_F(LifetimePolicyTest, Timed_AccessRenewsLease) {
     // Access repeatedly to renew lease
     for (int i = 0; i < 5; ++i) {
         std::this_thread::sleep_for(1500ms);
-        nexus.spawn<LifecycleTracker>(); // Renews lease
+        nexus.spawn<LifecycleTracker>();  // Renews lease
         EXPECT_EQ(LifecycleTracker::live_count.load(), 1);
     }
 }
@@ -348,8 +341,7 @@ TEST_F(LifetimePolicyTest, Timed_AccessRenewsLease) {
 class ThreadSafetyTest : public NexusTestFixture {};
 
 TEST_F(ThreadSafetyTest, ConcurrentSpawn_SingletonConsistency) {
-    nexus.register_factory<ExpensiveService>([] {
-        return std::make_shared<ExpensiveService>(); });
+    nexus.register_factory<ExpensiveService>([] { return std::make_shared<ExpensiveService>(); });
 
     constexpr int num_threads = 16;
     std::vector<std::future<std::shared_ptr<ExpensiveService>>> futures;
@@ -383,8 +375,8 @@ TEST_F(ThreadSafetyTest, ConcurrentRegistration_ThreadSafe) {
         threads.emplace_back([this, i] {
             // Register with custom IDs to avoid conflicts
             constexpr uint32_t BASE_ID = 0x4000;
-            nexus.register_factory<LifecycleTracker>([i] {
-                return std::make_shared<LifecycleTracker>(i); }, Resettable{}, BASE_ID + i);
+            nexus.register_factory<LifecycleTracker>(
+                [i] { return std::make_shared<LifecycleTracker>(i); }, Resettable{}, BASE_ID + i);
         });
     }
 
@@ -404,9 +396,7 @@ TEST_F(ThreadSafetyTest, ConcurrentRegistration_ThreadSafe) {
 
 TEST_F(ThreadSafetyTest, MixedOperations_StressTest) {
     // Register some base services
-    nexus.register_factory<Service>([] {
-        return std::make_shared<Service>();
-    });
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); });
     nexus.register_factory<LifecycleTracker>([] { return std::make_shared<LifecycleTracker>(0); });
 
     constexpr int num_threads           = 10;
@@ -425,24 +415,25 @@ TEST_F(ThreadSafetyTest, MixedOperations_StressTest) {
             for (std::uint32_t op = 0; op < operations_per_thread; ++op) {
                 try {
                     switch (op_dist(gen)) {
-                        case 0: // Spawn Service
+                        case 0:  // Spawn Service
                             nexus.spawn<Service>();
                             break;
-                        case 1: // Spawn LifecycleTracker
+                        case 1:  // Spawn LifecycleTracker
                             nexus.spawn<LifecycleTracker>();
                             break;
-                        case 2: // Register new service with unique ID
-                            nexus.register_factory<LifecycleTracker>([t, op] { return std::make_shared<LifecycleTracker>(t * 1000 + op); },
+                        case 2:  // Register new service with unique ID
+                            nexus.register_factory<LifecycleTracker>(
+                                [t, op] { return std::make_shared<LifecycleTracker>(t * 1000 + op); },
                                 Resettable{},
                                 STRESS_BASE_ID + t * 1000 + op);
                             break;
-                        case 3: // Get size
+                        case 3:  // Get size
                             std::cout << nexus.size();
                             break;
-                        default: std::unreachable();
+                        default:
+                            std::unreachable();
                     }
-                }
-                catch (...) {
+                } catch (...) {
                     ++errors;
                 }
             }
@@ -471,18 +462,14 @@ TEST_F(ErrorHandlingTest, ResetUnregistered_ThrowsException) {
 }
 
 TEST_F(ErrorHandlingTest, ResetWrongLifetime_ThrowsException) {
-    nexus.register_factory<Service>([] {
-        return std::make_shared<Service>();
-    }, Immortal{});
+    nexus.register_factory<Service>([] { return std::make_shared<Service>(); }, Immortal{});
     nexus.spawn<Service>();
 
     EXPECT_THROW(nexus.reset<Service>(), std::runtime_error);
 }
 
 TEST_F(ErrorHandlingTest, FactoryException_Propagated) {
-    nexus.register_factory<Service>([]() -> std::shared_ptr<Service> {
-        throw std::runtime_error("Factory failed");
-    });
+    nexus.register_factory<Service>([]() -> std::shared_ptr<Service> { throw std::runtime_error("Factory failed"); });
 
     EXPECT_THROW(nexus.spawn<Service>(), std::runtime_error);
 }
@@ -522,8 +509,8 @@ TEST_F(PerformanceTest, ScalabilityTest_ManyTypes) {
     // Register many types with unique IDs
     auto start = std::chrono::high_resolution_clock::now();
     for (std::uint32_t i = 0; i < num_types; ++i) {
-        nexus.register_factory<LifecycleTracker>([i] {
-            return std::make_shared<LifecycleTracker>(i); }, Resettable{}, PERF_BASE_ID + i);
+        nexus.register_factory<LifecycleTracker>(
+            [i] { return std::make_shared<LifecycleTracker>(i); }, Resettable{}, PERF_BASE_ID + i);
     }
     const auto registration_time = std::chrono::high_resolution_clock::now() - start;
 
@@ -547,18 +534,13 @@ class IntegrationTest : public NexusTestFixture {};
 
 TEST_F(IntegrationTest, ComplexDependencyGraph) {
     // Register dependencies using default IDs
-    nexus.register_factory<DatabaseService>([] {
-        return std::make_shared<DatabaseService>();
-    });
-    nexus.register_factory<LoggerService>([] { return std::make_shared<LoggerService>();
-    });
-    nexus.register_factory<ConfigService>([] { return std::make_shared<ConfigService>();
-    });
+    nexus.register_factory<DatabaseService>([] { return std::make_shared<DatabaseService>(); });
+    nexus.register_factory<LoggerService>([] { return std::make_shared<LoggerService>(); });
+    nexus.register_factory<ConfigService>([] { return std::make_shared<ConfigService>(); });
 
     nexus.register_factory<Application>([this] {
         return std::make_shared<Application>(
-            nexus.spawn<DatabaseService>(), nexus.spawn<LoggerService>(), nexus.spawn<ConfigService>()
-        );
+            nexus.spawn<DatabaseService>(), nexus.spawn<LoggerService>(), nexus.spawn<ConfigService>());
     });
 
     // Test the complete dependency graph
@@ -574,7 +556,7 @@ TEST_F(IntegrationTest, ComplexDependencyGraph) {
 
     // Verify shared dependencies
     const auto direct_logger = nexus.spawn<LoggerService>();
-    EXPECT_EQ(app->logger.get(), direct_logger.get()); // Same instance
+    EXPECT_EQ(app->logger.get(), direct_logger.get());  // Same instance
 }
 
 struct SessionManager2 {
@@ -598,12 +580,9 @@ struct RequestHandler2 {
 
 TEST_F(IntegrationTest, LifecycleManagement_RealWorldScenario) {
     // Session manager is immortal, request handlers are scoped
-    nexus.register_factory<SessionManager2>([] {
-        return std::make_shared<SessionManager2>();
-    }, Immortal{});
+    nexus.register_factory<SessionManager2>([] { return std::make_shared<SessionManager2>(); }, Immortal{});
     nexus.register_factory<RequestHandler2>(
-        [this] { return std::make_shared<RequestHandler2>(nexus.spawn<SessionManager2>());
-    }, Scoped{});
+        [this] { return std::make_shared<RequestHandler2>(nexus.spawn<SessionManager2>()); }, Scoped{});
 
     const auto session_mgr = nexus.spawn<SessionManager2>();
     EXPECT_EQ(session_mgr->active_sessions.load(), 0);

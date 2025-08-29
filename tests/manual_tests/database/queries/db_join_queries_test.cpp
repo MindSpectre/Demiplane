@@ -1,24 +1,23 @@
 // JOIN query expression tests
 // Comprehensive tests for join operations and join types
 
-#include <gtest/gtest.h>
+#include <demiplane/scroll>
 
-#include "query_expressions.hpp"
 #include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
+#include "query_expressions.hpp"
 
-#include <demiplane/scroll>
+#include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for JOIN operations
-class JoinQueryTest : public ::testing::Test,
-                      public demiplane::scroll::LoggerProvider {
+class JoinQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
@@ -30,24 +29,24 @@ protected:
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<std::string>("name", "VARCHAR(255)")
-                    .add_field<int>("age", "INTEGER")
-                    .add_field<bool>("active", "BOOLEAN");
+            .primary_key("id")
+            .add_field<std::string>("name", "VARCHAR(255)")
+            .add_field<int>("age", "INTEGER")
+            .add_field<bool>("active", "BOOLEAN");
 
         posts_schema = std::make_shared<TableSchema>("posts");
         posts_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<int>("user_id", "INTEGER")
-                    .add_field<std::string>("title", "VARCHAR(255)")
-                    .add_field<bool>("published", "BOOLEAN");
+            .primary_key("id")
+            .add_field<int>("user_id", "INTEGER")
+            .add_field<std::string>("title", "VARCHAR(255)")
+            .add_field<bool>("published", "BOOLEAN");
 
         comments_schema = std::make_shared<TableSchema>("comments");
         comments_schema->add_field<int>("id", "INTEGER")
-                       .primary_key("id")
-                       .add_field<int>("post_id", "INTEGER")
-                       .add_field<int>("user_id", "INTEGER")
-                       .add_field<std::string>("content", "TEXT");
+            .primary_key("id")
+            .add_field<int>("post_id", "INTEGER")
+            .add_field<int>("user_id", "INTEGER")
+            .add_field<std::string>("content", "TEXT");
 
         // Create column references
         user_id     = users_schema->column<int>("id");
@@ -93,9 +92,7 @@ protected:
 
 // Test INNER JOIN
 TEST_F(JoinQueryTest, InnerJoinExpression) {
-    auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema).on(post_user_id == user_id);
+    auto query  = select(user_name, post_title).from(users_schema).join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -103,9 +100,8 @@ TEST_F(JoinQueryTest, InnerJoinExpression) {
 
 // Test LEFT JOIN
 TEST_F(JoinQueryTest, LeftJoinExpression) {
-    auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
+    auto query =
+        select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -114,8 +110,9 @@ TEST_F(JoinQueryTest, LeftJoinExpression) {
 // Test RIGHT JOIN
 TEST_F(JoinQueryTest, RightJoinExpression) {
     auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema, JoinType::RIGHT).on(post_user_id == user_id);
+                     .from(users_schema)
+                     .join(posts_schema, JoinType::RIGHT)
+                     .on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -123,9 +120,8 @@ TEST_F(JoinQueryTest, RightJoinExpression) {
 
 // Test FULL OUTER JOIN
 TEST_F(JoinQueryTest, FullJoinExpression) {
-    auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema, JoinType::FULL).on(post_user_id == user_id);
+    auto query =
+        select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::FULL).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -133,9 +129,8 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
 
 // Test CROSS JOIN (simplified - cross join typically doesn't need ON clause)
 TEST_F(JoinQueryTest, CrossJoinExpression) {
-    auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema, JoinType::CROSS).on(user_id > lit(0));
+    auto query =
+        select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::CROSS).on(user_id > lit(0));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -143,9 +138,7 @@ TEST_F(JoinQueryTest, CrossJoinExpression) {
 
 // Test multiple JOINs (simplified to single join for now)
 TEST_F(JoinQueryTest, MultipleJoinsExpression) {
-    auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema).on(post_user_id == user_id);
+    auto query  = select(user_name, post_title).from(users_schema).join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -154,9 +147,9 @@ TEST_F(JoinQueryTest, MultipleJoinsExpression) {
 // Test JOIN with complex conditions
 TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
     auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema)
-                 .on(post_user_id == user_id && post_published == lit(true));
+                     .from(users_schema)
+                     .join(posts_schema)
+                     .on(post_user_id == user_id && post_published == lit(true));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -165,9 +158,10 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
 // Test JOIN with WHERE clause
 TEST_F(JoinQueryTest, JoinWithWhereExpression) {
     auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema).on(post_user_id == user_id)
-                 .where(user_active == lit(true));
+                     .from(users_schema)
+                     .join(posts_schema)
+                     .on(post_user_id == user_id)
+                     .where(user_active == lit(true));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -176,8 +170,9 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
 // Test JOIN with aggregates (simplified without GROUP BY for now)
 TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
     auto query = select(user_name, count(post_id).as("post_count"))
-                 .from(users_schema)
-                 .join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
+                     .from(users_schema)
+                     .join(posts_schema, JoinType::LEFT)
+                     .on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -186,9 +181,10 @@ TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
 // Test JOIN with ORDER BY
 TEST_F(JoinQueryTest, JoinWithOrderByExpression) {
     auto query = select(user_name, post_title)
-                 .from(users_schema)
-                 .join(posts_schema).on(post_user_id == user_id)
-                 .order_by(asc(user_name), desc(post_title));
+                     .from(users_schema)
+                     .join(posts_schema)
+                     .on(post_user_id == user_id)
+                     .order_by(asc(user_name), desc(post_title));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

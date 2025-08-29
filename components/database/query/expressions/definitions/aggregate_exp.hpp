@@ -9,7 +9,7 @@
 namespace demiplane::db {
     // Count expression with optional distinct support
     class CountExpr : public AliasableExpression<CountExpr>, public ColumnHolder {
-        public:
+    public:
         explicit CountExpr(DynamicColumn col, const bool dist)
             : ColumnHolder{std::move(col)},
               distinct_(dist) {
@@ -24,27 +24,27 @@ namespace demiplane::db {
             return distinct_;
         }
 
-        private:
+    private:
         bool distinct_{false};
     };
 
     // Simple aggregate expressions
     class SumExpr : public AliasableExpression<SumExpr>, public ColumnHolder {
-        public:
+    public:
         explicit SumExpr(DynamicColumn column)
             : ColumnHolder(std::move(column)) {
         }
     };
 
     class AvgExpr : public AliasableExpression<AvgExpr>, public ColumnHolder {
-        public:
+    public:
         explicit AvgExpr(DynamicColumn column)
             : ColumnHolder(std::move(column)) {
         }
     };
 
     class MaxExpr : public AliasableExpression<MaxExpr>, public ColumnHolder {
-        public:
+    public:
         explicit MaxExpr(DynamicColumn column)
             : ColumnHolder(std::move(column)) {
         }
@@ -52,7 +52,7 @@ namespace demiplane::db {
 
 
     class MinExpr : public AliasableExpression<MinExpr>, public ColumnHolder {
-        public:
+    public:
         explicit MinExpr(DynamicColumn column)
             : ColumnHolder(std::move(column)) {
         }

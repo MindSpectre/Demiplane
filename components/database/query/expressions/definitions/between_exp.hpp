@@ -7,7 +7,7 @@
 namespace demiplane::db {
     template <typename Operand, typename Lower, typename Upper>
     class BetweenExpr : public Expression<BetweenExpr<Operand, Lower, Upper>> {
-        public:
+    public:
         constexpr BetweenExpr(Operand op, Lower l, Upper u)
             : operand_(std::move(op)),
               lower_(std::move(l)),
@@ -29,7 +29,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).upper_;
         }
 
-        private:
+    private:
         Operand operand_;
         Lower lower_;
         Upper upper_;

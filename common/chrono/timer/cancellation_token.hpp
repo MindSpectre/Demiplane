@@ -6,7 +6,7 @@
 
 namespace demiplane::chrono {
     class CancellationToken : gears::NonCopyable {
-        public:
+    public:
         void cancel() noexcept {
             flag_.store(true, std::memory_order_release);
         }
@@ -19,7 +19,7 @@ namespace demiplane::chrono {
             return flag_.load(std::memory_order_relaxed);
         }
 
-        private:
+    private:
         std::atomic_bool flag_{false};
     };
 

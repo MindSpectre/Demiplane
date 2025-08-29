@@ -12,7 +12,7 @@ namespace demiplane::chrono {
      */
     template <typename T = std::chrono::milliseconds>
     class PrintingStopwatch {
-        public:
+    public:
         /**
          * @brief Checks if time is counted from the previous flag.
          *
@@ -195,7 +195,7 @@ namespace demiplane::chrono {
 
         // Overload -- operator to remove the last flag
 
-        private:
+    private:
         bool countdown_from_prev_  = true;
         bool countdown_from_start_ = true;
         std::string running_name_;

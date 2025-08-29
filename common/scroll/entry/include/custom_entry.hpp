@@ -20,7 +20,7 @@ namespace demiplane::scroll {
      * Inherits from the `gears::Immovable` class to restrict its copy or move semantics.
      */
     class CustomEntryConfig {
-        public:
+    public:
         bool add_time            = true;
         bool add_level           = true;
         bool add_location        = true;
@@ -40,7 +40,7 @@ namespace demiplane::scroll {
     };
 
     class CustomEntry final : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread> {
-        public:
+    public:
         CustomEntry(const LogLevel lvl,
                     const std::string_view& msg,
                     const MetaTimePoint& meta_time_point,
@@ -60,7 +60,7 @@ namespace demiplane::scroll {
             return lhs.time_point < rhs.time_point;
         }
 
-        private:
+    private:
         std::shared_ptr<CustomEntryConfig> config_;
     };
 

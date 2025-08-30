@@ -1,10 +1,13 @@
 #include "db_record.hpp"
+
 #include "db_field.hpp"
 #include "db_table_schema.hpp"
 
 namespace demiplane::db {
-    Record::Record(TableSchemaPtr schema): schema_(std::move(schema)) {
-        if (!schema_) throw std::invalid_argument("Schema cannot be null");
+    Record::Record(TableSchemaPtr schema)
+        : schema_(std::move(schema)) {
+        if (!schema_)
+            throw std::invalid_argument("Schema cannot be null");
 
         fields_.reserve(schema_->field_count());
         for (const auto& field_schema : schema_->fields()) {
@@ -80,4 +83,4 @@ namespace demiplane::db {
     std::vector<Field>::const_iterator Record::end() const {
         return fields_.end();
     }
-}
+}  // namespace demiplane::db

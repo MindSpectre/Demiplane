@@ -1,7 +1,7 @@
 #pragma once
 
-#include <gears_hash.hpp>
 #include <boost/unordered/unordered_map.hpp>
+#include <gears_hash.hpp>
 
 #include "db_core_fwd.hpp"
 #include "db_field.hpp"
@@ -48,4 +48,4 @@ namespace demiplane::db {
         std::vector<Field> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
     };
-}
+}  // namespace demiplane::db

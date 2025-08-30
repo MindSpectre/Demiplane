@@ -1,26 +1,27 @@
 #pragma once
 
-#define SCROLL_LOG_DIRECT_STREAM_DBG(logger_ptr)   SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::DBG)
-#define SCROLL_LOG_DIRECT_STREAM_INF(logger_ptr)   SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::INF)
-#define SCROLL_LOG_DIRECT_STREAM_WRN(logger_ptr)   SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::WRN)
-#define SCROLL_LOG_DIRECT_STREAM_ERR(logger_ptr)   SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::ERR)
-#define SCROLL_LOG_DIRECT_STREAM_FAT(logger_ptr)   SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::FAT)
+#define SCROLL_LOG_DIRECT_STREAM_DBG(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::DBG)
+#define SCROLL_LOG_DIRECT_STREAM_INF(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::INF)
+#define SCROLL_LOG_DIRECT_STREAM_WRN(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::WRN)
+#define SCROLL_LOG_DIRECT_STREAM_ERR(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::ERR)
+#define SCROLL_LOG_DIRECT_STREAM_FAT(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::FAT)
 
 
 #ifdef DMP_ENABLE_LOGGING
-    #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level) \
+    #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level)                                                                 \
         demiplane::scroll::StreamLogEntry(logger_ptr, level, std::source_location::current())
 
 
 #else
     #define SCROLL_LOG_ENTRY(logger_ptr, level, message) (void(0))
-    #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level)   demiplane::scroll::DummyStreamLogEntry()
+    #define SCROLL_LOG_STREAM_ENTRY(logger_ptr, level) demiplane::scroll::DummyStreamLogEntry()
 #endif
 
 
 #ifdef DMP_COMPONENT_LOGGING
 // Direct message logging
-    #define COMPONENT_LOG(level, message) SCROLL_LOG_DIRECT_##level(::demiplane::scroll::ComponentLoggerManager::get(), message)
+    #define COMPONENT_LOG(level, message)                                                                              \
+        SCROLL_LOG_DIRECT_##level(::demiplane::scroll::ComponentLoggerManager::get(), message)
 // Stream-based logging
     #define COMPONENT_LOG_DBG() SCROLL_LOG_DIRECT_STREAM_DBG(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_INF() SCROLL_LOG_DIRECT_STREAM_INF(::demiplane::scroll::ComponentLoggerManager::get())

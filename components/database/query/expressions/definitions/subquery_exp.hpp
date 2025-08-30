@@ -9,7 +9,8 @@ namespace demiplane::db {
     class Subquery : public AliasableExpression<Subquery<Query>> {
     public:
         constexpr explicit Subquery(Query q)
-            : query_(std::move(q)) {}
+            : query_(std::move(q)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -24,4 +25,4 @@ namespace demiplane::db {
     constexpr auto subquery(Q query) {
         return Subquery<Q>{std::move(query)};
     }
-}
+}  // namespace demiplane::db

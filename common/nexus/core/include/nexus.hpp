@@ -7,14 +7,15 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+
 #include <boost/thread/shared_mutex.hpp>
 
-#include "policies.hpp"
 #include "../details.hpp"
 #include "../nexus_traits.hpp"
+#include "policies.hpp"
 
 namespace demiplane::nexus {
-    class Nexus { //  ─── public façade ───
+    class Nexus {  //  ─── public façade ───
     public:
         Nexus();
         ~Nexus();
@@ -36,7 +37,7 @@ namespace demiplane::nexus {
 
         // ───────── management ────────
         template <class T>
-        void reset(std::uint32_t id = get_nexus_id<T>()); // only Flex
+        void reset(std::uint32_t id = get_nexus_id<T>());  // only Flex
 
         std::size_t size() const noexcept;
         void clear();
@@ -66,9 +67,7 @@ namespace demiplane::nexus {
         // helpers
         template <class F>
         static auto to_void_factory(F&& f) {
-            return [fn = std::forward<F>(f)]() {
-                return std::shared_ptr<void>(fn());
-            };
+            return [fn = std::forward<F>(f)] { return std::shared_ptr<void>(fn()); };
         }
 
         template <class T>
@@ -90,11 +89,12 @@ namespace demiplane::nexus {
         static Nexus instance;
         return instance;
     }
-} // namespace demiplane::nexus
+}  // namespace demiplane::nexus
 
-#define NEXUS_REGISTER(id, Policy) \
-    static constexpr std::uint32_t nexus_id = id; \
-    static constexpr Policy nexus_policy{}
+#define NEXUS_REGISTER(id, Policy)                                                                                     \
+    static constexpr std::uint32_t nexus_id = id;                                                                      \
+    static constexpr Policy nexus_policy {                                                                             \
+    }
 
 
 #include "../source/nexus.inl"

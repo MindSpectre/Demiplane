@@ -7,12 +7,12 @@
 namespace demiplane::db {
     template <IsQuery Query, IsCondition Condition>
     class WhereExpr : public Expression<WhereExpr<Query, Condition>>,
-                      public QueryOperations<WhereExpr<Query, Condition>,
-                                             AllowGroupBy, AllowOrderBy, AllowLimit> {
+                      public QueryOperations<WhereExpr<Query, Condition>, AllowGroupBy, AllowOrderBy, AllowLimit> {
     public:
         constexpr WhereExpr(Query q, Condition c)
             : query_(std::move(q)),
-              condition_(std::move(c)) {}
+              condition_(std::move(c)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -28,4 +28,4 @@ namespace demiplane::db {
         Query query_;
         Condition condition_;
     };
-}
+}  // namespace demiplane::db

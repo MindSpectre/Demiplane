@@ -4,18 +4,18 @@
 
 namespace demiplane::utilities::compile_time {
     template <std::size_t N>
-    static constexpr std::size_t strlen_constexpr(const char (&w)[N]) {
-        return N - 1; // Exclude the null terminator
+    static constexpr std::size_t strlen_constexpr([[maybe_unused]] const char (&w)[N]) {
+        return N - 1;  // Exclude the null terminator
     }
 
     // Variadic concatenation function
     template <typename... Args>
     consteval auto consteval_concat(Args... args) {
         // Calculate total size of all strings combined
-        constexpr std::size_t total_size = (strlen_constexpr(args) + ...); // Fold expression
+        constexpr std::size_t total_size = (strlen_constexpr(args) + ...);  // Fold expression
 
         // Create a result array
-        std::array<char, total_size + 1> result = {}; // +1 for the final null terminator
+        std::array<char, total_size + 1> result = {};  // +1 for the final null terminator
         std::size_t offset                      = 0;
 
         // Lambda to copy each string into the result array
@@ -27,7 +27,7 @@ namespace demiplane::utilities::compile_time {
         };
 
         // Expand each argument using the lambda
-        (copy_to_result(args), ...); // Fold expression to apply the lambda to each string
+        (copy_to_result(args), ...);  // Fold expression to apply the lambda to each string
 
         // Add the final null terminator
         result[total_size] = '\0';
@@ -35,4 +35,4 @@ namespace demiplane::utilities::compile_time {
         return result;
     }
     // Overload + operator for compile-time string concatenation
-} // namespace demiplane::utilities::compile_time
+}  // namespace demiplane::utilities::compile_time

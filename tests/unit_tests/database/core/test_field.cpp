@@ -1,10 +1,12 @@
-#include <db_field.hpp>
-#include <db_field_schema.hpp>
 #include <optional>
 #include <span>
 #include <string>
 #include <typeindex>
 #include <typeinfo>
+
+#include <db_field.hpp>
+#include <db_field_schema.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
@@ -38,7 +40,7 @@ TEST_F(FieldTest, FieldConstruction) {
 
     EXPECT_EQ(field.name(), "id");
     EXPECT_EQ(&field.schema(), &int_schema);
-    EXPECT_TRUE(field.is_null()); // Default constructed fields are null
+    EXPECT_TRUE(field.is_null());  // Default constructed fields are null
 }
 
 TEST_F(FieldTest, FieldCopyConstruction) {
@@ -136,7 +138,7 @@ TEST_F(FieldTest, TryGetValidType) {
 }
 
 TEST_F(FieldTest, TryGetNullField) {
-    const Field field(&nullable_int_schema); // Nullable field, starts as null
+    const Field field(&nullable_int_schema);  // Nullable field, starts as null
 
     const auto result = field.try_get<int>();
     EXPECT_FALSE(result.has_value());
@@ -154,7 +156,7 @@ TEST_F(FieldTest, IsNullAfterSet) {
 }
 
 TEST_F(FieldTest, SetBinaryData) {
-    Field field(&string_schema); // Using string schema for binary data
+    Field field(&string_schema);  // Using string schema for binary data
 
     std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0xFF};
     field.set_binary(std::span<const uint8_t>(data));

@@ -29,4 +29,4 @@ namespace demiplane::db {
 
         static std::string format_binary_data(std::span<const uint8_t> data);
     };
-}
+}  // namespace demiplane::db

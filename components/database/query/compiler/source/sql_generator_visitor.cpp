@@ -7,7 +7,8 @@
 namespace demiplane::db {
     SqlGeneratorVisitor::SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, const bool use_params)
         : dialect_(std::move(dialect)),
-          use_parameters_(use_params) {}
+          use_parameters_(use_params) {
+    }
 
 
     void SqlGeneratorVisitor::visit_table_column_impl(const FieldSchema* schema,
@@ -34,8 +35,7 @@ namespace demiplane::db {
         if (use_parameters_) {
             parameters_.push_back(value);
             sql_ << dialect_->placeholder(parameters_.size() - 1);
-        }
-        else {
+        } else {
             sql_ << dialect_->format_value(value);
         }
     }
@@ -44,8 +44,7 @@ namespace demiplane::db {
         if (use_parameters_) {
             parameters_.push_back(std::move(value));
             sql_ << dialect_->placeholder(parameters_.size() - 1);
-        }
-        else {
+        } else {
             sql_ << dialect_->format_value(value);
         }
     }
@@ -191,7 +190,8 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_count_impl(const bool distinct) {
         sql_ << "COUNT(";
-        if (distinct) sql_ << "DISTINCT ";
+        if (distinct)
+            sql_ << "DISTINCT ";
     }
 
     void SqlGeneratorVisitor::visit_sum_impl() {
@@ -218,40 +218,47 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_select_start(const bool distinct) {
         sql_ << "SELECT ";
-        if (distinct) sql_ << "DISTINCT ";
+        if (distinct)
+            sql_ << "DISTINCT ";
     }
 
-    void SqlGeneratorVisitor::visit_select_end() {}
+    void SqlGeneratorVisitor::visit_select_end() {
+    }
 
     void SqlGeneratorVisitor::visit_from_start() {
         sql_ << " FROM ";
     }
 
-    void SqlGeneratorVisitor::visit_from_end() {}
+    void SqlGeneratorVisitor::visit_from_end() {
+    }
 
     void SqlGeneratorVisitor::visit_where_start() {
         sql_ << " WHERE ";
     }
 
-    void SqlGeneratorVisitor::visit_where_end() {}
+    void SqlGeneratorVisitor::visit_where_end() {
+    }
 
     void SqlGeneratorVisitor::visit_group_by_start() {
         sql_ << " GROUP BY ";
     }
 
-    void SqlGeneratorVisitor::visit_group_by_end() {}
+    void SqlGeneratorVisitor::visit_group_by_end() {
+    }
 
     void SqlGeneratorVisitor::visit_having_start() {
         sql_ << " HAVING ";
     }
 
-    void SqlGeneratorVisitor::visit_having_end() {}
+    void SqlGeneratorVisitor::visit_having_end() {
+    }
 
     void SqlGeneratorVisitor::visit_order_by_start() {
         sql_ << " ORDER BY ";
     }
 
-    void SqlGeneratorVisitor::visit_order_by_end() {}
+    void SqlGeneratorVisitor::visit_order_by_end() {
+    }
 
     void SqlGeneratorVisitor::visit_order_direction_impl(const OrderDirection dir) {
         switch (dir) {
@@ -292,7 +299,8 @@ namespace demiplane::db {
         sql_ << " ON ";
     }
 
-    void SqlGeneratorVisitor::visit_join_end() {}
+    void SqlGeneratorVisitor::visit_join_end() {
+    }
 
     void SqlGeneratorVisitor::visit_insert_start() {
         sql_ << "INSERT INTO ";
@@ -302,7 +310,8 @@ namespace demiplane::db {
         sql_ << " (";
         bool first = true;
         for (const auto& col : columns) {
-            if (!first) sql_ << ", ";
+            if (!first)
+                sql_ << ", ";
             first = false;
             sql_ << dialect_->quote_identifier(col);
         }
@@ -313,7 +322,8 @@ namespace demiplane::db {
         sql_ << " (";
         bool first = true;
         for (const auto& col : columns) {
-            if (!first) sql_ << ", ";
+            if (!first)
+                sql_ << ", ";
             first = false;
             sql_ << dialect_->quote_identifier(col);
         }
@@ -323,12 +333,14 @@ namespace demiplane::db {
     void SqlGeneratorVisitor::visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) {
         bool first_row = true;
         for (const auto& row : rows) {
-            if (!first_row) sql_ << ", ";
+            if (!first_row)
+                sql_ << ", ";
             first_row = false;
             sql_ << "(";
             bool first_val = true;
             for (const auto& val : row) {
-                if (!first_val) sql_ << ", ";
+                if (!first_val)
+                    sql_ << ", ";
                 first_val = false;
                 visit_value_impl(val);
             }
@@ -339,12 +351,14 @@ namespace demiplane::db {
     void SqlGeneratorVisitor::visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) {
         bool first_row = true;
         for (auto&& row : std::move(rows)) {
-            if (!first_row) sql_ << ", ";
+            if (!first_row)
+                sql_ << ", ";
             first_row = false;
             sql_ << "(";
             bool first_val = true;
             for (auto&& val : std::move(row)) {
-                if (!first_val) sql_ << ", ";
+                if (!first_val)
+                    sql_ << ", ";
                 first_val = false;
                 visit_value_impl(std::move(val));
             }
@@ -352,7 +366,8 @@ namespace demiplane::db {
         }
     }
 
-    void SqlGeneratorVisitor::visit_insert_end() {}
+    void SqlGeneratorVisitor::visit_insert_end() {
+    }
 
     void SqlGeneratorVisitor::visit_update_start() {
         sql_ << "UPDATE ";
@@ -362,7 +377,8 @@ namespace demiplane::db {
         sql_ << " SET ";
         bool first = true;
         for (const auto& [col, val] : assignments) {
-            if (!first) sql_ << ", ";
+            if (!first)
+                sql_ << ", ";
             first = false;
             sql_ << dialect_->quote_identifier(col) << " = ";
             visit_value_impl(val);
@@ -373,20 +389,23 @@ namespace demiplane::db {
         sql_ << " SET ";
         bool first = true;
         for (auto&& [col, val] : std::move(assignments)) {
-            if (!first) sql_ << ", ";
+            if (!first)
+                sql_ << ", ";
             first = false;
             sql_ << dialect_->quote_identifier(col) << " = ";
             visit_value_impl(std::move(val));
         }
     }
 
-    void SqlGeneratorVisitor::visit_update_end() {}
+    void SqlGeneratorVisitor::visit_update_end() {
+    }
 
     void SqlGeneratorVisitor::visit_delete_start() {
         sql_ << "DELETE FROM ";
     }
 
-    void SqlGeneratorVisitor::visit_delete_end() {}
+    void SqlGeneratorVisitor::visit_delete_end() {
+    }
 
     void SqlGeneratorVisitor::visit_case_start() {
         sql_ << "CASE";
@@ -459,4 +478,4 @@ namespace demiplane::db {
     void SqlGeneratorVisitor::visit_column_separator() {
         sql_ << ", ";
     }
-}
+}  // namespace demiplane::db

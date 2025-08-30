@@ -2,10 +2,11 @@
 #pragma once
 
 #include <atomic>
+#include <demiplane/nexus>
 #include <memory>
 #include <vector>
+
 #include <boost/asio/io_context.hpp>
-#include <demiplane/nexus>
 
 #include "aliases.hpp"
 #include "controller.hpp"
@@ -15,7 +16,7 @@ namespace demiplane::http {
 
     class Server {
     public:
-        NEXUS_REGISTER(0xA0702D11, nexus::Immortal); // CRC32/ISO-HDLC of demiplane::http::Server
+        NEXUS_REGISTER(0xA0702D11, nexus::Immortal);  // CRC32/ISO-HDLC of demiplane::http::Server
 
         explicit Server(std::size_t threads = 1);
         ~Server();
@@ -50,7 +51,7 @@ namespace demiplane::http {
     private:
         mutable boost::asio::io_context ioc_;
         std::size_t thread_count_;
-        RouteRegistry registry_; // Single registry for all routes
+        RouteRegistry registry_;  // Single registry for all routes
         std::vector<Middleware> middlewares_;
         std::vector<std::shared_ptr<HttpController>> controllers_;
         std::atomic<bool> running_{false};
@@ -96,4 +97,4 @@ namespace demiplane::http {
         merge_controller_routes(controller.get());
     }
 
-} // namespace demiplane::http
+}  // namespace demiplane::http

@@ -1,4 +1,3 @@
 #pragma once
 
-namespace demiplane::fsm{
-}
+namespace demiplane::fsm {}

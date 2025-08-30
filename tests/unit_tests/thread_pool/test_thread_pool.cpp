@@ -1,13 +1,13 @@
 #include <barrier>
 #include <chrono>
-#include <vector>
-#include <gtest/gtest.h>
-
 #include <demiplane/multithread>
+#include <vector>
 
+#include "generators/time_generator.hpp"
 #include "random_utils.hpp"
 #include "stopwatch.hpp"
-#include "generators/time_generator.hpp"
+
+#include <gtest/gtest.h>
 
 using namespace demiplane::multithread;
 using namespace std::chrono_literals;
@@ -39,12 +39,12 @@ TEST_F(ThreadPoolTest, ConstructorInitialization) {
 TEST_F(ThreadPoolTest, InvalidConstructorParameters) {
     ThreadPoolConfig invalid_cfg1;
     invalid_cfg1.min_threads = 5;
-    invalid_cfg1.max_threads = 3; // min > max
+    invalid_cfg1.max_threads = 3;  // min > max
     EXPECT_THROW(ThreadPool{invalid_cfg1}, std::invalid_argument);
 
     ThreadPoolConfig invalid_cfg2;
     invalid_cfg2.min_threads = 0;
-    invalid_cfg2.max_threads = 0; // max == 0
+    invalid_cfg2.max_threads = 0;  // max == 0
     EXPECT_THROW(ThreadPool{invalid_cfg2}, std::invalid_argument);
 }
 
@@ -52,15 +52,13 @@ TEST_F(ThreadPoolTest, InvalidConstructorParameters) {
 TEST_F(ThreadPoolTest, TaskExecution) {
     ThreadPool pool(default_cfg);
 
-    auto result = pool.enqueue([] {
-        return 42;
-    });
+    auto result = pool.enqueue([] { return 42; });
     EXPECT_EQ(result.get(), 42);
 }
 
 // Test: Tasks execute in order of priority
 TEST_F(ThreadPoolTest, PriorityExecution) {
-    const ThreadPoolConfig cfg = ThreadPoolConfig::minimal(); // Single thread for ordering
+    const ThreadPoolConfig cfg = ThreadPoolConfig::minimal();  // Single thread for ordering
     ThreadPool pool(cfg);
 
     std::vector<int> results;
@@ -93,9 +91,9 @@ TEST_F(ThreadPoolTest, PriorityExecution) {
     std::this_thread::sleep_for(500ms);
 
     EXPECT_EQ(results.size(), 3);
-    EXPECT_EQ(results[0], 1); // Extreme priority first
-    EXPECT_EQ(results[1], 3); // High priority second
-    EXPECT_EQ(results[2], 2); // Low priority last
+    EXPECT_EQ(results[0], 1);  // Extreme priority first
+    EXPECT_EQ(results[1], 3);  // High priority second
+    EXPECT_EQ(results[2], 2);  // Low priority last
 }
 
 // Test: Thread pool can scale up to max threads
@@ -106,25 +104,21 @@ TEST_F(ThreadPoolTest, ScalingThreads) {
     results.reserve(10);
 
     for (int i = 0; i < 10; ++i) {
-        results.push_back(pool.enqueue([] {
-            std::this_thread::sleep_for(100ms);
-        }));
+        results.push_back(pool.enqueue([] { std::this_thread::sleep_for(100ms); }));
     }
 
     for (auto& res : results) {
-        res.get(); // Wait for all tasks to finish
+        res.get();  // Wait for all tasks to finish
     }
 
-    EXPECT_TRUE(true); // No errors should occur
+    EXPECT_TRUE(true);  // No errors should occur
 }
 
 // Test: Pool shuts down gracefully
 TEST_F(ThreadPoolTest, ShutdownGracefully) {
     ThreadPool pool(default_cfg);
 
-    auto result = pool.enqueue([] {
-        return 42;
-    });
+    auto result = pool.enqueue([] { return 42; });
     EXPECT_EQ(result.get(), 42);
 
     // Check for graceful shutdown
@@ -143,9 +137,7 @@ TEST_F(ThreadPoolTest, ThrowsAfterShutdown) {
 TEST_F(ThreadPoolTest, TaskExceptionPropagation) {
     ThreadPool pool(default_cfg);
 
-    auto result = pool.enqueue([] {
-        throw std::runtime_error("Task error");
-    });
+    auto result = pool.enqueue([] { throw std::runtime_error("Task error"); });
 
     EXPECT_THROW(result.get(), std::runtime_error);
 }
@@ -155,9 +147,7 @@ TEST_F(ThreadPoolTest, TerminatesThreadsAfterIdle) {
     cfg.idle_timeout     = 1s;
     ThreadPool pool(cfg);
 
-    auto result = pool.enqueue([] {
-        throw std::runtime_error("Task error");
-    });
+    auto result = pool.enqueue([] { throw std::runtime_error("Task error"); });
 
     EXPECT_THROW(result.get(), std::runtime_error);
     std::this_thread::sleep_for(2s);
@@ -172,7 +162,7 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
     ThreadPool pool(cfg);
 
     // Create a barrier to synchronize task execution
-    std::barrier sync_point(4); // 4 tasks will hit this point
+    std::barrier sync_point(4);  // 4 tasks will hit this point
     std::atomic concurrent_tasks{0};
     std::atomic max_concurrent{0};
 
@@ -185,12 +175,12 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
             const int current = ++concurrent_tasks;
             max_concurrent    = std::max(max_concurrent.load(), current);
 
-            sync_point.arrive_and_wait(); // Wait for all 4 to start
+            sync_point.arrive_and_wait();  // Wait for all 4 to start
             std::this_thread::sleep_for(100ms);
 
             --concurrent_tasks;
         }));
-        std::this_thread::sleep_for(100ms); // Ensure tasks start in order
+        std::this_thread::sleep_for(100ms);  // Ensure tasks start in order
     }
 
     // Wait for all tasks
@@ -199,8 +189,8 @@ TEST_F(ThreadPoolTest, ThreadScalingBehavior) {
     }
 
     // Should have scaled up to handle concurrent tasks
-    EXPECT_GE(max_concurrent.load(), 2); // At least min_threads
-    EXPECT_LE(max_concurrent.load(), 4); // But not more than needed
+    EXPECT_GE(max_concurrent.load(), 2);  // At least min_threads
+    EXPECT_LE(max_concurrent.load(), 4);  // But not more than needed
 }
 
 // Test: Thread idle timeout and cleanup
@@ -213,9 +203,7 @@ TEST_F(ThreadPoolTest, ThreadIdleTimeoutCleanup) {
     futures.reserve(10);
 
     for (int i = 0; i < 10; ++i) {
-        futures.push_back(pool.enqueue([] {
-            std::this_thread::sleep_for(50ms);
-        }));
+        futures.push_back(pool.enqueue([] { std::this_thread::sleep_for(50ms); }));
     }
 
     // Wait for all tasks to complete
@@ -236,7 +224,7 @@ TEST_F(ThreadPoolTest, ConcurrentTaskSubmission) {
     cfg.idle_timeout     = 1s;
     ThreadPool pool(cfg);
 
-    std::atomic<int> task_count{0};
+    std::atomic task_count{0};
     std::vector<std::future<int>> futures;
 
     // Multiple threads submitting tasks concurrently
@@ -247,9 +235,7 @@ TEST_F(ThreadPoolTest, ConcurrentTaskSubmission) {
     for (int thread_id = 0; thread_id < 4; ++thread_id) {
         submitters.emplace_back([&] {
             for (int i = 0; i < 25; ++i) {
-                auto future = pool.enqueue([&] {
-                    return ++task_count;
-                });
+                auto future = pool.enqueue([&] { return ++task_count; });
                 std::lock_guard lock{future_mutex};
                 futures.push_back(std::move(future));
             }
@@ -268,7 +254,7 @@ TEST_F(ThreadPoolTest, ConcurrentTaskSubmission) {
         results.push_back(f.get());
     }
 
-    EXPECT_EQ(results.size(), 100); // 4 threads * 25 tasks
+    EXPECT_EQ(results.size(), 100);  // 4 threads * 25 tasks
     EXPECT_EQ(task_count.load(), 100);
 }
 
@@ -276,7 +262,7 @@ TEST_F(ThreadPoolTest, ConcurrentTaskSubmission) {
 TEST_F(ThreadPoolTest, PriorityOrderingUnderLoad) {
     ThreadPoolConfig cfg = ThreadPoolConfig::minimal();
     cfg.idle_timeout     = 1s;
-    ThreadPool pool(cfg); // Single thread to ensure ordering
+    ThreadPool pool(cfg);  // Single thread to ensure ordering
 
     std::vector<int> execution_order;
     std::mutex order_mutex;
@@ -290,7 +276,7 @@ TEST_F(ThreadPoolTest, PriorityOrderingUnderLoad) {
         },
         1);
 
-    std::this_thread::sleep_for(10ms); // Ensure blocker starts
+    std::this_thread::sleep_for(10ms);  // Ensure blocker starts
 
     // Submit tasks with different priorities
     std::vector<std::future<void>> futures;
@@ -299,21 +285,21 @@ TEST_F(ThreadPoolTest, PriorityOrderingUnderLoad) {
             std::lock_guard lock(order_mutex);
             execution_order.push_back(1);
         },
-        1)); // Low priority
+        1));  // Low priority
 
     futures.push_back(pool.enqueue(
         [&] {
             std::lock_guard lock(order_mutex);
             execution_order.push_back(2);
         },
-        10)); // High priority
+        10));  // High priority
 
     futures.push_back(pool.enqueue(
         [&] {
             std::lock_guard lock(order_mutex);
             execution_order.push_back(3);
         },
-        5)); // Medium priority
+        5));  // Medium priority
 
     // Wait for all
     blocker.get();
@@ -322,7 +308,7 @@ TEST_F(ThreadPoolTest, PriorityOrderingUnderLoad) {
     }
 
     // Should execute in priority order: 0, 2 (high), 3 (medium), 1 (low)
-    EXPECT_EQ(execution_order, std::vector<int>({0, 2, 3, 1}));
+    EXPECT_EQ(execution_order, std::vector({0, 2, 3, 1}));
 }
 
 // Test: Exception handling doesn't break thread pool
@@ -331,18 +317,15 @@ TEST_F(ThreadPoolTest, ExceptionHandlingRobustness) {
     cfg.idle_timeout     = 1s;
     ThreadPool pool(cfg);
 
-    std::atomic<int> successful_tasks{0};
+    std::atomic successful_tasks{0};
     std::vector<std::future<void>> futures;
 
     // Mix of normal and throwing tasks
     for (int i = 0; i < 10; ++i) {
         if (i % 3 == 0) {
             // Throwing task
-            futures.push_back(pool.enqueue([i] {
-                throw std::runtime_error("Task " + std::to_string(i) + " failed");
-            }));
-        }
-        else {
+            futures.push_back(pool.enqueue([i] { throw std::runtime_error("Task " + std::to_string(i) + " failed"); }));
+        } else {
             // Normal task
             futures.push_back(pool.enqueue([&] {
                 std::this_thread::sleep_for(10ms);
@@ -355,19 +338,16 @@ TEST_F(ThreadPoolTest, ExceptionHandlingRobustness) {
     for (auto& f : futures) {
         try {
             f.get();
-        }
-        catch (const std::exception&) {
+        } catch (const std::exception&) {
             ++exception_count;
         }
     }
 
-    EXPECT_EQ(exception_count, 4);         // 4 throwing tasks
-    EXPECT_EQ(successful_tasks.load(), 6); // 6 successful tasks
+    EXPECT_EQ(exception_count, 4);          // 4 throwing tasks
+    EXPECT_EQ(successful_tasks.load(), 6);  // 6 successful tasks
 
     // Pool should still be functional
-    auto final_task = pool.enqueue([] {
-        return 42;
-    });
+    auto final_task = pool.enqueue([] { return 42; });
     EXPECT_EQ(final_task.get(), 42);
 }
 
@@ -377,7 +357,7 @@ TEST_F(ThreadPoolTest, ShutdownBehaviorWithPendingTasks) {
     cfg.idle_timeout     = 1s;
     ThreadPool pool(cfg);
 
-    std::atomic<int> completed_tasks{0};
+    std::atomic completed_tasks{0};
     std::vector<std::future<void>> futures;
 
     // Submit some long-running tasks
@@ -404,13 +384,12 @@ TEST_F(ThreadPoolTest, ShutdownBehaviorWithPendingTasks) {
         try {
             f.get();
             ++successful_completions;
-        }
-        catch (...) {
+        } catch (...) {
             // Some tasks might be cancelled depending on implementation
         }
     }
 
-    EXPECT_GT(successful_completions, 0); // At least some should complete
+    EXPECT_GT(successful_completions, 0);  // At least some should complete
 }
 
 // Test: Memory and resource management
@@ -426,10 +405,8 @@ TEST_F(ThreadPoolTest, ResourceManagement) {
         std::vector<std::future<std::string>> futures;
 
         for (int i = 0; i < 100; ++i) {
-            std::string data(1000, static_cast<char>('A' + (i % 26))); // Large string capture
-            futures.push_back(pool.enqueue([data, i] {
-                return data + std::to_string(i);
-            }));
+            std::string data(1000, static_cast<char>('A' + i % 26));  // Large string capture
+            futures.push_back(pool.enqueue([data, i] { return data + std::to_string(i); }));
         }
 
         // Verify all tasks complete correctly
@@ -439,7 +416,7 @@ TEST_F(ThreadPoolTest, ResourceManagement) {
         }
 
         // Pool should cleanup properly when it goes out of scope
-    } // ThreadPool destructor should handle cleanup
+    }  // ThreadPool destructor should handle cleanup
 
     // If we get here without crashes, resource management is working
     SUCCEED();
@@ -453,7 +430,7 @@ TEST_F(ThreadPoolTest, StressTestRapidTasks) {
     cfg.idle_timeout     = 1s;
     ThreadPool pool(cfg);
 
-    std::atomic<int> counter{0};
+    std::atomic counter{0};
     constexpr int TASK_COUNT = 1000;
 
     demiplane::chrono::Stopwatch sw;
@@ -481,10 +458,10 @@ TEST_F(ThreadPoolTest, StressTestRapidTasks) {
     const auto duration = static_cast<unsigned long long>(sw.total_time().count());
     EXPECT_EQ(counter.load(), TASK_COUNT);
     // Should complete reasonably quickly with multiple threads
-    EXPECT_LT(duration, 7000); // Less than 7 seconds
+    EXPECT_LT(duration, 7000);  // Less than 7 seconds
     std::cout << "Completed " << TASK_COUNT << " tasks in " << duration << "ms\n";
     std::cout << "Average time task execution: " << duration / TASK_COUNT << "ms\n"
-        << "When flags registered each " << sw.average_delta() << "\n";
+              << "When flags registered each " << sw.average_delta() << "\n";
 }
 
 TEST_F(ThreadPoolTest, SleepPool) {
@@ -506,7 +483,7 @@ TEST_F(ThreadPoolTest, SleepPool) {
             ++counter;
             std::this_thread::sleep_for(150ms);
         }));
-        std::this_thread::sleep_for(10ms); // Ensure tasks start in order
+        std::this_thread::sleep_for(10ms);  // Ensure tasks start in order
     }
 
     // Wait for all tasks
@@ -518,9 +495,7 @@ TEST_F(ThreadPoolTest, SleepPool) {
     std::this_thread::sleep_for(2s);
 
     std::cout << "Sleeping for 2s\n";
-    auto v = pool.enqueue([] {
-        std::cout << "Woke up" << std::endl;
-    });
+    auto v = pool.enqueue([] { std::cout << "Woke up" << std::endl; });
     v.get();
     EXPECT_EQ(pool.active_threads(), 0);
     EXPECT_EQ(pool.max_threads(), cfg.max_threads);

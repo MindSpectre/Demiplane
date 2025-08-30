@@ -13,7 +13,8 @@ namespace demiplane::multithread {
         }
 
         EnqueuedTask(std::function<void()> task, const uint32_t priority)
-            : task{std::move(task)}, priority_{priority} {
+            : task{std::move(task)},
+              priority_{priority} {
         }
 
     private:
@@ -21,7 +22,7 @@ namespace demiplane::multithread {
         uint32_t priority_{1};
 
         friend bool operator<(const EnqueuedTask& lhs, const EnqueuedTask& rhs) {
-            return lhs.priority_ < rhs.priority_; // Lower priority values have higher priority in queue
+            return lhs.priority_ < rhs.priority_;  // Lower priority values have higher priority in queue
         }
 
         friend bool operator<=(const EnqueuedTask& lhs, const EnqueuedTask& rhs) {
@@ -36,4 +37,4 @@ namespace demiplane::multithread {
             return !(lhs < rhs);
         }
     };
-}
+}  // namespace demiplane::multithread

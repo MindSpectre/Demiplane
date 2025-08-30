@@ -1,5 +1,6 @@
 #pragma once
 #include <ostream>
+
 #include "db_field_schema.hpp"
 
 namespace demiplane::db {
@@ -26,4 +27,4 @@ namespace demiplane::db {
         }
         return field->as_column<T>(std::make_shared<std::string>(table_name_));
     }
-}
+}  // namespace demiplane::db

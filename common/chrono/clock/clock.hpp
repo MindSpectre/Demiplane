@@ -1,6 +1,5 @@
 #pragma once
 #include <chrono>
-#include <format>
 #include <string>
 #include <string_view>
 
@@ -15,16 +14,15 @@ namespace demiplane::chrono {
         }
 
         template <class Dur = std::chrono::milliseconds>
-        [[nodiscard]] static std::chrono::time_point<std::chrono::system_clock, Dur> parse(
-            const std::string_view txt,
-            std::string_view fmt) {
+        [[nodiscard]] static std::chrono::time_point<std::chrono::system_clock, Dur> parse(const std::string_view txt,
+                                                                                           std::string_view fmt) {
             using namespace std::chrono;
             std::istringstream is(std::string{txt});
             sys_time<Dur> tp;
             is >> parse(fmt.data(), tp);
             if (is.fail()) {
-                throw std::invalid_argument(
-                    "Invalid time format " + std::string{fmt} + " or value:" + std::string{txt});
+                throw std::invalid_argument("Invalid time format " + std::string{fmt} +
+                                            " or value:" + std::string{txt});
             }
             return tp;
         }
@@ -35,7 +33,7 @@ namespace demiplane::chrono {
         constexpr auto eu_dmy_hms = "%d-%m-%Y %H:%M:%S";
         constexpr auto us_mdy_hms = "%m-%d-%Y %I:%M:%S %p";
         constexpr auto iso8601    = "%Y-%m-%dT%H:%M:%S";
-    } // namespace clock_formats
+    }  // namespace clock_formats
 
     // ─────────────── Local / UTC clocks ───────────────
     enum class ClockType { Local, UTC };
@@ -49,23 +47,31 @@ namespace demiplane::chrono {
         }
 
         static std::string format_time_iso_ms(const sys_tp tp) {
-            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                tp.time_since_epoch()) % 1000;
+            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
             const auto tm = to_tm(tp);
             char timestamp[32];
             std::int32_t len;
             if constexpr (CT == ClockType::UTC) {
-                len = snprintf(timestamp, sizeof(timestamp),
+                len = snprintf(timestamp,
+                               sizeof(timestamp),
                                "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
-                               tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                               tm.tm_hour, tm.tm_min, tm.tm_sec,
+                               tm.tm_year + 1900,
+                               tm.tm_mon + 1,
+                               tm.tm_mday,
+                               tm.tm_hour,
+                               tm.tm_min,
+                               tm.tm_sec,
                                ms.count());
-            }
-            else {
-                len = snprintf(timestamp, sizeof(timestamp),
+            } else {
+                len = snprintf(timestamp,
+                               sizeof(timestamp),
                                "%04d-%02d-%02dT%02d:%02d:%02d.%03ld ",
-                               tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                               tm.tm_hour, tm.tm_min, tm.tm_sec,
+                               tm.tm_year + 1900,
+                               tm.tm_mon + 1,
+                               tm.tm_mday,
+                               tm.tm_hour,
+                               tm.tm_min,
+                               tm.tm_sec,
                                ms.count());
             }
 
@@ -73,23 +79,31 @@ namespace demiplane::chrono {
         }
 
         static void format_time_iso_ms(const sys_tp tp, std::string& out) {
-            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                tp.time_since_epoch()) % 1000;
+            const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
             const auto tm = to_tm(tp);
             char timestamp[32];
             std::int32_t len;
             if constexpr (CT == ClockType::UTC) {
-                len = snprintf(timestamp, sizeof(timestamp),
+                len = snprintf(timestamp,
+                               sizeof(timestamp),
                                "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
-                               tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                               tm.tm_hour, tm.tm_min, tm.tm_sec,
+                               tm.tm_year + 1900,
+                               tm.tm_mon + 1,
+                               tm.tm_mday,
+                               tm.tm_hour,
+                               tm.tm_min,
+                               tm.tm_sec,
                                ms.count());
-            }
-            else {
-                len = snprintf(timestamp, sizeof(timestamp),
+            } else {
+                len = snprintf(timestamp,
+                               sizeof(timestamp),
                                "%04d-%02d-%02dT%02d:%02d:%02d.%03ld ",
-                               tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                               tm.tm_hour, tm.tm_min, tm.tm_sec,
+                               tm.tm_year + 1900,
+                               tm.tm_mon + 1,
+                               tm.tm_mday,
+                               tm.tm_hour,
+                               tm.tm_min,
+                               tm.tm_sec,
                                ms.count());
             }
 
@@ -107,8 +121,7 @@ namespace demiplane::chrono {
             std::tm out{};
             if constexpr (CT == ClockType::Local) {
                 localtime_r(&tt, &out);
-            }
-            else {
+            } else {
                 gmtime_r(&tt, &out);
             }
             return out;
@@ -117,4 +130,4 @@ namespace demiplane::chrono {
 
     using LocalClock = SpecClock<ClockType::Local>;
     using UTCClock   = SpecClock<ClockType::UTC>;
-} // namespace demiplane::chrono
+}  // namespace demiplane::chrono

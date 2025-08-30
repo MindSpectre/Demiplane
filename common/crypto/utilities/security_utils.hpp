@@ -14,4 +14,4 @@ namespace demiplane::utilities::security {
         }
         return result;
     }
-} // namespace demiplane::utilities::security
+}  // namespace demiplane::utilities::security

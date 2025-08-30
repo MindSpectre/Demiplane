@@ -22,4 +22,4 @@ namespace demiplane::db {
         }
         return std::nullopt;
     }
-}
+}  // namespace demiplane::db

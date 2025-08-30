@@ -12,4 +12,4 @@ namespace demiplane::http {
     size_t HttpController::route_count() const {
         return registry_.route_count();
     }
-} // namespace demiplane::http
+}  // namespace demiplane::http

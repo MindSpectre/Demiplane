@@ -22,4 +22,4 @@ namespace demiplane::gears {
 
     template <typename T>
     concept IsDuration = std::chrono::__is_duration_v<T>;
-} // namespace demiplane::gears
+}  // namespace demiplane::gears

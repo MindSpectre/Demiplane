@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "delete_exp.hpp"
 #include "../basic.hpp"
+#include "delete_exp.hpp"
 
 namespace demiplane::db {
     template <IsCondition Condition>
@@ -11,7 +11,8 @@ namespace demiplane::db {
     public:
         DeleteWhereExpr(DeleteExpr d, Condition c)
             : del_(std::move(d)),
-              condition_(std::move(c)) {}
+              condition_(std::move(c)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& del(this Self&& self) {
@@ -27,4 +28,4 @@ namespace demiplane::db {
         DeleteExpr del_;
         Condition condition_;
     };
-}
+}  // namespace demiplane::db

@@ -4,12 +4,12 @@
 #include <demiplane/chrono>
 
 namespace {
-    void append_number(std::string& buf, uint32_t value) {
+    void append_number(std::string& buf, const uint32_t value) {
         char temp[16];
         snprintf(temp, sizeof(temp), "%u", value);
         buf.append(temp);
     }
-}
+}  // namespace
 
 namespace demiplane::scroll {
     std::string DetailedEntry::to_string() const {
@@ -38,13 +38,13 @@ namespace demiplane::scroll {
 
         // Use pre-formatted strings
         tl_string_buffer.append("] [tid ");
-        tl_string_buffer.append(tid_str); // Already formatted!
+        tl_string_buffer.append(tid_str);  // Already formatted!
         tl_string_buffer.append(", pid ");
-        tl_string_buffer.append(pid_str); // Already formatted!
+        tl_string_buffer.append(pid_str);  // Already formatted!
         tl_string_buffer.append("] ");
         tl_string_buffer.append(message_);
         tl_string_buffer.push_back('\n');
 
         return std::move(tl_string_buffer);
     }
-}
+}  // namespace demiplane::scroll

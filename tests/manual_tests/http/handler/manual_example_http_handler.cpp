@@ -1,11 +1,12 @@
 #include <demiplane/math>
 #include <iostream>
 
+#include <boost/asio/use_awaitable.hpp>
+
 #include "controller.hpp"
 #include "gears_utils.hpp"
 #include "response_factory.hpp"
 #include "server.hpp"
-#include <boost/asio/use_awaitable.hpp>
 using namespace demiplane::http;
 
 class UserController final : public HttpController {
@@ -73,7 +74,6 @@ private:
 };
 
 int main() {
-
     Server server(4);
     server.on_error([](const std::exception& e) { std::cerr << e.what() << std::endl; });
     server.on_request([]([[maybe_unused]] const Request& req) { std::cout << "REQ" << std::endl; });

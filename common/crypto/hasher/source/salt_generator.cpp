@@ -1,10 +1,11 @@
 #include "salt_generator.hpp"
 
-#include <openssl/bio.h> // for BIO_* base64
-#include <openssl/buffer.h>
-#include <openssl/evp.h> // for EVP_*
-#include <openssl/rand.h>
 #include <stdexcept>
+
+#include <openssl/bio.h>  // for BIO_* base64
+#include <openssl/buffer.h>
+#include <openssl/evp.h>  // for EVP_*
+#include <openssl/rand.h>
 
 std::vector<std::uint8_t> demiplane::crypto::SaltGenerator::generate_bytes(const std::size_t size) {
     if (size == 0) {
@@ -20,7 +21,7 @@ std::vector<std::uint8_t> demiplane::crypto::SaltGenerator::generate_bytes(const
     return salt;
 }
 std::string demiplane::crypto::SaltGenerator::generate_hex(const std::size_t size) {
-    auto saltBytes = generate_bytes(size);
+    const auto saltBytes = generate_bytes(size);
 
     // Each byte becomes two hex characters.
     std::string hex_string;

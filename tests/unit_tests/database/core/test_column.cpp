@@ -1,9 +1,11 @@
-#include <gtest/gtest.h>
+#include <string>
 #include <typeindex>
 #include <typeinfo>
-#include <string>
+
 #include <db_column.hpp>
 #include <db_field_schema.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
@@ -19,7 +21,7 @@ protected:
 };
 
 TEST_F(ColumnTest, TypedColumnConstruction) {
-    TableColumn<int> column(&test_schema, "test_table");
+    const TableColumn<int> column(&test_schema, "test_table");
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
@@ -28,7 +30,7 @@ TEST_F(ColumnTest, TypedColumnConstruction) {
 }
 
 TEST_F(ColumnTest, TypedColumnWithAlias) {
-    TableColumn<int> column(&test_schema, "test_table", "t");
+    const TableColumn<int> column(&test_schema, "test_table", "t");
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
@@ -37,8 +39,8 @@ TEST_F(ColumnTest, TypedColumnWithAlias) {
 }
 
 TEST_F(ColumnTest, TypedColumnAliasing) {
-    TableColumn<int> original(&test_schema, "test_table");
-    TableColumn<int> aliased = original.as("t");
+    const TableColumn<int> original(&test_schema, "test_table");
+    const TableColumn<int> aliased = original.as("t");
 
     EXPECT_FALSE(original.alias().has_value());
     EXPECT_EQ(aliased.alias().value(), "t");
@@ -47,7 +49,7 @@ TEST_F(ColumnTest, TypedColumnAliasing) {
 }
 
 TEST_F(ColumnTest, VoidColumnConstruction) {
-    TableColumn<void> column(&test_schema, "test_table");
+    const TableColumn<void> column(&test_schema, "test_table");
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
@@ -56,7 +58,7 @@ TEST_F(ColumnTest, VoidColumnConstruction) {
 }
 
 TEST_F(ColumnTest, VoidColumnWithAlias) {
-    TableColumn<void> column(&test_schema, "test_table", "t");
+    const TableColumn<void> column(&test_schema, "test_table", "t");
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
@@ -66,13 +68,13 @@ TEST_F(ColumnTest, VoidColumnWithAlias) {
 
 
 TEST_F(ColumnTest, AllColumnsWithTable) {
-    AllColumns all_cols("users");
+    const AllColumns all_cols("users");
 
     EXPECT_EQ(all_cols.table_name(), "users");
 }
 
 TEST_F(ColumnTest, ColumnCreationHelper) {
-    auto column = col<int>(&test_schema, "test_table");
+    const auto column = col<int>(&test_schema, "test_table");
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
@@ -80,7 +82,7 @@ TEST_F(ColumnTest, ColumnCreationHelper) {
 }
 
 TEST_F(ColumnTest, AllColumnsHelper) {
-    auto all_with_table = all("users");
+    const auto all_with_table = all("users");
 
     EXPECT_EQ(all_with_table.table_name(), "users");
 }

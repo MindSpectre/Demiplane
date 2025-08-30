@@ -43,4 +43,4 @@ namespace demiplane::db {
         // Value formatting
         [[nodiscard]] virtual std::string format_value(const FieldValue& value) = 0;
     };
-}
+}  // namespace demiplane::db

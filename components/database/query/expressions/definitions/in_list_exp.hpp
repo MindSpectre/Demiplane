@@ -8,9 +8,9 @@ namespace demiplane::db {
     template <typename Operand, typename... Values>
     class InListExpr : public Expression<InListExpr<Operand, Values...>> {
     public:
-        constexpr explicit InListExpr(Operand op, Values&&... vals)
+        constexpr explicit InListExpr(Operand op, Values... vals)
             : operand_(std::move(op)),
-              values_(vals...) {
+              values_(std::move(vals)...) {
         }
 
         template <typename Self>
@@ -29,7 +29,7 @@ namespace demiplane::db {
     };
 
     template <typename O, typename... Values>
-    constexpr auto in(O operand, Values&&... values) {
-        return InListExpr<O, Values...>{std::move(operand), std::forward<Values>(values)...};
+    constexpr auto in(O operand, Values... values) {
+        return InListExpr<O, Values...>{std::move(operand), std::move(values)...};
     }
 }  // namespace demiplane::db

@@ -1,6 +1,7 @@
+#include "db_field.hpp"
+
 #include <stdexcept>
 
-#include "db_field.hpp"
 #include "db_field_schema.hpp"
 
 namespace demiplane::db {
@@ -13,7 +14,8 @@ namespace demiplane::db {
 
     Field::Field(Field&& other) noexcept
         : value_(std::move(other.value_)),
-          schema_(other.schema_) {}
+          schema_(other.schema_) {
+    }
 
     Field& Field::operator=(const Field& other) {
         if (this != &other) {
@@ -40,7 +42,7 @@ namespace demiplane::db {
         return std::holds_alternative<std::monostate>(value_);
     }
 
-    const FieldValue& Field::raw_value() const & {
+    const FieldValue& Field::raw_value() const& {
         return value_;
     }
 
@@ -55,4 +57,4 @@ namespace demiplane::db {
     const std::string& Field::name() const {
         return schema_->name;
     }
-}
+}  // namespace demiplane::db

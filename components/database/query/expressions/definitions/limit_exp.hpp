@@ -11,7 +11,8 @@ namespace demiplane::db {
         constexpr LimitExpr(Query query, const std::size_t limit, const std::size_t offset)
             : query_(std::move(query)),
               count_(limit),
-              offset_(offset) {}
+              offset_(offset) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -36,4 +37,4 @@ namespace demiplane::db {
         std::size_t count_;
         std::size_t offset_;
     };
-}
+}  // namespace demiplane::db

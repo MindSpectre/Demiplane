@@ -2,17 +2,18 @@
 
 #include <algorithm>
 
+#include "../basic.hpp"
 #include "db_column.hpp"
 #include "db_record.hpp"
 #include "db_table_schema.hpp"
-#include "../basic.hpp"
 
 namespace demiplane::db {
     template <IsSelectable... Columns>
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
     public:
         constexpr explicit SelectExpr(Columns... cols)
-            : columns_(std::forward<Columns>(cols)...) {}
+            : columns_(std::move(cols)...) {
+        }
 
         constexpr SelectExpr& set_distinct(const bool d = true) {
             distinct_ = d;
@@ -52,15 +53,15 @@ namespace demiplane::db {
 
     template <IsSelectable... Columns>
     constexpr auto select(Columns... columns) {
-        return SelectExpr<Columns...>{columns...};
+        return SelectExpr<Columns...>{std::move(columns)...};
     }
 
     template <IsSelectable... Columns>
     constexpr auto select_distinct(Columns... columns) {
-        return SelectExpr<Columns...>{columns...}.set_distinct(true);
+        return SelectExpr<Columns...>{std::move(columns)...}.set_distinct(true);
     }
 
     inline auto select_from_schema(TableSchemaPtr schema) {
         return SelectExpr{all(schema->table_name())}.from(std::move(schema));
     }
-}
+}  // namespace demiplane::db

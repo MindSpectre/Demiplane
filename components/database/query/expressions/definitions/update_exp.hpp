@@ -8,7 +8,8 @@ namespace demiplane::db {
     class UpdateExpr : public Expression<UpdateExpr> {
     public:
         explicit UpdateExpr(TableSchemaPtr t)
-            : table_(std::move(t)) {}
+            : table_(std::move(t)) {
+        }
 
         UpdateExpr& set(std::string column, FieldValue value) {
             assignments_.emplace_back(std::move(column), std::move(value));
@@ -49,4 +50,4 @@ namespace demiplane::db {
     inline auto update(std::string table_name) {
         return UpdateExpr{TableSchema::make_ptr(std::move(table_name))};
     }
-}
+}  // namespace demiplane::db

@@ -9,6 +9,11 @@ namespace demiplane::db {
     public:
         explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, bool use_params = true);
 
+        template <typename Self>
+        auto decompose(this Self&& self) {
+            return std::make_tuple(std::forward<Self>(self).sql_.str(), std::forward<Self>(self).parameters_);
+        }
+
         // Get results
         template <typename Self>
         [[nodiscard]] auto sql(this Self&& self) {
@@ -198,4 +203,4 @@ namespace demiplane::db {
         std::vector<FieldValue> parameters_;
         bool use_parameters_;
     };
-}
+}  // namespace demiplane::db

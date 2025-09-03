@@ -43,7 +43,6 @@ target_link_libraries(${DMP_SCROLL}.Entry PUBLIC
 # Scroll Loggers
 ##############################################################################
 add_library(${DMP_SCROLL}.Logger STATIC
-        logger/source/logger.cpp
         logger/include/log_macros.hpp
         logger/include/file_logger.hpp
         logger/include/console_logger.hpp

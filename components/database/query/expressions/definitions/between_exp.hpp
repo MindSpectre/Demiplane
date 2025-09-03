@@ -11,7 +11,8 @@ namespace demiplane::db {
         constexpr BetweenExpr(Operand op, Lower l, Upper u)
             : operand_(std::move(op)),
               lower_(std::move(l)),
-              upper_(std::move(u)) {}
+              upper_(std::move(u)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& operand(this Self&& self) {
@@ -38,4 +39,4 @@ namespace demiplane::db {
     constexpr auto between(O operand, L lower, U upper) {
         return BetweenExpr<O, L, U>{std::move(operand), std::move(lower), std::move(upper)};
     }
-}
+}  // namespace demiplane::db

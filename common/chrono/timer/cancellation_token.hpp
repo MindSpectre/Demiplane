@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+
 #include <gears_class_traits.hpp>
 
 namespace demiplane::chrono {
@@ -25,4 +26,4 @@ namespace demiplane::chrono {
     inline CancellationToken create_cancellation_token() {
         return CancellationToken{};
     }
-}
+}  // namespace demiplane::chrono

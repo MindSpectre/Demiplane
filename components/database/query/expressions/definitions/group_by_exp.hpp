@@ -11,7 +11,8 @@ namespace demiplane::db {
                             public QueryOperations<Derived, AllowHaving, AllowOrderBy, AllowLimit> {
     public:
         constexpr explicit GroupByExprBase(PreGroupQuery q)
-            : query_(std::move(q)) {}
+            : query_(std::move(q)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -30,7 +31,8 @@ namespace demiplane::db {
     public:
         constexpr explicit GroupByColumnExpr(PreGroupQuery q, GroupColumns... cols)
             : Base(std::move(q)),
-              columns_(cols...) {}
+              columns_(cols...) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& columns(this Self&& self) {
@@ -49,7 +51,8 @@ namespace demiplane::db {
     public:
         constexpr GroupByQueryExpr(PreGroupQuery q, GroupingCriteria&& criteria)
             : Base(std::move(q)),
-              grouping_criteria_(std::forward<GroupingCriteria>(criteria)) {}
+              grouping_criteria_(std::forward<GroupingCriteria>(criteria)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& criteria(this Self&& self) {
@@ -59,4 +62,4 @@ namespace demiplane::db {
     private:
         GroupingCriteria grouping_criteria_;
     };
-}
+}  // namespace demiplane::db

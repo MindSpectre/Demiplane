@@ -4,7 +4,10 @@
 namespace demiplane::fsm {
     class Transition {
     public:
-        Transition(const uint32_t from, const uint32_t to) : from_(from), to_(to) {}
+        Transition(const uint32_t from, const uint32_t to)
+            : from_(from),
+              to_(to) {
+        }
         [[nodiscard]] uint32_t get_from() const {
             return from_;
         }
@@ -22,4 +25,4 @@ namespace demiplane::fsm {
         uint32_t from_;
         uint32_t to_;
     };
-} // namespace demiplane::fsm
+}  // namespace demiplane::fsm

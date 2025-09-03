@@ -11,8 +11,7 @@ namespace demiplane::algorithms {
         bool operator()(const T& a, const T& b) const {
             if constexpr (requires { T::comp(a, b); }) {
                 return T::comp(a, b);
-            }
-            else {
+            } else {
                 return a < b;
             }
         }
@@ -20,14 +19,14 @@ namespace demiplane::algorithms {
 
     template <typename T>
     struct SlidingWindowConfig {
-        std::size_t window_size                            = 1024; // Size of sliding window
-        std::size_t batch_size                             = 512;  // Batch size for processing
-        bool enable_sorting                                = true; // Enable/disable sorting
+        std::size_t window_size                            = 1024;  // Size of sliding window
+        std::size_t batch_size                             = 512;   // Batch size for processing
+        bool enable_sorting                                = true;  // Enable/disable sorting
         std::function<bool(const T&, const T&)> comparator = DefaultComparator<T>{};
 
         // Performance tuning
-        bool use_inplace_merge      = true; // Use in-place merge for better memory usage
-        std::size_t merge_threshold = 64;   // Switch to insertion sort for small sequences
+        bool use_inplace_merge      = true;  // Use in-place merge for better memory usage
+        std::size_t merge_threshold = 64;    // Switch to insertion sort for small sequences
     };
 
 
@@ -36,7 +35,7 @@ namespace demiplane::algorithms {
     public:
         using value_type        = T;
         using comparator_type   = std::function<bool(const T&, const T&)>;
-        using consumer_function = std::function<void(const std::vector<T> &)>;
+        using consumer_function = std::function<void(const std::vector<T>&)>;
 
     private:
         SlidingWindowConfig<T> config_;
@@ -61,12 +60,12 @@ namespace demiplane::algorithms {
 
         // Add entries to be processed
         void add_entries(std::vector<T> entries) {
-            if (entries.empty()) return;
+            if (entries.empty())
+                return;
 
             // Move entries to new_entries buffer
-            new_entries_.insert(new_entries_.end(),
-                                std::make_move_iterator(entries.begin()),
-                                std::make_move_iterator(entries.end()));
+            new_entries_.insert(
+                new_entries_.end(), std::make_move_iterator(entries.begin()), std::make_move_iterator(entries.end()));
 
             // Process if we have enough entries
             if (should_process()) {
@@ -98,20 +97,18 @@ namespace demiplane::algorithms {
             double avg_merge_efficiency;
         };
 
-        Statistics get_statistics() const {
-            return {
-                total_processed_,
-                merge_operations_,
-                sort_operations_,
-                sort_operations_ > 0
-                    ? static_cast<double>(merge_operations_) / static_cast<double>(sort_operations_)
-                    : 0.0
-            };
+        [[nodiscard]] Statistics get_statistics() const {
+            return {total_processed_,
+                    merge_operations_,
+                    sort_operations_,
+                    sort_operations_ > 0
+                        ? static_cast<double>(merge_operations_) / static_cast<double>(sort_operations_)
+                        : 0.0};
         }
 
         // Reconfigure on the fly
         void reconfigure(SlidingWindowConfig<T> new_config) {
-            flush(); // Process any pending entries with old config
+            flush();  // Process any pending entries with old config
             config_ = std::move(new_config);
 
             // Resize buffers if needed
@@ -126,12 +123,12 @@ namespace demiplane::algorithms {
         }
 
         void process_batch(const bool force_all = false) {
-            if (new_entries_.empty() && sorted_window_.empty()) return;
+            if (new_entries_.empty() && sorted_window_.empty())
+                return;
 
             if (config_.enable_sorting) {
                 sort_and_merge();
-            }
-            else {
+            } else {
                 // No sorting - just append new entries to window
                 sorted_window_.insert(sorted_window_.end(),
                                       std::make_move_iterator(new_entries_.begin()),
@@ -143,8 +140,7 @@ namespace demiplane::algorithms {
             std::size_t output_count;
             if (force_all) {
                 output_count = sorted_window_.size();
-            }
-            else {
+            } else {
                 output_count = calculate_output_count();
             }
 
@@ -157,13 +153,13 @@ namespace demiplane::algorithms {
         }
 
         void sort_and_merge() {
-            if (new_entries_.empty()) return;
+            if (new_entries_.empty())
+                return;
 
             // Sort new entries
             if (new_entries_.size() <= config_.merge_threshold) {
                 insertion_sort(new_entries_.begin(), new_entries_.end(), config_.comparator);
-            }
-            else {
+            } else {
                 std::sort(new_entries_.begin(), new_entries_.end(), config_.comparator);
             }
             sort_operations_++;
@@ -172,8 +168,7 @@ namespace demiplane::algorithms {
                 // First batch - just move
                 sorted_window_ = std::move(new_entries_);
                 new_entries_.clear();
-            }
-            else {
+            } else {
                 // Merge with existing sorted window
                 merge_with_window();
                 merge_operations_++;
@@ -184,8 +179,7 @@ namespace demiplane::algorithms {
             if (config_.use_inplace_merge && can_use_inplace_merge()) {
                 // In-place merge (memory efficient)
                 perform_inplace_merge();
-            }
-            else {
+            } else {
                 // Standard merge (faster but uses more memory)
                 perform_standard_merge();
             }
@@ -215,8 +209,10 @@ namespace demiplane::algorithms {
             merge_buffer_.clear();
             merge_buffer_.reserve(sorted_window_.size() + new_entries_.size());
 
-            std::merge(sorted_window_.begin(), sorted_window_.end(),
-                       new_entries_.begin(), new_entries_.end(),
+            std::merge(sorted_window_.begin(),
+                       sorted_window_.end(),
+                       new_entries_.begin(),
+                       new_entries_.end(),
                        std::back_inserter(merge_buffer_),
                        config_.comparator);
 
@@ -226,7 +222,7 @@ namespace demiplane::algorithms {
 
         [[nodiscard]] size_t calculate_output_count() const {
             if (sorted_window_.size() < config_.window_size) {
-                return 0; // Window not exceeded, keep everything
+                return 0;  // Window not exceeded, keep everything
             }
 
             // Calculate how many entries to flush to maintain window size
@@ -237,16 +233,16 @@ namespace demiplane::algorithms {
         }
 
         void output_entries(std::size_t count) {
-            if (count == 0 || sorted_window_.empty()) return;
+            if (count == 0 || sorted_window_.empty())
+                return;
 
             // Create output vector
             std::vector<T> output;
             output.reserve(count);
 
             auto end_it = sorted_window_.begin() + static_cast<long>(std::min(count, sorted_window_.size()));
-            output.insert(output.end(),
-                          std::make_move_iterator(sorted_window_.begin()),
-                          std::make_move_iterator(end_it));
+            output.insert(
+                output.end(), std::make_move_iterator(sorted_window_.begin()), std::make_move_iterator(end_it));
 
             // Remove output entries from window
             sorted_window_.erase(sorted_window_.begin(), end_it);
@@ -266,7 +262,7 @@ namespace demiplane::algorithms {
 
         // Optimized insertion sort for small sequences
         template <typename Iterator, typename Compare>
-        void insertion_sort(Iterator first, Iterator last, Compare comp) {
+        void insertion_sort(Iterator first, Iterator last, const Compare& comp) {
             for (auto it = first + 1; it != last; ++it) {
                 auto key = std::move(*it);
                 auto pos = std::upper_bound(first, it, key, comp);
@@ -275,4 +271,4 @@ namespace demiplane::algorithms {
             }
         }
     };
-}
+}  // namespace demiplane::algorithms

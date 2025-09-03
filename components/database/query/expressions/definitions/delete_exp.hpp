@@ -2,22 +2,19 @@
 
 #include <algorithm>
 
-#include "db_table_schema.hpp"
 #include "../basic.hpp"
+#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     class DeleteExpr : public Expression<DeleteExpr> {
     public:
         constexpr explicit DeleteExpr(TableSchemaPtr t)
-            : table_(std::move(t)) {}
+            : table_(std::move(t)) {
+        }
 
         template <IsCondition Condition>
-        auto where(Condition cond) const {
-            return DeleteWhereExpr<Condition>
-            {
-                *this,
-                std::move(cond)
-            };
+        [[nodiscard]] auto where(Condition cond) const {
+            return DeleteWhereExpr<Condition>{*this, std::move(cond)};
         }
 
         [[nodiscard]] const TableSchemaPtr& table() const {
@@ -35,4 +32,4 @@ namespace demiplane::db {
     inline auto delete_from(std::string table_name) {
         return DeleteExpr{TableSchema::make_ptr(std::move(table_name))};
     }
-}
+}  // namespace demiplane::db

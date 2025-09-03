@@ -1,18 +1,21 @@
-#include <db_column.hpp>
-#include <db_table_schema.hpp>
-
 #include <memory>
 #include <string>
 #include <typeindex>
 #include <typeinfo>
+
+#include <db_column.hpp>
+#include <db_table_schema.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
 class TableSchemaTest : public ::testing::Test {
 protected:
-    void SetUp() override {}
-    void TearDown() override {}
+    void SetUp() override {
+    }
+    void TearDown() override {
+    }
 };
 
 TEST_F(TableSchemaTest, TableSchemaConstruction) {
@@ -186,14 +189,14 @@ TEST_F(TableSchemaTest, ChainedBuilderPattern) {
     TableSchema schema("users");
 
     schema.add_field<int>("id", "INTEGER")
-          .primary_key("id")
-          .nullable("id", false)
-          .add_field<std::string>("email", "VARCHAR(255)")
-          .unique("email")
-          .nullable("email", false)
-          .indexed("email")
-          .add_field<std::string>("name", "VARCHAR(100)")
-          .nullable("name", true);
+        .primary_key("id")
+        .nullable("id", false)
+        .add_field<std::string>("email", "VARCHAR(255)")
+        .unique("email")
+        .nullable("email", false)
+        .indexed("email")
+        .add_field<std::string>("name", "VARCHAR(100)")
+        .nullable("name", true);
 
     EXPECT_EQ(schema.field_count(), 3);
 
@@ -220,17 +223,17 @@ TEST_F(TableSchemaTest, ComplexSchemaDefinition) {
     TableSchema schema("complex_table");
 
     schema.add_field<int>("id", "INTEGER")
-          .primary_key("id")
-          .nullable("id", false)
-          .add_field<int>("parent_id", "INTEGER")
-          .foreign_key("parent_id", "complex_table", "id")
-          .add_field<std::string>("title", "VARCHAR(200)")
-          .nullable("title", false)
-          .indexed("title")
-          .add_field<std::string>("slug", "VARCHAR(200)")
-          .unique("slug")
-          .nullable("slug", false)
-          .add_field<std::string>("description", "TEXT");
+        .primary_key("id")
+        .nullable("id", false)
+        .add_field<int>("parent_id", "INTEGER")
+        .foreign_key("parent_id", "complex_table", "id")
+        .add_field<std::string>("title", "VARCHAR(200)")
+        .nullable("title", false)
+        .indexed("title")
+        .add_field<std::string>("slug", "VARCHAR(200)")
+        .unique("slug")
+        .nullable("slug", false)
+        .add_field<std::string>("description", "TEXT");
 
     EXPECT_EQ(schema.field_count(), 5);
 

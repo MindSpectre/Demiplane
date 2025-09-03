@@ -2,9 +2,9 @@
 
 #include <utility>
 
+#include "../basic.hpp"
 #include "aggregate_exp.hpp"
 #include "db_column.hpp"
-#include "../basic.hpp"
 
 namespace demiplane::db {
     // Count expression with optional distinct support
@@ -12,11 +12,13 @@ namespace demiplane::db {
     public:
         explicit CountExpr(DynamicColumn col, const bool dist)
             : ColumnHolder{std::move(col)},
-              distinct_(dist) {}
+              distinct_(dist) {
+        }
 
         explicit CountExpr(AllColumns col, const bool dist)
             : ColumnHolder{std::move(col)},
-              distinct_{dist} {}
+              distinct_{dist} {
+        }
 
         [[nodiscard]] bool distinct() const {
             return distinct_;
@@ -30,26 +32,30 @@ namespace demiplane::db {
     class SumExpr : public AliasableExpression<SumExpr>, public ColumnHolder {
     public:
         explicit SumExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {}
+            : ColumnHolder(std::move(column)) {
+        }
     };
 
     class AvgExpr : public AliasableExpression<AvgExpr>, public ColumnHolder {
     public:
         explicit AvgExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {}
+            : ColumnHolder(std::move(column)) {
+        }
     };
 
     class MaxExpr : public AliasableExpression<MaxExpr>, public ColumnHolder {
     public:
         explicit MaxExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {}
+            : ColumnHolder(std::move(column)) {
+        }
     };
 
 
     class MinExpr : public AliasableExpression<MinExpr>, public ColumnHolder {
     public:
         explicit MinExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {}
+            : ColumnHolder(std::move(column)) {
+        }
     };
 
 
@@ -92,4 +98,4 @@ namespace demiplane::db {
     MinExpr min(const TableColumn<T>& col) {
         return MinExpr{col.as_dynamic()};
     }
-}
+}  // namespace demiplane::db

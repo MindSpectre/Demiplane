@@ -52,14 +52,13 @@ namespace demiplane::gears {
     public:
         // True only if it's convertible to a specialization AND not itself a specialization
         static constexpr bool value =
-            is_convertible_to_specialization &&
-            !is_specialization<std::remove_cv_t<Derived>>();
+            is_convertible_to_specialization && !is_specialization<std::remove_cv_t<Derived>>();
     };
 
     // Concept for cleaner use
     template <typename Derived, template <typename...> class BaseTemplate>
-    inline constexpr bool derived_from_specialization_of_v = derived_from_specialization_of<
-        Derived, BaseTemplate>::value;
+    inline constexpr bool derived_from_specialization_of_v =
+        derived_from_specialization_of<Derived, BaseTemplate>::value;
 
 
     template <class...>
@@ -77,7 +76,7 @@ namespace demiplane::gears {
 
 
     // ── tiny type-list ────────────────────────────────────────────────
-    template <class... Ts>
+    template <class...>
     struct type_list {};
 
     // ── pick<T>() → std::get<T>(tuple) wrapper ────────────────────────
@@ -112,4 +111,4 @@ namespace demiplane::gears {
     constexpr bool has_exact_arg_type() {
         return (std::is_same_v<Args, T> || ...);
     }
-} // namespace demiplane::gears
+}  // namespace demiplane::gears

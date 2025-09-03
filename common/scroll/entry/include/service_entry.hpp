@@ -2,8 +2,9 @@
 
 #include <sstream>
 #include <string>
-//todo: make private
+// todo: make private
 #include <clock.hpp>
+
 #include "../entry_interface.hpp"
 
 namespace demiplane::scroll {
@@ -16,10 +17,10 @@ namespace demiplane::scroll {
         [[nodiscard]] std::string to_string() const override {
             std::ostringstream os;
             os << chrono::UTCClock::format_time(time_point, chrono::clock_formats::iso8601) << " "
-                << log_level_to_string(level_) << " "
-                << "[" << Service::name << "] "
-                << "[" << location.file_name() << ':' << location.line() << " " << location.function_name() << "] "
-                << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
+               << log_level_to_string(level_) << " "
+               << "[" << Service::name << "] "
+               << "[" << location.file_name() << ':' << location.line() << " " << location.function_name() << "] "
+               << "[tid " << tid << ", pid " << pid << "] " << message_ << '\n';
             return os.str();
         }
 
@@ -35,4 +36,4 @@ namespace demiplane::scroll {
     struct detail::entry_traits<ServiceEntry<Service>> {
         using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess>;
     };
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll

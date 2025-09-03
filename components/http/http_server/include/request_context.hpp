@@ -4,9 +4,10 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <json/json.h>
 
 #include "aliases.hpp"
+
+#include <json/json.h>
 
 // Forward declaration for JSON support
 
@@ -50,7 +51,7 @@ namespace demiplane::http {
             std::string name;
             std::string value;
             std::string content_type;
-            std::string filename; // Only for file uploads
+            std::string filename;  // Only for file uploads
         };
         std::optional<std::vector<MultipartField>> multipart_data() const;
 
@@ -111,4 +112,4 @@ namespace demiplane::http {
     template <>
     std::optional<std::string> RequestContext::convert_string<std::string>(const std::string& value) const;
 
-} // namespace demiplane::http
+}  // namespace demiplane::http

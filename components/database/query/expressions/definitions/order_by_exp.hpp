@@ -1,19 +1,17 @@
 #pragma once
 
-#include "db_column.hpp"
 #include "../basic.hpp"
+#include "db_column.hpp"
 
 namespace demiplane::db {
-    enum class OrderDirection {
-        ASC,
-        DESC
-    };
+    enum class OrderDirection { ASC, DESC };
 
     class OrderBy : public ColumnHolder {
     public:
         explicit OrderBy(DynamicColumn col, const OrderDirection dir = OrderDirection::ASC)
             : ColumnHolder{std::move(col)},
-              direction_(dir) {}
+              direction_(dir) {
+        }
 
 
         [[nodiscard]] OrderDirection direction() const {
@@ -48,7 +46,8 @@ namespace demiplane::db {
     public:
         constexpr explicit OrderByExpr(Query q, Orders... o)
             : query_(std::move(q)),
-              orders_(o...) {}
+              orders_(o...) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& query(this Self&& self) {
@@ -64,4 +63,4 @@ namespace demiplane::db {
         Query query_;
         std::tuple<Orders...> orders_;
     };
-}
+}  // namespace demiplane::db

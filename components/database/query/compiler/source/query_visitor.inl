@@ -23,4 +23,4 @@ namespace demiplane::db {
     void Literal<T>::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }
-}
+}  // namespace demiplane::db

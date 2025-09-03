@@ -40,4 +40,4 @@ namespace demiplane::gears {
         }
     };
 
-}
+}  // namespace demiplane::gears

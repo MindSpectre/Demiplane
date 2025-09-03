@@ -1,17 +1,21 @@
 #include <chrono>
-#include <db_column.hpp>
-#include <db_field_schema.hpp>
 #include <string>
 #include <typeindex>
 #include <typeinfo>
+
+#include <db_column.hpp>
+#include <db_field_schema.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
 class FieldSchemaTest : public ::testing::Test {
 protected:
-    void SetUp() override {}
-    void TearDown() override {}
+    void SetUp() override {
+    }
+    void TearDown() override {
+    }
 };
 
 TEST_F(FieldSchemaTest, FieldSchemaDefaultConstruction) {
@@ -91,9 +95,7 @@ TEST_F(FieldSchemaTest, AsColumnVoidType) {
     schema.db_type  = "INTEGER";
     schema.cpp_type = std::type_index(typeid(void));
 
-    EXPECT_NO_THROW({
-        std::ignore = schema.as_column<int>("test_table");
-        });
+    EXPECT_NO_THROW({ std::ignore = schema.as_column<int>("test_table"); });
 }
 
 TEST_F(FieldSchemaTest, AsColumnTypeMismatch) {
@@ -102,9 +104,7 @@ TEST_F(FieldSchemaTest, AsColumnTypeMismatch) {
     schema.db_type  = "INTEGER";
     schema.cpp_type = std::type_index(typeid(int));
 
-    EXPECT_THROW({
-                 std::ignore = schema.as_column<std::string>("test_table");
-                 }, std::logic_error);
+    EXPECT_THROW({ std::ignore = schema.as_column<std::string>("test_table"); }, std::logic_error);
 }
 
 TEST_F(FieldSchemaTest, AsColumnTypeMismatchErrorMessage) {
@@ -116,8 +116,7 @@ TEST_F(FieldSchemaTest, AsColumnTypeMismatchErrorMessage) {
     try {
         std::ignore = schema.as_column<std::string>("test_table");
         FAIL() << "Expected std::logic_error";
-    }
-    catch (const std::logic_error& e) {
+    } catch (const std::logic_error& e) {
         const std::string error_msg = e.what();
         EXPECT_TRUE(error_msg.find("test_field") != std::string::npos);
         EXPECT_TRUE(error_msg.find("Type mismatch") != std::string::npos);

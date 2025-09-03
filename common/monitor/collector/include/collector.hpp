@@ -26,12 +26,14 @@ namespace demiplane::monitor {
         void set_timeout(const std::chrono::milliseconds timeout) {
             timeout_ = timeout;
         }
+
     private:
         void collection() {
             while (true) {
                 std::unique_lock lock(mutex_);
                 checker_cv_.wait_for(lock, timeout_);
-                if (!is_run) break;
+                if (!is_run)
+                    break;
                 JsonStats stats = object.get().take_stats();
             }
         }
@@ -42,4 +44,4 @@ namespace demiplane::monitor {
         std::jthread collector_thread_;
         std::reference_wrapper<T> object;
     };
-}
+}  // namespace demiplane::monitor

@@ -23,4 +23,4 @@ namespace demiplane::http {
     using ErrorCallback         = std::function<void(const std::exception&)>;
     using AsyncErrorCallback    = std::function<AsyncVoid(const std::exception&)>;
 
-} // namespace demiplane::http
+}  // namespace demiplane::http

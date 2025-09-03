@@ -9,10 +9,9 @@ void demiplane::scroll::ComponentLoggerManager::initialize() {
             logger_ = nexus_logger;
             return;
         }
-    }
-    catch (...) {
-        //TODO: process error
-        // Nexus not available or logger not registered
+    } catch (...) {
+        // TODO: process error
+        //  Nexus not available or logger not registered
     }
     // Fallback: create our own logger
     logger_ = std::make_shared<ConsoleLogger<LightEntry>>(ConsoleLoggerConfig{});

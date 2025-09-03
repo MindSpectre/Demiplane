@@ -13,10 +13,10 @@ namespace demiplane::crypto {
         virtual std::string hash_function(std::string_view data, std::string_view salt) = 0;
 
         std::pair<std::string, std::string> hash_with_generated_salt(const std::string_view password) {
-            std::string salt = SaltGenerator::generate_base64(16); // 16-byte salt
+            std::string salt = SaltGenerator::generate_base64(16);  // 16-byte salt
             std::string hash = hash_function(password, salt);
             return {salt, hash};
         }
     };
 
-} // namespace demiplane::crypto
+}  // namespace demiplane::crypto

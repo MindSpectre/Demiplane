@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <demiplane/db4>
+
 #include <gtest/gtest.h>
 #include <trantor/utils/Logger.h>
 using namespace demiplane::database;
@@ -15,7 +16,7 @@ protected:
     static constexpr auto host     = "localhost";
     static constexpr auto db_name  = "test_db";
     static constexpr auto username = "postgres";
-    static constexpr auto password = "postgres"; // Replace it with your actual password
+    static constexpr auto password = "postgres";  // Replace it with your actual password
 
     // Pointer to the PqxxClient
     std::shared_ptr<PqxxClient> db_client_;
@@ -55,7 +56,10 @@ protected:
         query.table(test_table_).columns(fields);
         db_client_->create_table(query);
         query::SetUniqueConstraint constraint;
-        constraint.table(test_table_).make_constraint({Column{"id", SqlType::INT}});
+        constraint.table(test_table_)
+            .make_constraint({
+                Column{"id", SqlType::INT}
+        });
         db_client_->set_unique_constraint(constraint);
         // Set up full-text search on 'name' and 'description' fields
         std::vector<std::shared_ptr<FieldBase>> fts_fields;
@@ -164,7 +168,9 @@ TEST_F(PqxxClientTest, InsertTestWithReturn) {
     record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
     records.push_back(std::move(record2));
 
-    const Columns return_fields = {Column{"id", SqlType::INT}};
+    const Columns return_fields = {
+        Column{"id", SqlType::INT}
+    };
     // Add data to the table
     demiplane::gears::Interceptor<std::optional<Records>> result;
     InsertQuery query;
@@ -189,8 +195,11 @@ TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
     db_client_->drop_table(drop_q);
     CreateTableQuery create_table_query;
     create_table_query.table(test_table_);
-    create_table_query.columns(
-        Columns{Column{"id", SqlType::NULL_UUID}, Column{"name", SqlType::TEXT}, Column{"description", SqlType::TEXT}});
+    create_table_query.columns(Columns{
+        Column{"id",          SqlType::NULL_UUID},
+        Column{"name",        SqlType::TEXT     },
+        Column{"description", SqlType::TEXT     }
+    });
     db_client_->create_table(create_table_query);
     Record record1;
     record1.push_back(std::make_unique<Field<Uuid>>("id", Uuid(Uuid::null_value, false)));
@@ -203,7 +212,9 @@ TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
     record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
     records.push_back(std::move(record2));
 
-    const Columns return_fields = {Column{"id", SqlType::UUID}};
+    const Columns return_fields = {
+        Column{"id", SqlType::UUID}
+    };
     InsertQuery query;
     query.table(test_table_).insert(std::move(records)).return_with(return_fields);
     query.use_params = false;
@@ -222,12 +233,14 @@ TEST_F(PqxxClientTest, InsertTestWithNullUUID) {
     EXPECT_TRUE(results[1][0]->as<Uuid>().get_id() == "550e8400-e29b-41d4-a716-446655440001");
 }
 TEST_F(PqxxClientTest, InsertTestWithUuidGenerate) {
-
     db_client_->drop_table(drop_q);
     CreateTableQuery create_table_query;
     create_table_query.table(test_table_);
     create_table_query.columns(Columns{
-        Column{"id", SqlType::PRIMARY_UUID}, Column{"name", SqlType::TEXT}, Column{"description", SqlType::TEXT}});
+        Column{"id",          SqlType::PRIMARY_UUID},
+        Column{"name",        SqlType::TEXT        },
+        Column{"description", SqlType::TEXT        }
+    });
     db_client_->create_table(create_table_query);
 
     Records records;
@@ -241,7 +254,9 @@ TEST_F(PqxxClientTest, InsertTestWithUuidGenerate) {
     record2.push_back(std::make_unique<Field<std::string>>("name", "Bob"));
     record2.push_back(std::make_unique<Field<std::string>>("description", "L"));
     records.push_back(std::move(record2));
-    const Columns return_fields = {Column{"id", SqlType::PRIMARY_UUID}};
+    const Columns return_fields = {
+        Column{"id", SqlType::PRIMARY_UUID}
+    };
     // Add data to the table
     InsertQuery query;
     query.table(test_table_).insert(std::move(records)).return_with(return_fields);
@@ -284,7 +299,9 @@ TEST_F(PqxxClientTest, UpsertTestFullRecord) {
     UpsertQuery upsert_query;
     upsert_query.table(test_table_)
         .new_values(std::move(upsert_records))
-        .when_conflict_in_these_columns(Columns{Column{"id", SqlType::UNSUPPORTED}})
+        .when_conflict_in_these_columns(Columns{
+            Column{"id", SqlType::UNSUPPORTED}
+    })
         .replace_these_columns(Columns{Column{"description", SqlType::TEXT}});
     EXPECT_NO_THROW(db_client_->upsert(std::move(upsert_query)));
     EXPECT_TRUE(result1);
@@ -328,7 +345,9 @@ TEST_F(PqxxClientTest, UpsertTestWithReturn) {
     UpsertQuery upsert_query;
     upsert_query.table(test_table_)
         .new_values(std::move(upsert_records))
-        .when_conflict_in_these_columns(Columns{Column{"id", SqlType::INT}})
+        .when_conflict_in_these_columns(Columns{
+            Column{"id", SqlType::INT}
+    })
         .replace_these_columns(Columns{Column{"description", SqlType::TEXT}});
     EXPECT_TRUE(db_client_->upsert(std::move(upsert_query)));
 
@@ -374,7 +393,9 @@ TEST_F(PqxxClientTest, UpsertTestPartial) {
     UpsertQuery upsert_query;
     upsert_query.table(test_table_)
         .new_values(std::move(upsert_records))
-        .when_conflict_in_these_columns(Columns{Column{"id", SqlType::INT}})
+        .when_conflict_in_these_columns(Columns{
+            Column{"id", SqlType::INT}
+    })
         .replace_these_columns(Columns{Column{"description", SqlType::TEXT}});
     EXPECT_TRUE(db_client_->upsert(std::move(upsert_query)));
 

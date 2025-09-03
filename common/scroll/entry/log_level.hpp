@@ -51,4 +51,4 @@ namespace demiplane::scroll {
         }
         return "UNKNOWN";
     }
-} // namespace demiplane::scroll
+}  // namespace demiplane::scroll

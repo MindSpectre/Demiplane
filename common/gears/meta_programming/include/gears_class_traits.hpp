@@ -33,7 +33,7 @@ namespace demiplane::gears {
     struct InterfaceBundle : Interfaces... {
         using Interfaces::Interfaces...;
         InterfaceBundle()           = default;
-        ~InterfaceBundle() override = default; // optional if Traits have virtual dtors
+        ~InterfaceBundle() override = default;  // optional if Traits have virtual dtors
     };
 
     template <typename T>
@@ -43,5 +43,4 @@ namespace demiplane::gears {
     };
 
 
-
-} // namespace demiplane::gears
+}  // namespace demiplane::gears

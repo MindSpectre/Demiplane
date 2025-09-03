@@ -6,13 +6,14 @@ namespace demiplane::db {
     class RecordFactory {
     public:
         explicit RecordFactory(std::shared_ptr<const TableSchema> schema)
-            : schema_(std::move(schema)) {}
+            : schema_(std::move(schema)) {
+        }
 
         [[nodiscard]] Record create_record() const {
             return Record{schema_};
         }
 
-        std::vector<Record> create_batch(size_t count) {
+        std::vector<Record> create_batch(const size_t count) {
             std::vector<Record> records;
             records.reserve(count);
 
@@ -30,4 +31,4 @@ namespace demiplane::db {
     private:
         std::shared_ptr<const TableSchema> schema_;
     };
-}
+}  // namespace demiplane::db

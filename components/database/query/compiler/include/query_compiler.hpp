@@ -15,7 +15,8 @@ namespace demiplane::db {
     public:
         explicit QueryCompiler(std::shared_ptr<SqlDialect> dialect, const bool use_params = true)
             : dialect_(std::move(dialect)),
-              use_parameters_(use_params) {}
+              use_parameters_(use_params) {
+        }
 
         // Compile any expression to SQL
         template <IsQuery Expr>
@@ -23,7 +24,8 @@ namespace demiplane::db {
             SqlGeneratorVisitor visitor(dialect_, use_parameters_);
             std::forward<Expr>(expr).accept(visitor);
             COMPONENT_LOG_DBG() << SCROLL_PARAMS(visitor.sql());
-            return {std::move(visitor).sql(), std::move(visitor).parameters()};
+            auto [sql, params] = std::move(visitor).decompose();
+            return {std::move(sql), std::move(params)};
         }
 
         // Get dialect for feature checking
@@ -35,4 +37,4 @@ namespace demiplane::db {
         std::shared_ptr<SqlDialect> dialect_;
         bool use_parameters_;
     };
-}
+}  // namespace demiplane::db

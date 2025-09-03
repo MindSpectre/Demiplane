@@ -24,7 +24,10 @@ add_library(Demiplane::Crypto::Hasher ALIAS ${DMP_CRYPTO}.Hasher)
 ##############################################################################
 # Crypto utilities
 ##############################################################################
-add_library(${DMP_CRYPTO}.Utilities INTERFACE)
+add_library(${DMP_CRYPTO}.Utilities INTERFACE
+        utilities/security_utils.hpp
+        utilities/compile_time_utils.hpp
+)
 
 target_include_directories(${DMP_CRYPTO}.Utilities
         INTERFACE

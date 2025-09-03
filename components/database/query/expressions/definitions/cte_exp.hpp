@@ -12,7 +12,8 @@ namespace demiplane::db {
         CteExpr(std::string name, Query q, const bool r = false)
             : cte_name_(std::move(name)),
               query_(std::move(q)),
-              recursive_(r) {}
+              recursive_(r) {
+        }
 
 
         [[nodiscard]] const std::string& name() const {
@@ -43,4 +44,4 @@ namespace demiplane::db {
     auto with_recursive(std::string name, Query query) {
         return CteExpr<Query>{std::move(name), std::move(query), true};
     }
-}
+}  // namespace demiplane::db

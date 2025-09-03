@@ -1,8 +1,6 @@
 // Aggregate query expression tests
 // Comprehensive tests for aggregate functions and expressions
 
-#include <gtest/gtest.h>
-
 #include <demiplane/nexus>
 #include <demiplane/scroll>
 
@@ -13,35 +11,33 @@
 #include "query_compiler.hpp"
 #include "query_expressions.hpp"
 
+#include <gtest/gtest.h>
+
 using namespace demiplane::db;
 
 
 // Test fixture for aggregate operations
-class AggregateQueryTest : public ::testing::Test,
-                           public demiplane::scroll::LoggerProvider {
+class AggregateQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        demiplane::nexus::instance().register_factory<demiplane::scroll::Logger>([]() {
-            return std::make_shared<
-                demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(
-                *demiplane::nexus::instance().spawn<demiplane::scroll::ConsoleLoggerConfig>()
-            );
+        demiplane::nexus::instance().register_factory<demiplane::scroll::Logger>([] {
+            return std::make_shared<demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(
+                *demiplane::nexus::instance().spawn<demiplane::scroll::ConsoleLoggerConfig>());
         });
-        demiplane::nexus::instance().register_factory<demiplane::scroll::ConsoleLoggerConfig>([]() {
-            return std::make_shared<demiplane::scroll::ConsoleLoggerConfig>();
-        });
+        demiplane::nexus::instance().register_factory<demiplane::scroll::ConsoleLoggerConfig>(
+            [] { return std::make_shared<demiplane::scroll::ConsoleLoggerConfig>(); });
         set_logger(demiplane::nexus::instance().spawn<demiplane::scroll::Logger>());
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<std::string>("name", "VARCHAR(255)")
-                    .add_field<int>("age", "INTEGER")
-                    .add_field<bool>("active", "BOOLEAN");
+            .primary_key("id")
+            .add_field<std::string>("name", "VARCHAR(255)")
+            .add_field<int>("age", "INTEGER")
+            .add_field<bool>("active", "BOOLEAN");
 
         // Create column references
         user_id     = users_schema->column<int>("id");
@@ -65,128 +61,123 @@ protected:
 
 // Test basic aggregate expressions
 TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
-    // COUNT
-    auto count_query  = select(count(user_id)).from(users_schema);
-    auto count_result = compiler->compile(count_query);
-    EXPECT_FALSE(count_result.sql.empty());
+    SCROLL_LOG_INF() << "Aggregate expressions:";
+    {
+        // COUNT
+        auto count_query       = select(count(user_id)).from(users_schema);
+        auto [sql, parameters] = compiler->compile(count_query);
+        EXPECT_FALSE(sql.empty());
+        SCROLL_LOG_INF() << "COUNT: " << sql;
+    }
 
     // SUM
-    auto sum_query  = select(sum(user_age)).from(users_schema);
-    auto sum_result = compiler->compile(sum_query);
-    EXPECT_FALSE(sum_result.sql.empty());
+    {
+        auto sum_query         = select(sum(user_age)).from(users_schema);
+        auto [sql, parameters] = compiler->compile(sum_query);
+        EXPECT_FALSE(sql.empty());
+        SCROLL_LOG_INF() << "SUM: " << sql;
+    }
 
     // AVG
-    auto avg_query  = select(avg(user_age)).from(users_schema);
-    auto avg_result = compiler->compile(avg_query);
-    EXPECT_FALSE(avg_result.sql.empty());
+    {
+        auto avg_query         = select(avg(user_age)).from(users_schema);
+        auto [sql, parameters] = compiler->compile(avg_query);
+        EXPECT_FALSE(sql.empty());
+        SCROLL_LOG_INF() << "AVG: " << sql;
+    }
 
     // MIN
-    auto min_query  = select(min(user_age)).from(users_schema);
-    auto min_result = compiler->compile(min_query);
-    EXPECT_FALSE(min_result.sql.empty());
-
+    {
+        auto min_query         = select(min(user_age)).from(users_schema);
+        auto [sql, parameters] = compiler->compile(min_query);
+        EXPECT_FALSE(sql.empty());
+        SCROLL_LOG_INF() << "MIN: " << sql;
+    }
     // MAX
-    auto max_query  = select(max(user_age)).from(users_schema);
-    auto max_result = compiler->compile(max_query);
-    EXPECT_FALSE(max_result.sql.empty());
-
-
-    SCROLL_LOG_INF() << "Aggregate expressions:";
-    SCROLL_LOG_INF() << "COUNT: " << count_result.sql;
-    SCROLL_LOG_INF() << "SUM: " << sum_result.sql;
-    SCROLL_LOG_INF() << "AVG: " << avg_result.sql;
-    SCROLL_LOG_INF() << "MIN: " << min_result.sql;
-    SCROLL_LOG_INF() << "MAX: " << max_result.sql;
+    {
+        auto max_query         = select(max(user_age)).from(users_schema);
+        auto [sql, parameters] = compiler->compile(max_query);
+        EXPECT_FALSE(sql.empty());
+        SCROLL_LOG_INF() << "MAX: " << sql;
+    }
 }
 
 // Test aggregate expressions with aliases
 TEST_F(AggregateQueryTest, AggregateWithAliasExpressions) {
-    auto query = select(
-        count(user_id).as("total_users"),
-        sum(user_age).as("total_age"),
-        avg(user_age).as("avg_age"),
-        min(user_age).as("min_age"),
-        max(user_age).as("max_age")
-    ).from(users_schema);
+    auto query = select(count(user_id).as("total_users"),
+                        sum(user_age).as("total_age"),
+                        avg(user_age).as("avg_age"),
+                        min(user_age).as("min_age"),
+                        max(user_age).as("max_age"))
+                     .from(users_schema);
 
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test COUNT DISTINCT
 TEST_F(AggregateQueryTest, CountDistinctExpression) {
-    auto query  = select(count_distinct(user_age)).from(users_schema);
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+    auto query                   = select(count_distinct(user_age)).from(users_schema);
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test COUNT ALL
 TEST_F(AggregateQueryTest, CountAllExpression) {
-    auto query  = select(count_all()).from(users_schema);
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+    auto query                   = select(count_all()).from(users_schema);
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test aggregates with GROUP BY
 TEST_F(AggregateQueryTest, AggregateWithGroupByExpression) {
-    auto query = select(user_active, count(user_id).as("user_count"))
-                 .from(users_schema)
-                 .group_by(user_active);
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+    auto query = select(user_active, count(user_id).as("user_count")).from(users_schema).group_by(user_active);
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test aggregates with HAVING
 TEST_F(AggregateQueryTest, AggregateWithHavingExpression) {
     auto query = select(user_active, count(user_id).as("user_count"))
-                 .from(users_schema)
-                 .group_by(user_active)
-                 .having(count(user_id) > lit(5));
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+                     .from(users_schema)
+                     .group_by(user_active)
+                     .having(count(user_id) > lit(5));
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test multiple aggregates in same query
 TEST_F(AggregateQueryTest, MultipleAggregatesExpression) {
-    auto query = select(
-        count(user_id),
-        sum(user_age),
-        avg(user_age),
-        min(user_age),
-        max(user_age),
-        count_distinct(user_name)
-    ).from(users_schema);
+    auto query =
+        select(count(user_id), sum(user_age), avg(user_age), min(user_age), max(user_age), count_distinct(user_name))
+            .from(users_schema);
 
-    auto result = compiler->compile(std::move(query));
-    EXPECT_FALSE(result.sql.empty());
+    const auto [sql, parameters] = compiler->compile(std::move(query));
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test aggregate with mixed column types
 TEST_F(AggregateQueryTest, AggregateWithMixedTypesExpression) {
-    auto query = select(
-            user_name,
-            count(user_id).as("count"),
-            lit("literal_value"),
-            avg(user_age).as("avg_age")
-        ).from(users_schema)
-         .group_by(user_name);
+    auto query = select(user_name, count(user_id).as("count"), lit("literal_value"), avg(user_age).as("avg_age"))
+                     .from(users_schema)
+                     .group_by(user_name);
 
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }
 
 // Test aggregate method chaining
@@ -195,9 +186,9 @@ TEST_F(AggregateQueryTest, AggregateMethodChainingExpression) {
     auto& alias_ref = count_expr.as("user_count");
     EXPECT_EQ(&count_expr, &alias_ref);
 
-    auto query  = select(count_expr).from(users_schema);
-    auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
+    auto query                   = select(count_expr).from(users_schema);
+    const auto [sql, parameters] = compiler->compile(query);
+    EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << result.sql;
+    SCROLL_LOG_INF() << sql;
 }

@@ -1,18 +1,17 @@
 #include <demiplane/scroll>
 #include <filesystem>
 #include <fstream>
-#include <gtest/gtest.h>
 #include <sstream>
+
+#include <gtest/gtest.h>
 
 class FileLoggerTest : public ::testing::Test {
 protected:
-    demiplane::scroll::FileLoggerConfig cfg{
-        .threshold = demiplane::scroll::DBG,
-        .file = "test.log",
-        .add_time_to_filename = false,
-        .sort_entries = true,
-        .flush_each_batch = true
-    };
+    demiplane::scroll::FileLoggerConfig cfg{.threshold            = demiplane::scroll::DBG,
+                                            .file                 = "test.log",
+                                            .add_time_to_filename = false,
+                                            .sort_entries         = true,
+                                            .flush_each_batch     = true};
     std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> file_logger;
 
     void SetUp() override {
@@ -36,9 +35,8 @@ protected:
 // Test basic logging functionality with entry objects
 TEST_F(FileLoggerTest, LogsEntryWhenAboveThreshold) {
     // Create a mock entry
-    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(demiplane::scroll::INF,
-                                                                                       "Test message",
-                                                                                       std::source_location::current());
+    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
+        demiplane::scroll::INF, "Test message", std::source_location::current());
 
     // Log the entry
     file_logger->log(entry);
@@ -54,12 +52,11 @@ TEST_F(FileLoggerTest, LogsEntryWhenAboveThreshold) {
 // Test that messages below the threshold are not logged
 TEST_F(FileLoggerTest, FiltersEntriesBelowThreshold) {
     // Set threshold to ERROR
-    file_logger->config().threshold = (demiplane::scroll::ERR);
+    file_logger->config().threshold = demiplane::scroll::ERR;
     file_logger->reload();
     // Create and log an INFO entry (below the threshold)
-    auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(demiplane::scroll::INF,
-                                                                                 "This should not appear",
-                                                                                 std::source_location::current());
+    const auto entry = demiplane::scroll::make_entry<demiplane::scroll::DetailedEntry>(
+        demiplane::scroll::INF, "This should not appear", std::source_location::current());
 
     file_logger->log(entry);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -72,7 +69,7 @@ TEST_F(FileLoggerTest, DirectLoggingWithSourceLocation) {
     // Log directly with a message
     file_logger->log(demiplane::scroll::WRN, "Warning message", std::source_location::current());
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    std::string output = read_log_file();
+    const std::string output = read_log_file();
 
     // Verify output
     EXPECT_TRUE(output.find("Warning message") != std::string::npos);
@@ -86,14 +83,14 @@ TEST_F(FileLoggerTest, ThresholdChangeAffectsLogging) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
     // Verify debug message is logged
-    std::string output1 = read_log_file();
+    const std::string output1 = read_log_file();
     EXPECT_TRUE(output1.find("Debug message") != std::string::npos);
 
     // Clean up file for next test
 
     std::filesystem::remove(cfg.file);
     // Change the threshold to WARNING
-    file_logger->config().threshold = (demiplane::scroll::WRN);
+    file_logger->config().threshold = demiplane::scroll::WRN;
     file_logger->reload();
     // Try to log the DEBUG message again
     // file_logger->log(demiplane::scroll::DBG, "Another debug message", std::source_location::current());
@@ -109,7 +106,7 @@ TEST_F(FileLoggerTest, ThresholdChangeAffectsLogging) {
     file_logger->log(demiplane::scroll::WRN, "Warning message", std::source_location::current());
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Verify warning is logged
-    std::string output2 = read_log_file();
+    const std::string output2 = read_log_file();
     EXPECT_TRUE(output2.find("Warning message") != std::string::npos);
 }
 
@@ -117,11 +114,11 @@ TEST_F(FileLoggerTest, ThresholdChangeAffectsLogging) {
 TEST_F(FileLoggerTest, AllLogLevels) {
     // Test each log level
     std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {
-        {demiplane::scroll::DBG, "DEBUG"},
-        {demiplane::scroll::INF, "INFO"},
+        {demiplane::scroll::DBG, "DEBUG"  },
+        {demiplane::scroll::INF, "INFO"   },
         {demiplane::scroll::WRN, "WARNING"},
-        {demiplane::scroll::ERR, "ERROR"},
-        {demiplane::scroll::FAT, "FATAL"}
+        {demiplane::scroll::ERR, "ERROR"  },
+        {demiplane::scroll::FAT, "FATAL"  }
     };
 
     for (const auto& [level, levelName] : levels) {
@@ -147,13 +144,13 @@ TEST_F(FileLoggerTest, FileCreationAndAppending) {
     // First message
     file_logger->log(demiplane::scroll::INF, "First message", std::source_location::current());
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    std::string output1 = read_log_file();
+    const std::string output1 = read_log_file();
     EXPECT_TRUE(output1.find("First message") != std::string::npos);
 
     // Second message should be appended
     file_logger->log(demiplane::scroll::INF, "Second message", std::source_location::current());
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    std::string output2 = read_log_file();
+    const std::string output2 = read_log_file();
     EXPECT_TRUE(output2.find("First message") != std::string::npos);
     EXPECT_TRUE(output2.find("Second message") != std::string::npos);
 }
@@ -174,7 +171,7 @@ TEST_F(FileLoggerTest, FilePathHandling) {
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     // Verify directory was created and file exists
     EXPECT_TRUE(std::filesystem::exists(file_logger->file_path()) &&
-        file_logger->file_path().string().contains(nested_path.parent_path().string()));
+                file_logger->file_path().string().contains(nested_path.parent_path().string()));
 
     // Read the file content
     std::ifstream nested_file(file_logger->file_path());
@@ -188,7 +185,7 @@ TEST_F(FileLoggerTest, FilePathHandling) {
     // std::filesystem::remove_all("test_dir");
 }
 
-inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
+inline std::chrono::milliseconds parse_sec_ms(const std::string_view line) {
     // indexes for "… HH:MM:SS.mmmZ"
     //            012345678901234567890123
     //            ----------^  ^   ^
@@ -198,8 +195,8 @@ inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
         return std::chrono::milliseconds{0};
     }
 
-    int sec = std::stoi(std::string{line.substr(17, 2)});
-    int ms  = std::stoi(std::string{line.substr(20, 3)});
+    const int sec = std::stoi(std::string{line.substr(17, 2)});
+    const int ms  = std::stoi(std::string{line.substr(20, 3)});
 
     return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
 }
@@ -238,27 +235,26 @@ void multithread_write(
     std::string line;
     std::chrono::milliseconds prev{};
     bool first                     = true;
-    std::uint32_t monotonic_errors = 0; // how many times we go backwards?
+    std::uint32_t monotonic_errors = 0;  // how many times we go backwards?
     std::uint32_t total_lines      = 0;
     while (std::getline(in, line)) {
         auto ts = parse_sec_ms(line);
 
         if (!first) {
             if (ts < prev) {
-                ++monotonic_errors; // or store the offending line
+                ++monotonic_errors;  // or store the offending line
             }
-        }
-        else {
+        } else {
             first = false;
         }
-        prev  = ts;
+        prev = ts;
         total_lines++;
     }
 
     std::cout << "Non-monotonic lines: " << monotonic_errors << " " << total_lines << '\n';
     std::cout << "Non-monotonic lines%: "
-        << static_cast<double>(100 * monotonic_errors) / (static_cast<double>(t_num) * static_cast<double>(r_num))
-        << '\n';
+              << static_cast<double>(100 * monotonic_errors) / (static_cast<double>(t_num) * static_cast<double>(r_num))
+              << '\n';
 }
 
 TEST_F(FileLoggerTest, MultithreadWrite) {
@@ -270,7 +266,7 @@ TEST_F(FileLoggerTest, MultithreadWrite) {
 TEST_F(FileLoggerTest, MultithreadWriteSafe) {
     file_logger->config().sort_entries = true;
     file_logger->config().batch_size   = 512;
-    //TODO: result out of order between batches
+    // TODO: result out of order between batches
     file_logger->reload();
 
     multithread_write(file_logger);

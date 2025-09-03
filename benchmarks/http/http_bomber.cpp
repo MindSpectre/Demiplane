@@ -18,10 +18,19 @@ using tcp       = net::ip::tcp;
 
 class HttpBomber {
 public:
-    HttpBomber(std::string host, std::string port, std::string target, const uint32_t thread_count,
-        const uint32_t interval_ms, const uint32_t duration_seconds)
-        : host_(std::move(host)), port_(std::move(port)), target_(std::move(target)), thread_count_(thread_count),
-          interval_ms_(interval_ms), duration_seconds_(duration_seconds) {}
+    HttpBomber(std::string host,
+               std::string port,
+               std::string target,
+               const uint32_t thread_count,
+               const uint32_t interval_ms,
+               const uint32_t duration_seconds)
+        : host_(std::move(host)),
+          port_(std::move(port)),
+          target_(std::move(target)),
+          thread_count_(thread_count),
+          interval_ms_(interval_ms),
+          duration_seconds_(duration_seconds) {
+    }
 
     void start() {
         std::cout << "Starting HTTP Bomber with " << thread_count_ << " threads\n";
@@ -78,7 +87,7 @@ private:
                 http::request<http::string_body> req{http::verb::get, target_, 11};
                 req.set(http::field::host, host_);
                 req.set(http::field::user_agent, "HttpBomber/1.0");
-                req.set(http::field::connection, "close"); // Force connection close
+                req.set(http::field::connection, "close");  // Force connection close
 
                 // Send the request and measure response time
                 auto send_start = std::chrono::high_resolution_clock::now();
@@ -107,7 +116,7 @@ private:
                 }
 
                 // Update response time statistics (convert to milliseconds with precision)
-                uint64_t response_time_ms = response_time.count() / 1000; // Convert microseconds to milliseconds
+                uint64_t response_time_ms = response_time.count() / 1000;  // Convert microseconds to milliseconds
                 stats_.update_response_time(response_time_ms);
 
             } catch (const std::exception& e) {
@@ -137,7 +146,7 @@ private:
         const auto start_time = std::chrono::steady_clock::now();
 
         while (running_) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Update every 500ms
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));  // Update every 500ms
 
             auto current_time = std::chrono::steady_clock::now();
             auto elapsed      = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time);
@@ -216,14 +225,12 @@ private:
             total_response_time_ms += response_time_ms;
 
             uint64_t current_min = min_response_time_ms.load();
-            while (response_time_ms < current_min
-                   && !min_response_time_ms.compare_exchange_weak(current_min, response_time_ms)) {
-            }
+            while (response_time_ms < current_min &&
+                   !min_response_time_ms.compare_exchange_weak(current_min, response_time_ms)) {}
 
             uint64_t current_max = max_response_time_ms.load();
-            while (response_time_ms > current_max
-                   && !max_response_time_ms.compare_exchange_weak(current_max, response_time_ms)) {
-            }
+            while (response_time_ms > current_max &&
+                   !max_response_time_ms.compare_exchange_weak(current_max, response_time_ms)) {}
         }
     };
 

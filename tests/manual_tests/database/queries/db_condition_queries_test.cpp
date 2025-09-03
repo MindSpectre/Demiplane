@@ -1,47 +1,45 @@
 // Condition query expression tests
 // Comprehensive tests for condition expressions and operators
 
-#include <gtest/gtest.h>
+#include <demiplane/scroll>
 
-#include "query_expressions.hpp"
 #include "db_column.hpp"
 #include "db_field_schema.hpp"
 #include "db_table_schema.hpp"
 #include "postgres_dialect.hpp"
 #include "query_compiler.hpp"
+#include "query_expressions.hpp"
 
-#include <demiplane/scroll>
+#include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
 #define MANUAL_CHECK
 
 // Test fixture for condition operations
-class ConditionQueryTest : public ::testing::Test,
-                           public demiplane::scroll::LoggerProvider {
+class ConditionQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
         demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file             = "query_test.log";
+        cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        std::shared_ptr<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>> logger = std::make_shared<
-            demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<std::string>("name", "VARCHAR(255)")
-                    .add_field<int>("age", "INTEGER")
-                    .add_field<bool>("active", "BOOLEAN");
+            .primary_key("id")
+            .add_field<std::string>("name", "VARCHAR(255)")
+            .add_field<int>("age", "INTEGER")
+            .add_field<bool>("active", "BOOLEAN");
 
         posts_schema = std::make_shared<TableSchema>("posts");
         posts_schema->add_field<int>("id", "INTEGER")
-                    .primary_key("id")
-                    .add_field<int>("user_id", "INTEGER")
-                    .add_field<std::string>("title", "VARCHAR(255)")
-                    .add_field<bool>("published", "BOOLEAN");
+            .primary_key("id")
+            .add_field<int>("user_id", "INTEGER")
+            .add_field<std::string>("title", "VARCHAR(255)")
+            .add_field<bool>("published", "BOOLEAN");
 
         // Create column references
         user_id     = users_schema->column<int>("id");
@@ -117,14 +115,12 @@ TEST_F(ConditionQueryTest, BinaryConditionExpressions) {
 // Test logical condition expressions
 TEST_F(ConditionQueryTest, LogicalConditionExpressions) {
     // AND
-    auto and_query = select(user_name).from(users_schema)
-                                      .where(user_age > lit(18) && user_active == lit(true));
+    auto and_query  = select(user_name).from(users_schema).where(user_age > lit(18) && user_active == lit(true));
     auto and_result = compiler->compile(and_query);
     EXPECT_FALSE(and_result.sql.empty());
 
     // OR
-    auto or_query = select(user_name).from(users_schema)
-                                     .where(user_age < lit(18) || user_age > lit(65));
+    auto or_query  = select(user_name).from(users_schema).where(user_age < lit(18) || user_age > lit(65));
     auto or_result = compiler->compile(or_query);
     EXPECT_FALSE(or_result.sql.empty());
 
@@ -154,9 +150,7 @@ TEST_F(ConditionQueryTest, StringComparisonExpressions) {
 
 // Test BETWEEN expressions
 TEST_F(ConditionQueryTest, BetweenExpressions) {
-    auto query = select(user_name)
-                 .from(users_schema)
-                 .where(between(user_age, lit(18), lit(65)));
+    auto query  = select(user_name).from(users_schema).where(between(user_age, lit(18), lit(65)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -164,9 +158,7 @@ TEST_F(ConditionQueryTest, BetweenExpressions) {
 
 // Test IN LIST expressions
 TEST_F(ConditionQueryTest, InListExpressions) {
-    auto query = select(user_name)
-                 .from(users_schema)
-                 .where(in(user_age, lit(18), lit(25), lit(30)));
+    auto query  = select(user_name).from(users_schema).where(in(user_age, lit(18), lit(25), lit(30)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -174,13 +166,9 @@ TEST_F(ConditionQueryTest, InListExpressions) {
 
 // Test EXISTS expressions
 TEST_F(ConditionQueryTest, ExistsExpressions) {
-    auto subquery = select(lit(1))
-                    .from(posts_schema)
-                    .where(post_user_id == user_id && post_published == lit(true));
+    auto subquery = select(lit(1)).from(posts_schema).where(post_user_id == user_id && post_published == lit(true));
 
-    auto query = select(user_name)
-                 .from(users_schema)
-                 .where(exists(subquery));
+    auto query  = select(user_name).from(users_schema).where(exists(subquery));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -188,13 +176,9 @@ TEST_F(ConditionQueryTest, ExistsExpressions) {
 
 // Test SUBQUERY conditions
 TEST_F(ConditionQueryTest, SubqueryConditions) {
-    auto active_users = select(user_id)
-                        .from(users_schema)
-                        .where(user_active == lit(true));
+    auto active_users = select(user_id).from(users_schema).where(user_active == lit(true));
 
-    auto query = select(post_title)
-                 .from(posts_schema)
-                 .where(in(post_user_id, subquery(active_users)));
+    auto query  = select(post_title).from(posts_schema).where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;
@@ -202,10 +186,10 @@ TEST_F(ConditionQueryTest, SubqueryConditions) {
 
 // Test complex nested conditions
 TEST_F(ConditionQueryTest, ComplexNestedConditions) {
-    auto query = select(user_name)
-                 .from(users_schema)
-                 .where((user_age > lit(18) && user_age < lit(65)) ||
-                        (user_active == lit(true) && user_age >= lit(65)));
+    auto query =
+        select(user_name)
+            .from(users_schema)
+            .where((user_age > lit(18) && user_age < lit(65)) || (user_active == lit(true) && user_age >= lit(65)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
     SCROLL_LOG_INF() << result.sql;

@@ -25,4 +25,4 @@ namespace demiplane::crypto {
     private:
         std::string key_;
     };
-} // namespace demiplane::crypto
+}  // namespace demiplane::crypto

@@ -7,13 +7,13 @@
 namespace demiplane::db {
     template <typename Left, typename Right>
     class SetOpExpr : public Expression<SetOpExpr<Left, Right>>,
-                      public QueryOperations<SetOpExpr<Left, Right>,
-                                             AllowOrderBy, AllowLimit> {
+                      public QueryOperations<SetOpExpr<Left, Right>, AllowOrderBy, AllowLimit> {
     public:
         SetOpExpr(Left l, Right r, const SetOperation o)
             : left_(std::move(l)),
               right_(std::move(r)),
-              op_(o) {}
+              op_(o) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& left(this Self&& self) {
@@ -55,4 +55,4 @@ namespace demiplane::db {
     auto except(L left, R right) {
         return SetOpExpr<L, R>{std::move(left), std::move(right), SetOperation::EXCEPT};
     }
-}
+}  // namespace demiplane::db

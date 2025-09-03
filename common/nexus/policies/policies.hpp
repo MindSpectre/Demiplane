@@ -15,4 +15,4 @@ namespace demiplane::nexus {
     struct Scoped {};
 
     using Lifetime = std::variant<Resettable, Scoped, Timed, Immortal>;
-} // namespace demiplane::nexus
+}  // namespace demiplane::nexus

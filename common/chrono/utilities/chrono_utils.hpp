@@ -2,10 +2,10 @@
 
 #include <thread>
 
-#include <gears_concepts.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
+#include <gears_concepts.hpp>
 
 namespace demiplane::chrono {
     template <gears::IsDuration DurationClass>
@@ -28,4 +28,4 @@ namespace demiplane::chrono {
         timer.expires_after(duration);
         co_await timer.async_wait(boost::asio::use_awaitable);
     }
-} // namespace demiplane::chrono
+}  // namespace demiplane::chrono

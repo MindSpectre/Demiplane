@@ -14,8 +14,8 @@ namespace demiplane::math::random {
 
 
     template <typename Returned, typename T, std::size_t N>
-    [[nodiscard]] std::vector<Returned> generate_based_on_subset(
-        const std::array<T, N>& arr, std::function<Returned(T)> transformation) {
+    [[nodiscard]] std::vector<Returned> generate_based_on_subset(const std::array<T, N>& arr,
+                                                                 std::function<Returned(T)> transformation) {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<uint32_t> distrib(0, 1);
@@ -50,7 +50,7 @@ namespace demiplane::math::random {
     template <typename T>
     [[nodiscard]] std::optional<T> pick(std::span<const T> arr) {
         if (arr.empty()) {
-            return std::nullopt; // Handle empty array safely
+            return std::nullopt;  // Handle empty array safely
         }
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -59,14 +59,14 @@ namespace demiplane::math::random {
     }
 
     template <typename Iterator>
-    [[nodiscard]] std::optional<typename std::iterator_traits<Iterator>::value_type> pick(
-        Iterator begin, Iterator end) {
+    [[nodiscard]] std::optional<typename std::iterator_traits<Iterator>::value_type> pick(Iterator begin,
+                                                                                          Iterator end) {
         if (begin == end) {
-            return std::nullopt; // Handle empty range safely
+            return std::nullopt;  // Handle empty range safely
         }
 
         std::random_device rd;
-        std::mt19937 gen(rd()); // Indirect initialization of the random generator
+        std::mt19937 gen(rd());  // Indirect initialization of the random generator
         std::uniform_int_distribution<std::size_t> distrib(0, std::distance(begin, end) - 1);
 
         std::advance(begin, distrib(gen));
@@ -74,19 +74,17 @@ namespace demiplane::math::random {
     }
 
 
-
-
     inline std::string generate_random_uuid_v4() {
         std::random_device rd;
-        std::mt19937_64 gen(rd()); // 64-bit Mersenne Twister RNG
+        std::mt19937_64 gen(rd());  // 64-bit Mersenne Twister RNG
         std::uniform_int_distribution<uint64_t> distrib(0, std::numeric_limits<uint64_t>::max());
 
         uint64_t part1 = distrib(gen);
         uint64_t part2 = distrib(gen);
 
         // Set UUID v4 format (variant 1 and version 4)
-        part1 = (part1 & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL; // Version 4
-        part2 = (part2 & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL; // Variant 1
+        part1 = (part1 & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;  // Version 4
+        part2 = (part2 & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;  // Variant 1
 
         // Convert to string
         std::stringstream ss;
@@ -96,4 +94,4 @@ namespace demiplane::math::random {
 
         return ss.str();
     }
-} // namespace demiplane::utilities::math::random
+}  // namespace demiplane::math::random

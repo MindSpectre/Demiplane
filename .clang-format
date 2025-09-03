@@ -24,7 +24,7 @@ IndentExternBlock: AfterExternBlock
 IndentWrappedFunctionNames: false
 NamespaceIndentation: All
 IndentAccessModifiers: false
-AccessModifierOffset: 0
+AccessModifierOffset: -4
 ConstructorInitializerIndentWidth: 4
 IndentRequiresClause: true
 
@@ -164,29 +164,38 @@ DerivePointerAlignment: false
 BitFieldColonSpacing: Both
 
 # Comments
-ReflowComments: true
 CommentPragmas: '^ IWYU pragma:'
 FixNamespaceComments: true
 
 # Include directives
 SortIncludes: CaseSensitive
 IncludeBlocks: Regroup
+
 IncludeCategories:
-  - Regex: '^".*\.hpp"'
-    Priority: 4
-    SortPriority: 4
-  - Regex: '^".*"'
-    Priority: 3
-    SortPriority: 3
-  - Regex: '^<.*\.hpp>'
-    Priority: 2
-    SortPriority: 2
-  - Regex: '^<.*>'
+  # Priority 1: Standard library headers (C++ standard library)
+  - Regex: '^<[^.]*>$'
     Priority: 1
     SortPriority: 1
+    CaseSensitive: false
+
+  # Priority 2: System/library headers ending with .hpp in angle brackets
+  - Regex: '^<.*\.hpp>$'
+    Priority: 2
+    SortPriority: 2
+    CaseSensitive: false
+
+  # Priority 3: Project headers ending with .hpp in quotes
+  - Regex: '^".*\.hpp"$'
+    Priority: 3
+    SortPriority: 3
+    CaseSensitive: false
+
+  # Priority 4: Everything else
   - Regex: '.*'
-    Priority: 5
-    SortPriority: 5
+    Priority: 4
+    SortPriority: 4
+    CaseSensitive: false
+
 IncludeIsMainRegex: '([-_](test|unittest))?$'
 IncludeIsMainSourceRegex: ''
 

@@ -7,14 +7,14 @@
 
 namespace demiplane::db {
     template <IsQuery Select>
-    class FromTableExpr : public AliasableExpression<FromTableExpr<Select>>,
-                          public QueryOperations<FromTableExpr<Select>,
-                                                 AllowGroupBy, AllowOrderBy, AllowLimit,
-                                                 AllowJoin, AllowWhere> {
+    class FromTableExpr
+        : public AliasableExpression<FromTableExpr<Select>>,
+          public QueryOperations<FromTableExpr<Select>, AllowGroupBy, AllowOrderBy, AllowLimit, AllowJoin, AllowWhere> {
     public:
         constexpr FromTableExpr(Select select_q, TableSchemaPtr table)
             : select_(std::move(select_q)),
-              table_(std::move(table)) {}
+              table_(std::move(table)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& select(this Self&& self) {
@@ -33,13 +33,17 @@ namespace demiplane::db {
     // FromQueryExpr with proper inheritance order
     template <IsQuery Select, IsCteExpr CteQuery>
     class FromCteExpr : public Expression<FromCteExpr<Select, CteQuery>>,
-                          public QueryOperations<FromCteExpr<Select, CteQuery>,
-                                                 AllowGroupBy, AllowOrderBy, AllowLimit,
-                                                 AllowJoin, AllowWhere> {
+                        public QueryOperations<FromCteExpr<Select, CteQuery>,
+                                               AllowGroupBy,
+                                               AllowOrderBy,
+                                               AllowLimit,
+                                               AllowJoin,
+                                               AllowWhere> {
     public:
         constexpr FromCteExpr(Select select_q, CteQuery&& expr)
             : select_(std::move(select_q)),
-              query_(std::forward<CteQuery>(expr)) {}
+              query_(std::forward<CteQuery>(expr)) {
+        }
 
         template <typename Self>
         [[nodiscard]] auto&& select(this Self&& self) {
@@ -55,4 +59,4 @@ namespace demiplane::db {
         Select select_;
         CteQuery query_;
     };
-}
+}  // namespace demiplane::db

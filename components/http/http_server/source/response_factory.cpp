@@ -17,8 +17,8 @@ namespace demiplane::http {
         return ok(std::move(body), "application/json", version);
     }
 
-    Response ResponseFactory::created(
-        std::string body, const std::string_view content_type, const std::uint32_t version) {
+    Response
+    ResponseFactory::created(std::string body, const std::string_view content_type, const std::uint32_t version) {
         Response res{boost::beast::http::status::created, version};
         res.set(boost::beast::http::field::content_type, content_type);
         res.set(boost::beast::http::field::server, "demiplane/http");
@@ -87,8 +87,10 @@ namespace demiplane::http {
         return res;
     }
 
-    Response ResponseFactory::custom(const boost::beast::http::status status, std::string body,
-        const std::string_view content_type, const std::uint32_t version) {
+    Response ResponseFactory::custom(const boost::beast::http::status status,
+                                     std::string body,
+                                     const std::string_view content_type,
+                                     const std::uint32_t version) {
         Response res{status, version};
         res.set(boost::beast::http::field::content_type, content_type);
         res.set(boost::beast::http::field::server, "demiplane/http");
@@ -97,4 +99,4 @@ namespace demiplane::http {
         return res;
     }
 
-} // namespace demiplane::http
+}  // namespace demiplane::http

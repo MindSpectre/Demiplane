@@ -15,7 +15,7 @@ namespace demiplane::scroll::colors {
     constexpr std::string_view green   = "\033[0;32m";
     constexpr std::string_view yellow  = "\033[0;33m";
     constexpr std::string_view blue    = "\033[0;34m";
-    constexpr std::string_view magenta = "\033[0;35m"; // Purple
+    constexpr std::string_view magenta = "\033[0;35m";  // Purple
     constexpr std::string_view cyan    = "\033[0;36m";
     constexpr std::string_view white   = "\033[0;37m";
 
@@ -268,4 +268,4 @@ namespace demiplane::scroll::colors {
         return colorize(hi_background_white, text);
     }
 
-} // namespace demiplane::tracing::colors
+}  // namespace demiplane::scroll::colors

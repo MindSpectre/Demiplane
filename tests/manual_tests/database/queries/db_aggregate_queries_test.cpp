@@ -24,13 +24,13 @@ protected:
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        demiplane::nexus::instance().register_factory<demiplane::scroll::Logger>([] {
+        demiplane::nexus::instance().register_singleton<demiplane::scroll::Logger>([] {
             return std::make_shared<demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(
-                *demiplane::nexus::instance().spawn<demiplane::scroll::ConsoleLoggerConfig>());
+                *demiplane::nexus::instance().get<demiplane::scroll::ConsoleLoggerConfig>());
         });
-        demiplane::nexus::instance().register_factory<demiplane::scroll::ConsoleLoggerConfig>(
+        demiplane::nexus::instance().register_singleton<demiplane::scroll::ConsoleLoggerConfig>(
             [] { return std::make_shared<demiplane::scroll::ConsoleLoggerConfig>(); });
-        set_logger(demiplane::nexus::instance().spawn<demiplane::scroll::Logger>());
+        set_logger(demiplane::nexus::instance().get<demiplane::scroll::Logger>());
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")

@@ -16,7 +16,7 @@ namespace demiplane::http {
 
     class Server {
     public:
-        NEXUS_REGISTER(0xA0702D11, nexus::Immortal);  // CRC32/ISO-HDLC of demiplane::http::Server
+        NEXUS_REGISTER(nexus::Immortal);  // CRC32/ISO-HDLC of demiplane::http::Server
 
         explicit Server(std::size_t threads = 1);
         ~Server();

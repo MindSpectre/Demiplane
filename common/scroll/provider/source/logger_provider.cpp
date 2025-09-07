@@ -5,7 +5,7 @@
 void demiplane::scroll::ComponentLoggerManager::initialize() {
     // Try to get from Nexus first
     try {
-        if (const std::shared_ptr<Logger> nexus_logger = nexus::instance().spawn<Logger>()) {
+        if (const std::shared_ptr<Logger> nexus_logger = nexus::instance().get<Logger>()) {
             logger_ = nexus_logger;
             return;
         }

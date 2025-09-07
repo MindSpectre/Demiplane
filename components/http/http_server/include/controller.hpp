@@ -16,7 +16,7 @@ namespace demiplane::http {
 
     class HttpController : public std::enable_shared_from_this<HttpController> {
     public:
-        NEXUS_REGISTER(0x4E711AF1, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::HttpController
+        NEXUS_REGISTER(nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::HttpController
 
         virtual ~HttpController()       = default;
         virtual void configure_routes() = 0;

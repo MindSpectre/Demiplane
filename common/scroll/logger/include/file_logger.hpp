@@ -17,7 +17,7 @@
 namespace demiplane::scroll {
     /// @brief Config used in FileLogger
     struct FileLoggerConfig {
-        NEXUS_REGISTER(0x6B6D41CE, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLoggerConfig
+        NEXUS_REGISTER(nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLoggerConfig
 
         LogLevel threshold = LogLevel::Debug;
         std::filesystem::path file;
@@ -49,7 +49,7 @@ namespace demiplane::scroll {
     template <detail::EntryConcept EntryType>
     class FileLogger final : public Logger {
     public:
-        NEXUS_REGISTER(0xFCCE2FB1, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLogger
+        NEXUS_REGISTER(nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::FileLogger
 
         explicit FileLogger(FileLoggerConfig cfg);
 

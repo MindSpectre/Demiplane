@@ -1,7 +1,25 @@
 #pragma once
 namespace demiplane::nexus {
-    template <class T, class Factory>
-    void Nexus::register_factory(Factory&& f, const Lifetime lt, const std::uint32_t id) {
+    template <class T, typename Factory>
+        requires std::is_invocable_v<Factory>
+    void Nexus::register_singleton(Factory&& f, const Lifetime lt) {
+        this->register_instance<T>(std::forward<Factory>(f), 0, std::move(lt));
+    }
+
+    template <class T>
+    void Nexus::register_singleton(std::shared_ptr<T> sp, const Lifetime lt) {
+        this->register_instance<T>(std::move(sp), 0, std::move(lt));
+    }
+
+    template <class T>
+        requires std::is_object_v<T>
+    void Nexus::register_singleton(T value, Lifetime lt) {
+        this->register_instance<T>(std::make_shared<T>(std::move(value)), 0, std::move(lt));
+    }
+
+    template <class T, typename Factory>
+        requires std::is_invocable_v<Factory>
+    void Nexus::register_instance(Factory&& f, const nexus_id_t id, const Lifetime lt) {
         boost::unique_lock lk{mtx_};
         Slot& s   = map_[Key{typeid(T), id}];
         s.obj     = nullptr;  // lazy
@@ -10,7 +28,7 @@ namespace demiplane::nexus {
     }
 
     template <class T>
-    void Nexus::register_shared(std::shared_ptr<T> sp, const Lifetime lt, const std::uint32_t id) {
+    void Nexus::register_instance(std::shared_ptr<T> sp, const nexus_id_t id, const Lifetime lt) {
         boost::unique_lock lk{mtx_};
         Slot& s      = map_[Key{typeid(T), id}];
         s.obj        = std::move(sp);
@@ -20,14 +38,13 @@ namespace demiplane::nexus {
     }
 
     template <class T>
-    void Nexus::register_instance(T value, Lifetime lt, const std::uint32_t id) {
-        register_shared<T>(std::make_shared<T>(std::move(value)), std::move(lt), id);
+        requires std::is_object_v<T>
+    void Nexus::register_instance(T value, const nexus_id_t id, Lifetime lt) {
+        this->register_instance<T>(std::make_shared<T>(std::move(value)), id, std::move(lt));
     }
 
-    // ───────── spawn<T>() ─────────
-
     template <class T>
-    std::shared_ptr<T> Nexus::spawn(const std::uint32_t id) {
+    std::shared_ptr<T> Nexus::get(const std::uint32_t id) {
         const Key k{typeid(T), id};
 
         // Fast path - check if already constructed
@@ -125,16 +142,20 @@ namespace demiplane::nexus {
             throw std::runtime_error("Nexus::reset – no such object");
         }
         if (!std::holds_alternative<Resettable>(it->second.lt)) {
-            throw std::runtime_error("Nexus::reset – only Flex lifetime can be reset");
+            throw std::runtime_error("Nexus::reset – only Resettable lifetime can be reset");
         }
         map_.erase(it);
+    }
+    template <class T>
+    bool Nexus::has(const nexus_id_t id) const noexcept {
+        boost::shared_lock lk{mtx_};
+        return map_.contains(Key{typeid(T), id});
     }
 
     template <class T>
     std::shared_ptr<T> Nexus::build_handle(Slot& slot) {
-        using namespace std::chrono;
         if (std::holds_alternative<Timed>(slot.lt)) {
-            slot.last_touch = steady_clock::now();
+            slot.last_touch = std::chrono::steady_clock::now();
         }
         return std::static_pointer_cast<T>(slot.obj);
     }

@@ -10,6 +10,10 @@ target_include_directories(${DMP_MULTITHREAD}.ThreadSafeResource
         INTERFACE
         thread_safe_resource/include/
 )
+target_link_libraries(${DMP_MULTITHREAD}.ThreadSafeResource
+        INTERFACE
+        Threads::Threads
+)
 ##############################################################################
 
 

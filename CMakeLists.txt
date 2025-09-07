@@ -1,35 +1,50 @@
 cmake_minimum_required(VERSION 3.30.5)
 
-project("Demiplane" LANGUAGES CXX)
+project("Demiplane" LANGUAGES CXX VERSION 0.2)
 # Specify the C++ standard
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
+
+
+if (${CMAKE_CXX_STANDARD_REQUIRED})
+    message("Standard is ${CMAKE_CXX_STANDARD} and required")
+else ()
+    message("Standard is ${CMAKE_CXX_STANDARD} and not required")
+endif ()
+
+message("CXX Flags are ${CMAKE_CXX_FLAGS}")
+
 set(VCPKG_FEATURE_FLAGS "manifests")
-set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-set(CMAKE_HAVE_THREADS_LIBRARY 1)
-set(CMAKE_USE_WIN32_THREADS_INIT 0)
-set(CMAKE_USE_PTHREADS_INIT 1)
+
+message("VCPKG Flags are ${VCPKG_FEATURE_FLAGS}")
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-
-add_compile_options(
+list(APPEND general_compile_options
         -O2
         -Wall -Wextra -Wpedantic
         -Wconversion -Wshadow
         -Wdouble-promotion -Wnull-dereference
         -Wnon-virtual-dtor
-        #        -Werror
+        -Werror
         -fstack-protector-strong
         -D_FORTIFY_SOURCE=2
         -fvisibility=hidden
         $<$<CONFIG:Release>:-fomit-frame-pointer>
 )
 
+add_compile_options(
+        ${general_compile_options}
+)
+
+message("Compile options are ${general_compile_options}")
+
 # Add options to enable or disable Boost and Qt5
 # Toggles
-include(cmake/togglers.cmake)
+include(cmake/features.cmake)
 
 # Add compile definitions based on options
 if (DMP_ENABLE_LOGGING)
@@ -46,14 +61,11 @@ endif ()
 include(cmake/tests.cmake)
 include(cmake/combined_library.cmake)
 include(cmake/add_resources.cmake)
-# Global compiler options (if necessary)
-# It's better to set these per-target
-# add_compile_options(-pthread -pipe -Wall -fPIC -Werror=return-type)
+
 # Find necessary packages
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
-
 find_package(jsoncpp REQUIRED)
 #find_package(absl REQUIRED)
 #find_package(libpqxx REQUIRED)
@@ -66,7 +78,6 @@ find_package(jsoncpp REQUIRED)
 ##############################################################################
 if (USE_BOOST)
     # Boost settings (adjust as needed)
-
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED OFF)
     set(Boost_USE_STATIC_RUNTIME ON)

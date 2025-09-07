@@ -29,6 +29,7 @@ target_include_directories(${DMP_SCROLL}.Entry PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Entry PUBLIC
         JsonCpp::JsonCpp
+        Threads::Threads
         Demiplane::Common::Nexus
         Demiplane::Common::Gears
         Demiplane::Common::Chrono

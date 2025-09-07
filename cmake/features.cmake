@@ -11,3 +11,7 @@ if (BUILD_COMPONENTS)
     option(BUILD_HTTP "Build http" ON)
     option(BUILD_DATABASE "Build database" ON)
 endif ()
+
+if (BUILD_DATABASE)
+    option(BUILD_POSTGRESQL "Build PostgreSQL" ON)
+endif ()

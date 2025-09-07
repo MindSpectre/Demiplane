@@ -24,7 +24,7 @@ namespace demiplane::http {
 
     class RouteRegistry {
     public:
-        NEXUS_REGISTER(0xF6A865A4, nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::RouteRegistry
+        NEXUS_REGISTER(nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::http::RouteRegistry
 
         void add_route(boost::beast::http::verb method, std::string path, ContextHandler handler);
 

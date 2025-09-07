@@ -11,6 +11,6 @@ namespace demiplane::db {
                                     std::int64_t,
                                     double,
                                     std::string,
-                                    std::span<const uint8_t>  // Zero-copy binary data  // Zero-copy binary data
+                                    std::span<const uint8_t>  // Zero-copy binary data
                                     >;
 }

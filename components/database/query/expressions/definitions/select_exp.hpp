@@ -26,16 +26,16 @@ namespace demiplane::db {
             return distinct_;
         }
 
-        [[nodiscard]] auto from(TableSchemaPtr table) const {
+        [[nodiscard]] auto from(TablePtr table) const {
             return FromTableExpr<SelectExpr>{*this, std::move(table)};
         }
 
         [[nodiscard]] auto from(std::string table_name) const {
-            return FromTableExpr<SelectExpr>{*this, TableSchema::make_ptr(std::move(table_name))};
+            return FromTableExpr<SelectExpr>{*this, Table::make_ptr(std::move(table_name))};
         }
 
         [[nodiscard]] auto from(const Record& record) const {
-            return FromTableExpr<SelectExpr>{*this, record.schema_ptr()};
+            return FromTableExpr<SelectExpr>{*this, record.table_ptr()};
         }
 
         template <IsCteExpr Query>
@@ -58,7 +58,7 @@ namespace demiplane::db {
         return SelectExpr<Columns...>{std::move(columns)...}.set_distinct(true);
     }
 
-    inline auto select_from_schema(TableSchemaPtr schema) {
+    inline auto select_from_schema(TablePtr schema) {
         return SelectExpr{all(schema->table_name())}.from(std::move(schema));
     }
 }  // namespace demiplane::db

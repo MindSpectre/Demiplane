@@ -11,7 +11,7 @@ namespace demiplane::db {
         : public AliasableExpression<FromTableExpr<Select>>,
           public QueryOperations<FromTableExpr<Select>, AllowGroupBy, AllowOrderBy, AllowLimit, AllowJoin, AllowWhere> {
     public:
-        constexpr FromTableExpr(Select select_q, TableSchemaPtr table)
+        constexpr FromTableExpr(Select select_q, TablePtr table)
             : select_(std::move(select_q)),
               table_(std::move(table)) {
         }
@@ -21,13 +21,13 @@ namespace demiplane::db {
             return std::forward<Self>(self).select_;
         }
 
-        [[nodiscard]] const TableSchemaPtr& table() const {
+        [[nodiscard]] const TablePtr& table() const {
             return table_;
         }
 
     private:
         Select select_;
-        TableSchemaPtr table_;
+        TablePtr table_;
     };
 
     // FromQueryExpr with proper inheritance order

@@ -5,7 +5,7 @@
 namespace demiplane::db {
     class RecordFactory {
     public:
-        explicit RecordFactory(std::shared_ptr<const TableSchema> schema)
+        explicit RecordFactory(std::shared_ptr<const Table> schema)
             : schema_(std::move(schema)) {
         }
 
@@ -24,11 +24,11 @@ namespace demiplane::db {
             return records;
         }
 
-        [[nodiscard]] const TableSchema& schema() const {
+        [[nodiscard]] const Table& schema() const {
             return *schema_;
         }
 
     private:
-        std::shared_ptr<const TableSchema> schema_;
+        std::shared_ptr<const Table> schema_;
     };
 }  // namespace demiplane::db

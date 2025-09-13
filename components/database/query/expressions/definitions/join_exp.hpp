@@ -16,7 +16,7 @@ namespace demiplane::db {
                                             AllowGroupBy> {
     public:
         constexpr JoinExpr(Query parent_query,
-                           TableSchemaPtr joined_table,
+                           TablePtr joined_table,
                            Condition condition,
                            const JoinType join_type,
                            std::optional<std::string> alias = std::nullopt)
@@ -32,7 +32,7 @@ namespace demiplane::db {
             return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] const TableSchemaPtr& joined_table() const {
+        [[nodiscard]] const TablePtr& joined_table() const {
             return joined_table_;
         }
 
@@ -47,7 +47,7 @@ namespace demiplane::db {
 
     private:
         Query query_;
-        TableSchemaPtr joined_table_;
+        TablePtr joined_table_;
         Condition on_condition_;
         JoinType type_;
     };

@@ -1,25 +1,25 @@
-set(DMP_DB_DIALECT ${DMP_DATABASE}.Dialect)
+set(DMP_DATABASE_DIALECT ${DMP_DATABASE}.Dialect)
 
-add_library(${DMP_DB_DIALECT}.Interface INTERFACE)
-target_include_directories(${DMP_DB_DIALECT}.Interface INTERFACE
+add_library(${DMP_DATABASE_DIALECT}.Interface INTERFACE)
+target_include_directories(${DMP_DATABASE_DIALECT}.Interface INTERFACE
         interface/
 )
-target_link_libraries(${DMP_DB_DIALECT}.Interface INTERFACE
+target_link_libraries(${DMP_DATABASE_DIALECT}.Interface INTERFACE
         ${DMP_DATABASE}.Core
 )
 ##############################################################################
 # Sql Dialects
 ##############################################################################
-add_library(${DMP_DB_DIALECT}.PostgreSQL STATIC
+add_library(${DMP_DATABASE_DIALECT}.PostgreSQL STATIC
         postgresql/include/postgres_dialect.hpp
         postgresql/source/postgres_dialect.cpp
 )
-target_include_directories(${DMP_DB_DIALECT}.PostgreSQL PUBLIC
+target_include_directories(${DMP_DATABASE_DIALECT}.PostgreSQL PUBLIC
         postgresql/include
 )
-target_link_libraries(${DMP_DB_DIALECT}.PostgreSQL
+target_link_libraries(${DMP_DATABASE_DIALECT}.PostgreSQL
         PUBLIC
-        ${DMP_DB_DIALECT}.Interface
+        ${DMP_DATABASE_DIALECT}.Interface
         PRIVATE
         Demiplane::Common::Gears
 )

@@ -1,11 +1,9 @@
 #pragma once
 #include <ostream>
 
-#include "../../field/include/db_field_schema.hpp"
-
 namespace demiplane::db {
     template <typename T>
-    TableSchema& TableSchema::add_field(std::string name, std::string db_type) {
+    Table& Table::add_field(std::string name, std::string db_type) {
         auto field      = std::make_unique<FieldSchema>();
         field->name     = std::move(name);
         field->db_type  = std::move(db_type);
@@ -16,9 +14,9 @@ namespace demiplane::db {
         return *this;
     }
 
-    // Implementation of TableSchema::column
+    // Implementation of Table::column
     template <typename T>
-    TableColumn<T> TableSchema::column(const std::string_view field_name) const {
+    TableColumn<T> Table::column(const std::string_view field_name) const {
         auto* field = get_field_schema(field_name);
         if (!field) {
             std::ostringstream ss;

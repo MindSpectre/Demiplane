@@ -7,7 +7,7 @@
 namespace demiplane::db {
     class InsertExpr : public Expression<InsertExpr> {
     public:
-        explicit InsertExpr(TableSchemaPtr t)
+        explicit InsertExpr(TablePtr t)
             : table_(std::move(t)) {
         }
 
@@ -55,7 +55,7 @@ namespace demiplane::db {
             return *this;
         }
 
-        [[nodiscard]] const TableSchemaPtr& table() const {
+        [[nodiscard]] const TablePtr& table() const {
             return table_;
         }
 
@@ -70,17 +70,17 @@ namespace demiplane::db {
         }
 
     private:
-        TableSchemaPtr table_{nullptr};
+        TablePtr table_{nullptr};
         std::vector<std::string> columns_;
         std::vector<std::vector<FieldValue>> rows_;
     };
 
     // INSERT builder function
-    inline auto insert_into(TableSchemaPtr table) {
+    inline auto insert_into(TablePtr table) {
         return InsertExpr{std::move(table)};
     }
 
     inline auto insert_into(std::string table_name) {
-        return InsertExpr{TableSchema::make_ptr(std::move(table_name))};
+        return InsertExpr{Table::make_ptr(std::move(table_name))};
     }
 }  // namespace demiplane::db

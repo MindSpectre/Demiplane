@@ -145,7 +145,7 @@ namespace demiplane::db {
     template <typename Parent>
     class JoinBuilder {
     public:
-        JoinBuilder(Parent parent, TableSchemaPtr right_table, const JoinType type)
+        JoinBuilder(Parent parent, TablePtr right_table, const JoinType type)
             : parent_{std::move(parent)},
               right_table_name_{std::move(right_table)},
               type_{type} {
@@ -169,7 +169,7 @@ namespace demiplane::db {
 
     private:
         Parent parent_;
-        TableSchemaPtr right_table_name_;
+        TablePtr right_table_name_;
         JoinType type_;
         std::optional<std::string> right_alias_;
     };
@@ -261,7 +261,7 @@ namespace demiplane::db {
             requires(has_feature<AllowJoin, AllowedFeatures...>)
         [[nodiscard]] auto join(TableType&& table, JoinType type = JoinType::INNER) const& {
             if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
-                return JoinBuilder<Derived>{derived(), TableSchema::make_ptr(std::forward<TableType>(table)), type};
+                return JoinBuilder<Derived>{derived(), Table::make_ptr(std::forward<TableType>(table)), type};
             } else {
                 return JoinBuilder<Derived>{derived(), std::forward<TableType>(table), type};
             }
@@ -272,7 +272,7 @@ namespace demiplane::db {
         [[nodiscard]] auto join(TableType&& table, JoinType type = JoinType::INNER) && {
             if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
                 return JoinBuilder<Derived>{
-                    std::move(derived()), TableSchema::make_ptr(std::forward<TableType>(table)), type};
+                    std::move(derived()), Table::make_ptr(std::forward<TableType>(table)), type};
             } else {
                 return JoinBuilder<Derived>{std::move(derived()), std::forward<TableType>(table), type};
             }

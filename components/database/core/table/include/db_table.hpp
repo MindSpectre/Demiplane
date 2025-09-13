@@ -5,24 +5,23 @@
 #include <vector>
 
 #include <boost/unordered_map.hpp>
+#include <db_field_schema.hpp>
 #include <gears_hash.hpp>
 
-#include "db_column.hpp"
-
 namespace demiplane::db {
-    // Enhanced TableSchema with type-safe column access
+    // Enhanced Table with type-safe column access
     template <typename T>
     class TableColumn;
 
-    class TableSchema {
+    class Table {
     public:
-        explicit TableSchema(std::string table_name);
+        explicit Table(std::string table_name);
         // Enhanced builder pattern with type information
         template <typename T>
-        TableSchema& add_field(std::string name, std::string db_type);
+        Table& add_field(std::string name, std::string db_type);
 
         // Overload for runtime type specification
-        TableSchema& add_field(std::string name, std::string db_type, std::type_index cpp_type);
+        Table& add_field(std::string name, std::string db_type, std::type_index cpp_type);
 
         // Type-safe column accessor
         template <typename T>
@@ -30,11 +29,11 @@ namespace demiplane::db {
 
 
         // Existing methods
-        TableSchema& primary_key(std::string_view field_name);
-        TableSchema& nullable(std::string_view field_name, bool is_null = true);
-        TableSchema& foreign_key(std::string_view field_name, std::string_view ref_table, std::string_view ref_column);
-        TableSchema& unique(std::string_view field_name);
-        TableSchema& indexed(std::string_view field_name);
+        Table& primary_key(std::string_view field_name);
+        Table& nullable(std::string_view field_name, bool is_null = true);
+        Table& foreign_key(std::string_view field_name, std::string_view ref_table, std::string_view ref_column);
+        Table& unique(std::string_view field_name);
+        Table& indexed(std::string_view field_name);
 
         [[nodiscard]] const FieldSchema* get_field_schema(std::string_view name) const;
         FieldSchema* get_field_schema(std::string_view name);
@@ -48,9 +47,9 @@ namespace demiplane::db {
         // Get all column names
         [[nodiscard]] std::vector<std::string> field_names() const;
 
-        [[nodiscard]] std::shared_ptr<TableSchema> clone();
+        [[nodiscard]] std::shared_ptr<Table> clone();
 
-        [[nodiscard]] static std::shared_ptr<TableSchema> make_ptr(std::string name);
+        [[nodiscard]] static std::shared_ptr<Table> make_ptr(std::string name);
 
     private:
         std::string table_name_;
@@ -58,11 +57,11 @@ namespace demiplane::db {
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
     };
 
-    using TableSchemaPtr = std::shared_ptr<const TableSchema>;
+    using TablePtr = std::shared_ptr<const Table>;
 
     template <typename TablePtr>
-    concept IsTableSchema = std::is_same_v<std::remove_cvref_t<TableSchemaPtr>, TablePtr>;
+    concept IsTable = std::is_same_v<std::remove_cvref_t<TablePtr>, TablePtr>;
 
 }  // namespace demiplane::db
 
-#include "../source/db_table_schema.inl"
+#include "../source/db_table.inl"

@@ -1,10 +1,10 @@
 #include "db_record.hpp"
 
-#include "db_field.hpp"
-#include "db_table_schema.hpp"
-
+#include <db_field.hpp>
+#include <db_field_schema.hpp>
+#include <db_table.hpp>
 namespace demiplane::db {
-    Record::Record(TableSchemaPtr schema)
+    Record::Record(TablePtr schema)
         : schema_(std::move(schema)) {
         if (!schema_)
             throw std::invalid_argument("Schema cannot be null");
@@ -16,18 +16,18 @@ namespace demiplane::db {
         }
     }
 
-    Field& Record::operator[](const std::string& field_name) {
+    Field& Record::operator[](const std::string_view field_name) {
         const auto it = field_index_.find(field_name);
         if (it == field_index_.end()) {
-            throw std::out_of_range("Field not found: " + field_name);
+            throw std::out_of_range("Field not found: ");  // TODO: change exception
         }
         return fields_[it->second];
     }
 
-    const Field& Record::operator[](const std::string& field_name) const {
+    const Field& Record::operator[](const std::string_view field_name) const {
         const auto it = field_index_.find(field_name);
         if (it == field_index_.end()) {
-            throw std::out_of_range("Field not found: " + field_name);
+            throw std::out_of_range("Field not found: ");  // TODO: change exception
         }
         return fields_[it->second];
     }
@@ -56,11 +56,11 @@ namespace demiplane::db {
         return it != field_index_.end() ? &fields_[it->second] : nullptr;
     }
 
-    const TableSchema& Record::schema() const {
+    const Table& Record::schema() const {
         return *schema_;
     }
 
-    TableSchemaPtr Record::schema_ptr() const {
+    TablePtr Record::table_ptr() const {
         return schema_;
     }
 

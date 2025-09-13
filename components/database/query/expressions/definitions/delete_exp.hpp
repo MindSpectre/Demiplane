@@ -7,7 +7,7 @@
 namespace demiplane::db {
     class DeleteExpr : public Expression<DeleteExpr> {
     public:
-        constexpr explicit DeleteExpr(TableSchemaPtr t)
+        constexpr explicit DeleteExpr(TablePtr t)
             : table_(std::move(t)) {
         }
 
@@ -16,19 +16,19 @@ namespace demiplane::db {
             return DeleteWhereExpr<Condition>{*this, std::move(cond)};
         }
 
-        [[nodiscard]] const TableSchemaPtr& table() const {
+        [[nodiscard]] const TablePtr& table() const {
             return table_;
         }
 
     private:
-        TableSchemaPtr table_;
+        TablePtr table_;
     };
 
-    inline auto delete_from(TableSchemaPtr table) {
+    inline auto delete_from(TablePtr table) {
         return DeleteExpr{std::move(table)};
     }
 
     inline auto delete_from(std::string table_name) {
-        return DeleteExpr{TableSchema::make_ptr(std::move(table_name))};
+        return DeleteExpr{Table::make_ptr(std::move(table_name))};
     }
 }  // namespace demiplane::db

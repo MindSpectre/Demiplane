@@ -542,7 +542,7 @@ namespace demiplane::db {
 
         virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
 
-        virtual void visit_table_impl(const TableSchemaPtr& table)               = 0;
+        virtual void visit_table_impl(const TablePtr& table)                     = 0;
         virtual void visit_table_impl(std::string_view table_name)               = 0;
         virtual void visit_table_impl(const std::shared_ptr<std::string>& table) = 0;
 

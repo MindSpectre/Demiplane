@@ -3,14 +3,13 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include <../../../../components/database/core/column/include/db_column.hpp>
-#include <../../../../components/database/core/table/include/db_table_schema.hpp>
+#include <db_core_objects.hpp>
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-class TableSchemaTest : public ::testing::Test {
+class TableTest : public ::testing::Test {
 protected:
     void SetUp() override {
     }
@@ -18,8 +17,8 @@ protected:
     }
 };
 
-TEST_F(TableSchemaTest, TableSchemaConstruction) {
-    const TableSchema schema("users");
+TEST_F(TableTest, TableConstruction) {
+    const Table schema("users");
 
     EXPECT_EQ(schema.table_name(), "users");
     EXPECT_EQ(schema.field_count(), 0);
@@ -27,8 +26,8 @@ TEST_F(TableSchemaTest, TableSchemaConstruction) {
     EXPECT_TRUE(schema.field_names().empty());
 }
 
-TEST_F(TableSchemaTest, AddFieldWithType) {
-    TableSchema schema("users");
+TEST_F(TableTest, AddFieldWithType) {
+    Table schema("users");
 
     schema.add_field<int>("id", "INTEGER");
     schema.add_field<std::string>("name", "VARCHAR(255)");
@@ -43,8 +42,8 @@ TEST_F(TableSchemaTest, AddFieldWithType) {
     EXPECT_TRUE(std::ranges::find(field_names, "balance") != field_names.end());
 }
 
-TEST_F(TableSchemaTest, AddFieldWithRuntimeType) {
-    TableSchema schema("products");
+TEST_F(TableTest, AddFieldWithRuntimeType) {
+    Table schema("products");
 
     schema.add_field("id", "INTEGER", std::type_index(typeid(int)));
     schema.add_field("title", "TEXT", std::type_index(typeid(std::string)));
@@ -66,8 +65,8 @@ TEST_F(TableSchemaTest, AddFieldWithRuntimeType) {
     EXPECT_EQ(title_field->cpp_type, std::type_index(typeid(std::string)));
 }
 
-TEST_F(TableSchemaTest, GetFieldSchema) {
-    TableSchema schema("test_table");
+TEST_F(TableTest, GetFieldSchema) {
+    Table schema("test_table");
     schema.add_field<int>("id", "INTEGER");
     schema.add_field<std::string>("email", "VARCHAR(255)");
 
@@ -85,8 +84,8 @@ TEST_F(TableSchemaTest, GetFieldSchema) {
     EXPECT_EQ(email_field->db_type, "VARCHAR(255)");
 }
 
-TEST_F(TableSchemaTest, GetFieldSchemaMutable) {
-    TableSchema schema("test_table");
+TEST_F(TableTest, GetFieldSchemaMutable) {
+    Table schema("test_table");
     schema.add_field<int>("id", "INTEGER");
 
     auto* id_field = schema.get_field_schema("id");
@@ -101,8 +100,8 @@ TEST_F(TableSchemaTest, GetFieldSchemaMutable) {
     EXPECT_FALSE(const_field->is_nullable);
 }
 
-TEST_F(TableSchemaTest, PrimaryKey) {
-    TableSchema schema("users");
+TEST_F(TableTest, PrimaryKey) {
+    Table schema("users");
     schema.add_field<int>("id", "INTEGER");
     schema.add_field<std::string>("email", "VARCHAR(255)");
 
@@ -118,8 +117,8 @@ TEST_F(TableSchemaTest, PrimaryKey) {
     EXPECT_FALSE(email_field->is_primary_key);
 }
 
-TEST_F(TableSchemaTest, Nullable) {
-    TableSchema schema("users");
+TEST_F(TableTest, Nullable) {
+    Table schema("users");
     schema.add_field<std::string>("name", "VARCHAR(255)");
     schema.add_field<std::string>("email", "VARCHAR(255)");
 
@@ -136,8 +135,8 @@ TEST_F(TableSchemaTest, Nullable) {
     EXPECT_TRUE(email_field->is_nullable);
 }
 
-TEST_F(TableSchemaTest, ForeignKey) {
-    TableSchema schema("orders");
+TEST_F(TableTest, ForeignKey) {
+    Table schema("orders");
     schema.add_field<int>("id", "INTEGER");
     schema.add_field<int>("user_id", "INTEGER");
 
@@ -151,8 +150,8 @@ TEST_F(TableSchemaTest, ForeignKey) {
     EXPECT_EQ(user_id_field->foreign_column, "id");
 }
 
-TEST_F(TableSchemaTest, Unique) {
-    TableSchema schema("users");
+TEST_F(TableTest, Unique) {
+    Table schema("users");
     schema.add_field<std::string>("email", "VARCHAR(255)");
     schema.add_field<std::string>("username", "VARCHAR(50)");
 
@@ -168,8 +167,8 @@ TEST_F(TableSchemaTest, Unique) {
     EXPECT_FALSE(username_field->is_unique);
 }
 
-TEST_F(TableSchemaTest, Indexed) {
-    TableSchema schema("users");
+TEST_F(TableTest, Indexed) {
+    Table schema("users");
     schema.add_field<std::string>("last_name", "VARCHAR(100)");
     schema.add_field<std::string>("first_name", "VARCHAR(100)");
 
@@ -185,8 +184,8 @@ TEST_F(TableSchemaTest, Indexed) {
     EXPECT_FALSE(first_name_field->is_indexed);
 }
 
-TEST_F(TableSchemaTest, ChainedBuilderPattern) {
-    TableSchema schema("users");
+TEST_F(TableTest, ChainedBuilderPattern) {
+    Table schema("users");
 
     schema.add_field<int>("id", "INTEGER")
         .primary_key("id")
@@ -219,8 +218,8 @@ TEST_F(TableSchemaTest, ChainedBuilderPattern) {
     EXPECT_FALSE(name_field->is_unique);
 }
 
-TEST_F(TableSchemaTest, ComplexSchemaDefinition) {
-    TableSchema schema("complex_table");
+TEST_F(TableTest, ComplexSchemaDefinition) {
+    Table schema("complex_table");
 
     schema.add_field<int>("id", "INTEGER")
         .primary_key("id")
@@ -259,8 +258,8 @@ TEST_F(TableSchemaTest, ComplexSchemaDefinition) {
     EXPECT_TRUE(desc_field->is_nullable);
 }
 
-TEST_F(TableSchemaTest, TypedColumnAccess) {
-    TableSchema schema("users");
+TEST_F(TableTest, TypedColumnAccess) {
+    Table schema("users");
     schema.add_field<int>("id", "INTEGER");
     schema.add_field<std::string>("name", "VARCHAR(255)");
 
@@ -273,12 +272,12 @@ TEST_F(TableSchemaTest, TypedColumnAccess) {
     EXPECT_EQ(name_column.table_name(), "users");
 }
 
-TEST_F(TableSchemaTest, TableSchemaPtr) {
-    const auto schema_ptr = std::make_shared<const TableSchema>("shared_table");
+TEST_F(TableTest, TablePtr) {
+    const auto schema_ptr = std::make_shared<const Table>("shared_table");
 
     EXPECT_EQ(schema_ptr->table_name(), "shared_table");
     EXPECT_EQ(schema_ptr->field_count(), 0);
 
     // Test concept
-    static_assert(IsTableSchema<TableSchemaPtr>);
+    static_assert(IsTable<TablePtr>);
 }

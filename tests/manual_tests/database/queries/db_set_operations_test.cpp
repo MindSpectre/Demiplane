@@ -24,7 +24,7 @@ protected:
         auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         set_logger(std::move(logger));
         // Create test schemas
-        users_schema = std::make_shared<TableSchema>("users");
+        users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
             .primary_key("id")
             .add_field<std::string>("name", "VARCHAR(255)")
@@ -32,7 +32,7 @@ protected:
             .add_field<bool>("active", "BOOLEAN")
             .add_field<std::string>("department", "VARCHAR(100)");
 
-        employees_schema = std::make_shared<TableSchema>("employees");
+        employees_schema = std::make_shared<Table>("employees");
         employees_schema->add_field<int>("id", "INTEGER")
             .primary_key("id")
             .add_field<std::string>("name", "VARCHAR(255)")
@@ -57,8 +57,8 @@ protected:
         compiler = std::make_unique<QueryCompiler>(std::make_unique<PostgresDialect>(), false);
     }
 
-    std::shared_ptr<TableSchema> users_schema;
-    std::shared_ptr<TableSchema> employees_schema;
+    std::shared_ptr<Table> users_schema;
+    std::shared_ptr<Table> employees_schema;
 
     TableColumn<int> user_id{nullptr, ""};
     TableColumn<std::string> user_name{nullptr, ""};

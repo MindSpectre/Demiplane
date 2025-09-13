@@ -1,25 +1,25 @@
+set(DMP_DATABASE_CORE ${DMP_DATABASE}.Core)
+
+add_subdirectory(column)
+add_subdirectory(field)
+add_subdirectory(row)
+add_subdirectory(table)
+add_subdirectory(block)
+
 ##############################################################################
 # Fundamental structures for orm
 ##############################################################################
-add_library(${DMP_DATABASE}.Core STATIC
-        column/source/db_column.cpp
-        field/source/db_field.cpp
-        table/source/db_table_schema.cpp
-        row/source/db_record.cpp
-        row/include/db_record_factory.hpp
+add_combined_library(${DMP_DATABASE_CORE}
+        DIRECTORIES
+        export/
+        SOURCES
         export/db_core_objects.hpp
-        row/interface/row.hpp
-)
-
-target_include_directories(${DMP_DATABASE}.Core PUBLIC
-        export
-        column/include
-        field/include
-        row/include
-        table/include
-)
-target_link_libraries(${DMP_DATABASE}.Core PUBLIC
-        Boost::container
-        Demiplane::Common::Gears
+        LIBRARIES
+        ${DMP_DATABASE_CORE}.Field
+        ${DMP_DATABASE_CORE}.Column
+        ${DMP_DATABASE_CORE}.Row.Interface
+        ${DMP_DATABASE_CORE}.Row.Record
+        ${DMP_DATABASE_CORE}.Table
+        ${DMP_DATABASE_CORE}.Block.Interface
 )
 ##############################################################################

@@ -62,7 +62,7 @@ namespace demiplane::db {
     }
 
 
-    void SqlGeneratorVisitor::visit_table_impl(const TableSchemaPtr& table) {
+    void SqlGeneratorVisitor::visit_table_impl(const TablePtr& table) {
         sql_ << dialect_->quote_identifier(table->table_name());
     }
 

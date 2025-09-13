@@ -7,7 +7,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.FieldSchema
         Demiplane.Component.Database.Core
 )
 
-add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.TableSchema
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Core.Table
         test_table_schema.cpp
         LINK_LIBS
         ${TEST_LIBS}

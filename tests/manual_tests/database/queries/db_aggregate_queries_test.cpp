@@ -29,7 +29,7 @@ protected:
             [] { return std::make_shared<demiplane::scroll::ConsoleLoggerConfig>(); });
         set_logger(demiplane::nexus::instance().get<demiplane::scroll::Logger>());
         // Create test schema
-        users_schema = std::make_shared<TableSchema>("users");
+        users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
             .primary_key("id")
             .add_field<std::string>("name", "VARCHAR(255)")
@@ -46,7 +46,7 @@ protected:
         compiler = std::make_unique<QueryCompiler>(std::make_unique<PostgresDialect>(), false);
     }
 
-    std::shared_ptr<TableSchema> users_schema;
+    std::shared_ptr<Table> users_schema;
 
     TableColumn<int> user_id{nullptr, ""};
     TableColumn<std::string> user_name{nullptr, ""};

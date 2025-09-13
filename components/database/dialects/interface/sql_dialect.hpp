@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-#include <db_field_value.hpp>
+#include <../../core/field/include/db_field_value.hpp>
 
 namespace demiplane::db {
     class SqlDialect {

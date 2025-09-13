@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../basic.hpp"
-#include "db_column.hpp"
 
 namespace demiplane::db {
     enum class OrderDirection { ASC, DESC };

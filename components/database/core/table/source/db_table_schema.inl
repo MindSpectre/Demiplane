@@ -1,7 +1,7 @@
 #pragma once
 #include <ostream>
 
-#include "db_field_schema.hpp"
+#include "../../field/include/db_field_schema.hpp"
 
 namespace demiplane::db {
     template <typename T>

@@ -3,9 +3,6 @@
 #include <algorithm>
 
 #include "../basic.hpp"
-#include "db_column.hpp"
-#include "db_record.hpp"
-#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     template <IsSelectable... Columns>

@@ -1,10 +1,12 @@
 #pragma once
 #include <optional>
 
-#include "db_core_fwd.hpp"
 #include "db_field_value.hpp"
 
 namespace demiplane::db {
+
+    struct FieldSchema;
+
     class Field final {
     public:
         explicit Field(const FieldSchema* schema);

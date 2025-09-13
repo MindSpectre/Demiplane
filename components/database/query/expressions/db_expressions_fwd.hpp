@@ -1,7 +1,6 @@
 #pragma once
 #include <concepts>
 
-#include <db_core_fwd.hpp>
 #include <gears_templates.hpp>
 
 namespace demiplane::db {

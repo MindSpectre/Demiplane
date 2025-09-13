@@ -1,6 +1,7 @@
 #pragma once
 
-#include "db_core_fwd.hpp"
+#include <db_core_objects.hpp>
+
 #include "gears_utils.hpp"
 #include "query_expressions.hpp"
 // NOLINTBEGIN(bugprone-use-after-move)

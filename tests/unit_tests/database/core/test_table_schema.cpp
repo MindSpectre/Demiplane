@@ -3,8 +3,8 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include <db_column.hpp>
-#include <db_table_schema.hpp>
+#include <../../../../components/database/core/column/include/db_column.hpp>
+#include <../../../../components/database/core/table/include/db_table_schema.hpp>
 
 #include <gtest/gtest.h>
 

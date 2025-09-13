@@ -7,10 +7,13 @@
 #include <boost/unordered_map.hpp>
 #include <gears_hash.hpp>
 
-#include "db_core_fwd.hpp"
+#include "db_column.hpp"
 
 namespace demiplane::db {
     // Enhanced TableSchema with type-safe column access
+    template <typename T>
+    class TableColumn;
+
     class TableSchema {
     public:
         explicit TableSchema(std::string table_name);
@@ -23,7 +26,7 @@ namespace demiplane::db {
 
         // Type-safe column accessor
         template <typename T>
-        TableColumn<T> column(std::string_view field_name) const;
+        [[nodiscard]] TableColumn<T> column(std::string_view field_name) const;
 
 
         // Existing methods
@@ -54,6 +57,12 @@ namespace demiplane::db {
         std::vector<std::unique_ptr<FieldSchema>> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
     };
+
+    using TableSchemaPtr = std::shared_ptr<const TableSchema>;
+
+    template <typename TablePtr>
+    concept IsTableSchema = std::is_same_v<std::remove_cvref_t<TableSchemaPtr>, TablePtr>;
+
 }  // namespace demiplane::db
 
 #include "../source/db_table_schema.inl"

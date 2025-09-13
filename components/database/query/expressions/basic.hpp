@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <utility>
 
-#include "db_column.hpp"
+#include <db_core_objects.hpp>
+
 #include "db_expressions_fwd.hpp"
-#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     template <class Derived>

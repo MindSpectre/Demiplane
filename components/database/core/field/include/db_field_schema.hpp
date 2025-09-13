@@ -7,10 +7,13 @@
 #include <boost/container/flat_map.hpp>
 #include <gears_types.hpp>
 
-#include "db_core_fwd.hpp"
 
 namespace demiplane::db {
     // Enhanced FieldSchema with C++ type information
+
+    template <typename T>
+    class TableColumn;
+
     struct FieldSchema {
         std::string name;
         std::string db_type;                                       // e.g., "VARCHAR(255)", "INTEGER", "TIMESTAMP"
@@ -30,7 +33,7 @@ namespace demiplane::db {
 
         // Create typed column reference
         template <typename T>
-        TableColumn<T> as_column(std::shared_ptr<std::string> table) const {
+        [[nodiscard]] TableColumn<T> as_column(std::shared_ptr<std::string> table) const {
             // Type safety check
             if (cpp_type != std::type_index(typeid(void)) && cpp_type != std::type_index(typeid(T))) {
                 throw std::logic_error("Type mismatch: field " + name + " expects " +
@@ -41,7 +44,7 @@ namespace demiplane::db {
         }
 
         template <typename T>
-        TableColumn<T> as_column(std::string table) const {
+        [[nodiscard]] TableColumn<T> as_column(std::string table) const {
             // Type safety check
             if (cpp_type != std::type_index(typeid(void)) && cpp_type != std::type_index(typeid(T))) {
                 throw std::logic_error("Type mismatch: field " + name + " expects " +

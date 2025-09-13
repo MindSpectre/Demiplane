@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include "../basic.hpp"
-#include "db_record.hpp"
 
 namespace demiplane::db {
     class InsertExpr : public Expression<InsertExpr> {

@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "../basic.hpp"
-#include "db_column.hpp"
 
 
 namespace demiplane::db {

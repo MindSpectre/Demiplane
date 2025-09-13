@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include "../basic.hpp"
-#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     class DeleteExpr : public Expression<DeleteExpr> {

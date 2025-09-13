@@ -4,7 +4,6 @@
 
 #include "../basic.hpp"
 #include "aggregate_exp.hpp"
-#include "db_column.hpp"
 
 namespace demiplane::db {
     // Count expression with optional distinct support

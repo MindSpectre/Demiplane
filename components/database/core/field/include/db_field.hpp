@@ -26,9 +26,6 @@ namespace demiplane::db {
         template <typename T>
         Field& set(T&& value);
 
-        // Zero-copy binary data setter
-        Field& set_binary(std::span<const uint8_t> data);
-
         // Type-safe getters with proper error handling
         template <typename T>
         const T& get() const;

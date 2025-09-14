@@ -1,6 +1,8 @@
 set(DMP_DATABASE_DIALECT ${DMP_DATABASE}.Dialect)
 
-add_library(${DMP_DATABASE_DIALECT}.Interface INTERFACE)
+add_library(${DMP_DATABASE_DIALECT}.Interface INTERFACE
+        interface/sql_dialect.hpp
+)
 target_include_directories(${DMP_DATABASE_DIALECT}.Interface INTERFACE
         interface/
 )

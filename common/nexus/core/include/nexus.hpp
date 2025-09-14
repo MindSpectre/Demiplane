@@ -5,10 +5,9 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <thread>
 #include <unordered_map>
-
-#include <boost/thread/shared_mutex.hpp>
 
 #include "../details.hpp"
 #include "../nexus_traits.hpp"
@@ -252,7 +251,7 @@ namespace demiplane::nexus {
 
         // State members
         std::unordered_map<Key, Slot, KeyHash> map_;                ///< Service registry
-        mutable boost::shared_mutex mtx_;                           ///< Read-write lock for thread safety
+        mutable std::shared_mutex mtx_;                             ///< Read-write lock for thread safety
         std::jthread janitor_;                                      ///< Background cleanup thread
         std::atomic<bool> stop_                           = false;  ///< Stop flag for janitor
         std::atomic<std::chrono::seconds> sweep_interval_ = std::chrono::seconds(5);  ///< Cleanup interval

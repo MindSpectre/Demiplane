@@ -1,5 +1,3 @@
-option(USE_BOOST "Enable Boost library" ON)
-option(USE_QT5 "Enable Qt5 library" OFF)
 option(USE_PROTOBUF "Enable Protobuf" OFF)
 option(BUILD_COMPONENTS "Build components" ON)
 option(USE_TESTS "Tests activated" ON)

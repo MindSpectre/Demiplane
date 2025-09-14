@@ -159,7 +159,7 @@ TEST_F(FieldTest, SetBinaryData) {
     Field field(&string_schema);  // Using string schema for binary data
 
     std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0xFF};
-    field.set_binary(std::span<const uint8_t>(data));
+    field.set(std::span<const uint8_t>(data));
 
     EXPECT_FALSE(field.is_null());
     // Note: Getting binary data back would depend on FieldValue implementation

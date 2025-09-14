@@ -34,11 +34,6 @@ namespace demiplane::db {
         return *this;
     }
 
-    Field& Field::set_binary(std::span<const uint8_t> data) {
-        value_ = data;
-        return *this;
-    }
-
     bool Field::is_null() const {
         return std::holds_alternative<std::monostate>(value_);
     }

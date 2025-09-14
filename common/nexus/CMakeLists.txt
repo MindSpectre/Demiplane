@@ -26,8 +26,8 @@ target_include_directories(${DMP_NEXUS}.Core
         PRIVATE
         core/
 )
-target_link_libraries(${DMP_NEXUS}.Core PUBLIC
-        Boost::thread
+target_link_libraries(${DMP_NEXUS}.Core
+        PUBLIC
         ${DMP_NEXUS}.Policies
         PRIVATE
         Demiplane::Common::Chrono

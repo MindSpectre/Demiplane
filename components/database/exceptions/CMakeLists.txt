@@ -10,5 +10,7 @@ target_include_directories(${DMP_DATABASE}.Exceptions PUBLIC
 )
 target_link_libraries(${DMP_DATABASE}.Exceptions PUBLIC
         Boost::exception
+        Boost::system
+        Boost::stacktrace_backtrace
 )
 ##############################################################################

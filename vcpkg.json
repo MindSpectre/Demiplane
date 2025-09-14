@@ -6,6 +6,8 @@
     "boost-thread",
     "boost-beast",
     "boost-asio",
+    "boost-system",
+    "boost-stacktrace",
     "openssl",
     "jsoncpp",
     "gtest"

@@ -5,48 +5,69 @@
 
 namespace demiplane::db {
     std::string PostgresDialect::quote_identifier(const std::string_view name) const {
-        std::ostringstream os;
-        os << "\"" << name.data() << "\"";
-        return os.str();
+        std::string quoted_name;
+        quoted_name.reserve(name.size() + 2);
+        quoted_name += "\"";
+        quoted_name += name.data();
+        quoted_name += "\"";
+        return quoted_name;
+    }
+
+    void PostgresDialect::quote_identifier(std::string& query, std::string_view name) const {
+        query += "\"";
+        query += name.data();
+        query += "\"";
     }
 
     std::string PostgresDialect::placeholder(const std::size_t index) const {
-        return "$" + std::to_string(index + 1);
+        std::string place_holder;
+        place_holder.reserve(15);
+        placeholder(place_holder, index);
+        return place_holder;
+    }
+
+    void PostgresDialect::placeholder(std::string& query, const std::size_t index) const {
+        query += "$" + std::to_string(index + 1);
     }
 
     std::string PostgresDialect::limit_clause(const std::size_t limit, const std::size_t offset) const {
-        std::string clause = " LIMIT " + std::to_string(limit);
-        if (offset > 0) {
-            clause += " OFFSET " + std::to_string(offset);
-        }
+        std::string clause;
+        clause.reserve(32);
+        limit_clause(clause, limit, offset);
         return clause;
     }
 
-    std::string PostgresDialect::format_value(const FieldValue& value) {
-        return std::visit(
-            []<typename TX>(const TX& val) -> std::string {
+    void PostgresDialect::limit_clause(std::string& query, const std::size_t limit, const std::size_t offset) const {
+        query += " LIMIT " + std::to_string(limit);
+        if (offset > 0) {
+            query += " OFFSET " + std::to_string(offset);
+        }
+    }
+
+    void PostgresDialect::format_value(std::string& query, const FieldValue& value) {
+        std::visit(
+            [&query]<typename TX>(const TX& val) -> void {
                 using T = std::decay_t<TX>;
 
                 if constexpr (std::is_same_v<T, std::monostate>) {
-                    return "NULL";
+                    query += "NULL";
                 } else if constexpr (std::is_same_v<T, bool>) {
-                    return val ? "TRUE" : "FALSE";
+                    query += val ? "TRUE" : "FALSE";
                 } else if constexpr (std::is_same_v<T, std::int32_t> || std::is_same_v<T, std::int64_t> ||
                                      std::is_same_v<T, double>) {
-                    return std::to_string(val);
+                    query += std::to_string(val);
                 } else if constexpr (std::is_same_v<T, std::string>) {
-                    return "'" + escape_string(val) + "'";
+                    query += "'" + escape_string(val) + "'";
                 } else if constexpr (std::is_same_v<T, std::span<const uint8_t>>) {
-                    return format_binary_data(val);
+                    query += format_binary_data(val);
                 } else {
                     gears::unreachable_c<T>();
-                    return {};
                 }
             },
             value);
     }
 
-    std::string PostgresDialect::escape_string(const std::string& str) {
+    std::string PostgresDialect::escape_string(const std::string_view str) {
         std::string result;
         result.reserve(str.size() * 2);  // Reserve space for potential escaping
 

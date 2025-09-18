@@ -19,6 +19,8 @@ target_include_directories(${DMP_MATH}.Random
 add_combined_library(${DMP_MATH}
         DIRECTORIES
         export
+        SOURCES
+        export/demiplane/math
         LIBRARIES
         ${DMP_MATH}.Random
 )

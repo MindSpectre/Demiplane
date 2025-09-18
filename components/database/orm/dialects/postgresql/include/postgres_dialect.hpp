@@ -9,9 +9,12 @@ namespace demiplane::db {
     public:
         [[nodiscard]] std::string quote_identifier(std::string_view name) const override;
 
-        [[nodiscard]] std::string placeholder(std::size_t index) const override;
+        void quote_identifier(std::string& query, std::string_view name) const override;
 
+        [[nodiscard]] std::string placeholder(std::size_t index) const override;
+        void placeholder(std::string& query, std::size_t index) const override;
         [[nodiscard]] std::string limit_clause(std::size_t limit, std::size_t offset) const override;
+        void limit_clause(std::string& query, std::size_t limit, std::size_t offset) const override;
 
         [[nodiscard]] bool supports_returning() const override {
             return true;
@@ -21,11 +24,11 @@ namespace demiplane::db {
             return true;
         }
 
-        [[nodiscard]] std::string format_value(const FieldValue& value) override;
+        void format_value(std::string& query, const FieldValue& value) override;
 
     private:
         // Helper methods for formatting
-        static std::string escape_string(const std::string& str);
+        static std::string escape_string(std::string_view str);
 
         static std::string format_binary_data(std::span<const uint8_t> data);
     };

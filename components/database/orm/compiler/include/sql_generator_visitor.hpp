@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "query_visitor.hpp"
 
 namespace demiplane::db {
@@ -7,17 +9,19 @@ namespace demiplane::db {
 
     class SqlGeneratorVisitor final : public QueryVisitor {
     public:
-        explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect, bool use_params = true);
+        explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect,
+                                     bool use_params = true,
+                                     bool is_large   = false);
 
         template <typename Self>
         auto decompose(this Self&& self) {
-            return std::make_tuple(std::forward<Self>(self).sql_.str(), std::forward<Self>(self).parameters_);
+            return std::make_tuple(std::forward<Self>(self).sql_, std::forward<Self>(self).parameters_);
         }
 
         // Get results
         template <typename Self>
         [[nodiscard]] auto sql(this Self&& self) {
-            return std::forward<Self>(self).sql_.str();
+            return std::forward<Self>(self).sql_;
         }
 
         template <typename Self>
@@ -199,7 +203,7 @@ namespace demiplane::db {
 
     private:
         std::shared_ptr<SqlDialect> dialect_;
-        std::ostringstream sql_;
+        std::string sql_;
         std::vector<FieldValue> parameters_;
         bool use_parameters_;
     };

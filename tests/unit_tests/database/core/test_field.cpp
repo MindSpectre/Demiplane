@@ -4,8 +4,8 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include <../../../../components/database/core/field/include/db_field.hpp>
-#include <../../../../components/database/core/field/include/db_field_schema.hpp>
+#include <db_field.hpp>
+#include <db_field_schema.hpp>
 
 #include <gtest/gtest.h>
 

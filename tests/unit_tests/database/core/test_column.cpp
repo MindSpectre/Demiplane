@@ -2,8 +2,8 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include <../../../../components/database/core/column/include/db_column.hpp>
-#include <../../../../components/database/core/field/include/db_field_schema.hpp>
+#include <db_column.hpp>
+#include <db_field_schema.hpp>
 
 #include <gtest/gtest.h>
 

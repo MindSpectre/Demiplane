@@ -1,21 +1,29 @@
 #pragma once
 #include <string>
 
-#include <../../core/field/include/db_field_value.hpp>
+#include <db_field_value.hpp>
 
 namespace demiplane::db {
+
     class SqlDialect {
     public:
         virtual ~SqlDialect() = default;
 
         // Identifier quoting
+        /// @deprecated copying
         [[nodiscard]] virtual std::string quote_identifier(std::string_view name) const = 0;
+
+        virtual void quote_identifier(std::string& query, std::string_view name) const = 0;
 
         // Parameter placeholders
         [[nodiscard]] virtual std::string placeholder(std::size_t index) const = 0;
 
+        virtual void placeholder(std::string& query, std::size_t index) const = 0;
+
         // Limit/Offset syntax
         [[nodiscard]] virtual std::string limit_clause(std::size_t limit, std::size_t offset) const = 0;
+
+        virtual void limit_clause(std::string& query, std::size_t limit, std::size_t offset) const = 0;
 
         // Type mapping
         [[nodiscard]] virtual std::string map_type(const std::string_view db_type) const {
@@ -39,10 +47,7 @@ namespace demiplane::db {
         [[nodiscard]] virtual bool supports_lateral_joins() const {
             return false;
         }
-
         // Value formatting
-        [[nodiscard]] virtual std::string format_value(const FieldValue& value) = 0;
-
-        // TODO: implement rvalue format_value method
+        virtual void format_value(std::string& query, const FieldValue& value) = 0;
     };
 }  // namespace demiplane::db

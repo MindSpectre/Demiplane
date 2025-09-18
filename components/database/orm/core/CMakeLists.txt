@@ -1,4 +1,4 @@
-set(DMP_DATABASE_CORE ${DMP_DATABASE}.Core)
+set(DMP_DATABASE_ORM_CORE ${DMP_DATABASE_ORM}.Core)
 
 add_subdirectory(column)
 add_subdirectory(field)
@@ -8,7 +8,7 @@ add_subdirectory(table)
 ##############################################################################
 # Fundamental structures for orm
 ##############################################################################
-add_combined_library(${DMP_DATABASE_CORE}
+add_combined_library(${DMP_DATABASE_ORM_CORE}
         DIRECTORIES
         export/
         SOURCES

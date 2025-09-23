@@ -62,7 +62,8 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
     {
         // COUNT
         auto count_query       = select(count(user_id)).from(users_schema);
-        auto [sql, parameters] = compiler->compile(count_query);
+        auto q = compiler->compile(count_query);
+        const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
         SCROLL_LOG_INF() << "COUNT: " << sql;
     }
@@ -70,7 +71,8 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
     // SUM
     {
         auto sum_query         = select(sum(user_age)).from(users_schema);
-        auto [sql, parameters] = compiler->compile(sum_query);
+        auto q = compiler->compile(sum_query);
+        const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
         SCROLL_LOG_INF() << "SUM: " << sql;
     }
@@ -78,7 +80,8 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
     // AVG
     {
         auto avg_query         = select(avg(user_age)).from(users_schema);
-        auto [sql, parameters] = compiler->compile(avg_query);
+        auto q = compiler->compile(avg_query);
+        const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
         SCROLL_LOG_INF() << "AVG: " << sql;
     }
@@ -86,14 +89,16 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
     // MIN
     {
         auto min_query         = select(min(user_age)).from(users_schema);
-        auto [sql, parameters] = compiler->compile(min_query);
+        auto q = compiler->compile(min_query);
+        const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
         SCROLL_LOG_INF() << "MIN: " << sql;
     }
     // MAX
     {
         auto max_query         = select(max(user_age)).from(users_schema);
-        auto [sql, parameters] = compiler->compile(max_query);
+        auto q = compiler->compile(max_query);
+        const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
         SCROLL_LOG_INF() << "MAX: " << sql;
     }
@@ -108,7 +113,8 @@ TEST_F(AggregateQueryTest, AggregateWithAliasExpressions) {
                         max(user_age).as("max_age"))
                      .from(users_schema);
 
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -117,7 +123,8 @@ TEST_F(AggregateQueryTest, AggregateWithAliasExpressions) {
 // Test COUNT DISTINCT
 TEST_F(AggregateQueryTest, CountDistinctExpression) {
     auto query                   = select(count_distinct(user_age)).from(users_schema);
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -126,7 +133,8 @@ TEST_F(AggregateQueryTest, CountDistinctExpression) {
 // Test COUNT ALL
 TEST_F(AggregateQueryTest, CountAllExpression) {
     auto query                   = select(count_all()).from(users_schema);
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -135,7 +143,8 @@ TEST_F(AggregateQueryTest, CountAllExpression) {
 // Test aggregates with GROUP BY
 TEST_F(AggregateQueryTest, AggregateWithGroupByExpression) {
     auto query = select(user_active, count(user_id).as("user_count")).from(users_schema).group_by(user_active);
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -147,7 +156,8 @@ TEST_F(AggregateQueryTest, AggregateWithHavingExpression) {
                      .from(users_schema)
                      .group_by(user_active)
                      .having(count(user_id) > lit(5));
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -159,7 +169,8 @@ TEST_F(AggregateQueryTest, MultipleAggregatesExpression) {
         select(count(user_id), sum(user_age), avg(user_age), min(user_age), max(user_age), count_distinct(user_name))
             .from(users_schema);
 
-    const auto [sql, parameters] = compiler->compile(std::move(query));
+    const auto q = compiler->compile(std::move(query));
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -171,7 +182,8 @@ TEST_F(AggregateQueryTest, AggregateWithMixedTypesExpression) {
                      .from(users_schema)
                      .group_by(user_name);
 
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;
@@ -184,7 +196,8 @@ TEST_F(AggregateQueryTest, AggregateMethodChainingExpression) {
     EXPECT_EQ(&count_expr, &alias_ref);
 
     auto query                   = select(count_expr).from(users_schema);
-    const auto [sql, parameters] = compiler->compile(query);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
     SCROLL_LOG_INF() << sql;

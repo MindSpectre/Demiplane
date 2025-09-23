@@ -83,15 +83,15 @@ TEST_F(ClauseQueryTest, FromClauseExpression) {
     // FROM with Table
     auto query1  = select(user_name).from(users_schema);
     auto result1 = compiler->compile(query1);
-    EXPECT_FALSE(result1.sql.empty());
+    EXPECT_FALSE(result1.sql().empty());
 
     // FROM with table name string
     auto query2  = select(lit(1)).from("test_table");
     auto result2 = compiler->compile(query2);
-    EXPECT_FALSE(result2.sql.empty());
+    EXPECT_FALSE(result2.sql().empty());
 
-    SCROLL_LOG_INF() << "FROM schema: " << result1.sql;
-    SCROLL_LOG_INF() << "FROM string: " << result2.sql;
+    SCROLL_LOG_INF() << "FROM schema: " << result1.sql();
+    SCROLL_LOG_INF() << "FROM string: " << result2.sql();
 }
 
 // Test WHERE clause with various conditions
@@ -99,29 +99,29 @@ TEST_F(ClauseQueryTest, WhereClauseExpression) {
     // Simple WHERE
     auto query1  = select(user_name).from(users_schema).where(user_active == lit(true));
     auto result1 = compiler->compile(query1);
-    EXPECT_FALSE(result1.sql.empty());
+    EXPECT_FALSE(result1.sql().empty());
 
     // WHERE with AND/OR
     auto query2 = select(user_name)
                       .from(users_schema)
                       .where(user_age > lit(18) && (user_active == lit(true) || user_salary > lit(50000.0)));
     auto result2 = compiler->compile(query2);
-    EXPECT_FALSE(result2.sql.empty());
+    EXPECT_FALSE(result2.sql().empty());
 
     // WHERE with IN
     auto query3  = select(user_name).from(users_schema).where(in(user_age, lit(25), lit(30), lit(35)));
     auto result3 = compiler->compile(query3);
-    EXPECT_FALSE(result3.sql.empty());
+    EXPECT_FALSE(result3.sql().empty());
 
     // WHERE with BETWEEN
     auto query4  = select(user_name).from(users_schema).where(between(user_salary, lit(30000.0), lit(80000.0)));
     auto result4 = compiler->compile(query4);
-    EXPECT_FALSE(result4.sql.empty());
+    EXPECT_FALSE(result4.sql().empty());
 
-    SCROLL_LOG_INF() << "WHERE simple: " << result1.sql;
-    SCROLL_LOG_INF() << "WHERE complex: " << result2.sql;
-    SCROLL_LOG_INF() << "WHERE IN: " << result3.sql;
-    SCROLL_LOG_INF() << "WHERE BETWEEN: " << result4.sql;
+    SCROLL_LOG_INF() << "WHERE simple: " << result1.sql();
+    SCROLL_LOG_INF() << "WHERE complex: " << result2.sql();
+    SCROLL_LOG_INF() << "WHERE IN: " << result3.sql();
+    SCROLL_LOG_INF() << "WHERE BETWEEN: " << result4.sql();
 }
 
 // Test GROUP BY clause
@@ -129,14 +129,14 @@ TEST_F(ClauseQueryTest, GroupByClauseExpression) {
     // Single column GROUP BY
     auto query1  = select(user_department, count(user_id).as("count")).from(users_schema).group_by(user_department);
     auto result1 = compiler->compile(query1);
-    EXPECT_FALSE(result1.sql.empty());
+    EXPECT_FALSE(result1.sql().empty());
 
     // Multiple column GROUP BY
     auto query2 = select(user_department, user_active, count(user_id).as("count"))
                       .from(users_schema)
                       .group_by(user_department, user_active);
     auto result2 = compiler->compile(query2);
-    EXPECT_FALSE(result2.sql.empty());
+    EXPECT_FALSE(result2.sql().empty());
 
     // GROUP BY with WHERE
     auto query3 = select(user_department, avg(user_salary).as("avg_salary"))
@@ -144,11 +144,11 @@ TEST_F(ClauseQueryTest, GroupByClauseExpression) {
                       .where(user_active == lit(true))
                       .group_by(user_department);
     auto result3 = compiler->compile(query3);
-    EXPECT_FALSE(result3.sql.empty());
+    EXPECT_FALSE(result3.sql().empty());
 
-    SCROLL_LOG_INF() << "GROUP BY single: " << result1.sql;
-    SCROLL_LOG_INF() << "GROUP BY multiple: " << result2.sql;
-    SCROLL_LOG_INF() << "GROUP BY with WHERE: " << result3.sql;
+    SCROLL_LOG_INF() << "GROUP BY single: " << result1.sql();
+    SCROLL_LOG_INF() << "GROUP BY multiple: " << result2.sql();
+    SCROLL_LOG_INF() << "GROUP BY with WHERE: " << result3.sql();
 }
 
 // Test HAVING clause
@@ -159,7 +159,7 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
                       .group_by(user_department)
                       .having(count(user_id) > lit(5));
     auto result1 = compiler->compile(query1);
-    EXPECT_FALSE(result1.sql.empty());
+    EXPECT_FALSE(result1.sql().empty());
 
     // HAVING with multiple conditions
     auto query2 = select(user_department, avg(user_salary).as("avg_salary"), count(user_id).as("count"))
@@ -167,7 +167,7 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
                       .group_by(user_department)
                       .having(count(user_id) > lit(3) && avg(user_salary) > lit(45000.0));
     auto result2 = compiler->compile(query2);
-    EXPECT_FALSE(result2.sql.empty());
+    EXPECT_FALSE(result2.sql().empty());
 
     // HAVING with WHERE and GROUP BY
     auto query3 = select(user_department, max(user_salary).as("max_salary"))
@@ -176,11 +176,11 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
                       .group_by(user_department)
                       .having(max(user_salary) > lit(70000.0));
     auto result3 = compiler->compile(query3);
-    EXPECT_FALSE(result3.sql.empty());
+    EXPECT_FALSE(result3.sql().empty());
 
-    SCROLL_LOG_INF() << "HAVING simple: " << result1.sql;
-    SCROLL_LOG_INF() << "HAVING multiple: " << result2.sql;
-    SCROLL_LOG_INF() << "HAVING with WHERE/GROUP BY: " << result3.sql;
+    SCROLL_LOG_INF() << "HAVING simple: " << result1.sql();
+    SCROLL_LOG_INF() << "HAVING multiple: " << result2.sql();
+    SCROLL_LOG_INF() << "HAVING with WHERE/GROUP BY: " << result3.sql();
 }
 
 // Test ORDER BY clause
@@ -188,29 +188,29 @@ TEST_F(ClauseQueryTest, OrderByClauseExpression) {
     // Single column ORDER BY ASC
     auto query1  = select(user_name, user_age).from(users_schema).order_by(asc(user_name));
     auto result1 = compiler->compile(query1);
-    EXPECT_FALSE(result1.sql.empty());
+    EXPECT_FALSE(result1.sql().empty());
 
     // Single column ORDER BY DESC
     auto query2  = select(user_name, user_salary).from(users_schema).order_by(desc(user_salary));
     auto result2 = compiler->compile(query2);
-    EXPECT_FALSE(result2.sql.empty());
+    EXPECT_FALSE(result2.sql().empty());
 
     // Multiple column ORDER BY
     auto query3 = select(user_name, user_department, user_salary)
                       .from(users_schema)
                       .order_by(asc(user_department), desc(user_salary), asc(user_name));
     auto result3 = compiler->compile(query3);
-    EXPECT_FALSE(result3.sql.empty());
+    EXPECT_FALSE(result3.sql().empty());
 
     // ORDER BY with expressions
     auto query4  = select(user_name, user_age, user_salary).from(users_schema).order_by(desc(user_salary));
     auto result4 = compiler->compile(query4);
-    EXPECT_FALSE(result4.sql.empty());
+    EXPECT_FALSE(result4.sql().empty());
 
-    SCROLL_LOG_INF() << "ORDER BY ASC: " << result1.sql;
-    SCROLL_LOG_INF() << "ORDER BY DESC: " << result2.sql;
-    SCROLL_LOG_INF() << "ORDER BY multiple: " << result3.sql;
-    SCROLL_LOG_INF() << "ORDER BY expression: " << result4.sql;
+    SCROLL_LOG_INF() << "ORDER BY ASC: " << result1.sql();
+    SCROLL_LOG_INF() << "ORDER BY DESC: " << result2.sql();
+    SCROLL_LOG_INF() << "ORDER BY multiple: " << result3.sql();
+    SCROLL_LOG_INF() << "ORDER BY expression: " << result4.sql();
 }
 
 // Test LIMIT clause
@@ -218,12 +218,12 @@ TEST_F(ClauseQueryTest, LimitClauseExpression) {
     // Basic LIMIT
     auto query1  = select(user_name).from(users_schema).limit(10);
     auto result1 = compiler->compile(query1);
-    EXPECT_FALSE(result1.sql.empty());
+    EXPECT_FALSE(result1.sql().empty());
 
     // LIMIT with ORDER BY
     auto query2  = select(user_name, user_salary).from(users_schema).order_by(desc(user_salary)).limit(5);
     auto result2 = compiler->compile(query2);
-    EXPECT_FALSE(result2.sql.empty());
+    EXPECT_FALSE(result2.sql().empty());
 
     // LIMIT with WHERE and ORDER BY
     auto query3 = select(user_name, user_age)
@@ -232,11 +232,11 @@ TEST_F(ClauseQueryTest, LimitClauseExpression) {
                       .order_by(asc(user_age))
                       .limit(20);
     auto result3 = compiler->compile(query3);
-    EXPECT_FALSE(result3.sql.empty());
+    EXPECT_FALSE(result3.sql().empty());
 
-    SCROLL_LOG_INF() << "LIMIT basic: " << result1.sql;
-    SCROLL_LOG_INF() << "LIMIT with ORDER BY: " << result2.sql;
-    SCROLL_LOG_INF() << "LIMIT with WHERE/ORDER BY: " << result3.sql;
+    SCROLL_LOG_INF() << "LIMIT basic: " << result1.sql();
+    SCROLL_LOG_INF() << "LIMIT with ORDER BY: " << result2.sql();
+    SCROLL_LOG_INF() << "LIMIT with WHERE/ORDER BY: " << result3.sql();
 }
 
 // Test complex query with all clauses
@@ -253,8 +253,8 @@ TEST_F(ClauseQueryTest, ComplexQueryWithAllClausesExpression) {
                      .limit(10);
     // todo: desc accept aggregate
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Complex query: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "Complex query: " << result.sql();
 }
 
 // Test clause combinations with JOINs
@@ -270,6 +270,6 @@ TEST_F(ClauseQueryTest, ClausesWithJoinsExpression) {
                      .limit(5);
 
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Clauses with JOIN: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "Clauses with JOIN: " << result.sql();
 }

@@ -43,16 +43,16 @@ protected:
 TEST_F(InsertQueryTest, BasicInsertExpression) {
     auto query  = insert_into(users_schema).into({"name", "age", "active"}).values({"John Doe", 25, true});
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test INSERT with table name string
 TEST_F(InsertQueryTest, InsertWithTableNameExpression) {
     auto query  = insert_into("users").into({"name", "age"}).values({"Jane Doe", 30});
     auto result = compiler->compile(std::move(query));
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test INSERT with Record
@@ -64,8 +64,8 @@ TEST_F(InsertQueryTest, InsertWithRecordExpression) {
 
     auto query  = insert_into(users_schema).into({"name", "age", "active"}).values(test_record);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test INSERT batch operation
@@ -84,8 +84,8 @@ TEST_F(InsertQueryTest, InsertBatchExpression) {
 
     auto query  = insert_into(users_schema).into({"name", "age", "active"}).batch(records);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test INSERT multiple values calls
@@ -95,8 +95,8 @@ TEST_F(InsertQueryTest, InsertMultipleValuesExpression) {
                      .values({"User1", 25, true})
                      .values({"User2", 30, false});
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test INSERT with empty columns (should work with schema inference)
@@ -115,6 +115,6 @@ TEST_F(InsertQueryTest, InsertMethodChainingExpression) {
     EXPECT_EQ(&query, &query_ref);
 
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }

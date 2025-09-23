@@ -3,19 +3,18 @@
 #include <memory>
 
 #include "query_visitor.hpp"
-
+#include "sql_dialect.hpp"
 namespace demiplane::db {
-    class SqlDialect;
 
     class SqlGeneratorVisitor final : public QueryVisitor {
     public:
-        explicit SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect,
-                                     bool use_params = true,
-                                     bool is_large   = false);
+        SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
+                        std::pmr::memory_resource* mr,
+                        bool use_params);
 
         template <typename Self>
         auto decompose(this Self&& self) {
-            return std::make_tuple(std::forward<Self>(self).sql_, std::forward<Self>(self).parameters_);
+            return std::make_tuple(std::forward<Self>(self).sql_, std::forward<Self>(self).packet_.packet);
         }
 
         // Get results
@@ -26,7 +25,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] auto&& parameters(this Self&& self) {
-            return std::forward<Self>(self).parameters_;
+            return std::forward<Self>(self).packet_.packet;
         }
 
     protected:
@@ -203,8 +202,9 @@ namespace demiplane::db {
 
     private:
         std::shared_ptr<SqlDialect> dialect_;
-        std::string sql_;
-        std::vector<FieldValue> parameters_;
-        bool use_parameters_;
+        std::pmr::string sql_;
+        bool use_params_{true};
+        DialectBindPacket packet_{};
+        ParamSink* sink_{nullptr};
     };
 }  // namespace demiplane::db

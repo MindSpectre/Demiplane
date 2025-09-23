@@ -91,8 +91,8 @@ protected:
 TEST_F(JoinQueryTest, InnerJoinExpression) {
     auto query  = select(user_name, post_title).from(users_schema).join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test LEFT JOIN
@@ -100,8 +100,8 @@ TEST_F(JoinQueryTest, LeftJoinExpression) {
     auto query =
         select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test RIGHT JOIN
@@ -111,8 +111,8 @@ TEST_F(JoinQueryTest, RightJoinExpression) {
                      .join(posts_schema, JoinType::RIGHT)
                      .on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test FULL OUTER JOIN
@@ -120,8 +120,8 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
     auto query =
         select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::FULL).on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test CROSS JOIN (simplified - cross join typically doesn't need ON clause)
@@ -129,16 +129,16 @@ TEST_F(JoinQueryTest, CrossJoinExpression) {
     auto query =
         select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::CROSS).on(user_id > lit(0));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test multiple JOINs (simplified to single join for now)
 TEST_F(JoinQueryTest, MultipleJoinsExpression) {
     auto query  = select(user_name, post_title).from(users_schema).join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test JOIN with complex conditions
@@ -148,8 +148,8 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
                      .join(posts_schema)
                      .on(post_user_id == user_id && post_published == lit(true));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test JOIN with WHERE clause
@@ -160,8 +160,8 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
                      .on(post_user_id == user_id)
                      .where(user_active == lit(true));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test JOIN with aggregates (simplified without GROUP BY for now)
@@ -171,8 +171,8 @@ TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
                      .join(posts_schema, JoinType::LEFT)
                      .on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test JOIN with ORDER BY
@@ -183,6 +183,6 @@ TEST_F(JoinQueryTest, JoinWithOrderByExpression) {
                      .on(post_user_id == user_id)
                      .order_by(asc(user_name), desc(post_title));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }

@@ -85,8 +85,8 @@ TEST_F(CteQueryTest, BasicCteExpression) {
                                     .from(employees_schema)
                                     .where(emp_salary > lit(75000.0) && emp_active == lit(true)));
     auto result          = compiler->compile(high_performers);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Basic CTE: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "Basic CTE: " << result.sql();
 }
 
 // Test CTE with aggregation
@@ -100,8 +100,8 @@ TEST_F(CteQueryTest, CteWithAggregationExpression) {
                                .where(emp_active == lit(true))
                                .group_by(emp_department));
     auto result     = compiler->compile(dept_stats);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "CTE with aggregation: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "CTE with aggregation: " << result.sql();
 }
 
 // Test CTE used in main query
@@ -117,8 +117,8 @@ TEST_F(CteQueryTest, CteUsedInMainQueryExpression) {
                           .where(sale_amount > lit(10000.0));
 
     auto result = compiler->compile(main_query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "CTE used in main query: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "CTE used in main query: " << result.sql();
 }
 
 // Test multiple CTEs
@@ -136,8 +136,8 @@ TEST_F(CteQueryTest, MultipleCteExpression) {
     auto main_query = select(emp_name.as_dynamic().set_context(high_sales.name()), emp_department, lit("total_sales"))
                           .from(active_employees);
     auto result = compiler->compile(main_query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Multiple CTE: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "Multiple CTE: " << result.sql();
 }
 
 
@@ -153,9 +153,9 @@ TEST_F(CteQueryTest, CteWithComplexJoinsExpression) {
                  .group_by(emp_id, emp_name, emp_department));
 
     auto result = compiler->compile(employee_sales_summary);
-    EXPECT_FALSE(result.sql.empty());
+    EXPECT_FALSE(result.sql().empty());
 #ifdef MANUAL_CHECK
-    std::cout << result.sql << std::endl;
+    std::cout << result.sql() << std::endl;
 #endif
 }
 
@@ -169,6 +169,6 @@ TEST_F(CteQueryTest, CteWithSubqueriesExpression) {
                         subquery(select(avg(emp_salary)).from(employees_schema).where(emp_active == lit(true)))));
 
     auto result = compiler->compile(top_performers);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "CTE with subqueries: " << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << "CTE with subqueries: " << result.sql();
 }

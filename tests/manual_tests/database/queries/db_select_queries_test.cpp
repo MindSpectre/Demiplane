@@ -72,32 +72,32 @@ protected:
 TEST_F(SelectQueryTest, BasicSelectExpression) {
     const auto query = select(user_id, user_name);
     auto result      = compiler->compile(query.from(users_schema));
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with ALL columns
 TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
     const auto query = select(all("users"));
     auto result      = compiler->compile(query.from(users_schema));
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT DISTINCT
 TEST_F(SelectQueryTest, SelectDistinctExpression) {
     const auto query = select_distinct(user_name, user_age);
     auto result      = compiler->compile(query.from(users_schema));
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with mixed types (columns, literals, aggregates)
 TEST_F(SelectQueryTest, SelectMixedTypesExpression) {
     const auto query = select(user_name, lit("constant"), count(user_id).as("total"));
     auto result      = compiler->compile(query.from(users_schema));
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT from Record
@@ -108,24 +108,24 @@ TEST_F(SelectQueryTest, SelectFromRecordExpression) {
 
     auto query  = select(user_name).from(test_record);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT from table name string
 TEST_F(SelectQueryTest, SelectFromTableNameExpression) {
     auto query  = select(lit(1)).from("test_table");
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with WHERE clause
 TEST_F(SelectQueryTest, SelectWithWhereExpression) {
     auto query  = select(user_name).from(users_schema).where(user_age > lit(18));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with JOIN
@@ -133,16 +133,16 @@ TEST_F(SelectQueryTest, SelectWithJoinExpression) {
     auto query =
         select(user_name, post_title).from(users_schema).join(posts_schema->table_name()).on(post_user_id == user_id);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with GROUP BY
 TEST_F(SelectQueryTest, SelectWithGroupByExpression) {
     auto query  = select(user_active, count(user_id).as("user_count")).from(users_schema).group_by(user_active);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with HAVING
@@ -152,22 +152,22 @@ TEST_F(SelectQueryTest, SelectWithHavingExpression) {
                      .group_by(user_active)
                      .having(count(user_id) > lit(5));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with ORDER BY
 TEST_F(SelectQueryTest, SelectWithOrderByExpression) {
     auto query  = select(user_name).from(users_schema).order_by(asc(user_name));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SELECT with LIMIT
 TEST_F(SelectQueryTest, SelectWithLimitExpression) {
     auto query  = select(user_name).from(users_schema).limit(10);
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }

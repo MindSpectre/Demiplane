@@ -11,7 +11,6 @@
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
 
 // Test fixture for CASE operations
 class CaseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
@@ -63,7 +62,8 @@ TEST_F(CaseQueryTest, BasicCaseExpression) {
         select(user_name,
                case_when(user_age < lit(18), lit("minor")).when(user_age < lit(65), lit("adult")).else_(lit("senior")))
             .from(users_schema);
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -74,7 +74,8 @@ TEST_F(CaseQueryTest, CaseWithoutElseExpression) {
         select(user_name,
                case_when(user_active == lit(true), lit("Active")).when(user_active == lit(false), lit("Inactive")))
             .from(users_schema);
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -88,7 +89,8 @@ TEST_F(CaseQueryTest, MultipleWhenExpression) {
                             .else_(lit("Very High"))
                             .as("salary_category"))
                      .from(users_schema);
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -101,7 +103,8 @@ TEST_F(CaseQueryTest, CaseWithComplexConditionsExpression) {
                             .when(user_active == lit(false), lit("Inactive"))
                             .else_(lit("Other")))
                      .from(users_schema);
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -111,7 +114,8 @@ TEST_F(CaseQueryTest, CaseInWhereExpression) {
     auto query = select(user_name)
                      .from(users_schema)
                      .where(case_when(user_active == lit(true), user_salary).else_(lit(0.0)) > lit(40000.0));
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -135,8 +139,9 @@ TEST_F(CaseQueryTest, CaseWithGroupByExpression) {
     auto age_group =
         case_when(user_age < lit(30), lit("Young")).when(user_age < lit(50), lit("Middle")).else_(lit("Senior"));
 
-    auto query = select(age_group.as("age_group"), count(user_id).as("count")).from(users_schema).group_by(age_group);
-    auto [sql, parameters] = compiler->compile(query);
+    auto query   = select(age_group.as("age_group"), count(user_id).as("count")).from(users_schema).group_by(age_group);
+    const auto q = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -148,7 +153,8 @@ TEST_F(CaseQueryTest, NestedCaseExpression) {
                                   case_when(user_salary > lit(50000.0), lit("High Active")).else_(lit("Low Active")))
                             .else_(case_when(user_age > lit(60), lit("Retired")).else_(lit("Inactive"))))
                      .from(users_schema);
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -159,7 +165,8 @@ TEST_F(CaseQueryTest, CaseWithDifferentTypesExpression) {
                         case_when(user_active == lit(true), user_salary).else_(lit(0.0)).as("effective_salary"),
                         case_when(user_age < lit(18), lit(false)).else_(lit(true)).as("can_work"))
                      .from(users_schema);
-    auto [sql, parameters] = compiler->compile(query);
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }
@@ -171,8 +178,9 @@ TEST_F(CaseQueryTest, CaseWithOrderByExpression) {
                         .when(user_status == lit("Standard"), lit(3))
                         .else_(lit(4));
 
-    auto query = select(user_name, user_status).from(users_schema).order_by(/*asc(priority),*/ asc(user_name));
-    auto [sql, parameters] = compiler->compile(query);
+    auto query     = select(user_name, user_status).from(users_schema).order_by(/*asc(priority),*/ asc(user_name));
+    const auto q   = compiler->compile(query);
+    const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
     SCROLL_LOG_INF() << sql;
 }

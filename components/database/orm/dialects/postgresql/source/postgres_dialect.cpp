@@ -13,7 +13,12 @@ namespace demiplane::db {
         return quoted_name;
     }
 
-    void PostgresDialect::quote_identifier(std::string& query, std::string_view name) const {
+    void PostgresDialect::quote_identifier(std::string& query, const std::string_view name) const {
+        query += "\"";
+        query += name.data();
+        query += "\"";
+    }
+    void PostgresDialect::quote_identifier(std::pmr::string& query, const std::string_view name) const {
         query += "\"";
         query += name.data();
         query += "\"";
@@ -29,6 +34,9 @@ namespace demiplane::db {
     void PostgresDialect::placeholder(std::string& query, const std::size_t index) const {
         query += "$" + std::to_string(index + 1);
     }
+    void PostgresDialect::placeholder(std::pmr::string& query, const std::size_t index) const {
+        query += "$" + std::to_string(index + 1);
+    }
 
     std::string PostgresDialect::limit_clause(const std::size_t limit, const std::size_t offset) const {
         std::string clause;
@@ -38,6 +46,12 @@ namespace demiplane::db {
     }
 
     void PostgresDialect::limit_clause(std::string& query, const std::size_t limit, const std::size_t offset) const {
+        query += " LIMIT " + std::to_string(limit);
+        if (offset > 0) {
+            query += " OFFSET " + std::to_string(offset);
+        }
+    }
+    void PostgresDialect::limit_clause(std::pmr::string& query, const std::size_t limit, const std::size_t offset) const {
         query += " LIMIT " + std::to_string(limit);
         if (offset > 0) {
             query += " OFFSET " + std::to_string(offset);
@@ -65,6 +79,31 @@ namespace demiplane::db {
                 }
             },
             value);
+    }
+    void PostgresDialect::format_value(std::pmr::string& query, const FieldValue& value) {
+        std::visit(
+            [&query]<typename TX>(const TX& val) -> void {
+                using T = std::decay_t<TX>;
+
+                if constexpr (std::is_same_v<T, std::monostate>) {
+                    query += "NULL";
+                } else if constexpr (std::is_same_v<T, bool>) {
+                    query += val ? "TRUE" : "FALSE";
+                } else if constexpr (std::is_same_v<T, std::int32_t> || std::is_same_v<T, std::int64_t> ||
+                                     std::is_same_v<T, double>) {
+                    query += std::to_string(val);
+                } else if constexpr (std::is_same_v<T, std::string>) {
+                    query += "'" + escape_string(val) + "'";
+                } else if constexpr (std::is_same_v<T, std::span<const uint8_t>>) {
+                    query += format_binary_data(val);
+                } else {
+                    gears::unreachable_c<T>();
+                }
+            },
+            value);
+    }
+    DialectBindPacket PostgresDialect::make_param_sink(std::pmr::memory_resource*) const {
+        return {};  //TODO
     }
 
     std::string PostgresDialect::escape_string(const std::string_view str) {

@@ -74,39 +74,39 @@ TEST_F(ConditionQueryTest, BinaryConditionExpressions) {
     // Equality
     auto eq_query  = select(user_name).from(users_schema).where(user_age == lit(25));
     auto eq_result = compiler->compile(eq_query);
-    EXPECT_FALSE(eq_result.sql.empty());
+    EXPECT_FALSE(eq_result.sql().empty());
 
     // Inequality
     auto neq_query  = select(user_name).from(users_schema).where(user_age != lit(25));
     auto neq_result = compiler->compile(neq_query);
-    EXPECT_FALSE(neq_result.sql.empty());
+    EXPECT_FALSE(neq_result.sql().empty());
 
     // Greater than
     auto gt_query  = select(user_name).from(users_schema).where(user_age > lit(18));
     auto gt_result = compiler->compile(gt_query);
-    EXPECT_FALSE(gt_result.sql.empty());
+    EXPECT_FALSE(gt_result.sql().empty());
 
     // Greater than or equal
     auto gte_query  = select(user_name).from(users_schema).where(user_age >= lit(18));
     auto gte_result = compiler->compile(gte_query);
-    EXPECT_FALSE(gte_result.sql.empty());
+    EXPECT_FALSE(gte_result.sql().empty());
 
     // Less than
     auto lt_query  = select(user_name).from(users_schema).where(user_age < lit(65));
     auto lt_result = compiler->compile(lt_query);
-    EXPECT_FALSE(lt_result.sql.empty());
+    EXPECT_FALSE(lt_result.sql().empty());
 
     // Less than or equal
     auto lte_query  = select(user_name).from(users_schema).where(user_age <= lit(65));
     auto lte_result = compiler->compile(lte_query);
-    EXPECT_FALSE(lte_result.sql.empty());
+    EXPECT_FALSE(lte_result.sql().empty());
 
-    SCROLL_LOG_INF() << "EQ: " << eq_result.sql;
-    SCROLL_LOG_INF() << "NEQ: " << neq_result.sql;
-    SCROLL_LOG_INF() << "GT: " << gt_result.sql;
-    SCROLL_LOG_INF() << "GTE: " << gte_result.sql;
-    SCROLL_LOG_INF() << "LT: " << lt_result.sql;
-    SCROLL_LOG_INF() << "LTE: " << lte_result.sql;
+    SCROLL_LOG_INF() << "EQ: " << eq_result.sql();
+    SCROLL_LOG_INF() << "NEQ: " << neq_result.sql();
+    SCROLL_LOG_INF() << "GT: " << gt_result.sql();
+    SCROLL_LOG_INF() << "GTE: " << gte_result.sql();
+    SCROLL_LOG_INF() << "LT: " << lt_result.sql();
+    SCROLL_LOG_INF() << "LTE: " << lte_result.sql();
 }
 
 // Test logical condition expressions
@@ -114,15 +114,15 @@ TEST_F(ConditionQueryTest, LogicalConditionExpressions) {
     // AND
     auto and_query  = select(user_name).from(users_schema).where(user_age > lit(18) && user_active == lit(true));
     auto and_result = compiler->compile(and_query);
-    EXPECT_FALSE(and_result.sql.empty());
+    EXPECT_FALSE(and_result.sql().empty());
 
     // OR
     auto or_query  = select(user_name).from(users_schema).where(user_age < lit(18) || user_age > lit(65));
     auto or_result = compiler->compile(or_query);
-    EXPECT_FALSE(or_result.sql.empty());
+    EXPECT_FALSE(or_result.sql().empty());
 
-    SCROLL_LOG_INF() << "AND: " << and_result.sql;
-    SCROLL_LOG_INF() << "OR: " << or_result.sql;
+    SCROLL_LOG_INF() << "AND: " << and_result.sql();
+    SCROLL_LOG_INF() << "OR: " << or_result.sql();
 }
 
 // Test unary condition expressions
@@ -130,9 +130,9 @@ TEST_F(ConditionQueryTest, UnaryConditionExpressions) {
     // NOT (using boolean column)
     auto not_query  = select(user_name).from(users_schema).where(user_active == lit(false));
     auto not_result = compiler->compile(not_query);
-    EXPECT_FALSE(not_result.sql.empty());
+    EXPECT_FALSE(not_result.sql().empty());
 
-    SCROLL_LOG_INF() << "NOT condition: " << not_result.sql;
+    SCROLL_LOG_INF() << "NOT condition: " << not_result.sql();
 }
 
 // Test string comparison expressions (placeholder for LIKE when available)
@@ -140,25 +140,25 @@ TEST_F(ConditionQueryTest, StringComparisonExpressions) {
     // String equality comparison
     auto str_eq_query  = select(user_name).from(users_schema).where(user_name == lit("john"));
     auto str_eq_result = compiler->compile(str_eq_query);
-    EXPECT_FALSE(str_eq_result.sql.empty());
+    EXPECT_FALSE(str_eq_result.sql().empty());
 
-    SCROLL_LOG_INF() << "String equality: " << str_eq_result.sql;
+    SCROLL_LOG_INF() << "String equality: " << str_eq_result.sql();
 }
 
 // Test BETWEEN expressions
 TEST_F(ConditionQueryTest, BetweenExpressions) {
     auto query  = select(user_name).from(users_schema).where(between(user_age, lit(18), lit(65)));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test IN LIST expressions
 TEST_F(ConditionQueryTest, InListExpressions) {
     auto query  = select(user_name).from(users_schema).where(in(user_age, lit(18), lit(25), lit(30)));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test EXISTS expressions
@@ -167,8 +167,8 @@ TEST_F(ConditionQueryTest, ExistsExpressions) {
 
     auto query  = select(user_name).from(users_schema).where(exists(subquery));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test SUBQUERY conditions
@@ -177,8 +177,8 @@ TEST_F(ConditionQueryTest, SubqueryConditions) {
 
     auto query  = select(post_title).from(posts_schema).where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test complex nested conditions
@@ -188,6 +188,6 @@ TEST_F(ConditionQueryTest, ComplexNestedConditions) {
             .from(users_schema)
             .where((user_age > lit(18) && user_age < lit(65)) || (user_active == lit(true) && user_age >= lit(65)));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }

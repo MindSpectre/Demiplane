@@ -6,6 +6,7 @@ add_library(${DMP_DATABASE_ORM}.Compiler STATIC
         include/query_visitor.hpp
         include/sql_generator_visitor.hpp
         source/sql_generator_visitor.cpp
+        include/compiled_query.hpp
 )
 target_include_directories(${DMP_DATABASE_ORM}.Compiler PUBLIC
         include

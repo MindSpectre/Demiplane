@@ -2,15 +2,10 @@
 
 #include <demiplane/scroll>
 
+#include "compiled_query.hpp"
 #include "sql_generator_visitor.hpp"
 
-
 namespace demiplane::db {
-    struct CompiledQuery {
-        std::string sql;
-        std::vector<FieldValue> parameters;
-    };
-
     class QueryCompiler {
     public:
         explicit QueryCompiler(std::shared_ptr<SqlDialect> dialect, const bool use_params = true)
@@ -21,11 +16,11 @@ namespace demiplane::db {
         // Compile any expression to SQL
         template <IsQuery Expr>
         CompiledQuery compile(Expr&& expr) {
-            SqlGeneratorVisitor visitor(dialect_, use_parameters_);
-            std::forward<Expr>(expr).accept(visitor);
-            COMPONENT_LOG_DBG() << SCROLL_PARAMS(visitor.sql());
-            auto [sql, params] = std::move(visitor).decompose();
-            return {std::move(sql), std::move(params)};
+            auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
+            SqlGeneratorVisitor v{dialect_, arena.get(), use_parameters_};
+            std::forward<Expr>(expr).accept(v);
+            auto [sql, pkt] = std::move(v).decompose();
+            return {std::move(sql), std::move(pkt), std::move(arena)};
         }
 
         // Get dialect for feature checking

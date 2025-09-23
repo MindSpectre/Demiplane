@@ -54,24 +54,24 @@ protected:
 TEST_F(UpdateQueryTest, BasicUpdateExpression) {
     auto query  = update(users_schema).set("active", false).where(user_age < lit(18));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE with table name string
 TEST_F(UpdateQueryTest, UpdateWithTableNameExpression) {
     auto query  = update("users").set("active", true).where(user_id > lit(0));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE with multiple set operations
 TEST_F(UpdateQueryTest, UpdateMultipleSetExpression) {
     auto query  = update(users_schema).set("active", false).set("age", 21).where(user_age < lit(18));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE with initializer list set
@@ -83,16 +83,16 @@ TEST_F(UpdateQueryTest, UpdateInitializerListSetExpression) {
     })
                      .where(user_age < lit(18));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE without WHERE clause
 TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
     auto update_query = update(users_schema).set("active", true);
     auto result       = compiler->compile(update_query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE WHERE expression
@@ -100,8 +100,8 @@ TEST_F(UpdateQueryTest, UpdateWhereExpression) {
     const auto update_query = update(users_schema).set("active", false);
     auto query              = UpdateWhereExpr{update_query, user_age < lit(18)};
     auto result             = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE method chaining
@@ -113,8 +113,8 @@ TEST_F(UpdateQueryTest, UpdateMethodChainingExpression) {
     EXPECT_EQ(&query, &query_ref);
 
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }
 
 // Test UPDATE with various field value types
@@ -125,6 +125,6 @@ TEST_F(UpdateQueryTest, UpdateVariousValueTypesExpression) {
                      .set("active", true)
                      .where(user_id == lit(1));
     auto result = compiler->compile(query);
-    EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    EXPECT_FALSE(result.sql().empty());
+    SCROLL_LOG_INF() << result.sql();
 }

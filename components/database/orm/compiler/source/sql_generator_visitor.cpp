@@ -2,22 +2,20 @@
 
 #include <iostream>
 
-#include "sql_dialect.hpp"
 
 namespace demiplane::db {
-    SqlGeneratorVisitor::SqlGeneratorVisitor(std::shared_ptr<SqlDialect> dialect,
-                                             const bool use_params,
-                                             const bool is_large)
-        : dialect_(std::move(dialect)),
-          use_parameters_(use_params) {
-        if (is_large) {
-            sql_.reserve(2048);
-        } else {
-            sql_.reserve(512);
+
+    SqlGeneratorVisitor::SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
+                                             std::pmr::memory_resource* mr,
+                                             const bool use_params)
+        : dialect_(std::move(d)),
+          sql_{mr},
+          use_params_{use_params} {
+        if (use_params_) {
+            packet_ = dialect_->make_param_sink(mr);
+            sink_   = packet_.sink.get();
         }
     }
-
-
     void SqlGeneratorVisitor::visit_table_column_impl(const FieldSchema* schema,
                                                       const std::shared_ptr<std::string>& table,
                                                       const std::optional<std::string>& alias) {
@@ -38,21 +36,21 @@ namespace demiplane::db {
         dialect_->quote_identifier(sql_, name);
     }
 
-    void SqlGeneratorVisitor::visit_value_impl(const FieldValue& value) {
-        if (use_parameters_) {
-            parameters_.push_back(value);
-            dialect_->placeholder(sql_, parameters_.size() - 1);
+    void SqlGeneratorVisitor::visit_value_impl(const FieldValue& v)  {
+        if (use_params_) {
+            const std::size_t idx = sink_->push(v);
+            dialect_->placeholder(sql_, idx);
         } else {
-            dialect_->format_value(sql_, value);
+            dialect_->format_value(sql_, v);
         }
     }
 
-    void SqlGeneratorVisitor::visit_value_impl(FieldValue&& value) {
-        if (use_parameters_) {
-            parameters_.push_back(std::move(value));
-            dialect_->placeholder(sql_, parameters_.size() - 1);
+    void SqlGeneratorVisitor::visit_value_impl(FieldValue&& v) {
+        if (use_params_) {
+            const std::size_t idx = sink_->push(std::move(v));
+            dialect_->placeholder(sql_, idx);
         } else {
-            dialect_->format_value(sql_, value);
+            dialect_->format_value(sql_, v);
         }
     }
 

@@ -1,8 +1,0 @@
-//
-// Created by grivin on 9/15/25.
-//
-
-#ifndef DEMIPLANE_PG_EXCEPTIONS_HPP
-#define DEMIPLANE_PG_EXCEPTIONS_HPP
-
-#endif  // DEMIPLANE_PG_EXCEPTIONS_HPP

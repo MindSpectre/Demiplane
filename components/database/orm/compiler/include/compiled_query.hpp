@@ -21,8 +21,8 @@ namespace demiplane::db {
         [[nodiscard]] std::shared_ptr<std::pmr::monotonic_buffer_resource> arena() & noexcept {
             return arena_;
         }
-                               // e.g., PostgresBoundParams
     private:
+        //TODO: add constexpr support
         std::pmr::string sql_;
         std::shared_ptr<void> backend_packet_;
         std::shared_ptr<std::pmr::monotonic_buffer_resource> arena_;  // lifetime keeper

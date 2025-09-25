@@ -36,21 +36,21 @@ namespace demiplane::db {
         dialect_->quote_identifier(sql_, name);
     }
 
-    void SqlGeneratorVisitor::visit_value_impl(const FieldValue& v)  {
+    void SqlGeneratorVisitor::visit_value_impl(const FieldValue& value)  {
         if (use_params_) {
-            const std::size_t idx = sink_->push(v);
+            const std::size_t idx = sink_->push(value);
             dialect_->placeholder(sql_, idx);
         } else {
-            dialect_->format_value(sql_, v);
+            dialect_->format_value(sql_, value);
         }
     }
 
-    void SqlGeneratorVisitor::visit_value_impl(FieldValue&& v) {
+    void SqlGeneratorVisitor::visit_value_impl(FieldValue&& value) {
         if (use_params_) {
-            const std::size_t idx = sink_->push(std::move(v));
+            const std::size_t idx = sink_->push(std::move(value));
             dialect_->placeholder(sql_, idx);
         } else {
-            dialect_->format_value(sql_, v);
+            dialect_->format_value(sql_, value);
         }
     }
 

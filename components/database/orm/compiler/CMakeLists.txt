@@ -14,7 +14,7 @@ target_include_directories(${DMP_DATABASE_ORM}.Compiler PUBLIC
 target_link_libraries(${DMP_DATABASE_ORM}.Compiler
         PUBLIC
         ${DMP_DATABASE_ORM}.Expressions
-        ${DMP_DATABASE_ORM}.Dialect.Interface
+        ${DMP_DATABASE_ORM}.Dialect
         Demiplane::Common::Scroll
         PRIVATE
         Demiplane::Common::Nexus

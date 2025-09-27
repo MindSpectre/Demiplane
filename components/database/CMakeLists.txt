@@ -1,12 +1,10 @@
 set(DMP_DATABASE ${DMP_COMPONENT}.Database)
 
 
-add_subdirectory(exceptions)
+add_subdirectory(base)
 
-add_subdirectory(dialects)
+add_subdirectory(query)
 
-add_subdirectory(params)
+add_subdirectory(primitives)
 
-add_subdirectory(orm)
-
-add_subdirectory(clients)
+add_subdirectory(providers)

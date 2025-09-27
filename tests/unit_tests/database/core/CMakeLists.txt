@@ -4,7 +4,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.FieldSchema
         LINK_LIBS
         ${TEST_LIBS}
         Demiplane.Common.Gears
-        Demiplane.Component.Database.ORM.Core
+        Demiplane.Component.Database.Primitives
 )
 
 add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.Table
@@ -12,7 +12,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.Table
         LINK_LIBS
         ${TEST_LIBS}
         Demiplane.Common.Gears
-        Demiplane.Component.Database.ORM.Core
+        Demiplane.Component.Database.Primitives
 )
 
 add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.Column
@@ -20,7 +20,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.Column
         LINK_LIBS
         ${TEST_LIBS}
         Demiplane.Common.Gears
-        Demiplane.Component.Database.ORM.Core
+        Demiplane.Component.Database.Primitives
 )
 
 add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.Field
@@ -28,5 +28,5 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.ORM.Core.Field
         LINK_LIBS
         ${TEST_LIBS}
         Demiplane.Common.Gears
-        Demiplane.Component.Database.ORM.Core
+        Demiplane.Component.Database.Primitives
 )

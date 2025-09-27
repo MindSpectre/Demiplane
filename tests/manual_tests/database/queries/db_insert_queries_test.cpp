@@ -41,7 +41,7 @@ protected:
 
 // Test basic INSERT expression
 TEST_F(InsertQueryTest, BasicInsertExpression) {
-    auto query  = insert_into(users_schema).into({"name", "age", "active"}).values({"John Doe", 25, true});
+    auto query  = insert_into(users_schema).into({"name", "age", "active"}).values({std::string{"John Doe"}, 25, true});
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -49,7 +49,7 @@ TEST_F(InsertQueryTest, BasicInsertExpression) {
 
 // Test INSERT with table name string
 TEST_F(InsertQueryTest, InsertWithTableNameExpression) {
-    auto query  = insert_into("users").into({"name", "age"}).values({"Jane Doe", 30});
+    auto query  = insert_into("users").into({"name", "age"}).values({std::string{"Jane Doe"}, 30});
     auto result = compiler->compile(std::move(query));
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -92,8 +92,8 @@ TEST_F(InsertQueryTest, InsertBatchExpression) {
 TEST_F(InsertQueryTest, InsertMultipleValuesExpression) {
     auto query = insert_into(users_schema)
                      .into({"name", "age", "active"})
-                     .values({"User1", 25, true})
-                     .values({"User2", 30, false});
+                     .values({std::string{"User1"}, 25, true})
+                     .values({std::string{"User2"}, 30, false});
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -111,7 +111,7 @@ TEST_F(InsertQueryTest, InsertMethodChainingExpression) {
     auto query = insert_into(users_schema).into({"name", "age", "active"});
 
     // Test that methods return reference for chaining
-    auto& query_ref = query.values({"Test User", 40, true});
+    auto& query_ref = query.values({std::string{"Test User"}, 40, true});
     EXPECT_EQ(&query, &query_ref);
 
     auto result = compiler->compile(query);

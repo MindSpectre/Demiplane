@@ -112,7 +112,7 @@ TEST_F(FieldTest, SetAndGetString) {
 TEST_F(FieldTest, SetAndGetStringLiteral) {
     Field field(&string_schema);
 
-    field.set("Hello Literal");
+    field.set<std::string>("Hello Literal");
     EXPECT_FALSE(field.is_null());
     EXPECT_EQ(field.get<std::string>(), "Hello Literal");
 }
@@ -214,7 +214,7 @@ TEST_F(FieldTest, FieldWithDifferentTypes) {
     Field double_field(&double_schema);
 
     int_field.set(42);
-    string_field.set("test");
+    string_field.set<std::string>("test");
     double_field.set(99.99);
 
     EXPECT_EQ(int_field.get<int>(), 42);

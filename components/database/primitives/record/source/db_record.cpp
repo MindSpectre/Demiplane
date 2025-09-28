@@ -19,7 +19,7 @@ namespace demiplane::db {
     Field& Record::operator[](const std::string_view field_name) {
         const auto it = field_index_.find(field_name);
         if (it == field_index_.end()) {
-            throw std::out_of_range("Field not found: ");  // TODO: change exception
+            throw std::out_of_range(std::format("Field not found: {}", field_name));
         }
         return fields_[it->second];
     }
@@ -27,21 +27,23 @@ namespace demiplane::db {
     const Field& Record::operator[](const std::string_view field_name) const {
         const auto it = field_index_.find(field_name);
         if (it == field_index_.end()) {
-            throw std::out_of_range("Field not found: ");  // TODO: change exception
+            throw std::out_of_range(std::format("Field not found: {}", field_name));
         }
         return fields_[it->second];
     }
 
     Field& Record::at(const std::size_t index) {
         if (index >= fields_.size()) {
-            throw std::out_of_range("Field index out of range");
+            throw std::out_of_range(
+                std::format("Field index out of range. Index is {} when size is {}", index, fields_.size()));
         }
         return fields_[index];
     }
 
     const Field& Record::at(const std::size_t index) const {
         if (index >= fields_.size()) {
-            throw std::out_of_range("Field index out of range");
+            throw std::out_of_range(
+                std::format("Field index out of range. Index is {} when size is {}", index, fields_.size()));
         }
         return fields_[index];
     }

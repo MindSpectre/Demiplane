@@ -3,26 +3,20 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
-
 // Test fixture for JOIN operations
 class JoinQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -126,8 +120,7 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
 
 // Test CROSS JOIN (simplified - cross join typically doesn't need ON clause)
 TEST_F(JoinQueryTest, CrossJoinExpression) {
-    auto query =
-        select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::CROSS).on(user_id > lit(0));
+    auto query  = select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::CROSS).on(user_id > 0);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -146,7 +139,7 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
     auto query = select(user_name, post_title)
                      .from(users_schema)
                      .join(posts_schema)
-                     .on(post_user_id == user_id && post_published == lit(true));
+                     .on(post_user_id == user_id && post_published == true);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -158,7 +151,7 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
                      .from(users_schema)
                      .join(posts_schema)
                      .on(post_user_id == user_id)
-                     .where(user_active == lit(true));
+                     .where(user_active == true);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();

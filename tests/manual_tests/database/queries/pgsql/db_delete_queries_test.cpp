@@ -3,26 +3,20 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
-
 // Test fixture for DELETE operations
 class DeleteQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schema
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -53,7 +47,7 @@ protected:
 
 // Test basic DELETE expression
 TEST_F(DeleteQueryTest, BasicDeleteExpression) {
-    auto query  = delete_from(users_schema).where(user_active == lit(false));
+    auto query  = delete_from(users_schema).where(user_active == false);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -61,7 +55,7 @@ TEST_F(DeleteQueryTest, BasicDeleteExpression) {
 
 // Test DELETE with table name string
 TEST_F(DeleteQueryTest, DeleteWithTableNameExpression) {
-    auto query  = delete_from("users").where(user_id > lit(0));
+    auto query  = delete_from("users").where(user_id > 0);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -78,7 +72,7 @@ TEST_F(DeleteQueryTest, DeleteWithoutWhereExpression) {
 // Test DELETE WHERE expression
 TEST_F(DeleteQueryTest, DeleteWhereExpression) {
     const auto delete_query = delete_from(users_schema);
-    auto query              = DeleteWhereExpr{delete_query, user_active == lit(false)};
+    auto query              = DeleteWhereExpr{delete_query, user_active == false};
     auto result             = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -86,7 +80,7 @@ TEST_F(DeleteQueryTest, DeleteWhereExpression) {
 
 // Test DELETE with complex WHERE conditions
 TEST_F(DeleteQueryTest, DeleteComplexWhereExpression) {
-    auto query  = delete_from(users_schema).where(user_active == lit(false) && user_age < lit(18));
+    auto query  = delete_from(users_schema).where(user_active == false && user_age < 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -94,7 +88,7 @@ TEST_F(DeleteQueryTest, DeleteComplexWhereExpression) {
 
 // Test DELETE with IN condition
 TEST_F(DeleteQueryTest, DeleteWithInExpression) {
-    auto query  = delete_from(users_schema).where(in(user_age, lit(18), lit(19), lit(20)));
+    auto query  = delete_from(users_schema).where(in(user_age, 18, 19, 20));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -102,7 +96,7 @@ TEST_F(DeleteQueryTest, DeleteWithInExpression) {
 
 // Test DELETE with BETWEEN condition
 TEST_F(DeleteQueryTest, DeleteWithBetweenExpression) {
-    auto query  = delete_from(users_schema).where(between(user_age, lit(18), lit(25)));
+    auto query  = delete_from(users_schema).where(between(user_age, 18, 25));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -110,7 +104,7 @@ TEST_F(DeleteQueryTest, DeleteWithBetweenExpression) {
 
 // Test DELETE with subquery condition
 TEST_F(DeleteQueryTest, DeleteWithSubqueryExpression) {
-    auto inactive_users = select(user_id).from(users_schema).where(user_active == lit(false));
+    auto inactive_users = select(user_id).from(users_schema).where(user_active == false);
 
     auto query  = delete_from(users_schema).where(in(user_id, subquery(inactive_users)));
     auto result = compiler->compile(query);

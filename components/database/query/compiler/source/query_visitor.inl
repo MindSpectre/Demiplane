@@ -19,8 +19,7 @@ namespace demiplane::db {
         visitor.visit(std::forward<decltype(self)>(self).self());
     }
 
-    template <typename T>
-    void Literal<T>::accept(this auto&& self, QueryVisitor& visitor) {
+    void Literal::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }
 }  // namespace demiplane::db

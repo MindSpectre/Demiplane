@@ -62,7 +62,6 @@ namespace demiplane::db {
     // Set operations
     enum class SetOperation { UNION, UNION_ALL, INTERSECT, EXCEPT };
 
-    template <typename  T>
     class Literal {
     public:
         auto&& value(this auto&& self) {
@@ -73,7 +72,7 @@ namespace demiplane::db {
             return alias_;
         }
 
-        constexpr explicit Literal(T v)
+        constexpr explicit Literal(FieldValue v)
             : value_(std::move(v)) {
         }
 
@@ -85,14 +84,31 @@ namespace demiplane::db {
         void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
-        T value_;
+        FieldValue value_;
         std::optional<std::string> alias_;
     };
 
     template <typename T>
-    constexpr Literal<T> lit(T value) {
-        return Literal<T>{std::move(value)};
+    constexpr Literal lit(T value) {
+        return Literal{std::move(value)};
     }
+    template <>
+    constexpr Literal lit(const char* value) {
+        return Literal{std::string{value}};
+    }
+
+    namespace detail {
+        template <typename T>
+        constexpr auto make_literal_if_needed(T&& value) {
+            if constexpr (HasAcceptVisitor<T>) {
+                return std::forward<T>(value);
+            } else {
+                // Raw value, wrap in Literal
+                return lit(std::forward<T>(value));
+            }
+        }
+
+    }  // namespace detail
 
     // Null literal
     struct NullLiteral {};

@@ -3,9 +3,10 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
@@ -17,12 +18,7 @@ using namespace demiplane::db;
 class SubqueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -89,7 +85,7 @@ protected:
 
 // Test basic subquery in WHERE clause
 TEST_F(SubqueryTest, SubqueryInWhereExpression) {
-    auto active_users = select(user_id).from(users_schema).where(user_active == lit(true));
+    auto active_users = select(user_id).from(users_schema).where(user_active == true);
 
     auto query  = select(post_title).from(posts_schema).where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
@@ -100,7 +96,7 @@ TEST_F(SubqueryTest, SubqueryInWhereExpression) {
 // Test EXISTS expression
 TEST_F(SubqueryTest, ExistsExpression) {
     auto published_posts_subquery =
-        select(lit(1)).from(posts_schema).where(post_user_id == user_id && post_published == lit(true));
+        select(1).from(posts_schema).where(post_user_id == user_id && post_published == true);
 
     auto query  = select(user_name).from(users_schema).where(exists(published_posts_subquery));
     auto result = compiler->compile(query);
@@ -111,7 +107,7 @@ TEST_F(SubqueryTest, ExistsExpression) {
 // Test NOT EXISTS expression
 TEST_F(SubqueryTest, NotExistsExpression) {
     auto pending_orders_subquery =
-        select(lit(1)).from(orders_schema).where(order_user_id == user_id && order_completed == lit(false));
+        select(1).from(orders_schema).where(order_user_id == user_id && order_completed == false);
 
     auto query  = select(user_name).from(users_schema).where(!exists(pending_orders_subquery));
     auto result = compiler->compile(query);
@@ -155,7 +151,7 @@ TEST_F(SubqueryTest, InSubqueryMultipleValuesExpression) {
 
 // Test nested subqueries
 TEST_F(SubqueryTest, NestedSubqueriesExpression) {
-    auto users_with_completed_orders = select(order_user_id).from(orders_schema).where(order_completed == lit(true));
+    auto users_with_completed_orders = select(order_user_id).from(orders_schema).where(order_completed == true);
 
     auto posts_by_active_users =
         select(post_user_id).from(posts_schema).where(in(post_user_id, subquery(users_with_completed_orders)));
@@ -168,7 +164,7 @@ TEST_F(SubqueryTest, NestedSubqueriesExpression) {
 
 // Test subquery with aggregates
 TEST_F(SubqueryTest, SubqueryWithAggregatesExpression) {
-    const auto avg_order_amount = select(avg(order_amount)).from(orders_schema).where(order_completed == lit(true));
+    const auto avg_order_amount = select(avg(order_amount)).from(orders_schema).where(order_completed == true);
 
     auto query = select(user_name, order_amount)
                      .from(users_schema)
@@ -182,7 +178,7 @@ TEST_F(SubqueryTest, SubqueryWithAggregatesExpression) {
 
 // Test subquery with DISTINCT
 TEST_F(SubqueryTest, SubqueryWithDistinctExpression) {
-    auto unique_publishers = select_distinct(post_user_id).from(posts_schema).where(post_published == lit(true));
+    auto unique_publishers = select_distinct(post_user_id).from(posts_schema).where(post_published == true);
 
     auto query  = select(user_name).from(users_schema).where(in(user_id, subquery(unique_publishers)));
     auto result = compiler->compile(query);

@@ -22,15 +22,13 @@ namespace demiplane::db {
         }
 
 
-        template <typename T>
-        void visit(Literal<T>&& lit) {
-            visit_value_impl(FieldValue{std::move(lit).value()});
+        void visit(Literal&& lit) {
+            visit_value_impl(std::move(lit).value());
             visit_alias_impl(std::move(lit).alias());
         }
 
-        template <typename T>
-        void visit(const Literal<T>& lit) {
-            visit_value_impl(FieldValue{lit.value()});
+        void visit(const Literal& lit) {
+            visit_value_impl(lit.value());
             visit_alias_impl(lit.alias());
         }
 

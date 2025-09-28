@@ -1,5 +1,6 @@
 #pragma once
 
+#define SCROLL_LOG_DIRECT_STREAM_TRC(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::TRC)
 #define SCROLL_LOG_DIRECT_STREAM_DBG(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::DBG)
 #define SCROLL_LOG_DIRECT_STREAM_INF(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::INF)
 #define SCROLL_LOG_DIRECT_STREAM_WRN(logger_ptr) SCROLL_LOG_STREAM_ENTRY(logger_ptr, demiplane::scroll::WRN)
@@ -23,6 +24,7 @@
     #define COMPONENT_LOG(level, message)                                                                              \
         SCROLL_LOG_DIRECT_##level(::demiplane::scroll::ComponentLoggerManager::get(), message)
 // Stream-based logging
+    #define COMPONENT_LOG_TRC() SCROLL_LOG_DIRECT_STREAM_TRC(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_DBG() SCROLL_LOG_DIRECT_STREAM_DBG(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_INF() SCROLL_LOG_DIRECT_STREAM_INF(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_WRN() SCROLL_LOG_DIRECT_STREAM_WRN(::demiplane::scroll::ComponentLoggerManager::get())
@@ -32,6 +34,7 @@
 #else
 // When component logging is disabled, use scroll's dummy implementations
     #define COMPONENT_LOG(level, message) ((void)0)
+    #define COMPONENT_LOG_TRC() demiplane::scroll::DummyStreamLogEntry()
     #define COMPONENT_LOG_DBG() demiplane::scroll::DummyStreamLogEntry()
     #define COMPONENT_LOG_INF() demiplane::scroll::DummyStreamLogEntry()
     #define COMPONENT_LOG_WRN() demiplane::scroll::DummyStreamLogEntry()

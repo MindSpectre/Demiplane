@@ -35,8 +35,11 @@ namespace demiplane::db {
         Upper upper_;
     };
 
-    template <typename O, typename L, typename U>
-    constexpr auto between(O operand, L lower, U upper) {
-        return BetweenExpr<O, L, U>{std::move(operand), std::move(lower), std::move(upper)};
+    template <typename Operand, typename LeftBound, typename UpperBound>
+    constexpr auto between(Operand operand, LeftBound lower, UpperBound upper) {
+        auto wrapped_lower_bound = detail::make_literal_if_needed(std::forward<LeftBound>(lower));
+        auto wrapped_right_bound = detail::make_literal_if_needed(std::forward<UpperBound>(upper));
+        return BetweenExpr<Operand, decltype(wrapped_lower_bound), decltype(wrapped_right_bound)>{
+            std::move(operand), std::move(wrapped_lower_bound), std::move(wrapped_right_bound)};
     }
 }  // namespace demiplane::db

@@ -20,6 +20,7 @@ namespace demiplane::db {
             SqlGeneratorVisitor v{dialect_, arena.get(), use_parameters_};
             std::forward<Expr>(expr).accept(v);
             auto [sql, pkt] = std::move(v).decompose();
+            COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
             return {std::move(sql), std::move(pkt), std::move(arena)};
         }
 

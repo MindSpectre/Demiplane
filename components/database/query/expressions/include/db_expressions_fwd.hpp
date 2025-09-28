@@ -5,6 +5,15 @@
 
 namespace demiplane::db {
     class QueryVisitor;
+
+    template <typename T>
+    concept HasAcceptVisitor = requires(std::remove_reference_t<T>& t, QueryVisitor& v) {
+        { t.accept(v) };
+    } || requires(const std::remove_reference_t<T>& t, QueryVisitor& v) {
+        { t.accept(v) };
+    };
+
+
     struct OpBase;
 
     template <typename T>
@@ -18,11 +27,10 @@ namespace demiplane::db {
         requires std::derived_from<std::remove_cvref_t<T>, Expression<std::remove_cvref_t<T>>>;
     };
 
-    template <typename T>
     class Literal;
 
     template <typename T>
-    concept IsLiteral = gears::is_specialization_of_v<std::remove_cvref_t<T>, Literal>;
+    concept IsLiteral = std::is_same_v<std::remove_cvref_t<T>, Literal>;
 
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr;

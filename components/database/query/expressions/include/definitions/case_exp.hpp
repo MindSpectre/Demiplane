@@ -32,9 +32,11 @@ namespace demiplane::db {
 
         template <typename ConditionExpr, typename ValueExpr>
         [[nodiscard]] auto when(ConditionExpr&& condition, ValueExpr&& value) const {
-            using NewWhenClause = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
+            auto wrapped_value = detail::make_literal_if_needed(std::forward<ValueExpr>(value));
+            using NewWhenClause = WhenClause<std::decay_t<ConditionExpr>, decltype(wrapped_value)>;
+
             return static_cast<const Derived&>(*this).add_when_clause(
-                NewWhenClause(std::forward<ConditionExpr>(condition), std::forward<ValueExpr>(value)));
+                NewWhenClause(std::forward<ConditionExpr>(condition), std::move(wrapped_value)));
         }
 
     protected:
@@ -51,8 +53,11 @@ namespace demiplane::db {
 
         template <typename ElseExpr>
         [[nodiscard]] auto else_(ElseExpr&& else_expr) const {
-            return CaseExprWithElse<std::decay_t<ElseExpr>, WhenClauses...>(this->when_clauses_,
-                                                                            std::forward<ElseExpr>(else_expr));
+            // Auto-wrap the else expression if needed
+            auto wrapped_else = detail::make_literal_if_needed(std::forward<ElseExpr>(else_expr));
+            return CaseExprWithElse<decltype(wrapped_else), WhenClauses...>(
+                this->when_clauses_,
+                std::move(wrapped_else));
         }
 
         // Used by base class when() method
@@ -93,8 +98,12 @@ namespace demiplane::db {
     // Factory function
     template <IsCondition ConditionExpr, typename ValueExpr>
     [[nodiscard]] constexpr auto case_when(ConditionExpr&& condition, ValueExpr&& value) {
-        using WhenType = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
-        return CaseExpr<WhenType>(WhenType(std::forward<ConditionExpr>(condition), std::forward<ValueExpr>(value)));
+        // Auto-wrap the value if needed
+        auto wrapped_value = detail::make_literal_if_needed(std::forward<ValueExpr>(value));
+        using WhenType = WhenClause<std::decay_t<ConditionExpr>, decltype(wrapped_value)>;
+
+        return CaseExpr<WhenType>(
+            WhenType(std::forward<ConditionExpr>(condition), std::move(wrapped_value)));
     }
 
 }  // namespace demiplane::db

@@ -4,11 +4,8 @@
 #include <source_location>
 #include <string_view>
 
-#include "../entry/entry_interface.hpp"
-#include "../entry/log_level.hpp"
-
-
 namespace demiplane::scroll {
+    enum class LogLevel : std::uint8_t;
     class Logger {
     public:
         NEXUS_REGISTER(nexus::Immortal);

@@ -4,6 +4,7 @@
 // There are main macros
 
 
+#define SCROLL_LOG_TRC() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::TRC)
 #define SCROLL_LOG_DBG() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::DBG)
 #define SCROLL_LOG_INF() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::INF)
 #define SCROLL_LOG_WRN() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::WRN)

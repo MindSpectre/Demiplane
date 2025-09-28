@@ -48,14 +48,17 @@ namespace demiplane::db {
         bool distinct_{false};
     };
 
-    template <IsSelectable... Columns>
+    template <typename... Columns>
     constexpr auto select(Columns... columns) {
-        return SelectExpr<Columns...>{std::move(columns)...};
+        return SelectExpr<decltype(detail::make_literal_if_needed(columns))...>{
+            detail::make_literal_if_needed(std::move(columns))...};
     }
 
-    template <IsSelectable... Columns>
+    template <typename... Columns>
     constexpr auto select_distinct(Columns... columns) {
-        return SelectExpr<Columns...>{std::move(columns)...}.set_distinct(true);
+        return SelectExpr<decltype(detail::make_literal_if_needed(columns))...>{
+            detail::make_literal_if_needed(std::move(columns))...}
+            .set_distinct(true);
     }
 
     inline auto select_from_schema(TablePtr schema) {

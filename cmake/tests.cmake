@@ -32,7 +32,10 @@ function(add_custom_test TARGET_NAME)
             PROPERTIES LABELS ${TEST_LABEL})
 endfunction()
 
-# Specialized unit test alias with default "unit" label
+function(add_manual_test TARGET_NAME)
+    add_custom_test(${TARGET_NAME} ${ARGN} LABEL "manual")
+endfunction()
+
 function(add_unit_test TARGET_NAME)
     add_custom_test(${TARGET_NAME} ${ARGN} LABEL "unit")
 endfunction()
@@ -44,3 +47,4 @@ endfunction()
 function(add_integration_test TARGET_NAME)
     add_custom_test(${TARGET_NAME} ${ARGN} LABEL "integration")
 endfunction()
+

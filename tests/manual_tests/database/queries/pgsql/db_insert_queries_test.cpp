@@ -3,26 +3,21 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
 
 // Test fixture for INSERT operations
 class InsertQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schema
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -63,7 +58,7 @@ TEST_F(InsertQueryTest, InsertWithRecordExpression) {
     test_record["active"].set(true);
 
     auto query  = insert_into(users_schema).into({"name", "age", "active"}).values(test_record);
-    auto result = compiler->compile(query);
+    const auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }

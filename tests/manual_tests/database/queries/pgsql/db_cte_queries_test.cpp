@@ -3,26 +3,20 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
-
 // Test fixture for CTE operations
 class CteQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         employees_schema = std::make_shared<Table>("employees");
         employees_schema->add_field<int>("id", "INTEGER")
@@ -83,7 +77,7 @@ TEST_F(CteQueryTest, BasicCteExpression) {
     auto high_performers = with("high_performers",
                                 select(emp_id, emp_name, emp_salary)
                                     .from(employees_schema)
-                                    .where(emp_salary > lit(75000.0) && emp_active == lit(true)));
+                                    .where(emp_salary > lit(75000.0) && emp_active == true));
     auto result          = compiler->compile(high_performers);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << "Basic CTE: " << result.sql();
@@ -97,7 +91,7 @@ TEST_F(CteQueryTest, CteWithAggregationExpression) {
                                   avg(emp_salary).as("avg_salary"),
                                   max(emp_salary).as("max_salary"))
                                .from(employees_schema)
-                               .where(emp_active == lit(true))
+                               .where(emp_active == true)
                                .group_by(emp_department));
     auto result     = compiler->compile(dept_stats);
     EXPECT_FALSE(result.sql().empty());
@@ -123,9 +117,8 @@ TEST_F(CteQueryTest, CteUsedInMainQueryExpression) {
 
 // Test multiple CTEs
 TEST_F(CteQueryTest, MultipleCteExpression) {
-    auto active_employees =
-        with("active_employees",
-             select(emp_id, emp_name, emp_department).from(employees_schema).where(emp_active == lit(true)));
+    auto active_employees = with(
+        "active_employees", select(emp_id, emp_name, emp_department).from(employees_schema).where(emp_active == true));
 
     const auto high_sales = with("high_sales",
                                  select(sale_employee_id, sum(sale_amount).as("total_sales"))
@@ -133,7 +126,7 @@ TEST_F(CteQueryTest, MultipleCteExpression) {
                                      .group_by(sale_employee_id)
                                      .having(sum(sale_amount) > lit(50000.0)));
 
-    auto main_query = select(emp_name.as_dynamic().set_context(high_sales.name()), emp_department, lit("total_sales"))
+    auto main_query = select(emp_name.as_dynamic().set_context(high_sales.name()), emp_department, "total_sales")
                           .from(active_employees);
     auto result = compiler->compile(main_query);
     EXPECT_FALSE(result.sql().empty());
@@ -149,7 +142,7 @@ TEST_F(CteQueryTest, CteWithComplexJoinsExpression) {
                  .from(employees_schema)
                  .join(sales_schema->table_name(), JoinType::LEFT)
                  .on(sale_employee_id == emp_id)
-                 .where(emp_active == lit(true))
+                 .where(emp_active == true)
                  .group_by(emp_id, emp_name, emp_department));
 
     auto result = compiler->compile(employee_sales_summary);
@@ -161,12 +154,11 @@ TEST_F(CteQueryTest, CteWithComplexJoinsExpression) {
 
 // Test CTE with subqueries
 TEST_F(CteQueryTest, CteWithSubqueriesExpression) {
-    auto top_performers =
-        with("top_performers",
-             select(emp_id, emp_name)
-                 .from(employees_schema)
-                 .where(emp_salary >
-                        subquery(select(avg(emp_salary)).from(employees_schema).where(emp_active == lit(true)))));
+    auto top_performers = with(
+        "top_performers",
+        select(emp_id, emp_name)
+            .from(employees_schema)
+            .where(emp_salary > subquery(select(avg(emp_salary)).from(employees_schema).where(emp_active == true))));
 
     auto result = compiler->compile(top_performers);
     EXPECT_FALSE(result.sql().empty());

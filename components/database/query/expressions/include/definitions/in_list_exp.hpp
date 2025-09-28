@@ -30,6 +30,7 @@ namespace demiplane::db {
 
     template <typename O, typename... Values>
     constexpr auto in(O operand, Values... values) {
-        return InListExpr<O, Values...>{std::move(operand), std::move(values)...};
+        return InListExpr<O, decltype(detail::make_literal_if_needed(values))...>{
+            std::move(operand), detail::make_literal_if_needed(std::move(values))...};
     }
 }  // namespace demiplane::db

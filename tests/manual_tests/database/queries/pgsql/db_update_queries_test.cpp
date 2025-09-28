@@ -3,9 +3,10 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
@@ -16,12 +17,7 @@ using namespace demiplane::db;
 class UpdateQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schema
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -52,7 +48,7 @@ protected:
 
 // Test basic UPDATE expression
 TEST_F(UpdateQueryTest, BasicUpdateExpression) {
-    auto query  = update(users_schema).set("active", false).where(user_age < lit(18));
+    auto query  = update(users_schema).set("active", false).where(user_age < 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -60,7 +56,7 @@ TEST_F(UpdateQueryTest, BasicUpdateExpression) {
 
 // Test UPDATE with table name string
 TEST_F(UpdateQueryTest, UpdateWithTableNameExpression) {
-    auto query  = update("users").set("active", true).where(user_id > lit(0));
+    auto query  = update("users").set("active", true).where(user_id > 0);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -68,7 +64,7 @@ TEST_F(UpdateQueryTest, UpdateWithTableNameExpression) {
 
 // Test UPDATE with multiple set operations
 TEST_F(UpdateQueryTest, UpdateMultipleSetExpression) {
-    auto query  = update(users_schema).set("active", false).set("age", 21).where(user_age < lit(18));
+    auto query  = update(users_schema).set("active", false).set("age", 21).where(user_age < 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -81,7 +77,7 @@ TEST_F(UpdateQueryTest, UpdateInitializerListSetExpression) {
                          {"active", false},
                          {"age",    21   }
     })
-                     .where(user_age < lit(18));
+                     .where(user_age < 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -98,7 +94,7 @@ TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
 // Test UPDATE WHERE expression
 TEST_F(UpdateQueryTest, UpdateWhereExpression) {
     const auto update_query = update(users_schema).set("active", false);
-    auto query              = UpdateWhereExpr{update_query, user_age < lit(18)};
+    auto query              = UpdateWhereExpr{update_query, user_age < 18};
     auto result             = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -123,7 +119,7 @@ TEST_F(UpdateQueryTest, UpdateVariousValueTypesExpression) {
                      .set("name", std::string("New Name"))
                      .set("age", 30)
                      .set("active", true)
-                     .where(user_id == lit(1));
+                     .where(user_id == 1);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();

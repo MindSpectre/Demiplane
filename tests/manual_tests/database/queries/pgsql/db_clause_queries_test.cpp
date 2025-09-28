@@ -3,26 +3,21 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
 
 // Test fixture for SQL clause operations
 class ClauseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -86,7 +81,7 @@ TEST_F(ClauseQueryTest, FromClauseExpression) {
     EXPECT_FALSE(result1.sql().empty());
 
     // FROM with table name string
-    auto query2  = select(lit(1)).from("test_table");
+    auto query2  = select(1).from("test_table");
     auto result2 = compiler->compile(query2);
     EXPECT_FALSE(result2.sql().empty());
 
@@ -97,19 +92,19 @@ TEST_F(ClauseQueryTest, FromClauseExpression) {
 // Test WHERE clause with various conditions
 TEST_F(ClauseQueryTest, WhereClauseExpression) {
     // Simple WHERE
-    auto query1  = select(user_name).from(users_schema).where(user_active == lit(true));
+    auto query1  = select(user_name).from(users_schema).where(user_active == true);
     auto result1 = compiler->compile(query1);
     EXPECT_FALSE(result1.sql().empty());
 
     // WHERE with AND/OR
     auto query2 = select(user_name)
                       .from(users_schema)
-                      .where(user_age > lit(18) && (user_active == lit(true) || user_salary > lit(50000.0)));
+                      .where(user_age > 18 && (user_active == true || user_salary > lit(50000.0)));
     auto result2 = compiler->compile(query2);
     EXPECT_FALSE(result2.sql().empty());
 
     // WHERE with IN
-    auto query3  = select(user_name).from(users_schema).where(in(user_age, lit(25), lit(30), lit(35)));
+    auto query3  = select(user_name).from(users_schema).where(in(user_age, 25, 30, 35));
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql().empty());
 
@@ -141,7 +136,7 @@ TEST_F(ClauseQueryTest, GroupByClauseExpression) {
     // GROUP BY with WHERE
     auto query3 = select(user_department, avg(user_salary).as("avg_salary"))
                       .from(users_schema)
-                      .where(user_active == lit(true))
+                      .where(user_active == true)
                       .group_by(user_department);
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql().empty());
@@ -157,7 +152,7 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
     auto query1 = select(user_department, count(user_id).as("count"))
                       .from(users_schema)
                       .group_by(user_department)
-                      .having(count(user_id) > lit(5));
+                      .having(count(user_id) > 5);
     auto result1 = compiler->compile(query1);
     EXPECT_FALSE(result1.sql().empty());
 
@@ -165,14 +160,14 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
     auto query2 = select(user_department, avg(user_salary).as("avg_salary"), count(user_id).as("count"))
                       .from(users_schema)
                       .group_by(user_department)
-                      .having(count(user_id) > lit(3) && avg(user_salary) > lit(45000.0));
+                      .having(count(user_id) > 3 && avg(user_salary) > lit(45000.0));
     auto result2 = compiler->compile(query2);
     EXPECT_FALSE(result2.sql().empty());
 
     // HAVING with WHERE and GROUP BY
     auto query3 = select(user_department, max(user_salary).as("max_salary"))
                       .from(users_schema)
-                      .where(user_active == lit(true))
+                      .where(user_active == true)
                       .group_by(user_department)
                       .having(max(user_salary) > lit(70000.0));
     auto result3 = compiler->compile(query3);
@@ -226,11 +221,8 @@ TEST_F(ClauseQueryTest, LimitClauseExpression) {
     EXPECT_FALSE(result2.sql().empty());
 
     // LIMIT with WHERE and ORDER BY
-    auto query3 = select(user_name, user_age)
-                      .from(users_schema)
-                      .where(user_active == lit(true))
-                      .order_by(asc(user_age))
-                      .limit(20);
+    auto query3 =
+        select(user_name, user_age).from(users_schema).where(user_active == true).order_by(asc(user_age)).limit(20);
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql().empty());
 
@@ -246,9 +238,9 @@ TEST_F(ClauseQueryTest, ComplexQueryWithAllClausesExpression) {
                         avg(user_salary).as("avg_salary"),
                         max(user_salary).as("max_salary"))
                      .from(users_schema)
-                     .where(user_active == lit(true) && user_age >= lit(21))
+                     .where(user_active == true && user_age >= 21)
                      .group_by(user_department)
-                     .having(count(user_id) >= lit(3) && avg(user_salary) > lit(40000.0))
+                     .having(count(user_id) >= 3 && avg(user_salary) > lit(40000.0))
                      .order_by(desc(/*avg*/ (user_salary)), asc(user_department))
                      .limit(10);
     // todo: desc accept aggregate
@@ -263,7 +255,7 @@ TEST_F(ClauseQueryTest, ClausesWithJoinsExpression) {
                      .from(users_schema)
                      .join(orders_schema->table_name())
                      .on(order_user_id == user_id)
-                     .where(user_active == lit(true) && order_status == lit("completed"))
+                     .where(user_active == true && order_status == "completed")
                      .group_by(user_id, user_name, user_department)
                      .having(sum(order_amount) > lit(1000.0))
                      .order_by(desc(/*sum*/ (order_amount)))

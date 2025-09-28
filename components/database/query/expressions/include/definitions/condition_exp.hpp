@@ -7,18 +7,6 @@
 
 
 namespace demiplane::db {
-    namespace detail {
-        template <typename T>
-        constexpr auto make_literal_if_needed(T&& value) {
-            if constexpr (requires { value.accept(std::declval<QueryVisitor&>()); }) {
-                return std::forward<T>(value);
-            } else {
-                // Raw value, wrap in Literal
-                return Literal<std::decay_t<T>>{std::forward<T>(value)};
-            }
-        }
-    }  // namespace detail
-
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr : public Expression<BinaryExpr<Left, Right, Op>> {
     public:

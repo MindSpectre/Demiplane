@@ -3,26 +3,20 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
-
 // Test fixture for SET operations
 class SetOperationsTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -78,13 +72,13 @@ protected:
 // Test UNION operation
 TEST_F(SetOperationsTest, UnionExpression) {
     const auto active_users =
-        select(user_name.as("name"), user_age.as("age")).from(users_schema).where(user_active == lit(true));
+        select(user_name.as("name"), user_age.as("age")).from(users_schema).where(user_active == true);
 
     const auto young_employees =
-        select(emp_name.as("name"), emp_age.as("age")).from(employees_schema).where(emp_age < lit(30));
+        select(emp_name.as("name"), emp_age.as("age")).from(employees_schema).where(emp_age < 30);
 
     auto query  = union_query(active_users, young_employees);
-    auto result = compiler->compile(query);
+    const auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }
@@ -103,9 +97,9 @@ TEST_F(SetOperationsTest, UnionAllExpression) {
 
 // Test INTERSECT operation
 TEST_F(SetOperationsTest, IntersectExpression) {
-    auto it_users = select(user_name.as("name")).from(users_schema).where(user_department == lit("IT"));
+    auto it_users = select(user_name.as("name")).from(users_schema).where(user_department == "IT");
 
-    auto it_employees = select(emp_name.as("name")).from(employees_schema).where(emp_department == lit("IT"));
+    auto it_employees = select(emp_name.as("name")).from(employees_schema).where(emp_department == "IT");
 
     auto query  = intersect(it_users, it_employees);
     auto result = compiler->compile(query);
@@ -117,7 +111,7 @@ TEST_F(SetOperationsTest, IntersectExpression) {
 TEST_F(SetOperationsTest, ExceptExpression) {
     auto all_user_names = select(user_name.as("name")).from(users_schema);
 
-    auto inactive_user_names = select(user_name.as("name")).from(users_schema).where(user_active == lit(false));
+    auto inactive_user_names = select(user_name.as("name")).from(users_schema).where(user_active == false);
 
     auto query  = except(all_user_names, inactive_user_names);
     auto result = compiler->compile(query);
@@ -128,17 +122,17 @@ TEST_F(SetOperationsTest, ExceptExpression) {
 // Test multiple UNION operations
 TEST_F(SetOperationsTest, MultipleUnionExpression) {
     const auto young_users =
-        select(user_name.as("name"), lit("User").as("type")).from(users_schema).where(user_age < lit(25));
+        select(user_name.as("name"), lit("User").as("type")).from(users_schema).where(user_age < 25);
 
     const auto senior_employees =
-        select(emp_name.as("name"), lit("Employee").as("type")).from(employees_schema).where(emp_age > lit(50));
+        select(emp_name.as("name"), lit("Employee").as("type")).from(employees_schema).where(emp_age > 50);
 
     const auto high_salary_employees = select(emp_name.as("name"), lit("High Earner").as("type"))
                                            .from(employees_schema)
                                            .where(emp_salary > lit(75000.0));
 
     auto query  = union_all(union_all(young_users, senior_employees), high_salary_employees);
-    auto result = compiler->compile(query);
+    const auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }
@@ -146,14 +140,14 @@ TEST_F(SetOperationsTest, MultipleUnionExpression) {
 // Test SET operation with ORDER BY
 TEST_F(SetOperationsTest, SetOperationWithOrderByExpression) {
     const auto active_users =
-        select(user_name.as("name"), user_age.as("age")).from(users_schema).where(user_active == lit(true));
+        select(user_name.as("name"), user_age.as("age")).from(users_schema).where(user_active == true);
 
     const auto employees = select(emp_name.as("name"), emp_age.as("age")).from(employees_schema);
 
     const auto als_name = user_name.as_dynamic().set_name("name");
     const auto als_age  = user_age.as_dynamic().set_name("age");
     auto query          = union_all(active_users, employees).order_by(asc(als_name), desc(als_age));
-    auto result         = compiler->compile(query);
+    const auto result         = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }
@@ -174,13 +168,13 @@ TEST_F(SetOperationsTest, SetOperationWithLimitExpression) {
 TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
     const auto user_summary = select(user_name.as("name"), user_department.as("dept"), lit("Active User").as("status"))
                                   .from(users_schema)
-                                  .where(user_active == lit(true));
+                                  .where(user_active == true);
 
     const auto employee_summary =
         select(emp_name.as("name"), emp_department.as("dept"), lit("Employee").as("status")).from(employees_schema);
 
     auto query  = union_all(user_summary, employee_summary);
-    auto result = compiler->compile(query);
+    const auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }
@@ -189,7 +183,7 @@ TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
 TEST_F(SetOperationsTest, ComplexSetOperationsWithSubqueriesExpression) {
     const auto dept_users = select(user_department.as("department"), count(user_id).as("count"))
                                 .from(users_schema)
-                                .where(user_active == lit(true))
+                                .where(user_active == true)
                                 .group_by(user_department);
 
     const auto dept_employees = select(emp_department.as("department"), count(emp_id).as("count"))
@@ -197,7 +191,7 @@ TEST_F(SetOperationsTest, ComplexSetOperationsWithSubqueriesExpression) {
                                     .group_by(emp_department);
 
     auto query  = union_all(dept_users, dept_employees);
-    auto result = compiler->compile(query);
+    const auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }

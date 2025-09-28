@@ -3,26 +3,21 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-#define MANUAL_CHECK
 
 // Test fixture for condition operations
 class ConditionQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -72,32 +67,32 @@ protected:
 // Test binary condition expressions
 TEST_F(ConditionQueryTest, BinaryConditionExpressions) {
     // Equality
-    auto eq_query  = select(user_name).from(users_schema).where(user_age == lit(25));
+    auto eq_query  = select(user_name).from(users_schema).where(user_age == 25);
     auto eq_result = compiler->compile(eq_query);
     EXPECT_FALSE(eq_result.sql().empty());
 
     // Inequality
-    auto neq_query  = select(user_name).from(users_schema).where(user_age != lit(25));
+    auto neq_query  = select(user_name).from(users_schema).where(user_age != 25);
     auto neq_result = compiler->compile(neq_query);
     EXPECT_FALSE(neq_result.sql().empty());
 
     // Greater than
-    auto gt_query  = select(user_name).from(users_schema).where(user_age > lit(18));
+    auto gt_query  = select(user_name).from(users_schema).where(user_age > 18);
     auto gt_result = compiler->compile(gt_query);
     EXPECT_FALSE(gt_result.sql().empty());
 
     // Greater than or equal
-    auto gte_query  = select(user_name).from(users_schema).where(user_age >= lit(18));
+    auto gte_query  = select(user_name).from(users_schema).where(user_age >= 18);
     auto gte_result = compiler->compile(gte_query);
     EXPECT_FALSE(gte_result.sql().empty());
 
     // Less than
-    auto lt_query  = select(user_name).from(users_schema).where(user_age < lit(65));
+    auto lt_query  = select(user_name).from(users_schema).where(user_age < 65);
     auto lt_result = compiler->compile(lt_query);
     EXPECT_FALSE(lt_result.sql().empty());
 
     // Less than or equal
-    auto lte_query  = select(user_name).from(users_schema).where(user_age <= lit(65));
+    auto lte_query  = select(user_name).from(users_schema).where(user_age <= 65);
     auto lte_result = compiler->compile(lte_query);
     EXPECT_FALSE(lte_result.sql().empty());
 
@@ -112,12 +107,12 @@ TEST_F(ConditionQueryTest, BinaryConditionExpressions) {
 // Test logical condition expressions
 TEST_F(ConditionQueryTest, LogicalConditionExpressions) {
     // AND
-    auto and_query  = select(user_name).from(users_schema).where(user_age > lit(18) && user_active == lit(true));
+    auto and_query  = select(user_name).from(users_schema).where(user_age > 18 && user_active == true);
     auto and_result = compiler->compile(and_query);
     EXPECT_FALSE(and_result.sql().empty());
 
     // OR
-    auto or_query  = select(user_name).from(users_schema).where(user_age < lit(18) || user_age > lit(65));
+    auto or_query  = select(user_name).from(users_schema).where(user_age < 18 || user_age > 65);
     auto or_result = compiler->compile(or_query);
     EXPECT_FALSE(or_result.sql().empty());
 
@@ -128,7 +123,7 @@ TEST_F(ConditionQueryTest, LogicalConditionExpressions) {
 // Test unary condition expressions
 TEST_F(ConditionQueryTest, UnaryConditionExpressions) {
     // NOT (using boolean column)
-    auto not_query  = select(user_name).from(users_schema).where(user_active == lit(false));
+    auto not_query  = select(user_name).from(users_schema).where(user_active == false);
     auto not_result = compiler->compile(not_query);
     EXPECT_FALSE(not_result.sql().empty());
 
@@ -138,7 +133,7 @@ TEST_F(ConditionQueryTest, UnaryConditionExpressions) {
 // Test string comparison expressions (placeholder for LIKE when available)
 TEST_F(ConditionQueryTest, StringComparisonExpressions) {
     // String equality comparison
-    auto str_eq_query  = select(user_name).from(users_schema).where(user_name == lit("john"));
+    auto str_eq_query  = select(user_name).from(users_schema).where(user_name == "john");
     auto str_eq_result = compiler->compile(str_eq_query);
     EXPECT_FALSE(str_eq_result.sql().empty());
 
@@ -147,7 +142,7 @@ TEST_F(ConditionQueryTest, StringComparisonExpressions) {
 
 // Test BETWEEN expressions
 TEST_F(ConditionQueryTest, BetweenExpressions) {
-    auto query  = select(user_name).from(users_schema).where(between(user_age, lit(18), lit(65)));
+    auto query  = select(user_name).from(users_schema).where(between(user_age, 18, 65));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -155,7 +150,7 @@ TEST_F(ConditionQueryTest, BetweenExpressions) {
 
 // Test IN LIST expressions
 TEST_F(ConditionQueryTest, InListExpressions) {
-    auto query  = select(user_name).from(users_schema).where(in(user_age, lit(18), lit(25), lit(30)));
+    auto query  = select(user_name).from(users_schema).where(in(user_age, 18, 25, 30));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -173,7 +168,7 @@ TEST_F(ConditionQueryTest, ExistsExpressions) {
 
 // Test SUBQUERY conditions
 TEST_F(ConditionQueryTest, SubqueryConditions) {
-    auto active_users = select(user_id).from(users_schema).where(user_active == lit(true));
+    auto active_users = select(user_id).from(users_schema).where(user_active == true);
 
     auto query  = select(post_title).from(posts_schema).where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
@@ -183,10 +178,9 @@ TEST_F(ConditionQueryTest, SubqueryConditions) {
 
 // Test complex nested conditions
 TEST_F(ConditionQueryTest, ComplexNestedConditions) {
-    auto query =
-        select(user_name)
-            .from(users_schema)
-            .where((user_age > lit(18) && user_age < lit(65)) || (user_active == lit(true) && user_age >= lit(65)));
+    auto query = select(user_name)
+                     .from(users_schema)
+                     .where((user_age > 18 && user_age < 65) || (user_active == true && user_age >= 65));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();

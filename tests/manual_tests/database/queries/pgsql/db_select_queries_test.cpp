@@ -3,9 +3,10 @@
 
 #include <demiplane/scroll>
 
-#include "postgres_dialect.hpp"
-#include "query_compiler.hpp"
-#include "query_expressions.hpp"
+#include <postgres_dialect.hpp>
+#include <query_compiler.hpp>
+
+#include "common.hpp"
 
 #include <gtest/gtest.h>
 
@@ -16,12 +17,7 @@ using namespace demiplane::db;
 class SelectQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
-
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
-        set_logger(std::move(logger));
+        SET_COMMON_LOGGER();
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -94,7 +90,7 @@ TEST_F(SelectQueryTest, SelectDistinctExpression) {
 
 // Test SELECT with mixed types (columns, literals, aggregates)
 TEST_F(SelectQueryTest, SelectMixedTypesExpression) {
-    const auto query = select(user_name, lit("constant"), count(user_id).as("total"));
+    const auto query = select(user_name, "constant", count(user_id).as("total"));
     auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -114,7 +110,7 @@ TEST_F(SelectQueryTest, SelectFromRecordExpression) {
 
 // Test SELECT from table name string
 TEST_F(SelectQueryTest, SelectFromTableNameExpression) {
-    auto query  = select(lit(1)).from("test_table");
+    auto query  = select(1).from("test_table");
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -122,7 +118,7 @@ TEST_F(SelectQueryTest, SelectFromTableNameExpression) {
 
 // Test SELECT with WHERE clause
 TEST_F(SelectQueryTest, SelectWithWhereExpression) {
-    auto query  = select(user_name).from(users_schema).where(user_age > lit(18));
+    auto query  = select(user_name).from(users_schema).where(user_age > 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
@@ -150,7 +146,7 @@ TEST_F(SelectQueryTest, SelectWithHavingExpression) {
     auto query = select(user_active, count(user_id).as("user_count"))
                      .from(users_schema)
                      .group_by(user_active)
-                     .having(count(user_id) > lit(5));
+                     .having(count(user_id) > 5);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();

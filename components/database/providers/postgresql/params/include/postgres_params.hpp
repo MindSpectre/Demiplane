@@ -32,6 +32,8 @@ namespace demiplane::db {
             std::visit([this](const auto& x) { bind_one(x); }, v);
             return params_->values.size();  // 1-based index for PostgreSQL
         }
+
+        /// @warning No true move. Must be copied
         std::size_t push(FieldValue&& v) override {
             return push(v);
         }

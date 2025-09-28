@@ -59,6 +59,6 @@ namespace demiplane::db {
 
         virtual void format_value(std::pmr::string& query, const FieldValue& value) = 0;
 
-        virtual DialectBindPacket make_param_sink(std::pmr::memory_resource*) const = 0;
+        virtual DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const = 0;
     };
 }  // namespace demiplane::db

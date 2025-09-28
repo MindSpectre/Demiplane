@@ -1,5 +1,5 @@
 ##############################################################################
-# Column
+# Field Primitive Class
 ##############################################################################
 add_library(${DMP_DATABASE}.Primitives.Field STATIC
         include/db_field.hpp

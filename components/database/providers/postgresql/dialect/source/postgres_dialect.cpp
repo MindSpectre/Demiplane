@@ -106,9 +106,9 @@ namespace demiplane::db {
             },
             value);
     }
-    DialectBindPacket PostgresDialect::make_param_sink(std::pmr::memory_resource* mr) const {
+    DialectBindPacket PostgresDialect::make_param_sink(std::pmr::memory_resource* memory_resource) const {
         PgTypeRegistry type_registry_;
-        auto sink                          = std::make_unique<PostgresParamSink>(mr, type_registry_);
+        auto sink                          = std::make_unique<PostgresParamSink>(memory_resource, type_registry_);
         const std::shared_ptr<void> packet = sink->packet();
 
         return DialectBindPacket{.sink = std::move(sink), .packet = packet};
@@ -131,13 +131,18 @@ namespace demiplane::db {
     }
 
     std::string PostgresDialect::format_binary_data(const std::span<const uint8_t> data) {
-        std::ostringstream oss;
-        oss << "\\x";  // PostgreSQL bytea hex format
+        std::string result;
+        result.reserve(5 + data.size() * 2);  // Reserve: "'" + "\x" + 2chars_per_byte + "'"
+
+        result = "'\\x";
 
         for (const uint8_t byte : data) {
-            oss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
+            constexpr char hex_chars[]  = "0123456789abcdef";
+            result += hex_chars[byte >> 4];     // High nibble
+            result += hex_chars[byte & 0x0F];   // Low nibble
         }
 
-        return "'" + oss.str() + "'";
+        result += "'";
+        return result;
     }
 }  // namespace demiplane::db

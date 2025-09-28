@@ -5,6 +5,12 @@
 #include <variant>
 
 namespace demiplane::db {
+
+
+    /**
+     * @brief A variant for storing field data. Provided with owning and viewable options.
+     * @warning Be careful using views(std::string_view, std::span and others non owning data).
+     */
     using FieldValue = std::variant<std::monostate,
                                     bool,
                                     std::int32_t,
@@ -17,7 +23,4 @@ namespace demiplane::db {
 
     template <typename T>
     concept IsFieldValueType = std::is_constructible_v<FieldValue, T>;
-        // std::is_same_v<T, std::monostate> || std::is_same_v<T, bool> || std::is_same_v<T, std::int32_t> ||
-        // std::is_same_v<T, std::int64_t> || std::is_same_v<T, double> || std::is_same_v<T, std::string> ||
-        // std::is_same_v<T, std::string_view> || std::is_same_v<T, std::span<const uint8_t>>;
 }  // namespace demiplane::db

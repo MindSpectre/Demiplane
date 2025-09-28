@@ -13,27 +13,6 @@ namespace demiplane::db {
         }
     }
 
-    Field::Field(Field&& other) noexcept
-        : value_(std::move(other.value_)),
-          schema_(other.schema_) {
-    }
-
-    Field& Field::operator=(const Field& other) {
-        if (this != &other) {
-            value_  = other.value_;
-            schema_ = other.schema_;
-        }
-        return *this;
-    }
-
-    Field& Field::operator=(Field&& other) noexcept {
-        if (this != &other) {
-            value_  = std::move(other.value_);
-            schema_ = other.schema_;
-        }
-        return *this;
-    }
-
     bool Field::is_null() const {
         return std::holds_alternative<std::monostate>(value_);
     }

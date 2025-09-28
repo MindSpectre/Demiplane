@@ -39,7 +39,7 @@ namespace demiplane::db {
 
         void format_value(std::pmr::string& query, const FieldValue& value) override;
 
-        DialectBindPacket make_param_sink(std::pmr::memory_resource* mr) const override;
+        DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const override;
 
     private:
         // Helper methods for formatting

@@ -86,7 +86,8 @@ message("Using OpenSSL")
 find_package(jsoncpp REQUIRED)
 message("Using JsonCpp")
 #find_package(absl REQUIRED)
-#find_package(libpqxx REQUIRED)
+find_package(PostgreSQL REQUIRED)
+message("Using PostgreSQL")
 #find_package(Libevent CONFIG REQUIRED)
 
 ##############################################################################

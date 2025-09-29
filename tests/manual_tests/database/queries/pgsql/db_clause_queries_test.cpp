@@ -51,7 +51,7 @@ protected:
         order_created_date = orders_schema->column<std::string>("created_date");
 
         // Create compiler
-        compiler = std::make_unique<QueryCompiler>(std::make_unique<PostgresDialect>(), false);
+        compiler = std::make_unique<QueryCompiler>(std::make_unique<postgres::Dialect>(), false);
     }
 
     std::shared_ptr<Table> users_schema;

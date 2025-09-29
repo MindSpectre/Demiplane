@@ -5,9 +5,9 @@
 #include <pg_type_registry.hpp>
 #include <sql_dialect.hpp>
 
-namespace demiplane::db {
+namespace demiplane::db::postgres {
 
-    class PostgresDialect final : public SqlDialect {
+    class Dialect final : public SqlDialect {
     public:
         [[nodiscard]] std::string quote_identifier(std::string_view name) const override;
 

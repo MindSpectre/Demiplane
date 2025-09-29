@@ -6,6 +6,7 @@ add_subdirectory(dialect)
 
 add_subdirectory(params)
 
+add_subdirectory(result)
 
 add_combined_library(${DMP_DATABASE_POSTGRESQL}
         DIRECTORIES

@@ -3,8 +3,8 @@
 #include <demiplane/gears>
 
 #include <postgres_params.hpp>
-namespace demiplane::db {
-    std::string PostgresDialect::quote_identifier(const std::string_view name) const {
+namespace demiplane::db::postgres {
+    std::string Dialect::quote_identifier(const std::string_view name) const {
         std::string quoted_name;
         quoted_name.reserve(name.size() + 2);
         quoted_name += "\"";
@@ -13,39 +13,39 @@ namespace demiplane::db {
         return quoted_name;
     }
 
-    void PostgresDialect::quote_identifier(std::string& query, const std::string_view name) const {
+    void Dialect::quote_identifier(std::string& query, const std::string_view name) const {
         query += "\"";
         query += name.data();
         query += "\"";
     }
-    void PostgresDialect::quote_identifier(std::pmr::string& query, const std::string_view name) const {
+    void Dialect::quote_identifier(std::pmr::string& query, const std::string_view name) const {
         query += "\"";
         query += name.data();
         query += "\"";
     }
 
-    std::string PostgresDialect::placeholder(const std::size_t index) const {
+    std::string Dialect::placeholder(const std::size_t index) const {
         std::string place_holder;
         place_holder.reserve(15);
         placeholder(place_holder, index);
         return place_holder;
     }
 
-    void PostgresDialect::placeholder(std::string& query, const std::size_t index) const {
+    void Dialect::placeholder(std::string& query, const std::size_t index) const {
         query += "$" + std::to_string(index + 1);
     }
-    void PostgresDialect::placeholder(std::pmr::string& query, const std::size_t index) const {
+    void Dialect::placeholder(std::pmr::string& query, const std::size_t index) const {
         query += "$" + std::to_string(index + 1);
     }
 
-    std::string PostgresDialect::limit_clause(const std::size_t limit, const std::size_t offset) const {
+    std::string Dialect::limit_clause(const std::size_t limit, const std::size_t offset) const {
         std::string clause;
         clause.reserve(32);
         limit_clause(clause, limit, offset);
         return clause;
     }
 
-    void PostgresDialect::limit_clause(std::string& query, const std::size_t limit, const std::size_t offset) const {
+    void Dialect::limit_clause(std::string& query, const std::size_t limit, const std::size_t offset) const {
         query += " LIMIT " + std::to_string(limit);
         if (offset > 0) {
             query += " OFFSET " + std::to_string(offset);
@@ -53,14 +53,14 @@ namespace demiplane::db {
     }
 
     void
-    PostgresDialect::limit_clause(std::pmr::string& query, const std::size_t limit, const std::size_t offset) const {
+    Dialect::limit_clause(std::pmr::string& query, const std::size_t limit, const std::size_t offset) const {
         query += " LIMIT " + std::to_string(limit);
         if (offset > 0) {
             query += " OFFSET " + std::to_string(offset);
         }
     }
 
-    void PostgresDialect::format_value(std::string& query, const FieldValue& value) {
+    void Dialect::format_value(std::string& query, const FieldValue& value) {
         std::visit(
             [&query]<typename TX>(const TX& val) -> void {
                 using T = std::decay_t<TX>;
@@ -83,7 +83,7 @@ namespace demiplane::db {
             },
             value);
     }
-    void PostgresDialect::format_value(std::pmr::string& query, const FieldValue& value) {
+    void Dialect::format_value(std::pmr::string& query, const FieldValue& value) {
         std::visit(
             [&query]<typename TX>(const TX& val) -> void {
                 using T = std::decay_t<TX>;
@@ -106,15 +106,14 @@ namespace demiplane::db {
             },
             value);
     }
-    DialectBindPacket PostgresDialect::make_param_sink(std::pmr::memory_resource* memory_resource) const {
-        PgTypeRegistry type_registry_;
-        auto sink                          = std::make_unique<PostgresParamSink>(memory_resource, type_registry_);
+    DialectBindPacket Dialect::make_param_sink(std::pmr::memory_resource* memory_resource) const {
+        auto sink                          = std::make_unique<ParamSink>(memory_resource);
         const std::shared_ptr<void> packet = sink->packet();
 
         return DialectBindPacket{.sink = std::move(sink), .packet = packet};
     }
 
-    std::string PostgresDialect::escape_string(const std::string_view str) {
+    std::string Dialect::escape_string(const std::string_view str) {
         std::string result;
         result.reserve(str.size() * 2);  // Reserve space for potential escaping
 
@@ -130,7 +129,7 @@ namespace demiplane::db {
         return result;
     }
 
-    std::string PostgresDialect::format_binary_data(const std::span<const uint8_t> data) {
+    std::string Dialect::format_binary_data(const std::span<const uint8_t> data) {
         std::string result;
         result.reserve(5 + data.size() * 2);  // Reserve: "'" + "\x" + 2chars_per_byte + "'"
 

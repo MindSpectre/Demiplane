@@ -8,9 +8,9 @@
 #include <pg_type_registry.hpp>
 #include <sql_params.hpp>
 
-namespace demiplane::db {
+namespace demiplane::db::postgres {
 
-    struct PostgresParams {
+    struct Params {
         std::pmr::vector<const char*> values;
         std::pmr::vector<int> lengths;
         std::pmr::vector<int> formats;  // 0 text, 1 binary
@@ -19,13 +19,12 @@ namespace demiplane::db {
         std::pmr::vector<std::byte> binary_data;
     };
 
-    class PostgresParamSink final : public ParamSink {
+    class ParamSink final : public db::ParamSink {
     public:
-        PostgresParamSink(std::pmr::memory_resource* mr, const PgTypeRegistry& reg)
+        explicit ParamSink(std::pmr::memory_resource* mr)
             : mr_(mr),
-              params_(std::make_shared<PostgresParams>(PostgresParams{
-                  .values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .keeparams_str{mr}, .binary_data{mr}})),
-              reg_(reg) {
+              params_(std::make_shared<Params>(Params{
+                  .values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .keeparams_str{mr}, .binary_data{mr}})) {
         }
 
         std::size_t push(const FieldValue& v) override {
@@ -59,7 +58,7 @@ namespace demiplane::db {
 
         void bind_one(std::span<const uint8_t> bytes) const;
 
-        void bind_one(std::string_view sview) const;
+        void bind_one(std::string_view s_view) const;
         // helpers …
         const char* clone(const void* src, const std::size_t n) const {
             auto* buf = static_cast<char*>(mr_->allocate(n, alignof(char)));
@@ -68,8 +67,7 @@ namespace demiplane::db {
         }
 
         std::pmr::memory_resource* mr_;
-        std::shared_ptr<PostgresParams> params_;
-        PgTypeRegistry reg_;
+        std::shared_ptr<Params> params_;
     };
 
 }  // namespace demiplane::db

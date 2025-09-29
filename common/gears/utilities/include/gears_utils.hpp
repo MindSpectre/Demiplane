@@ -27,10 +27,13 @@ namespace demiplane::gears {
         std::unreachable();
     }
 
+    #define GEARS_UNREACHABLE(TYPE, TEXT) \
+        static_assert(demiplane::gears::dependent_false_v<TYPE>, TEXT); \
+        std::unreachable();
+
     template <typename T>
     constexpr void enforce_non_static(const T* this_ptr) {
         static_assert(!std::is_same_v<T, std::nullptr_t>, "This function cannot be called from a static context");
-
         static_cast<void>(this_ptr);
     }
 
@@ -39,6 +42,4 @@ namespace demiplane::gears {
     constexpr void enforce_non_const(T) {
         static_assert(!std::is_const_v<std::remove_pointer_t<T>>, "Function must not be const-qualified!");
     }
-
-
 }  // namespace demiplane::gears

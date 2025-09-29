@@ -30,7 +30,7 @@ namespace demiplane::db {
         mutable std::string cached_what;
 
     public:
-        database_exception()           = default;
+        database_exception() noexcept  = default;
         ~database_exception() override = default;
 
         const char* what() const noexcept override {
@@ -87,6 +87,13 @@ namespace demiplane::db {
     public:
         [[nodiscard]] constexpr const char* category() const noexcept override {
             return "client.invalid_argument.type";
+        }
+    };
+
+    class null_conversion_error : public invalid_argument_error {
+    public:
+        [[nodiscard]] constexpr const char* category() const noexcept override {
+            return "client.invalid_argument.null_conversion";
         }
     };
 

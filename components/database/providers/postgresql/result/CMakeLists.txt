@@ -2,10 +2,10 @@
 # Postgres result class + views
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Result STATIC
-        include/pg_result_views.hpp
-        include/pg_result.hpp
-        source/pg_result.cpp
-        source/pg_result_views.cpp
+        include/postgres_result_views.hpp
+        include/postgres_result.hpp
+        source/postgres_result.cpp
+        source/postgres_result_views.cpp
 
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC

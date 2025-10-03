@@ -31,14 +31,18 @@ target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
 ##############################################################################
 # Traits for classes
 ##############################################################################
-add_library(${DMP_GEARS}.Utilities INTERFACE
+add_library(${DMP_GEARS}.Utilities STATIC
         utilities/include/gears_macros.hpp
         utilities/include/gears_utils.hpp
         utilities/include/gears_types.hpp
         utilities/include/gears_hash.hpp
+        utilities/source/gears_utils.cpp
 )
-target_include_directories(${DMP_GEARS}.Utilities INTERFACE
+target_include_directories(${DMP_GEARS}.Utilities PUBLIC
         utilities/include
+)
+target_link_libraries(${DMP_GEARS}.Utilities PUBLIC
+    ${DMP_GEARS}.MetaProgramming
 )
 ##############################################################################
 

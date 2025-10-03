@@ -2,15 +2,16 @@
 #include <memory>
 #include <optional>
 
-#include <libpq-fe.h>
 #include <gears_class_traits.hpp>
-#include "pg_result_views.hpp"
+#include <libpq-fe.h>
+
+#include "postgres_result_views.hpp"
 
 namespace demiplane::db::postgres {
 
-    class Result : gears::NonCopyable {
+    class ResultBlock : gears::NonCopyable {
     public:
-        explicit Result(PGresult* r)
+        explicit ResultBlock(PGresult* r)
             : res_(r) {
         }
 

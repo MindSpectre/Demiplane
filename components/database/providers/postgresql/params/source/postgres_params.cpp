@@ -2,6 +2,8 @@
 
 #include <netinet/in.h>
 
+#include "pg_format_registry.hpp"
+
 namespace demiplane::db::postgres {
 
     void ParamSink::bind_one(std::monostate) const {
@@ -18,7 +20,7 @@ namespace demiplane::db::postgres {
 
         params_->values.push_back(reinterpret_cast<const char*>(params_->binary_data.data() + offset));
         params_->lengths.push_back(1);
-        params_->formats.push_back(1);  // Binary
+        params_->formats.push_back(FormatRegistry::binary);
         params_->oids.push_back(TypeRegistry::oid_bool);
     }
 
@@ -34,7 +36,7 @@ namespace demiplane::db::postgres {
 
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(4);
-        params_->formats.push_back(1);  // Binary
+        params_->formats.push_back(FormatRegistry::binary);
         params_->oids.push_back(TypeRegistry::oid_int4);
     }
 
@@ -49,8 +51,25 @@ namespace demiplane::db::postgres {
 
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(8);
-        params_->formats.push_back(1);  // Binary
+        params_->formats.push_back(FormatRegistry::binary);
         params_->oids.push_back(TypeRegistry::oid_int8);
+    }
+
+    void ParamSink::bind_one(const float f) const {
+        const auto offset = params_->binary_data.size();
+        params_->binary_data.resize(offset + 4);  // ← 4 bytes, not 8
+        auto* ptr = params_->binary_data.data() + offset;
+
+        // PostgreSQL uses network byte order for floats
+        uint32_t bits;
+        std::memcpy(&bits, &f, 4);  // ← 4 bytes
+        bits = htobe32(bits);
+        std::memcpy(ptr, &bits, 4);  // ← 4 bytes
+
+        params_->values.push_back(reinterpret_cast<const char*>(ptr));
+        params_->lengths.push_back(4);
+        params_->formats.push_back(FormatRegistry::binary);
+        params_->oids.push_back(TypeRegistry::oid_float4);
     }
 
     void ParamSink::bind_one(const double d) const {
@@ -66,7 +85,7 @@ namespace demiplane::db::postgres {
 
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(8);
-        params_->formats.push_back(1);  // Binary
+        params_->formats.push_back(FormatRegistry::binary);  // Binary
         params_->oids.push_back(TypeRegistry::oid_float8);
     }
 
@@ -76,11 +95,18 @@ namespace demiplane::db::postgres {
         params_->keeparams_str.emplace_back(std::move(pmr_str));
         params_->values.push_back(params_->keeparams_str.back().c_str());
         params_->lengths.push_back(static_cast<int>(params_->keeparams_str.back().size()));
-        params_->formats.push_back(0);  // Text
+        params_->formats.push_back(FormatRegistry::text);  // Text
         params_->oids.push_back(TypeRegistry::oid_text);
     }
-
-    void ParamSink::bind_one(const std::span<const uint8_t> bytes) const {
+    void ParamSink::bind_one(const std::string_view s_view) const {
+        std::pmr::string pmr_str{s_view, mr_};  // copy
+        params_->keeparams_str.emplace_back(std::move(pmr_str));
+        params_->values.push_back(params_->keeparams_str.back().c_str());
+        params_->lengths.push_back(static_cast<int>(params_->keeparams_str.back().size()));
+        params_->formats.push_back(FormatRegistry::text);
+        params_->oids.push_back(TypeRegistry::oid_text);
+    }
+    void ParamSink::bind_one(const std::span<const std::uint8_t> bytes) const {
         // Binary data as BYTEA
         const auto offset = params_->binary_data.size();
         params_->binary_data.resize(offset + bytes.size());
@@ -88,15 +114,19 @@ namespace demiplane::db::postgres {
 
         params_->values.push_back(reinterpret_cast<const char*>(params_->binary_data.data() + offset));
         params_->lengths.push_back(static_cast<int>(bytes.size()));
-        params_->formats.push_back(1);  // Binary
+        params_->formats.push_back(FormatRegistry::binary);  // Binary
         params_->oids.push_back(TypeRegistry::oid_bytea);
     }
-    void ParamSink::bind_one(const std::string_view s_view) const {
-        std::pmr::string pmr_str{s_view, mr_};  // copy
-        params_->keeparams_str.emplace_back(std::move(pmr_str));
-        params_->values.push_back(params_->keeparams_str.back().c_str());
-        params_->lengths.push_back(static_cast<int>(params_->keeparams_str.back().size()));
-        params_->formats.push_back(0);  // Text
-        params_->oids.push_back(TypeRegistry::oid_text);
+    void ParamSink::bind_one(const std::vector<std::uint8_t>& bytes) const {
+        const auto offset = params_->binary_data.size();
+        params_->binary_data.resize(offset + bytes.size());
+        std::memcpy(params_->binary_data.data() + offset, bytes.data(), bytes.size());
+
+        params_->values.push_back(reinterpret_cast<const char*>(params_->binary_data.data() + offset));
+        params_->lengths.push_back(static_cast<int>(bytes.size()));
+        params_->formats.push_back(FormatRegistry::binary);  // Binary
+        params_->oids.push_back(TypeRegistry::oid_bytea);
     }
-}  // namespace demiplane::db
+
+
+}  // namespace demiplane::db::postgres

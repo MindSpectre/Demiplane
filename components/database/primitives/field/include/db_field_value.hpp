@@ -3,6 +3,7 @@
 #include <span>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace demiplane::db {
 
@@ -15,10 +16,12 @@ namespace demiplane::db {
                                     bool,
                                     std::int32_t,
                                     std::int64_t,
+                                    float,
                                     double,
                                     std::string,
-                                    std::string_view,
-                                    std::span<const uint8_t>  // Zero-copy binary data
+                                    std::string_view,  // Zero-copy string data
+                                    std::vector<std::uint8_t>,
+                                    std::span<const std::uint8_t>  // Zero-copy binary data
                                     >;
 
     template <typename T>

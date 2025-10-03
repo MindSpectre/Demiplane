@@ -8,7 +8,7 @@
 
 namespace demiplane::gears {
     template <typename T>
-    class Result {
+    class ExceptionalResult {
     public:
         /* ───── state ────────────────────────────────────────────── */
         [[nodiscard]] bool has_value() const noexcept {
@@ -52,10 +52,10 @@ namespace demiplane::gears {
 
         /* ───── factory helpers (optional) ───────────────────────── */
         template <typename... Args>
-        static Result success(Args&&... args)
+        static ExceptionalResult success(Args&&... args)
             requires std::is_constructible_v<T, Args&&...>
         {
-            Result r;
+            ExceptionalResult r;
             r.value_.emplace(std::forward<Args>(args)...);
             return r;
         }
@@ -90,7 +90,7 @@ namespace demiplane::gears {
     };
 
     template <>
-    class Result<void> {
+    class ExceptionalResult<void> {
     public:
         [[nodiscard]] bool has_value() const noexcept {
             return !error_;

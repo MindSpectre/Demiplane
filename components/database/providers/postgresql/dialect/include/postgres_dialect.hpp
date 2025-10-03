@@ -2,7 +2,6 @@
 
 #include <iomanip>
 
-#include <pg_type_registry.hpp>
 #include <sql_dialect.hpp>
 
 namespace demiplane::db::postgres {
@@ -42,9 +41,14 @@ namespace demiplane::db::postgres {
         DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const override;
 
     private:
+        template <typename String>
+        static void format_value_impl(String& query, const FieldValue& value);
         // Helper methods for formatting
         static std::string escape_string(std::string_view str);
 
-        static std::string format_binary_data(std::span<const uint8_t> data);
+        template <typename Container>
+        static std::string format_binary_data(const Container& data);
     };
-}  // namespace demiplane::db
+}  // namespace demiplane::db::postgres
+
+#include "../source/postgres_dialect.inl"

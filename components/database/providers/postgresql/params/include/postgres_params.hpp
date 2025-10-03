@@ -52,19 +52,17 @@ namespace demiplane::db::postgres {
 
         void bind_one(std::int64_t i) const;
 
+        void bind_one(float f) const;
+
         void bind_one(double d) const;
 
         void bind_one(const std::string& s) const;
 
-        void bind_one(std::span<const uint8_t> bytes) const;
-
         void bind_one(std::string_view s_view) const;
-        // helpers …
-        const char* clone(const void* src, const std::size_t n) const {
-            auto* buf = static_cast<char*>(mr_->allocate(n, alignof(char)));
-            std::memcpy(buf, src, n);
-            return buf;
-        }
+
+        void bind_one(const std::vector<std::uint8_t>& bytes) const;
+
+        void bind_one(std::span<const std::uint8_t> bytes) const;
 
         std::pmr::memory_resource* mr_;
         std::shared_ptr<Params> params_;

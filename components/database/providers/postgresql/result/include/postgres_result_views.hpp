@@ -2,7 +2,7 @@
 
 #include <charconv>
 #include <cstring>
-#include <limits>
+#include <demiplane/gears>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -10,7 +10,6 @@
 
 #include <db_exceptions.hpp>
 #include <db_field_value.hpp>
-#include <gears_utils.hpp>
 #include <libpq-fe.h>
 #include <pg_format_registry.hpp>
 
@@ -64,9 +63,9 @@ namespace demiplane::db::postgres {
                 return decode_string();
             } else if constexpr (std::is_same_v<T, std::string_view>) {
                 return decode_string_view();
-            } else if constexpr (std::is_same_v<T, std::span<const uint8_t>>) {
+            } else if constexpr (std::is_same_v<T, std::span<const std::uint8_t>>) {
                 return decode_binary_span();
-            } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
+            } else if constexpr (std::is_same_v<T, std::vector<std::uint8_t>>) {
                 return decode_binary_vector();
             } else {
                 GEARS_UNREACHABLE(T,
@@ -105,11 +104,11 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] std::string_view decode_string_view() const;
 
-        [[nodiscard]] std::span<const uint8_t> decode_binary_span() const;
+        [[nodiscard]] std::span<const std::uint8_t> decode_binary_span() const;
 
-        [[nodiscard]] std::vector<uint8_t> decode_binary_vector() const;
+        [[nodiscard]] std::vector<std::uint8_t> decode_binary_vector() const;
 
-        [[nodiscard]] std::vector<uint8_t> decode_hex_bytea() const;
+        [[nodiscard]] std::vector<std::uint8_t> decode_hex_bytea() const;
 
         const char* ptr_{nullptr};
         std::size_t len_      = 0;

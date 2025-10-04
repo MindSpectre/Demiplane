@@ -5,6 +5,7 @@ set(DMP_GEARS ${DMP_COMMON}.Gears)
 ##############################################################################
 add_library(${DMP_GEARS}.Result INTERFACE
         result/include/gears_result.hpp
+        result/include/gears_outcome.hpp
 )
 target_include_directories(${DMP_GEARS}.Result INTERFACE
         result/include/

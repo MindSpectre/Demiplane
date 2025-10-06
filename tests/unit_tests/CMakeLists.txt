@@ -76,10 +76,10 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Algorithms
 ##############################################################################
 # Test Gears Result (Outcome)
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Gears.Result
+add_unit_test(${UNIT_TESTING_TARGET}.Gears.Result.Outcome
         gears/test_outcome.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Gears.Result
+target_link_libraries(${UNIT_TESTING_TARGET}.Gears.Result.Outcome
         PRIVATE
         Demiplane::Common::Gears
         ${TEST_LIBS}

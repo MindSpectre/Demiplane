@@ -517,62 +517,100 @@ namespace demiplane::gears {
         std::variant<std::monostate, Errors...> value_;
     };
 
-    // Utility to combine multiple outcomes
-    // Returns Outcome<std::tuple<Values...>, Errors...> or Outcome<void, Errors...>
-    template <typename T, typename... Errors, typename... Rest>
-    constexpr auto combine_outcomes(const Outcome<T, Errors...>& first, const Rest&... rest) {
-        // Check if all are successful
-        if (!first.is_success() || (!rest.is_success() || ...)) {
-            // Return first error found
-            if (!first.is_success()) {
-                if constexpr (std::same_as<T, void>) {
-                    return first;
-                } else {
-                    Outcome<void, Errors...> result;
-                    first.visit([&result]<typename ErrT>(const ErrT& err) {
-                        if constexpr (!std::same_as<std::decay_t<ErrT>, T>) {
-                            result = ErrorTag{err};
-                        }
-                    });
-                    return result;
-                }
-            }
+    // Helper to build non-void value tuple at compile time
+    namespace detail {
+        // Collect only non-void types
+        template<typename... Ts>
+        struct NonVoidTypes;
 
-            // Check rest for first error
-            Outcome<void, Errors...> result;
-            auto check_error = [&result]<typename OutcomeT>(const OutcomeT& outcome) {
+        template<>
+        struct NonVoidTypes<> {
+            using tuple_type = std::tuple<>;
+        };
+
+        template<typename T, typename... Rest>
+        struct NonVoidTypes<T, Rest...> {
+            using rest_tuple = NonVoidTypes<Rest...>::tuple_type;
+            using tuple_type = std::conditional_t<
+                std::same_as<T, void>,
+                rest_tuple,  // Skip void
+                decltype(std::tuple_cat(std::declval<std::tuple<T>>(), std::declval<rest_tuple>()))
+            >;
+        };
+
+        // Convert tuple<> to void, tuple<T> to T, tuple<T, U, ...> stays as tuple
+        template<typename Tuple>
+        struct SimplifyTuple {
+            using type = Tuple;
+        };
+
+        template<>
+        struct SimplifyTuple<std::tuple<>> {
+            using type = void;
+        };
+
+        template<typename T>
+        struct SimplifyTuple<std::tuple<T>> {
+            using type = T;
+        };
+    }
+
+    // Combine multiple outcomes - returns first error or combined success values
+    template <typename... Outcomes>
+        requires (sizeof...(Outcomes) > 0)
+    constexpr auto combine_outcomes(const Outcomes&... outcomes) {
+        // Compute result value type
+        using NonVoidTuple = detail::NonVoidTypes<typename std::decay_t<Outcomes>::value_type...>::tuple_type;
+        using ValueType = detail::SimplifyTuple<NonVoidTuple>::type;
+
+        // Get error type from first outcome
+        using FirstOutcome = std::tuple_element_t<0, std::tuple<std::decay_t<Outcomes>...>>;
+        using ErrorVariant = FirstOutcome::error_types;
+
+        // Extract first error type from variant
+        using ErrorType = std::variant_alternative_t<0, ErrorVariant>;
+
+        using ResultType = Outcome<ValueType, ErrorType>;
+
+        // Check for any errors
+        if ((!outcomes.is_success() || ...)) {
+            ResultType result;
+            auto check = [&]<typename OutcomeT>(const OutcomeT& outcome) {
                 if (!outcome.is_success() && result.is_success()) {
-                    outcome.visit([&result]<typename ErrT>(const ErrT& err) {
-                        using OutcomeType = std::decay_t<OutcomeT>;
-                        using ValueType = OutcomeType::value_type;
-                        if constexpr (!std::same_as<std::decay_t<ErrT>, ValueType> &&
+                    outcome.visit([&]<typename ErrT>(const ErrT& err) {
+                        using OutT = std::decay_t<OutcomeT>;
+                        using ValT = OutT::value_type;
+                        if constexpr (!std::same_as<std::decay_t<ErrT>, ValT> &&
                                       !std::same_as<std::decay_t<ErrT>, std::monostate>) {
                             result = ErrorTag{err};
                         }
                     });
                 }
             };
-            (check_error(rest), ...);
+            (check(outcomes), ...);
             return result;
         }
 
-        // All successful - combine values
-        if constexpr (std::same_as<T, void> && (std::same_as<typename std::decay_t<Rest>::value_type, void> && ...)) {
-            // All void outcomes - return void success
-            return Outcome<void, Errors...>{};
-        } else if constexpr (std::same_as<T, void>) {
-            // Mixed void and non-void - return tuple of non-void values
-            return Outcome<std::tuple<typename std::decay_t<Rest>::value_type...>, Errors...>{
-                std::make_tuple(rest.value()...)
-            };
-        } else if constexpr ((std::same_as<typename std::decay_t<Rest>::value_type, void> && ...)) {
-            // First is non-void, rest are void
-            return Outcome<T, Errors...>{first.value()};
+        // All successful - build result
+        if constexpr (std::same_as<ValueType, void>) {
+            return ResultType{};
         } else {
-            // All non-void - return tuple
-            return Outcome<std::tuple<T, typename std::decay_t<Rest>::value_type...>, Errors...>{
-                std::make_tuple(first.value(), rest.value()...)
-            };
+            // Collect non-void values
+            auto values = std::tuple_cat(
+                [&]<typename T>(const T& outcome) {
+                    if constexpr (std::same_as<typename std::decay_t<T>::value_type, void>) {
+                        return std::tuple<>();
+                    } else {
+                        return std::make_tuple(outcome.value());
+                    }
+                }(outcomes)...
+            );
+
+            if constexpr (std::tuple_size_v<decltype(values)> == 1) {
+                return ResultType{std::get<0>(values)};
+            } else {
+                return ResultType{values};
+            }
         }
     }
 

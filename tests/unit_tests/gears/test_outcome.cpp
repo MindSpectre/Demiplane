@@ -86,8 +86,7 @@ TEST(OutcomeTest, ErrorFactoryMethod) {
 
 TEST(OutcomeTest, ConstructionWithComplexType) {
     ParseError err{"Invalid syntax", 42};
-    Err(std::move(err));
-    Outcome<std::string, ParseError> result;
+    Outcome<std::string, ParseError> result = Err((err));
     EXPECT_TRUE(result.is_error());
     EXPECT_EQ(result.error<ParseError>(), err);
 }
@@ -486,7 +485,7 @@ Outcome<std::string, NetworkError, ParseError> fetch_and_parse(const std::string
     if (url == "invalid_json") {
         return Err(ParseError{"Invalid JSON", 1});
     }
-    return Ok(std::string("parsed data"));
+    return "parsed data";
 }
 
 TEST(RealWorldTest, NetworkRequestSuccess) {

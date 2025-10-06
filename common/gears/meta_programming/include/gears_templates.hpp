@@ -111,4 +111,12 @@ namespace demiplane::gears {
     constexpr bool has_exact_arg_type() {
         return (std::is_same_v<Args, T> || ...);
     }
+
+    // Helper for overloaded visitor pattern
+    template<class... Ts>
+    struct overloaded : Ts... {
+        using Ts::operator()...;
+    };
+    template<class... Ts>
+    overloaded(Ts...) -> overloaded<Ts...>;
 }  // namespace demiplane::gears

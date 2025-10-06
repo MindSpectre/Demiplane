@@ -94,6 +94,12 @@ Testing/
 *.pdb
 *.opendb
 
+# ===========================
+# Private specific
+# ===========================
+tests/codesandbox/
+
+
 # AI
 /CLAUDE.md
 .claude/

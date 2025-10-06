@@ -4,7 +4,8 @@ set(DMP_GEARS ${DMP_COMMON}.Gears)
 # Result class for convenient handling
 ##############################################################################
 add_library(${DMP_GEARS}.Result INTERFACE
-        result/include/gears_result.hpp
+        result/include/gears_exception_result.hpp
+        result/include/gears_outcome.hpp
 )
 target_include_directories(${DMP_GEARS}.Result INTERFACE
         result/include/
@@ -52,6 +53,8 @@ target_link_libraries(${DMP_GEARS}.Utilities PUBLIC
 add_combined_library(${DMP_GEARS}
         DIRECTORIES
         export
+        SOURCES
+        export/demiplane/gears
         LIBRARIES
         ${DMP_GEARS}.Result
         ${DMP_GEARS}.MetaProgramming

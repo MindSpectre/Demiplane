@@ -22,4 +22,11 @@ namespace demiplane::gears {
 
     template <typename T>
     concept IsDuration = std::chrono::__is_duration_v<T>;
+
+    template <typename T, typename... Args>
+    concept OneOf = (std::is_same_v<Args, T> || ...);
+
+    template <typename T, typename... Args>
+    concept OneOfDecayed = (std::is_same_v<std::remove_cvref_t<Args>, T> || ...);
+
 }  // namespace demiplane::gears

@@ -97,9 +97,10 @@ Testing/
 # ===========================
 # Private specific
 # ===========================
-tests/codesandbox/
-
 
 # AI
 /CLAUDE.md
 .claude/
+
+
+/tests/codesandbox/

@@ -8,9 +8,17 @@ namespace demiplane::db {
 
     class SqlGeneratorVisitor final : public QueryVisitor {
     public:
-        SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
-                        std::pmr::memory_resource* mr,
-                        bool use_params);
+        constexpr SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
+                                             std::pmr::memory_resource* mr,
+                                             const bool use_params)
+        : use_params_{use_params},
+          dialect_(std::move(d)),
+          sql_{mr} {
+            if (use_params_) {
+                packet_ = dialect_->make_param_sink(mr);
+                sink_   = packet_.sink.get();
+            }
+        }
 
         template <typename Self>
         auto decompose(this Self&& self) {
@@ -201,10 +209,11 @@ namespace demiplane::db {
         void visit_column_separator() override;
 
     private:
+        bool use_params_ = true;
+
         std::shared_ptr<SqlDialect> dialect_;
         std::pmr::string sql_;
-        bool use_params_{true};
-        DialectBindPacket packet_{};
-        ParamSink* sink_{nullptr};
+        DialectBindPacket packet_;
+        ParamSink* sink_;
     };
 }  // namespace demiplane::db

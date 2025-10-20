@@ -38,18 +38,26 @@ namespace demiplane::db {
         [[nodiscard]] const FieldSchema* get_field_schema(std::string_view name) const;
         FieldSchema* get_field_schema(std::string_view name);
 
-        [[nodiscard]] const std::string& table_name() const;
+        [[nodiscard]] constexpr const std::string& table_name() const {
+            return table_name_;
+        }
 
-        [[nodiscard]] std::size_t field_count() const;
+        [[nodiscard]] constexpr std::size_t field_count() const {
+            return fields_.size();
+        }
 
-        [[nodiscard]] const std::vector<std::unique_ptr<FieldSchema>>& fields() const;
+        [[nodiscard]] constexpr const std::vector<std::unique_ptr<FieldSchema>>& fields() const {
+            return fields_;
+        }
 
         // Get all column names
         [[nodiscard]] std::vector<std::string> field_names() const;
 
         [[nodiscard]] std::shared_ptr<Table> clone();
 
-        [[nodiscard]] static std::shared_ptr<Table> make_ptr(std::string name);
+        [[nodiscard]] static std::shared_ptr<Table> make_ptr(std::string name) {
+            return std::make_shared<Table>(std::move(name));
+        }
 
     private:
         std::string table_name_;

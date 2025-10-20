@@ -28,20 +28,20 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) {
             return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] const TablePtr& joined_table() const {
+        [[nodiscard]] constexpr const TablePtr& joined_table() const {
             return joined_table_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& on_condition(this Self&& self) {
+        [[nodiscard]] constexpr auto&& on_condition(this Self&& self) {
             return std::forward<Self>(self).on_condition_;
         }
 
-        [[nodiscard]] JoinType type() const {
+        [[nodiscard]] constexpr JoinType type() const {
             return type_;
         }
 

@@ -15,7 +15,7 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) {
             return std::forward<Self>(self).query_;
         }
 
@@ -35,7 +35,7 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& columns(this Self&& self) {
+        [[nodiscard]] constexpr auto&& columns(this Self&& self) {
             return std::forward<Self>(self).columns_;
         }
 
@@ -55,7 +55,7 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& criteria(this Self&& self) {
+        [[nodiscard]] constexpr auto&& criteria(this Self&& self) {
             return std::forward<Self>(self).grouping_criteria_;
         }
 

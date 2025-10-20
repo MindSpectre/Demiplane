@@ -7,16 +7,16 @@
 namespace demiplane::db {
     class InsertExpr : public Expression<InsertExpr> {
     public:
-        explicit InsertExpr(TablePtr t)
+        constexpr explicit InsertExpr(TablePtr t)
             : table_(std::move(t)) {
         }
 
-        InsertExpr& into(const std::initializer_list<std::string> cols) {
+        constexpr InsertExpr& into(const std::initializer_list<std::string> cols) {
             columns_ = cols;
             return *this;
         }
 
-        InsertExpr& values(std::initializer_list<FieldValue> vals) {
+        constexpr InsertExpr& values(std::initializer_list<FieldValue> vals) {
             rows_.emplace_back(vals);
             return *this;
         }
@@ -55,17 +55,17 @@ namespace demiplane::db {
             return *this;
         }
 
-        [[nodiscard]] const TablePtr& table() const {
+        [[nodiscard]] constexpr const TablePtr& table() const {
             return table_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& columns(this Self&& self) {
+        [[nodiscard]] constexpr auto&& columns(this Self&& self) {
             return std::forward<Self>(self).columns_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& rows(this Self&& self) {
+        [[nodiscard]] constexpr auto&& rows(this Self&& self) {
             return std::forward<Self>(self).rows_;
         }
 

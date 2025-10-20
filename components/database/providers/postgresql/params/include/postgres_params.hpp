@@ -23,8 +23,8 @@ namespace demiplane::db::postgres {
     public:
         explicit ParamSink(std::pmr::memory_resource* mr)
             : mr_(mr),
-              params_(std::make_shared<Params>(Params{
-                  .values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .keeparams_str{mr}, .binary_data{mr}})) {
+              params_(std::make_shared<Params>(
+                  Params{.values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .keeparams_str{mr}, .binary_data{mr}})) {
         }
 
         std::size_t push(const FieldValue& v) override {
@@ -36,12 +36,17 @@ namespace demiplane::db::postgres {
         std::size_t push(FieldValue&& v) override {
             return push(v);
         }
-        std::shared_ptr<void> packet() override {
+
+        /// @brief Expose packet via shared_ptr<void>
+        [[nodiscard]] std::shared_ptr<void> packet() const noexcept override {
+            return params_;
+        }
+        /// @brief Expose packet in native format
+        [[nodiscard]] std::shared_ptr<Params> native_packet() const noexcept {
             return params_;
         }
 
-        // expose packet via shared_ptr<void>
-
+        //TODO: think about adding binary format flag(indicate dont use binary format at all)
     private:
         // Specializations for each type
         void bind_one(std::monostate) const;
@@ -68,4 +73,4 @@ namespace demiplane::db::postgres {
         std::shared_ptr<Params> params_;
     };
 
-}  // namespace demiplane::db
+}  // namespace demiplane::db::postgres

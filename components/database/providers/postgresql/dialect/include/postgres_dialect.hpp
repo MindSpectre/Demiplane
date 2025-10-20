@@ -38,7 +38,9 @@ namespace demiplane::db::postgres {
 
         void format_value(std::pmr::string& query, const FieldValue& value) override;
 
-        DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const override;
+        [[nodiscard]] DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const override;
+
+        [[nodiscard]] constexpr SupportedProviders type() const override;
 
     private:
         template <typename String>
@@ -48,6 +50,7 @@ namespace demiplane::db::postgres {
 
         template <typename Container>
         static std::string format_binary_data(const Container& data);
+
     };
 }  // namespace demiplane::db::postgres
 

@@ -15,12 +15,12 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) {
             return std::forward<Self>(self).query_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& condition(this Self&& self) {
+        [[nodiscard]] constexpr auto&& condition(this Self&& self) {
             return std::forward<Self>(self).condition_;
         }
 

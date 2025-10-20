@@ -2,11 +2,11 @@
 
 #include <boost/unordered/unordered_map.hpp>
 #include <gears_hash.hpp>
+#include <db_field.hpp>
 
 namespace demiplane::db {
 
     class Table;
-    class Field;
 
     /**
      * @brief Database record representing a single row with type-safe field access
@@ -94,48 +94,62 @@ namespace demiplane::db {
          * @return Const reference to the associated Table schema
          * @note Lifetime tied to shared_ptr held by this Record
          */
-        [[nodiscard]] const Table& schema() const;
+        [[nodiscard]] constexpr const Table& schema() const {
+            return *schema_;
+        }
         /**
          * @brief Returns shared pointer to the table schema
          * @return Shared pointer to the associated Table schema
          * @note Allows sharing schema ownership across multiple Records
          */
-        [[nodiscard]] std::shared_ptr<const Table> table_ptr() const;
+        [[nodiscard]] constexpr std::shared_ptr<const Table> table_ptr() const {
+            return schema_;
+        }
 
         /**
          * @brief Returns the number of fields in this record
          * @return Total field count as defined by schema
          * @complexity O(1)
          */
-        [[nodiscard]] std::size_t field_count() const;
+        [[nodiscard]] constexpr std::size_t field_count() const {
+            return fields_.size();
+        }
 
         /**
          * @brief Returns iterator to the first field
          * @return Mutable iterator to beginning of field vector
          * @note Iterator invalidation follows std::vector semantics
          */
-        std::vector<Field>::iterator begin();
+        constexpr std::vector<Field>::iterator begin() {
+            return fields_.begin();
+        }
 
         /**
          * @brief Returns iterator past the last field
          * @return Mutable iterator to end of field vector
          * @note Iterator invalidation follows std::vector semantics
          */
-        std::vector<Field>::iterator end();
+        constexpr std::vector<Field>::iterator end() {
+            return fields_.end();
+        }
 
         /**
          * @brief Returns const iterator to the first field
          * @return Const iterator to beginning of field vector
          * @note Iterator invalidation follows std::vector semantics
          */
-        [[nodiscard]] std::vector<Field>::const_iterator begin() const;
+        [[nodiscard]] constexpr std::vector<Field>::const_iterator begin() const {
+            return fields_.begin();
+        }
 
         /**
          * @brief Returns const iterator past the last field
          * @return Const iterator to end of field vector
          * @note Iterator invalidation follows std::vector semantics
          */
-        [[nodiscard]] std::vector<Field>::const_iterator end() const;
+        [[nodiscard]] constexpr std::vector<Field>::const_iterator end() const {
+            return fields_.end();
+        }
 
     private:
         std::shared_ptr<const Table> schema_;

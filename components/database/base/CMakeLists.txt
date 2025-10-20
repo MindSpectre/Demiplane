@@ -1,4 +1,18 @@
 ##############################################################################
+# Database support info
+##############################################################################
+add_library(${DMP_DATABASE}.Base.SupportInfo INTERFACE
+        support/supported_providers.hpp
+)
+target_include_directories(${DMP_DATABASE}.Base.SupportInfo INTERFACE
+        support/
+)
+target_link_libraries(${DMP_DATABASE}.Base.SupportInfo INTERFACE
+)
+##############################################################################
+
+
+##############################################################################
 # Sql Params base class
 ##############################################################################
 add_library(${DMP_DATABASE}.Base.Params INTERFACE
@@ -25,6 +39,7 @@ target_include_directories(${DMP_DATABASE}.Base.Dialect INTERFACE
 )
 target_link_libraries(${DMP_DATABASE}.Base.Dialect INTERFACE
         ${DMP_DATABASE}.Base.Params
+        ${DMP_DATABASE}.Base.SupportInfo
 )
 ##############################################################################
 
@@ -33,13 +48,13 @@ target_link_libraries(${DMP_DATABASE}.Base.Dialect INTERFACE
 ##############################################################################
 # Database exceptions base classes
 ##############################################################################
-add_library(${DMP_DATABASE}.Base.Exceptions INTERFACE
+add_library(${DMP_DATABASE}.Base.Errors INTERFACE
         exceptions/db_exceptions.hpp
 )
-target_include_directories(${DMP_DATABASE}.Base.Exceptions INTERFACE
+target_include_directories(${DMP_DATABASE}.Base.Errors INTERFACE
         exceptions/
 )
-target_link_libraries(${DMP_DATABASE}.Base.Exceptions INTERFACE
+target_link_libraries(${DMP_DATABASE}.Base.Errors INTERFACE
         Boost::exception
         Boost::system
         Boost::stacktrace_backtrace

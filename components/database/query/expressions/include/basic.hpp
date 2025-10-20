@@ -15,7 +15,7 @@ namespace demiplane::db {
         void accept(this auto&& self, QueryVisitor& visitor);
 
     protected:
-        auto&& self(this auto&& self) {
+        constexpr auto&& self(this auto&& self) {
             return static_cast<
                 std::conditional_t<std::is_const_v<std::remove_reference_t<decltype(self)>>, const Derived, Derived>&&>(
                 self);
@@ -64,7 +64,7 @@ namespace demiplane::db {
 
     class Literal {
     public:
-        auto&& value(this auto&& self) {
+        constexpr auto&& value(this auto&& self) {
             return std::forward<decltype(self)>(self).value_;
         }
 
@@ -76,7 +76,7 @@ namespace demiplane::db {
             : value_(std::move(v)) {
         }
 
-        Literal& as(std::optional<std::string> alias) {
+        constexpr Literal& as(std::optional<std::string> alias) {
             alias_ = std::move(alias);
             return *this;
         }
@@ -92,6 +92,7 @@ namespace demiplane::db {
     constexpr Literal lit(T value) {
         return Literal{std::move(value)};
     }
+
     template <>
     constexpr Literal lit(const char* value) {
         return Literal{std::string{value}};
@@ -123,13 +124,13 @@ namespace demiplane::db {
             : alias_(std::move(alias)) {
         }
 
-        Derived& as(std::optional<std::string> name) {
+        constexpr Derived& as(std::optional<std::string> name) {
             alias_ = std::move(name);
             return static_cast<Derived&>(*this);
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& alias(this Self&& self) {
+        [[nodiscard]] constexpr auto&& alias(this Self&& self) {
             return std::forward<Self>(self).alias_;
         }
 
@@ -161,25 +162,25 @@ namespace demiplane::db {
     template <typename Parent>
     class JoinBuilder {
     public:
-        JoinBuilder(Parent parent, TablePtr right_table, const JoinType type)
+        constexpr JoinBuilder(Parent parent, TablePtr right_table, const JoinType type)
             : parent_{std::move(parent)},
               right_table_name_{std::move(right_table)},
               type_{type} {
         }
 
-        JoinBuilder& as(std::optional<std::string> name) {
+        constexpr JoinBuilder& as(std::optional<std::string> name) {
             right_alias_ = std::move(name);
             return *this;
         }
 
         template <IsCondition Condition>
-        auto on(Condition cond) && {
+        constexpr auto on(Condition cond) && {
             return JoinExpr<Parent, Condition>{
                 std::move(parent_), std::move(right_table_name_), std::move(cond), type_, right_alias_};
         }
 
         template <IsCondition Condition>
-        auto on(Condition cond) const& {
+        constexpr auto on(Condition cond) const& {
             return JoinExpr<Parent, Condition>{parent_, right_table_name_, std::move(cond), type_, right_alias_};
         }
 
@@ -192,23 +193,23 @@ namespace demiplane::db {
 
     class ColumnHolder {
     public:
-        explicit ColumnHolder(DynamicColumn column)
+        constexpr explicit ColumnHolder(DynamicColumn column)
             : column_{std::move(column)} {
         }
 
-        explicit ColumnHolder(AllColumns column)
+        constexpr explicit ColumnHolder(AllColumns column)
             : column_{std::move(column)} {
         }
 
-        [[nodiscard]] const DynamicColumn& column() const {
+        [[nodiscard]] constexpr const DynamicColumn& column() const& {
             return std::get<DynamicColumn>(column_);
         }
 
-        [[nodiscard]] const AllColumns& all_columns() const {
+        [[nodiscard]] constexpr const AllColumns& all_columns() const& {
             return std::get<AllColumns>(column_);
         }
 
-        [[nodiscard]] constexpr bool is_all_columns() const {
+        [[nodiscard]] constexpr bool is_all_columns() const& {
             return std::holds_alternative<AllColumns>(column_);
         }
 
@@ -223,38 +224,38 @@ namespace demiplane::db {
         // WHERE - consistent formatting with leading requires
         template <IsCondition Condition>
             requires(has_feature<AllowWhere, AllowedFeatures...>)
-        [[nodiscard]] auto where(Condition cond) const& {
+        [[nodiscard]] constexpr auto where(Condition cond) const& {
             return WhereExpr<Derived, Condition>{derived(), std::move(cond)};
         }
 
         template <IsCondition Condition>
             requires(has_feature<AllowWhere, AllowedFeatures...>)
-        [[nodiscard]] auto where(Condition cond) && {
+        [[nodiscard]] constexpr auto where(Condition cond) && {
             return WhereExpr<Derived, Condition>{std::move(derived()), std::move(cond)};
         }
 
         // GROUP BY - consistent formatting
         template <IsColumn... GroupColumns>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] auto group_by(GroupColumns... cols) const& {
+        [[nodiscard]] constexpr auto group_by(GroupColumns... cols) const& {
             return GroupByColumnExpr<Derived, GroupColumns...>{derived(), cols...};
         }
 
         template <IsColumn... GroupColumns>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] auto group_by(GroupColumns... cols) && {
+        [[nodiscard]] constexpr auto group_by(GroupColumns... cols) && {
             return GroupByColumnExpr<Derived, GroupColumns...>{std::move(derived()), cols...};
         }
 
         template <IsQuery GroupingCriteria>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] auto group_by(GroupingCriteria&& query) const& {
+        [[nodiscard]] constexpr auto group_by(GroupingCriteria&& query) const& {
             return GroupByQueryExpr<Derived, GroupingCriteria>{derived(), std::forward<GroupingCriteria>(query)};
         }
 
         template <IsQuery GroupingCriteria>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] auto group_by(GroupingCriteria&& query) && {
+        [[nodiscard]] constexpr auto group_by(GroupingCriteria&& query) && {
             return GroupByQueryExpr<Derived, GroupingCriteria>{std::move(derived()),
                                                                std::forward<GroupingCriteria>(query)};
         }
@@ -262,20 +263,20 @@ namespace demiplane::db {
         // HAVING - consistent formatting
         template <IsCondition Condition>
             requires(has_feature<AllowHaving, AllowedFeatures...>)
-        [[nodiscard]] auto having(Condition cond) const& {
+        [[nodiscard]] constexpr auto having(Condition cond) const& {
             return HavingExpr<Derived, Condition>{derived(), std::move(cond)};
         }
 
         template <IsCondition Condition>
             requires(has_feature<AllowHaving, AllowedFeatures...>)
-        [[nodiscard]] auto having(Condition cond) && {
+        [[nodiscard]] constexpr auto having(Condition cond) && {
             return HavingExpr<Derived, Condition>{std::move(derived()), std::move(cond)};
         }
 
         // JOIN - consistent formatting
         template <typename TableType>
             requires(has_feature<AllowJoin, AllowedFeatures...>)
-        [[nodiscard]] auto join(TableType&& table, JoinType type = JoinType::INNER) const& {
+        [[nodiscard]] constexpr auto join(TableType&& table, JoinType type = JoinType::INNER) const& {
             if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
                 return JoinBuilder<Derived>{derived(), Table::make_ptr(std::forward<TableType>(table)), type};
             } else {
@@ -285,7 +286,7 @@ namespace demiplane::db {
 
         template <typename TableType>
             requires(has_feature<AllowJoin, AllowedFeatures...>)
-        [[nodiscard]] auto join(TableType&& table, JoinType type = JoinType::INNER) && {
+        [[nodiscard]] constexpr auto join(TableType&& table, JoinType type = JoinType::INNER) && {
             if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
                 return JoinBuilder<Derived>{
                     std::move(derived()), Table::make_ptr(std::forward<TableType>(table)), type};
@@ -297,40 +298,40 @@ namespace demiplane::db {
         // ORDER BY - consistent formatting
         template <IsOrderBy... Orders>
             requires(has_feature<AllowOrderBy, AllowedFeatures...>)
-        [[nodiscard]] auto order_by(Orders... orders) const& {
+        [[nodiscard]] constexpr auto order_by(Orders... orders) const& {
             return OrderByExpr<Derived, Orders...>{derived(), orders...};
         }
 
         template <IsOrderBy... Orders>
             requires(has_feature<AllowOrderBy, AllowedFeatures...>)
-        [[nodiscard]] auto order_by(Orders... orders) && {
+        [[nodiscard]] constexpr auto order_by(Orders... orders) && {
             return OrderByExpr<Derived, Orders...>{std::move(derived()), orders...};
         }
 
         // LIMIT - consistent formatting
         template <typename T = void>
             requires(has_feature<AllowLimit, AllowedFeatures...>)
-        [[nodiscard]] auto limit(std::size_t count) const& {
+        [[nodiscard]] constexpr auto limit(std::size_t count) const& {
             return LimitExpr<Derived>{derived(), count, 0};
         }
 
         template <typename T = void>
             requires(has_feature<AllowLimit, AllowedFeatures...>)
-        [[nodiscard]] auto limit(std::size_t count) && {
+        [[nodiscard]] constexpr auto limit(std::size_t count) && {
             return LimitExpr<Derived>{std::move(derived()), count, 0};
         }
 
     protected:
         // Helper to get derived instance
-        [[nodiscard]] const Derived& derived() const& {
+        [[nodiscard]] constexpr const Derived& derived() const& {
             return static_cast<const Derived&>(*this);
         }
 
-        [[nodiscard]] Derived&& derived() && {
+        [[nodiscard]] constexpr Derived&& derived() && {
             return static_cast<Derived&&>(*this);
         }
 
-        [[nodiscard]] Derived& derived() & {
+        [[nodiscard]] constexpr Derived& derived() & {
             return static_cast<Derived&>(*this);
         }
     };

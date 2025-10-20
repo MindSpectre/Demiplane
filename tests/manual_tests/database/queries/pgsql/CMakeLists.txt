@@ -2,6 +2,7 @@ set(DB_Query_Man_Check Database.Queries)
 set(Query_LINK_LIBS
         Demiplane.Component.Database.Query.Compiler
         Demiplane.Component.Database.Providers.PostgreSQL.Dialect
+        Demiplane.Component.Database.Providers.PostgreSQL.Params
         Demiplane::Common::Scroll
         Demiplane::Common::Nexus
 )

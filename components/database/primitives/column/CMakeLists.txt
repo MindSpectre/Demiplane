@@ -3,7 +3,6 @@
 ##############################################################################
 add_library(${DMP_DATABASE}.Primitives.Column STATIC
         include/db_column.hpp
-        source/db_column.cpp
 )
 
 target_include_directories(${DMP_DATABASE}.Primitives.Column PUBLIC

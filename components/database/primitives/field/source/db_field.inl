@@ -8,7 +8,7 @@ namespace demiplane::db {
     }
 
     template <typename T>
-    const T& Field::get() const {
+    constexpr const T& Field::get() const {
         if (!std::holds_alternative<T>(value_)) {
             throw std::bad_variant_access();
         }
@@ -16,7 +16,7 @@ namespace demiplane::db {
     }
 
     template <typename T>
-    std::optional<T> Field::try_get() const {
+    constexpr std::optional<T> Field::try_get() const noexcept {
         if (std::holds_alternative<T>(value_)) {
             return std::get<T>(value_);
         }

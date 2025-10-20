@@ -2,10 +2,9 @@
 #include <optional>
 
 #include "db_field_value.hpp"
+#include "db_field_schema.hpp"
 
 namespace demiplane::db {
-
-    struct FieldSchema;
 
     /**
      * @brief Type-safe database field with schema validation
@@ -39,7 +38,7 @@ namespace demiplane::db {
          * @throws std::logic_error if null value
          */
         template <typename T>
-        const T& get() const;
+        constexpr const T& get() const;
 
         /**
          * @brief Try get typed value safely
@@ -47,37 +46,47 @@ namespace demiplane::db {
          * @return Optional value or nullopt if type mismatch/null
          */
         template <typename T>
-        std::optional<T> try_get() const;
+        constexpr std::optional<T> try_get() const noexcept;
 
         /**
          * @brief Check if field contains null value
          * @return True if null, false otherwise
          */
-        [[nodiscard]] bool is_null() const;
+        [[nodiscard]] constexpr bool is_null() const noexcept {
+            return std::holds_alternative<std::monostate>(value_);
+        }
 
         /**
          * @brief Get raw underlying value (lvalue)
          * @return Const reference to FieldValue
          */
-        [[nodiscard]] const FieldValue& raw_value() const&;
+        [[nodiscard]] constexpr const FieldValue& raw_value() const& noexcept {
+            return value_;
+        }
 
         /**
          * @brief Get raw underlying value (rvalue)
          * @return Moved FieldValue
          */
-        [[nodiscard]] FieldValue raw_value() &&;
+        [[nodiscard]] constexpr FieldValue raw_value() && noexcept {
+            return std::move(value_);
+        }
 
         /**
          * @brief Get field schema metadata
          * @return Const reference to schema
          */
-        [[nodiscard]] const FieldSchema& schema() const;
+        [[nodiscard]] constexpr const FieldSchema& schema() const noexcept {
+            return *schema_;
+        }
 
         /**
          * @brief Get field name from schema
          * @return Const reference to field name
          */
-        [[nodiscard]] const std::string& name() const;
+        [[nodiscard]] constexpr const std::string& name() const noexcept {
+            return schema_->name;
+        }
 
     private:
         FieldValue value_;

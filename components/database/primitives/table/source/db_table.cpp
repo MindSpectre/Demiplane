@@ -67,14 +67,6 @@ namespace demiplane::db {
         return it != field_index_.end() ? fields_[it->second].get() : nullptr;
     }
 
-    const std::string& Table::table_name() const {
-        return table_name_;
-    }
-
-    const std::vector<std::unique_ptr<FieldSchema>>& Table::fields() const {
-        return fields_;
-    }
-
     std::vector<std::string> Table::field_names() const {
         std::vector<std::string> names;
         names.reserve(fields_.size());
@@ -101,13 +93,5 @@ namespace demiplane::db {
         return cloned;
     }
 
-    std::shared_ptr<Table> Table::make_ptr(std::string name) {
-        return std::make_shared<Table>(std::move(name));
-    }
-
-    std::size_t Table::field_count() const {
-        return fields_.size();
-    }
-
-    // Implementation of FieldSchema::as_column
+    // Removed constexpr methods - they are now inline in the header
 }  // namespace demiplane::db

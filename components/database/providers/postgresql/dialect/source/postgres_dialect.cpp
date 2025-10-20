@@ -76,6 +76,10 @@ namespace demiplane::db::postgres {
         return DialectBindPacket{.sink = std::move(sink), .packet = packet};
     }
 
+    constexpr SupportedProviders Dialect::type() const {
+        return SupportedProviders::PostgreSQL;
+    }
+
     std::string Dialect::escape_string(const std::string_view str) {
         std::string result;
         result.reserve(str.size() * 2);  // Reserve space for potential escaping

@@ -58,31 +58,5 @@ namespace demiplane::db {
         return it != field_index_.end() ? &fields_[it->second] : nullptr;
     }
 
-    const Table& Record::schema() const {
-        return *schema_;
-    }
-
-    TablePtr Record::table_ptr() const {
-        return schema_;
-    }
-
-    std::size_t Record::field_count() const {
-        return fields_.size();
-    }
-
-    std::vector<Field>::iterator Record::begin() {
-        return fields_.begin();
-    }
-
-    std::vector<Field>::iterator Record::end() {
-        return fields_.end();
-    }
-
-    std::vector<Field>::const_iterator Record::begin() const {
-        return fields_.begin();
-    }
-
-    std::vector<Field>::const_iterator Record::end() const {
-        return fields_.end();
-    }
+    // Removed constexpr methods - they are now inline in the header
 }  // namespace demiplane::db

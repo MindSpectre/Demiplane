@@ -1,8 +1,9 @@
 #pragma once
 #include <string>
-#include <memory>
 
 #include <sql_params.hpp>
+
+#include "supported_providers.hpp"
 
 namespace demiplane::db {
 
@@ -39,19 +40,19 @@ namespace demiplane::db {
         }
 
         // Feature support
-        [[nodiscard]] virtual bool supports_returning() const {
+        [[nodiscard]] constexpr virtual bool supports_returning() const {
             return false;
         }
 
-        [[nodiscard]] virtual bool supports_cte() const {
+        [[nodiscard]] constexpr virtual bool supports_cte() const {
             return true;
         }
 
-        [[nodiscard]] virtual bool supports_window_functions() const {
+        [[nodiscard]] constexpr virtual bool supports_window_functions() const {
             return true;
         }
 
-        [[nodiscard]] virtual bool supports_lateral_joins() const {
+        [[nodiscard]] constexpr virtual bool supports_lateral_joins() const {
             return false;
         }
         // Value formatting
@@ -60,5 +61,7 @@ namespace demiplane::db {
         virtual void format_value(std::pmr::string& query, const FieldValue& value) = 0;
 
         virtual DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const = 0;
+
+        [[nodiscard]] constexpr virtual SupportedProviders type() const = 0;
     };
 }  // namespace demiplane::db

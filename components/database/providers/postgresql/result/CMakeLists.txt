@@ -16,7 +16,7 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
         PostgreSQL::PostgreSQL
         Demiplane::Common::Gears
         ${DMP_DATABASE_POSTGRESQL}.Shared
-        ${DMP_DATABASE}.Base.Exceptions
+        ${DMP_DATABASE}.Base.Errors
         PRIVATE
         ${DMP_DATABASE}.Primitives.Field
 )

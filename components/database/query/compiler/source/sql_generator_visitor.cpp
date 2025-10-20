@@ -6,17 +6,7 @@
 
 namespace demiplane::db {
 
-    SqlGeneratorVisitor::SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
-                                             std::pmr::memory_resource* mr,
-                                             const bool use_params)
-        : dialect_(std::move(d)),
-          sql_{mr},
-          use_params_{use_params} {
-        if (use_params_) {
-            packet_ = dialect_->make_param_sink(mr);
-            sink_   = packet_.sink.get();
-        }
-    }
+
     void SqlGeneratorVisitor::visit_table_column_impl(const FieldSchema* schema,
                                                       const std::shared_ptr<std::string>& table,
                                                       const std::optional<std::string>& alias) {

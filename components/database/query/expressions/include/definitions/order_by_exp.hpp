@@ -7,13 +7,13 @@ namespace demiplane::db {
 
     class OrderBy : public ColumnHolder {
     public:
-        explicit OrderBy(DynamicColumn col, const OrderDirection dir = OrderDirection::ASC)
+        constexpr explicit OrderBy(DynamicColumn col, const OrderDirection dir = OrderDirection::ASC)
             : ColumnHolder{std::move(col)},
               direction_(dir) {
         }
 
 
-        [[nodiscard]] OrderDirection direction() const {
+        [[nodiscard]] constexpr OrderDirection direction() const {
             return direction_;
         }
 
@@ -22,12 +22,12 @@ namespace demiplane::db {
     };
 
     template <typename T>
-    OrderBy asc(const TableColumn<T>& col) {
+    constexpr OrderBy asc(const TableColumn<T>& col) {
         return OrderBy{col.as_dynamic(), OrderDirection::ASC};
     }
 
     template <typename T>
-    OrderBy desc(const TableColumn<T>& col) {
+    constexpr OrderBy desc(const TableColumn<T>& col) {
         return OrderBy{col.as_dynamic(), OrderDirection::DESC};
     }
 
@@ -49,12 +49,12 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) {
             return std::forward<Self>(self).query_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& orders(this Self&& self) {
+        [[nodiscard]] constexpr auto&& orders(this Self&& self) {
             return std::forward<Self>(self).orders_;
         }
 

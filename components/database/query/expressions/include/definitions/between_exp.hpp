@@ -15,17 +15,17 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& operand(this Self&& self) {
+        [[nodiscard]] constexpr auto&& operand(this Self&& self) {
             return std::forward<Self>(self).operand_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& lower(this Self&& self) {
+        [[nodiscard]] constexpr auto&& lower(this Self&& self) {
             return std::forward<Self>(self).lower_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& upper(this Self&& self) {
+        [[nodiscard]] constexpr auto&& upper(this Self&& self) {
             return std::forward<Self>(self).upper_;
         }
 

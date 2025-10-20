@@ -12,11 +12,11 @@ namespace demiplane::db {
         }
 
         template <IsCondition Condition>
-        [[nodiscard]] auto where(Condition cond) const {
+        [[nodiscard]] constexpr auto where(Condition cond) const {
             return DeleteWhereExpr<Condition>{*this, std::move(cond)};
         }
 
-        [[nodiscard]] const TablePtr& table() const {
+        [[nodiscard]] constexpr const TablePtr& table() const {
             return table_;
         }
 

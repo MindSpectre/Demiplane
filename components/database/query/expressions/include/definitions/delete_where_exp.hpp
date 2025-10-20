@@ -9,18 +9,18 @@ namespace demiplane::db {
     template <IsCondition Condition>
     class DeleteWhereExpr : public Expression<DeleteWhereExpr<Condition>> {
     public:
-        DeleteWhereExpr(DeleteExpr d, Condition c)
+        constexpr DeleteWhereExpr(DeleteExpr d, Condition c)
             : del_(std::move(d)),
               condition_(std::move(c)) {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& del(this Self&& self) {
+        [[nodiscard]] constexpr auto&& del(this Self&& self) {
             return std::forward<Self>(self).del_;
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& condition(this Self&& self) {
+        [[nodiscard]] constexpr auto&& condition(this Self&& self) {
             return std::forward<Self>(self).condition_;
         }
 

@@ -18,28 +18,28 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& columns(this Self&& self) {
+        [[nodiscard]] constexpr auto&& columns(this Self&& self) {
             return std::forward<Self>(self).columns_;
         }
 
-        [[nodiscard]] bool distinct() const {
+        [[nodiscard]] constexpr bool distinct() const {
             return distinct_;
         }
 
-        [[nodiscard]] auto from(TablePtr table) const {
+        [[nodiscard]] constexpr auto from(TablePtr table) const {
             return FromTableExpr<SelectExpr>{*this, std::move(table)};
         }
 
-        [[nodiscard]] auto from(std::string table_name) const {
+        [[nodiscard]] constexpr auto from(std::string table_name) const {
             return FromTableExpr<SelectExpr>{*this, Table::make_ptr(std::move(table_name))};
         }
 
-        [[nodiscard]] auto from(const Record& record) const {
+        [[nodiscard]] constexpr auto from(const Record& record) const {
             return FromTableExpr<SelectExpr>{*this, record.table_ptr()};
         }
 
         template <IsCteExpr Query>
-        [[nodiscard]] auto from(Query&& query) const {
+        [[nodiscard]] constexpr auto from(Query&& query) const {
             return FromCteExpr<SelectExpr, Query>{*this, std::forward<Query>(query)};
         }
 

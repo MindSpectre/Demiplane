@@ -44,17 +44,17 @@ target_link_libraries(${DMP_DATABASE}.Base.Dialect INTERFACE
 ##############################################################################
 
 
-
 ##############################################################################
 # Database exceptions base classes
 ##############################################################################
-add_library(${DMP_DATABASE}.Base.Errors INTERFACE
-        exceptions/db_exceptions.hpp
+add_library(${DMP_DATABASE}.Base.Errors STATIC
+        errors/include/db_exceptions.hpp
+        errors/include/db_error_codes.hpp
 )
-target_include_directories(${DMP_DATABASE}.Base.Errors INTERFACE
-        exceptions/
+target_include_directories(${DMP_DATABASE}.Base.Errors PUBLIC
+        errors/include
 )
-target_link_libraries(${DMP_DATABASE}.Base.Errors INTERFACE
+target_link_libraries(${DMP_DATABASE}.Base.Errors PUBLIC
         Boost::exception
         Boost::system
         Boost::stacktrace_backtrace

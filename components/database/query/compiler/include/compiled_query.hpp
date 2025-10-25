@@ -16,9 +16,11 @@ namespace demiplane::db {
               provider_(provider),
               arena_{std::move(arena)} {
         }
+
         [[nodiscard]] constexpr std::string_view sql() const& noexcept {
             return sql_;
         }
+
         [[nodiscard]] constexpr std::shared_ptr<void> backend_packet() const& noexcept {
             return backend_packet_;
         }
@@ -38,12 +40,12 @@ namespace demiplane::db {
         }
 
     private:
-        // TODO: add constexpr support
+
         std::pmr::string sql_;
         std::shared_ptr<void> backend_packet_;
         SupportedProviders provider_;
         std::shared_ptr<std::pmr::monotonic_buffer_resource> arena_;  // lifetime keeper
     };
 
-
+    // TODO: add constexpr support aka PreCompiledQuery
 }  // namespace demiplane::db

@@ -12,7 +12,7 @@ namespace demiplane::db {
                                              std::pmr::memory_resource* mr,
                                              const bool use_params)
         : use_params_{use_params},
-          dialect_(std::move(d)),
+          dialect_{std::move(d)},
           sql_{mr} {
             if (use_params_) {
                 packet_ = dialect_->make_param_sink(mr);
@@ -209,7 +209,7 @@ namespace demiplane::db {
         void visit_column_separator() override;
 
     private:
-        bool use_params_ = true;
+        bool use_params_;
 
         std::shared_ptr<SqlDialect> dialect_;
         std::pmr::string sql_;

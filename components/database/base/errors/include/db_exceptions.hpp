@@ -4,7 +4,6 @@
 
 #include <boost/exception/all.hpp>
 #include <boost/stacktrace/stacktrace.hpp>
-#include <boost/system/error_code.hpp>
 namespace demiplane::db {
 
     // ============== Error Info Tags ==============

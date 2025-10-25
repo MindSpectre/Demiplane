@@ -61,8 +61,8 @@ demiplane::math::random::RandomTimeGenerator::generate_time_period_to(const std:
     auto end   = generate_date(start, to);
     return {start, end};
 }
-inline uint32_t demiplane::math::random::NumberGenerator::generate_random_uint32(const uint32_t min,
-                                                                                 const uint32_t max) const {
+uint32_t demiplane::math::random::NumberGenerator::generate_random_uint32(const uint32_t min,
+                                                                          const uint32_t max) const {
     std::uniform_int_distribution distrib(min, max);
     return distrib(generator_);
 }

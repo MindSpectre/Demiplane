@@ -8,9 +8,9 @@
 namespace demiplane::db {
     class QueryCompiler {
     public:
-        explicit constexpr  QueryCompiler(std::shared_ptr<SqlDialect> dialect, const bool use_params = true)
-            : dialect_(std::move(dialect)),
-              use_parameters_(use_params) {
+        explicit constexpr QueryCompiler(std::shared_ptr<SqlDialect> dialect, const bool use_params = true)
+            : dialect_{std::move(dialect)},
+              use_parameters_{use_params} {
         }
 
         // Compile any expression to SQL

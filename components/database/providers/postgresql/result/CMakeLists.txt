@@ -13,10 +13,10 @@ target_include_directories(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
-        PostgreSQL::PostgreSQL
-        Demiplane::Common::Gears
         ${DMP_DATABASE_POSTGRESQL}.Shared
         ${DMP_DATABASE}.Base.Errors
+        Demiplane::Common::Gears
+        PostgreSQL::PostgreSQL
         PRIVATE
         ${DMP_DATABASE}.Primitives.Field
 )

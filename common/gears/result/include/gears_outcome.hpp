@@ -49,7 +49,7 @@ namespace demiplane::gears {
         using error_types = std::variant<Errors...>;
 
         // Default constructor (requires T to be default constructible)
-        Outcome() noexcept(std::is_nothrow_constructible_v<T>)
+        constexpr Outcome() noexcept(std::is_nothrow_constructible_v<T>)
             requires std::default_initializable<T>
             : value_(T{}) {
         }

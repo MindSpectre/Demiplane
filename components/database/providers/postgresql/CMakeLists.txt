@@ -6,11 +6,15 @@ add_subdirectory(dialect)
 
 add_subdirectory(params)
 
+add_subdirectory(errors)
+
 add_subdirectory(result)
 
 add_subdirectory(config)
 
-add_subdirectory(connection)
+add_subdirectory(capabilities)
+
+add_subdirectory(session)
 
 add_subdirectory(transaction)
 

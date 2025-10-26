@@ -2,8 +2,9 @@
 # PostgreSql Config
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Config STATIC
-        include/postgres_config.hpp
-        source/postgres_config.cpp
+        include/postgres_connection_config.hpp
+        source/postgres_connection_config.cpp
+        include/postgres_database_config.hpp
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Config PUBLIC
         include

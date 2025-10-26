@@ -170,8 +170,6 @@ namespace demiplane::db {
               code_(static_cast<uint16_t>(code)) {
         }
 
-        // -------- Query Methods --------
-
         /**
          * @brief Check if this represents success (no error)
          */

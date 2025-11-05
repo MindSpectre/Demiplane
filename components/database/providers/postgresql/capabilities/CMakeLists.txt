@@ -31,7 +31,7 @@ add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE)
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Copier
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Notifier
-        ${DMP_DATABASE_POSTGRESQL}.Capabilities.AsyncExecutor
+#        ${DMP_DATABASE_POSTGRESQL}.Capabilities.AsyncExecutor
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.SyncExecutor
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Pipeline
 )

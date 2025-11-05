@@ -1,5 +1,6 @@
 #pragma once
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <string>
 #include <variant>
@@ -15,8 +16,8 @@ namespace demiplane::db::postgres {
         std::pmr::vector<int> lengths;
         std::pmr::vector<int> formats;  // 0 text, 1 binary
         std::pmr::vector<unsigned> oids;
-        std::pmr::vector<std::pmr::string> keeparams_str;  // adopt/move strings
-        std::pmr::vector<std::byte> binary_data;
+        std::pmr::deque<std::pmr::string> str_data;  // deque for pointer stability
+        std::pmr::deque<std::pmr::vector<std::byte>> binary_chunks;  // each binary param in its own vector
     };
 
     class ParamSink final : public db::ParamSink {
@@ -24,7 +25,7 @@ namespace demiplane::db::postgres {
         explicit ParamSink(std::pmr::memory_resource* mr)
             : mr_(mr),
               params_(std::make_shared<Params>(
-                  Params{.values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .keeparams_str{mr}, .binary_data{mr}})) {
+                  Params{.values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .str_data{mr}, .binary_chunks{mr}})) {
         }
 
         std::size_t push(const FieldValue& v) override {

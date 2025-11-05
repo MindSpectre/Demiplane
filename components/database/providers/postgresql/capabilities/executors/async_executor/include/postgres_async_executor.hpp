@@ -74,7 +74,7 @@ namespace demiplane::db::postgres {
 
             // Consume input
             if (!PQconsumeInput(conn_)) {
-                co_return ErrorCode::ConsumeFailed;
+                co_return ;
             }
 
             // Collect all result sets

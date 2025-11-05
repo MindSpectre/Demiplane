@@ -15,6 +15,8 @@ add_subdirectory(unit_tests)
 
 add_subdirectory(integration_tests)
 
+add_subdirectory(functional_tests)
+
 add_subdirectory(codesandbox)
 
 ##############################################################################

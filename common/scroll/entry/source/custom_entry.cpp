@@ -1,5 +1,6 @@
 #include "custom_entry.hpp"
 
+#include <algorithm>
 #include <demiplane/chrono>
 #include <fstream>
 #include <iostream>

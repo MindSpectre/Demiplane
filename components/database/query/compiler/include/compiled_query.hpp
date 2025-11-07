@@ -13,7 +13,7 @@ namespace demiplane::db {
                                 std::shared_ptr<std::pmr::monotonic_buffer_resource> arena)
             : sql_{std::move(sql)},
               backend_packet_{std::move(backend_packet)},
-              provider_(provider),
+              provider_{provider},
               arena_{std::move(arena)} {
         }
 

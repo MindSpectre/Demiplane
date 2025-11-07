@@ -15,10 +15,9 @@
 #include "postgres_result.hpp"
 
 using namespace demiplane::db;
+using demiplane::db::postgres::ErrorContext;
 using demiplane::db::postgres::FormatRegistry;
 using demiplane::db::postgres::TypeRegistry;
-using demiplane::db::postgres::ErrorContext;
-// ParamSink is ambiguous - use full qualification
 
 // Test fixture for PostgreSQL params
 class PostgresParamsTest : public ::testing::Test {
@@ -73,7 +72,7 @@ TEST_F(PostgresParamsTest, BindNull) {
     EXPECT_EQ(params->values[0], nullptr);
     EXPECT_EQ(params->lengths[0], 0);
     EXPECT_EQ(params->formats[0], 0);  // Format doesn't matter for NULL
-    EXPECT_EQ(params->oids[0], 0);      // Let PostgreSQL infer
+    EXPECT_EQ(params->oids[0], 0);     // Let PostgreSQL infer
 }
 
 TEST_F(PostgresParamsTest, BindBoolTrue) {
@@ -388,15 +387,14 @@ TEST_F(PostgresParamsTest, RoundTripInt32) {
     auto params = sink.native_packet();
 
     // Execute with PQexecParams
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::int4",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1  // Binary result format
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::int4",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1  // Binary result format
     );
 
     ASSERT_NE(result, nullptr);
@@ -418,15 +416,14 @@ TEST_F(PostgresParamsTest, RoundTripInt64) {
     sink.push(FieldValue{std::int64_t{9223372036854775807LL}});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::int8",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1  // Binary result format
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::int8",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1  // Binary result format
     );
 
     ASSERT_NE(result, nullptr);
@@ -446,16 +443,14 @@ TEST_F(PostgresParamsTest, RoundTripBool) {
     sink.push(FieldValue{true});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::bool",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1
-    );
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::bool",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -472,16 +467,14 @@ TEST_F(PostgresParamsTest, RoundTripFloat) {
     sink.push(FieldValue{3.14159f});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::float4",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1
-    );
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::float4",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -503,16 +496,14 @@ TEST_F(PostgresParamsTest, RoundTripDouble) {
     sink.push(FieldValue{2.718281828459045});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::float8",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1
-    );
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::float8",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -534,15 +525,14 @@ TEST_F(PostgresParamsTest, RoundTripString) {
     sink.push(FieldValue{std::string{"Hello, PostgreSQL!"}});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::text",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        0  // Text result format for strings
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::text",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    0  // Text result format for strings
     );
 
     ASSERT_NE(result, nullptr);
@@ -561,16 +551,14 @@ TEST_F(PostgresParamsTest, RoundTripNull) {
     sink.push(FieldValue{std::monostate{}});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1
-    );
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -591,15 +579,14 @@ TEST_F(PostgresParamsTest, RoundTripMultipleTypes) {
 
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::int4, $2::text, $3::bool, $4::float8",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1  // Binary result format
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::int4, $2::text, $3::bool, $4::float8",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1  // Binary result format
     );
 
     ASSERT_NE(result, nullptr);
@@ -638,22 +625,21 @@ TEST_F(PostgresParamsTest, RoundTripByteArray) {
     sink.push(FieldValue{bytes});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(
-        conn_,
-        "SELECT $1::bytea",
-        static_cast<int>(params->values.size()),
-        params->oids.data(),
-        params->values.data(),
-        params->lengths.data(),
-        params->formats.data(),
-        1  // Binary result format
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::bytea",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1  // Binary result format
     );
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
 
     // Verify bytea content
-    int result_len = PQgetlength(result, 0, 0);
+    int result_len          = PQgetlength(result, 0, 0);
     const char* result_data = PQgetvalue(result, 0, 0);
 
     ASSERT_EQ(result_len, static_cast<int>(bytes.size()));
@@ -671,12 +657,15 @@ TEST_F(PostgresParamsTest, Int32EdgeCases) {
     demiplane::db::postgres::ParamSink sink(&pool);
 
     std::vector<std::int32_t> test_values = {
-        0, 1, -1,
+        0,
+        1,
+        -1,
         std::numeric_limits<std::int32_t>::min(),
         std::numeric_limits<std::int32_t>::max(),
         std::numeric_limits<std::int32_t>::min() + 1,
         std::numeric_limits<std::int32_t>::max() - 1,
-        2147483647, -2147483648,
+        2147483647,
+        -2147483648,
     };
 
     for (auto val : test_values) {
@@ -687,8 +676,14 @@ TEST_F(PostgresParamsTest, Int32EdgeCases) {
     ASSERT_EQ(params->values.size(), test_values.size());
 
     for (size_t i = 0; i < test_values.size(); ++i) {
-        PGresult* result = PQexecParams(conn_, "SELECT $1::int4", 1,
-            &params->oids[i], &params->values[i], &params->lengths[i], &params->formats[i], 1);
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::int4",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        1);
         ASSERT_NE(result, nullptr);
         ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
         uint32_t net_value;
@@ -703,12 +698,15 @@ TEST_F(PostgresParamsTest, Int64EdgeCases) {
     demiplane::db::postgres::ParamSink sink(&pool);
 
     std::vector<std::int64_t> test_values = {
-        0LL, 1LL, -1LL,
+        0LL,
+        1LL,
+        -1LL,
         std::numeric_limits<std::int64_t>::min(),
         std::numeric_limits<std::int64_t>::max(),
         9223372036854775807LL,
         -9223372036854775807LL - 1LL,
-        2147483648LL, -2147483649LL,
+        2147483648LL,
+        -2147483649LL,
     };
 
     for (auto val : test_values) {
@@ -718,8 +716,14 @@ TEST_F(PostgresParamsTest, Int64EdgeCases) {
     auto params = sink.native_packet();
 
     for (size_t i = 0; i < test_values.size(); ++i) {
-        PGresult* result = PQexecParams(conn_, "SELECT $1::int8", 1,
-            &params->oids[i], &params->values[i], &params->lengths[i], &params->formats[i], 1);
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::int8",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        1);
         ASSERT_NE(result, nullptr);
         ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
         uint64_t net_value;
@@ -744,8 +748,14 @@ TEST_F(PostgresParamsTest, FloatSpecialValues) {
     auto params = sink.native_packet();
 
     // Test infinity
-    PGresult* result = PQexecParams(conn_, "SELECT $1::float4", 1,
-        &params->oids[0], &params->values[0], &params->lengths[0], &params->formats[0], 1);
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::float4",
+                                    1,
+                                    &params->oids[0],
+                                    &params->values[0],
+                                    &params->lengths[0],
+                                    &params->formats[0],
+                                    1);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK);
     uint32_t bits;
     std::memcpy(&bits, PQgetvalue(result, 0, 0), 4);
@@ -756,8 +766,14 @@ TEST_F(PostgresParamsTest, FloatSpecialValues) {
     PQclear(result);
 
     // Test -infinity
-    result = PQexecParams(conn_, "SELECT $1::float4", 1,
-        &params->oids[1], &params->values[1], &params->lengths[1], &params->formats[1], 1);
+    result = PQexecParams(conn_,
+                          "SELECT $1::float4",
+                          1,
+                          &params->oids[1],
+                          &params->values[1],
+                          &params->lengths[1],
+                          &params->formats[1],
+                          1);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK);
     std::memcpy(&bits, PQgetvalue(result, 0, 0), 4);
     bits = be32toh(bits);
@@ -766,8 +782,14 @@ TEST_F(PostgresParamsTest, FloatSpecialValues) {
     PQclear(result);
 
     // Test NaN
-    result = PQexecParams(conn_, "SELECT $1::float4", 1,
-        &params->oids[2], &params->values[2], &params->lengths[2], &params->formats[2], 1);
+    result = PQexecParams(conn_,
+                          "SELECT $1::float4",
+                          1,
+                          &params->oids[2],
+                          &params->values[2],
+                          &params->lengths[2],
+                          &params->formats[2],
+                          1);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK);
     std::memcpy(&bits, PQgetvalue(result, 0, 0), 4);
     bits = be32toh(bits);
@@ -788,9 +810,14 @@ TEST_F(PostgresParamsTest, VeryLargeString) {
     sink.push(FieldValue{large_string});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(conn_, "SELECT length($1::text), $1::text",
-        static_cast<int>(params->values.size()), params->oids.data(),
-        params->values.data(), params->lengths.data(), params->formats.data(), 0);
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT length($1::text), $1::text",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    0);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -804,8 +831,15 @@ TEST_F(PostgresParamsTest, UnicodeStrings) {
     demiplane::db::postgres::ParamSink sink(&pool);
 
     std::vector<std::string> unicode_strings = {
-        "Hello, 世界", "Привет мир", "مرحبا بالعالم", "🎉🚀💻🌟",
-        "Ñoño", "Café", "日本語テスト", "한글 테스트", "Ελληνικά",
+        "Hello, 世界",
+        "Привет мир",
+        "مرحبا بالعالم",
+        "🎉🚀💻🌟",
+        "Ñoño",
+        "Café",
+        "日本語テスト",
+        "한글 테스트",
+        "Ελληνικά",
     };
 
     for (const auto& str : unicode_strings) {
@@ -815,8 +849,14 @@ TEST_F(PostgresParamsTest, UnicodeStrings) {
     auto params = sink.native_packet();
 
     for (size_t i = 0; i < unicode_strings.size(); ++i) {
-        PGresult* result = PQexecParams(conn_, "SELECT $1::text", 1,
-            &params->oids[i], &params->values[i], &params->lengths[i], &params->formats[i], 0);
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::text",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        0);
         ASSERT_NE(result, nullptr);
         ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
         EXPECT_EQ(std::string(PQgetvalue(result, 0, 0)), unicode_strings[i]);
@@ -829,6 +869,7 @@ TEST_F(PostgresParamsTest, BinaryAllByteValues) {
     demiplane::db::postgres::ParamSink sink(&pool);
 
     std::vector<uint8_t> all_bytes;
+    all_bytes.reserve(256);
     for (int i = 0; i < 256; ++i) {
         all_bytes.push_back(static_cast<uint8_t>(i));
     }
@@ -836,8 +877,14 @@ TEST_F(PostgresParamsTest, BinaryAllByteValues) {
     sink.push(FieldValue{all_bytes});
     auto params = sink.native_packet();
 
-    PGresult* result = PQexecParams(conn_, "SELECT $1::bytea", 1,
-        params->oids.data(), params->values.data(), params->lengths.data(), params->formats.data(), 1);
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::bytea",
+                                    1,
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -856,13 +903,29 @@ TEST_F(PostgresParamsTest, ManyParameters) {
 
     for (int i = 0; i < 100; ++i) {
         switch (i % 7) {
-            case 0: sink.push(FieldValue{std::int32_t{i}}); break;
-            case 1: sink.push(FieldValue{std::int64_t{i * 1000LL}}); break;
-            case 2: sink.push(FieldValue{static_cast<float>(i) * 0.5f}); break;
-            case 3: sink.push(FieldValue{static_cast<double>(i) * 0.25}); break;
-            case 4: sink.push(FieldValue{std::string{"str"} + std::to_string(i)}); break;
-            case 5: sink.push(FieldValue{i % 2 == 0}); break;
-            case 6: sink.push(FieldValue{std::monostate{}}); break;
+            case 0:
+                sink.push(FieldValue{std::int32_t{i}});
+                break;
+            case 1:
+                sink.push(FieldValue{std::int64_t{i * 1000LL}});
+                break;
+            case 2:
+                sink.push(FieldValue{static_cast<float>(i) * 0.5f});
+                break;
+            case 3:
+                sink.push(FieldValue{static_cast<double>(i) * 0.25});
+                break;
+            case 4:
+                sink.push(FieldValue{std::string{"str"} + std::to_string(i)});
+                break;
+            case 5:
+                sink.push(FieldValue{i % 2 == 0});
+                break;
+            case 6:
+                sink.push(FieldValue{std::monostate{}});
+                break;
+            default:
+                std::unreachable();
         }
     }
 
@@ -890,10 +953,7 @@ TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
         sink.push(FieldValue{static_cast<double>(i) * 2.5});
         sink.push(FieldValue{i % 2 == 0});
         std::vector<uint8_t> bytes = {
-            static_cast<uint8_t>(i),
-            static_cast<uint8_t>(i + 1),
-            static_cast<uint8_t>(i + 2)
-        };
+            static_cast<uint8_t>(i), static_cast<uint8_t>(i + 1), static_cast<uint8_t>(i + 2)};
         sink.push(FieldValue{bytes});
     }
 
@@ -902,7 +962,7 @@ TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
 
     // Verify strings
     for (int i = 0; i < 50; ++i) {
-        size_t idx = static_cast<size_t>(i) * 7;
+        size_t idx           = static_cast<size_t>(i) * 7;
         std::string expected = "String " + std::to_string(i);
         std::string actual(params->values[idx], static_cast<size_t>(params->lengths[idx]));
         EXPECT_EQ(actual, expected);
@@ -922,8 +982,8 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
     std::pmr::unsynchronized_pool_resource pool;
 
     PGresult* create_result = PQexec(conn_,
-        "CREATE TEMP TABLE test_data (id SERIAL PRIMARY KEY, name TEXT, age INT, "
-        "salary FLOAT8, active BOOL, data BYTEA)");
+                                     "CREATE TEMP TABLE test_data (id SERIAL PRIMARY KEY, name TEXT, age INT, "
+                                     "salary FLOAT8, active BOOL, data BYTEA)");
     ASSERT_EQ(PQresultStatus(create_result), PGRES_COMMAND_OK) << PQerrorMessage(conn_);
     PQclear(create_result);
 
@@ -938,10 +998,15 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
 
     auto insert_params = insert_sink.native_packet();
 
-    PGresult* insert_result = PQexecParams(conn_,
-        "INSERT INTO test_data (name, age, salary, active, data) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-        static_cast<int>(insert_params->values.size()), insert_params->oids.data(),
-        insert_params->values.data(), insert_params->lengths.data(), insert_params->formats.data(), 0);
+    PGresult* insert_result =
+        PQexecParams(conn_,
+                     "INSERT INTO test_data (name, age, salary, active, data) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                     static_cast<int>(insert_params->values.size()),
+                     insert_params->oids.data(),
+                     insert_params->values.data(),
+                     insert_params->lengths.data(),
+                     insert_params->formats.data(),
+                     0);
 
     ASSERT_EQ(PQresultStatus(insert_result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
     int id = std::atoi(PQgetvalue(insert_result, 0, 0));
@@ -952,9 +1017,13 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
     auto select_params = select_sink.native_packet();
 
     PGresult* select_result = PQexecParams(conn_,
-        "SELECT name, age, salary, active, data FROM test_data WHERE id = $1",
-        1, select_params->oids.data(), select_params->values.data(),
-        select_params->lengths.data(), select_params->formats.data(), 1);
+                                           "SELECT name, age, salary, active, data FROM test_data WHERE id = $1",
+                                           1,
+                                           select_params->oids.data(),
+                                           select_params->values.data(),
+                                           select_params->lengths.data(),
+                                           select_params->formats.data(),
+                                           1);
 
     ASSERT_EQ(PQresultStatus(select_result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
     EXPECT_EQ(PQntuples(select_result), 1);

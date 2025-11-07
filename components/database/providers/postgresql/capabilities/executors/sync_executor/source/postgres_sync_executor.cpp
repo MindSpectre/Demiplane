@@ -19,14 +19,13 @@ namespace demiplane::db::postgres {
         return process_result(result);
     }
 
-    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const std::string_view query, Params&& params) const {
-        // Check connection health
+    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const std::string_view query,
+                                                                    const Params& params) const {
         if (const auto ec = check_connection(conn_); ec) {
             return gears::Err(ErrorContext(ec));
         }
 
         // Execute parameterized query
-        // params is moved here, but we keep it alive until PQexecParams returns
         // Since this is synchronous, libpq will read the data before returning
         PGresult* result = params.values.empty()
                                ? PQexec(conn_, query.data())
@@ -47,8 +46,17 @@ namespace demiplane::db::postgres {
         return process_result(result);
     }
 
-    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledQuery& query, Params&& params) const {
-        return execute(query.sql(), std::move(params));
+    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledQuery& query) const {
+        if (query.provider() != SupportedProviders::PostgreSQL) {
+            ErrorContext ec{ErrorCode{ClientErrorCode::SyntaxError}};
+            ec.context = "Wrong provider. Query was compiled not by PostgreSQL";
+            return gears::Err(ec);
+        }
+        const auto params_ptr = query.backend_packet_as<Params>();
+        if (!params_ptr) {
+            return execute(query.sql());
+        }
+        return execute(query.sql(), *params_ptr);
     }
 
     gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::process_result(PGresult* result) {

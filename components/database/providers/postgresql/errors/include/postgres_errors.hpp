@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <ostream>
 #include <string>
 #include <string_view>
 
@@ -98,6 +99,22 @@ namespace demiplane::db::postgres {
      * @note Compiled separately to keep header lightweight.
      */
     std::optional<ErrorCode> extract_error_code(const PGresult* result);
+
+    // ============== Stream Operators (Inline) ==============
+
+    /**
+     * @brief Stream output operator for ErrorContext
+     *
+     * Enables easy debugging output for ErrorContext objects.
+     * Example: std::cout << error_ctx << std::endl;
+     *
+     * @param os Output stream
+     * @param ctx ErrorContext to output
+     * @return Reference to the output stream
+     */
+    inline std::ostream& operator<<(std::ostream& os, const ErrorContext& ctx) {
+        return os << ctx.format();
+    }
 
     // ============== Connection Error Helpers (Inline) ==============
 

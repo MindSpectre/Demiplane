@@ -37,7 +37,13 @@ namespace demiplane::db::postgres {
                 return std::nullopt;
             return f.as<T>();
         }
-
+        template <class T>
+        T get(const std::size_t r, const std::size_t c) const {
+            const auto f = row(r)[c];
+            if (f.is_null())
+                throw std::runtime_error("get() failed");
+            return f.as<T>();
+        }
         [[nodiscard]] PGresult* raw() const noexcept {
             return res_.get();
         }

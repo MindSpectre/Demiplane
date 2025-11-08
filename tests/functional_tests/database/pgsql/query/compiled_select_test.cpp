@@ -31,6 +31,7 @@ protected:
         // Connect to database
         conn_ = PQconnectdb(conninfo.c_str());
 
+        // TODO: CE bcuz of try of B expression postgres
         // Check connection status
         // if (PQstatus(conn_) != CONNECTION_OK) {
         //     std::string error = PQerrorMessage(conn_);
@@ -240,7 +241,7 @@ TEST_F(CompiledSelectTest, SelectWithLimitAndOffset) {
     }
 
     // Build and compile query with LIMIT and OFFSET
-    auto query          = select(user_name_).from(users_schema_).limit(3);
+    auto query          = select(user_name_).from(users_schema_).limit(3).offset(2);
     auto compiled_query = compiler_->compile(query);
 
     // Execute compiled query

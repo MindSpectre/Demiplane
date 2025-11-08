@@ -28,7 +28,7 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& offset(this Self&& self, const std::size_t offset) {
+        [[nodiscard]] constexpr auto offset(this Self&& self, const std::size_t offset) {
             return LimitExpr{std::forward<Self>(self).query_, std::forward<Self>(self).count_, offset};
         }
 

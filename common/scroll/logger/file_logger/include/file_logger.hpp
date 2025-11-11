@@ -12,7 +12,7 @@
 #include <concurrent_queue.hpp>  // moodycamel
 #include <gears_types.hpp>
 
-#include "../logger_interface.hpp"
+#include "logger_interface.hpp"
 
 namespace demiplane::scroll {
     /// @brief Config used in FileLogger
@@ -53,13 +53,13 @@ namespace demiplane::scroll {
 
         explicit FileLogger(FileLoggerConfig cfg);
 
-        ~FileLogger() override {
+        ~FileLogger() noexcept override {
             // explicit killing
             kill();
         }
 
         /// @brief Fast shutdown: no guarantee that queued entries are flushed.
-        void kill();
+        void kill() noexcept;
 
         /// @brief Graceful shutdown: stop accepting, wait until *every* entry is written.
         void graceful_shutdown();
@@ -67,15 +67,17 @@ namespace demiplane::scroll {
         /*---------------- logging API ----------------------------------------*/
 
         void log(LogLevel lvl, std::string_view msg, const std::source_location& loc) override;
-        void log(const EntryType& entry);
 
-        void log(EntryType&& entry);
+        /// @brief Log an entry using perfect forwarding
+        template <typename T>
+            requires std::is_same_v<std::decay_t<T>, EntryType>
+        void log(T&& entry) noexcept;
 
-        FileLoggerConfig& config() {
+        FileLoggerConfig& config() noexcept {
             return config_;
         }
 
-        [[nodiscard]] const std::filesystem::path& file_path() const {
+        [[nodiscard]] const std::filesystem::path& file_path() const noexcept {
             return file_path_;
         }
 
@@ -84,9 +86,10 @@ namespace demiplane::scroll {
 
     private:
         /*---------------- enqueue helper (lock-free) --------------------------*/
-        void enqueue(const EntryType& entry) noexcept;
-
-        void enqueue(EntryType&& entry) noexcept;
+        /// @brief Enqueue an entry using perfect forwarding
+        template <typename T>
+            requires std::is_same_v<std::decay_t<T>, EntryType>
+        void enqueue(T&& entry) noexcept;
 
         /*---------------- writer thread --------------------------------------*/
         void writer_loop();

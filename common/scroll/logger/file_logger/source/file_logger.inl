@@ -11,7 +11,7 @@ namespace demiplane::scroll {
     }
 
     template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::kill() {
+    void FileLogger<EntryType>::kill() noexcept {
         accepting_.store(false, std::memory_order_release);
         running_.store(false, std::memory_order_release);
         cv_.notify_one();
@@ -51,27 +51,17 @@ namespace demiplane::scroll {
         enqueue(std::move(entry));
     }
 
-
     template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::log(const EntryType& entry) {
+    template <typename T>
+        requires std::is_same_v<std::decay_t<T>, EntryType>
+    void FileLogger<EntryType>::log(T&& entry) noexcept {
         if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
             return;
         }
         if (!accepting_.load(std::memory_order_relaxed)) {
             return;
         }
-        enqueue(entry);
-    }
-
-    template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::log(EntryType&& entry) {
-        if (static_cast<int8_t>(entry.level()) < static_cast<int8_t>(config_.threshold)) {
-            return;
-        }
-        if (!accepting_.load(std::memory_order_relaxed)) {
-            return;
-        }
-        enqueue(std::move(entry));
+        enqueue(std::forward<T>(entry));
     }
 
     template <detail::EntryConcept EntryType>
@@ -87,15 +77,10 @@ namespace demiplane::scroll {
     }
 
     template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::enqueue(const EntryType& entry) noexcept {
-        queue_.enqueue(entry);  // copy or move as needed
-        pending_entries_.fetch_add(1, std::memory_order_relaxed);
-        cv_.notify_one();
-    }
-
-    template <detail::EntryConcept EntryType>
-    void FileLogger<EntryType>::enqueue(EntryType&& entry) noexcept {
-        queue_.enqueue(std::move(entry));
+    template <typename T>
+        requires std::is_same_v<std::decay_t<T>, EntryType>
+    void FileLogger<EntryType>::enqueue(T&& entry) noexcept {
+        queue_.enqueue(std::forward<T>(entry));
         pending_entries_.fetch_add(1, std::memory_order_relaxed);
         cv_.notify_one();
     }

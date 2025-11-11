@@ -4,8 +4,8 @@
 #include <source_location>
 #include <string_view>
 
-#include "../entry/entry_interface.hpp"
-#include "../entry/log_level.hpp"
+#include "../entry_interface.hpp"
+#include "../log_level.hpp"
 
 
 namespace demiplane::scroll {

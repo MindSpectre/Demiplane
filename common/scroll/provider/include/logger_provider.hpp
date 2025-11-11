@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "console_logger.hpp"
 #include "file_logger.hpp"
+#include "console_logger.hpp"
 
 // For test logger provider
 #include <factory/entry_factory.hpp>

@@ -2,16 +2,16 @@
 
 #include <iostream>
 
-#include "../logger_interface.hpp"
 #include "factory/entry_factory.hpp"
+#include "logger_interface.hpp"
 
 
 namespace demiplane::scroll {
     struct ConsoleLoggerConfig {
         NEXUS_REGISTER(nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLoggerConfig
 
-        LogLevel threshold{LogLevel::Debug};
-        bool flush_each_entry{false};
+        LogLevel threshold    = LogLevel::Debug;
+        bool flush_each_entry = false;
     };
 
     template <detail::EntryConcept EntryType>
@@ -19,7 +19,7 @@ namespace demiplane::scroll {
     public:
         NEXUS_REGISTER(nexus::Resettable);  // CRC32/ISO-HDLC of demiplane::scroll::ConsoleLogger
 
-        explicit ConsoleLogger(const ConsoleLoggerConfig cfg)
+        constexpr explicit ConsoleLogger(const ConsoleLoggerConfig cfg) noexcept
             : config_{cfg} {
         }
 
@@ -40,7 +40,7 @@ namespace demiplane::scroll {
             }
         }
 
-        ConsoleLoggerConfig& config() {
+        ConsoleLoggerConfig& config() noexcept {
             return config_;
         }
 

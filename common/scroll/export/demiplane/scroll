@@ -3,7 +3,7 @@
 
 // #include "custom_entry.hpp"
 
-#include "../stream_log.hpp"
+#include "stream_log.hpp"
 #include "log_macros.hpp"
 #include "log_macros_adds.hpp"
 #include "logger_provider.hpp"

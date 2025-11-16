@@ -202,8 +202,8 @@ namespace demiplane::db {
             visit_select_end();
         }
 
-        template <typename SelectQuery>
-        void visit(FromTableExpr<SelectQuery>&& expr) {
+        template <typename SelectQuery, typename IsTable>
+        void visit(FromTableExpr<SelectQuery, IsTable>&& expr) {
             std::move(expr).select().accept(*this);
             visit_from_start();
             visit_table_impl(expr.table());
@@ -211,8 +211,8 @@ namespace demiplane::db {
             visit_from_end();
         }
 
-        template <typename SelectQuery>
-        void visit(const FromTableExpr<SelectQuery>& expr) {
+        template <typename SelectQuery, typename IsTable>
+        void visit(const FromTableExpr<SelectQuery, IsTable>& expr) {
             expr.select().accept(*this);
             visit_from_start();
             visit_table_impl(expr.table());
@@ -353,7 +353,8 @@ namespace demiplane::db {
         }
 
         // DML operations - perfect forwarding
-        void visit(InsertExpr&& expr) {
+        template <IsTable TableT>
+        void visit(InsertExpr<TableT>&& expr) {
             visit_insert_start();
             visit_table_impl(std::move(expr).table());
             visit_insert_columns(std::move(expr).columns());
@@ -361,7 +362,8 @@ namespace demiplane::db {
             visit_insert_end();
         }
 
-        void visit(const InsertExpr& expr) {
+        template <IsTable TableT>
+        void visit(const InsertExpr<TableT>& expr) {
             visit_insert_start();
             visit_table_impl(expr.table());
             visit_insert_columns(expr.columns());
@@ -369,52 +371,55 @@ namespace demiplane::db {
             visit_insert_end();
         }
 
-        void visit(UpdateExpr&& expr) {
+        template <IsTable TableT>
+        void visit(UpdateExpr<TableT>&& expr) {
             visit_update_start();
             visit_table_impl(std::move(expr).table());
             visit_update_set(std::move(expr).assignments());
             visit_update_end();
         }
 
-        void visit(const UpdateExpr& expr) {
+        template <IsTable TableT>
+        void visit(const UpdateExpr<TableT>& expr) {
             visit_update_start();
             visit_table_impl(expr.table());
             visit_update_set(expr.assignments());
             visit_update_end();
         }
 
-        template <typename C>
-        void visit(UpdateWhereExpr<C>&& expr) {
+        template <IsTable TableT, IsCondition ConditionT>
+        void visit(UpdateWhereExpr<TableT, ConditionT>&& expr) {
             std::move(expr).update().accept(*this);
             visit_where_start();
             std::move(expr).condition().accept(*this);
             visit_where_end();
         }
 
-        template <typename C>
-        void visit(const UpdateWhereExpr<C>& expr) {
+        template <IsTable TableT, IsCondition ConditionT>
+        void visit(const UpdateWhereExpr<TableT, ConditionT>& expr) {
             expr.update().accept(*this);
             visit_where_start();
             expr.condition().accept(*this);
             visit_where_end();
         }
 
-        void visit(const DeleteExpr& expr) {
+        template <typename T>
+        void visit(const DeleteExpr<T>& expr) {
             visit_delete_start();
             visit_table_impl(expr.table());
             visit_delete_end();
         }
 
-        template <typename C>
-        void visit(DeleteWhereExpr<C>&& expr) {
+        template <typename T, typename C>
+        void visit(DeleteWhereExpr<T, C>&& expr) {
             std::move(expr).del().accept(*this);
             visit_where_start();
             std::move(expr).condition().accept(*this);
             visit_where_end();
         }
 
-        template <typename C>
-        void visit(const DeleteWhereExpr<C>& expr) {
+        template <typename T, typename C>
+        void visit(const DeleteWhereExpr<T, C>& expr) {
             expr.del().accept(*this);
             visit_where_start();
             expr.condition().accept(*this);

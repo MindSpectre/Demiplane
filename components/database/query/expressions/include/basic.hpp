@@ -1,5 +1,8 @@
 #pragma once
 
+// TODO: std::is_constructible_v -> constructible_from
+
+
 #include <algorithm>
 #include <utility>
 
@@ -72,13 +75,17 @@ namespace demiplane::db {
             return alias_;
         }
 
-        constexpr explicit Literal(FieldValue v)
-            : value_(std::move(v)) {
+        template <typename T>
+            requires std::constructible_from<FieldValue, T>
+        constexpr explicit Literal(T&& v)
+            : value_{std::forward<T>(v)} {
         }
 
-        constexpr Literal& as(std::optional<std::string> alias) {
-            alias_ = std::move(alias);
-            return *this;
+        template <typename Self, typename T>
+            requires std::constructible_from<std::optional<std::string>, T>
+        constexpr decltype(auto) as(this Self&& self, T&& alias) {
+            std::forward<Self>(self).alias_ = std::forward<T>(alias);
+            return std::forward<Self>(self);
         }
 
         void accept(this auto&& self, QueryVisitor& visitor);
@@ -95,7 +102,7 @@ namespace demiplane::db {
 
     template <>
     constexpr Literal lit(const char* value) {
-        return Literal{std::string{value}};
+        return Literal{std::string_view{value}};
     }
 
     namespace detail {
@@ -120,13 +127,18 @@ namespace demiplane::db {
     template <typename Derived>
     class AliasableExpression : public Expression<Derived> {
     public:
-        constexpr explicit AliasableExpression(std::optional<std::string> alias)
-            : alias_(std::move(alias)) {
+        template <typename T>
+            requires std::constructible_from<std::optional<std::string>, T>
+        constexpr explicit AliasableExpression(T&& alias)
+            : alias_(std::forward<T>(alias)) {
         }
 
-        constexpr Derived& as(std::optional<std::string> name) {
-            alias_ = std::move(name);
-            return static_cast<Derived&>(*this);
+        template <typename Self, typename T>
+            requires std::constructible_from<std::optional<std::string>, T>
+        constexpr decltype(auto) as(this Self&& self, T&& name) {
+            std::forward<Self>(self).alias_ = std::forward<T>(name);
+            return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
+                std::forward<Self>(self));
         }
 
         template <typename Self>
@@ -162,26 +174,28 @@ namespace demiplane::db {
     template <typename Parent>
     class JoinBuilder {
     public:
-        constexpr JoinBuilder(Parent parent, TablePtr right_table, const JoinType type)
-            : parent_{std::move(parent)},
-              right_table_name_{std::move(right_table)},
+        template <typename P, typename T>
+            requires std::same_as<std::remove_cvref_t<P>, Parent> && std::constructible_from<TablePtr, T>
+        constexpr JoinBuilder(P&& parent, T&& right_table, const JoinType type)
+            : parent_{std::forward<P>(parent)},
+              right_table_name_{std::forward<T>(right_table)},
               type_{type} {
         }
 
-        constexpr JoinBuilder& as(std::optional<std::string> name) {
-            right_alias_ = std::move(name);
-            return *this;
+        template <typename Self, typename T>
+            requires std::constructible_from<std::optional<std::string>, T>
+        constexpr decltype(auto) as(this Self&& self, T&& name) {
+            std::forward<Self>(self).right_alias_ = std::forward<T>(name);
+            return std::forward<Self>(self);
         }
 
-        template <IsCondition Condition>
-        constexpr auto on(Condition cond) && {
-            return JoinExpr<Parent, Condition>{
-                std::move(parent_), std::move(right_table_name_), std::move(cond), type_, right_alias_};
-        }
-
-        template <IsCondition Condition>
-        constexpr auto on(Condition cond) const& {
-            return JoinExpr<Parent, Condition>{parent_, right_table_name_, std::move(cond), type_, right_alias_};
+        template <typename Self, IsCondition Condition>
+        constexpr auto on(this Self&& self, Condition&& cond) {
+            return JoinExpr<Parent, std::remove_cvref_t<Condition>>{std::forward<Self>(self).parent_,
+                                                                    std::forward<Self>(self).right_table_name_,
+                                                                    std::forward<Condition>(cond),
+                                                                    std::forward<Self>(self).type_,
+                                                                    std::forward<Self>(self).right_alias_};
         }
 
     private:
@@ -193,12 +207,28 @@ namespace demiplane::db {
 
     class ColumnHolder {
     public:
-        constexpr explicit ColumnHolder(DynamicColumn column)
-            : column_{std::move(column)} {
+        template <typename DynamicColumnTp>
+            requires std::is_same_v<std::remove_cvref_t<DynamicColumnTp>, DynamicColumn>
+        constexpr explicit ColumnHolder(DynamicColumnTp&& column) noexcept
+            : column_{std::forward<DynamicColumnTp>(column)} {
         }
 
-        constexpr explicit ColumnHolder(AllColumns column)
-            : column_{std::move(column)} {
+        template <typename AllColumnsTp>
+            requires std::is_same_v<std::remove_cvref_t<AllColumnsTp>, AllColumns>
+        constexpr explicit ColumnHolder(AllColumnsTp&& column) noexcept
+            : column_{std::forward<AllColumnsTp>(column)} {
+        }
+
+        template <typename T>
+            requires std::constructible_from<DynamicColumn, T> && (!std::same_as<std::remove_cvref_t<T>, DynamicColumn>)
+        constexpr explicit ColumnHolder(T&& column)
+            : column_{std::forward<T>(column)} {
+        }
+
+        template <typename T>
+            requires std::constructible_from<AllColumns, T> && (!std::same_as<std::remove_cvref_t<T>, AllColumns>)
+        constexpr explicit ColumnHolder(T&& column)
+            : column_{std::forward<T>(column)} {
         }
 
         [[nodiscard]] constexpr const DynamicColumn& column() const& {
@@ -217,122 +247,94 @@ namespace demiplane::db {
         std::variant<DynamicColumn, AllColumns> column_;
     };
 
+    template <IsTable TableT>
+    class TableHolder {
+    public:
+        template <typename TableTp>
+            requires(!std::same_as<std::remove_cvref_t<TableTp>, TableHolder>) &&
+                    std::constructible_from<TableT, TableTp>
+        constexpr explicit TableHolder(TableTp&& table) noexcept
+            : table_{std::forward<TableTp>(table)} {
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& table(this Self&& self) noexcept {
+            return std::forward<Self>(self).table_;
+        }
+
+    private:
+        TableT table_;
+    };
 
     template <typename Derived, typename... AllowedFeatures>
     class QueryOperations {
     public:
-        // WHERE - consistent formatting with leading requires
-        template <IsCondition Condition>
+        // WHERE
+        template <typename Self, IsCondition Condition>
             requires(has_feature<AllowWhere, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto where(Condition cond) const& {
-            return WhereExpr<Derived, Condition>{derived(), std::move(cond)};
+        [[nodiscard]] constexpr auto where(this Self&& self, Condition&& cond) {
+            return WhereExpr<Derived, std::remove_cvref_t<Condition>>{std::forward<Self>(self).derived(),
+                                                                      std::forward<Condition>(cond)};
         }
 
-        template <IsCondition Condition>
-            requires(has_feature<AllowWhere, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto where(Condition cond) && {
-            return WhereExpr<Derived, Condition>{std::move(derived()), std::move(cond)};
-        }
-
-        // GROUP BY - consistent formatting
-        template <IsColumn... GroupColumns>
+        // GROUP BY
+        template <typename Self, IsColumn... GroupColumns>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto group_by(GroupColumns... cols) const& {
-            return GroupByColumnExpr<Derived, GroupColumns...>{derived(), cols...};
+        [[nodiscard]] constexpr auto group_by(this Self&& self, GroupColumns&&... cols) {
+            return GroupByColumnExpr<Derived, std::remove_cvref_t<GroupColumns>...>{
+                std::forward<Self>(self).derived(), std::forward<GroupColumns>(cols)...};
         }
 
-        template <IsColumn... GroupColumns>
+        template <typename Self, IsQuery GroupingCriteria>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto group_by(GroupColumns... cols) && {
-            return GroupByColumnExpr<Derived, GroupColumns...>{std::move(derived()), cols...};
+        [[nodiscard]] constexpr auto group_by(this Self&& self, GroupingCriteria&& query) {
+            return GroupByQueryExpr<Derived, std::remove_cvref_t<GroupingCriteria>>{
+                std::forward<Self>(self).derived(), std::forward<GroupingCriteria>(query)};
         }
 
-        template <IsQuery GroupingCriteria>
-            requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto group_by(GroupingCriteria&& query) const& {
-            return GroupByQueryExpr<Derived, GroupingCriteria>{derived(), std::forward<GroupingCriteria>(query)};
-        }
-
-        template <IsQuery GroupingCriteria>
-            requires(has_feature<AllowGroupBy, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto group_by(GroupingCriteria&& query) && {
-            return GroupByQueryExpr<Derived, GroupingCriteria>{std::move(derived()),
-                                                               std::forward<GroupingCriteria>(query)};
-        }
-
-        // HAVING - consistent formatting
-        template <IsCondition Condition>
+        // HAVING
+        template <typename Self, IsCondition Condition>
             requires(has_feature<AllowHaving, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto having(Condition cond) const& {
-            return HavingExpr<Derived, Condition>{derived(), std::move(cond)};
+        [[nodiscard]] constexpr auto having(this Self&& self, Condition&& cond) {
+            return HavingExpr<Derived, std::remove_cvref_t<Condition>>{std::forward<Self>(self).derived(),
+                                                                       std::forward<Condition>(cond)};
         }
 
-        template <IsCondition Condition>
-            requires(has_feature<AllowHaving, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto having(Condition cond) && {
-            return HavingExpr<Derived, Condition>{std::move(derived()), std::move(cond)};
-        }
-
-        // JOIN - consistent formatting
-        template <typename TableType>
+        // JOIN
+        template <typename Self, typename TableType>
             requires(has_feature<AllowJoin, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto join(TableType&& table, JoinType type = JoinType::INNER) const& {
-            if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
-                return JoinBuilder<Derived>{derived(), Table::make_ptr(std::forward<TableType>(table)), type};
-            } else {
-                return JoinBuilder<Derived>{derived(), std::forward<TableType>(table), type};
-            }
-        }
-
-        template <typename TableType>
-            requires(has_feature<AllowJoin, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto join(TableType&& table, JoinType type = JoinType::INNER) && {
+        [[nodiscard]] constexpr auto join(this Self&& self, TableType&& table, JoinType type = JoinType::INNER) {
             if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
                 return JoinBuilder<Derived>{
-                    std::move(derived()), Table::make_ptr(std::forward<TableType>(table)), type};
+                    std::forward<Self>(self).derived(), Table::make_ptr(std::forward<TableType>(table)), type};
             } else {
-                return JoinBuilder<Derived>{std::move(derived()), std::forward<TableType>(table), type};
+                return JoinBuilder<Derived>{std::forward<Self>(self).derived(), std::forward<TableType>(table), type};
             }
         }
 
-        // ORDER BY - consistent formatting
-        template <IsOrderBy... Orders>
+        // ORDER BY
+        template <typename Self, IsOrderBy... Orders>
             requires(has_feature<AllowOrderBy, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto order_by(Orders... orders) const& {
-            return OrderByExpr<Derived, Orders...>{derived(), orders...};
+        [[nodiscard]] constexpr auto order_by(this Self&& self, Orders&&... orders) {
+            return OrderByExpr<Derived, std::remove_cvref_t<Orders>...>{std::forward<Self>(self).derived(),
+                                                                        std::forward<Orders>(orders)...};
         }
 
-        template <IsOrderBy... Orders>
-            requires(has_feature<AllowOrderBy, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto order_by(Orders... orders) && {
-            return OrderByExpr<Derived, Orders...>{std::move(derived()), orders...};
-        }
-
-        // LIMIT - consistent formatting
-        template <typename T = void>
+        // LIMIT
+        template <typename Self, typename T = void>
             requires(has_feature<AllowLimit, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto limit(std::size_t count) const& {
-            return LimitExpr<Derived>{derived(), count, 0};
-        }
-
-        template <typename T = void>
-            requires(has_feature<AllowLimit, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto limit(std::size_t count) && {
-            return LimitExpr<Derived>{std::move(derived()), count, 0};
+        [[nodiscard]] constexpr auto limit(this Self&& self, std::size_t count) {
+            return LimitExpr<Derived>{std::forward<Self>(self).derived(), count, 0};
         }
 
     protected:
         // Helper to get derived instance
-        [[nodiscard]] constexpr const Derived& derived() const& {
-            return static_cast<const Derived&>(*this);
-        }
-
-        [[nodiscard]] constexpr Derived&& derived() && {
-            return static_cast<Derived&&>(*this);
-        }
-
-        [[nodiscard]] constexpr Derived& derived() & {
-            return static_cast<Derived&>(*this);
+        [[nodiscard]] constexpr auto&& derived(this auto&& self) {
+            return static_cast<std::conditional_t<
+                std::is_const_v<std::remove_reference_t<decltype(self)>>,
+                std::conditional_t<std::is_lvalue_reference_v<decltype(self)>, const Derived&, const Derived&&>,
+                std::conditional_t<std::is_lvalue_reference_v<decltype(self)>, Derived&, Derived&&>>>(
+                std::forward<decltype(self)>(self));
         }
     };
 }  // namespace demiplane::db

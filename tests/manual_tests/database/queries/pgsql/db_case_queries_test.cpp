@@ -3,12 +3,11 @@
 
 #include <demiplane/scroll>
 
+#include <gtest/gtest.h>
 #include <postgres_dialect.hpp>
 #include <query_compiler.hpp>
 
 #include "common.hpp"
-
-#include <gtest/gtest.h>
 
 
 using namespace demiplane::db;

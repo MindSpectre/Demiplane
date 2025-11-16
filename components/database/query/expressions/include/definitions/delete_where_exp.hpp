@@ -1,17 +1,16 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 #include "delete_exp.hpp"
 
 namespace demiplane::db {
-    template <IsCondition Condition>
-    class DeleteWhereExpr : public Expression<DeleteWhereExpr<Condition>> {
+    template <IsTable TableT, IsCondition Condition>
+    class DeleteWhereExpr : public Expression<DeleteWhereExpr<TableT, Condition>> {
     public:
-        constexpr DeleteWhereExpr(DeleteExpr d, Condition c)
-            : del_(std::move(d)),
-              condition_(std::move(c)) {
+        template <typename DeleteExprTp, typename ConditionTp>
+        constexpr DeleteWhereExpr(DeleteExprTp&& d, ConditionTp&& c)
+            : del_{std::forward<DeleteExprTp>(d)},
+              condition_{std::forward<ConditionTp>(c)} {
         }
 
         template <typename Self>
@@ -25,7 +24,7 @@ namespace demiplane::db {
         }
 
     private:
-        DeleteExpr del_;
+        DeleteExpr<TableT> del_;
         Condition condition_;
     };
 }  // namespace demiplane::db

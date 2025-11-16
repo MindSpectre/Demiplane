@@ -93,9 +93,8 @@ TEST_F(UpdateQueryTest, UpdateWithoutWhereExpression) {
 
 // Test UPDATE WHERE expression
 TEST_F(UpdateQueryTest, UpdateWhereExpression) {
-    const auto update_query = update(users_schema).set("active", false);
-    auto query              = UpdateWhereExpr{update_query, user_age < 18};
-    auto result             = compiler->compile(query);
+    const auto update_query = update(users_schema).set("active", false).where(user_age < 18);
+    auto result             = compiler->compile(update_query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }

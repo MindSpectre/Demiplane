@@ -67,8 +67,13 @@ namespace demiplane::db {
 
     using TablePtr = std::shared_ptr<const Table>;
 
-    template <typename TablePtr>
-    concept IsTable = std::is_same_v<std::remove_cvref_t<TablePtr>, TablePtr>;
+    template <typename TablePtrT>
+    concept IsTablePtr = std::is_constructible_v<TablePtr, std::remove_cvref_t<TablePtrT>>;
+
+    template <typename TableT>
+    concept IsTable =
+        IsTablePtr<std::remove_cvref_t<TableT>> || std::is_constructible_v<std::string, std::remove_cvref_t<TableT>> ||
+        std::is_constructible_v<std::string_view, std::remove_cvref_t<TableT>>;
 
 }  // namespace demiplane::db
 

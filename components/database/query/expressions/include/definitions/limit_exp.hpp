@@ -1,35 +1,35 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 
 namespace demiplane::db {
     template <IsQuery Query>
     class LimitExpr : public Expression<LimitExpr<Query>> {
     public:
-        constexpr LimitExpr(Query query, const std::size_t limit, const std::size_t offset)
-            : query_(std::move(query)),
-              count_(limit),
-              offset_(offset) {
+        template <typename QueryTp>
+            requires std::constructible_from<Query, QueryTp>
+        constexpr LimitExpr(QueryTp&& query, const std::size_t limit, const std::size_t offset) noexcept
+            : query_{std::forward<QueryTp>(query)},
+              count_{limit},
+              offset_{offset} {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {
             return std::forward<Self>(self).query_;
         }
 
-        [[nodiscard]] constexpr std::size_t count() const {
+        [[nodiscard]] constexpr std::size_t count() const noexcept {
             return count_;
         }
 
-        [[nodiscard]] constexpr std::size_t offset() const {
+        [[nodiscard]] constexpr std::size_t offset() const noexcept {
             return offset_;
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto offset(this Self&& self, const std::size_t offset) {
-            return LimitExpr{std::forward<Self>(self).query_, std::forward<Self>(self).count_, offset};
+        [[nodiscard]] constexpr auto offset(this Self&& self, const std::size_t new_offset) noexcept {
+            return LimitExpr{std::forward<Self>(self).query_, self.count_, new_offset};
         }
 
     private:

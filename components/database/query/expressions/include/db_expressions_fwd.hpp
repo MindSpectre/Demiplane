@@ -124,7 +124,7 @@ namespace demiplane::db {
     template <typename T>
     concept IsSelectable = IsColumn<T> || IsAggregate<T> || IsCaseExpr<T> || IsLiteral<T>;
     // Set operations concept
-    template <typename Left, typename Right>
+    template <IsQuery Left, IsQuery Right>
     class SetOpExpr;
 
     template <typename T>
@@ -175,7 +175,7 @@ namespace demiplane::db {
     template <typename T>
     concept IsCteExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, CteExpr>;
 
-    template <IsQuery Query>
+    template <IsQuery Query, IsTable TableT>
     class FromTableExpr;
 
     // From expression concept
@@ -190,29 +190,32 @@ namespace demiplane::db {
 
 
     // Insert expression concepts
+    template <IsTable TableT>
     class InsertExpr;
 
     template <typename T>
-    concept IsInsertExpr = std::is_same_v<std::remove_cvref_t<T>, InsertExpr>;
+    concept IsInsertExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, InsertExpr>;
 
     // Update expression concepts
+    template <IsTable TableT>
     class UpdateExpr;
 
-    template <IsCondition Condition>
+    template <IsTable TableT, IsCondition Condition>
     class UpdateWhereExpr;
 
     template <typename T>
-    concept IsUpdateExpr = std::is_same_v<std::remove_cvref_t<T>, UpdateExpr> ||
+    concept IsUpdateExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, UpdateExpr> ||
                            gears::is_specialization_of_v<std::remove_cvref_t<T>, UpdateWhereExpr>;
 
     // Delete expression concepts
+    template <IsTable TableT>
     class DeleteExpr;
 
-    template <IsCondition Condition>
+    template <IsTable TableT, IsCondition Condition>
     class DeleteWhereExpr;
 
     template <typename T>
-    concept IsDeleteExpr = std::is_same_v<std::remove_cvref_t<T>, DeleteExpr> ||
+    concept IsDeleteExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, DeleteExpr> ||
                            gears::is_specialization_of_v<std::remove_cvref_t<T>, DeleteWhereExpr>;
 
     template <IsQuery Query, IsCondition Condition>

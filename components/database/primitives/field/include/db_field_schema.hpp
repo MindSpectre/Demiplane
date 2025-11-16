@@ -36,7 +36,7 @@ namespace demiplane::db {
         boost::container::flat_map<std::string, std::string> db_attributes;
 
         /**
-         * @brief Create type-safe column reference
+         * @brief Create a type-safe column reference
          * @tparam T Expected C++ type
          * @param table Shared table name
          * @return TableColumn with type safety validation
@@ -54,7 +54,7 @@ namespace demiplane::db {
         }
 
         /**
-         * @brief Create type-safe column reference
+         * @brief Create a type-safe column reference
          * @tparam T Expected C++ type
          * @param table Table name
          * @return TableColumn with type safety validation

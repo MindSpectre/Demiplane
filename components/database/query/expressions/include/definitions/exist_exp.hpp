@@ -1,19 +1,18 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 
 namespace demiplane::db {
     template <IsQuery Query>
     class ExistsExpr : public Expression<ExistsExpr<Query>> {
     public:
-        constexpr explicit ExistsExpr(Query sq)
-            : query_(std::move(sq)) {
+        template <IsQuery SubQueryT>
+        constexpr explicit ExistsExpr(SubQueryT&& sq) noexcept
+            : query_{std::forward<SubQueryT>(sq)} {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {
             return std::forward<Self>(self).query_;
         }
 
@@ -22,7 +21,7 @@ namespace demiplane::db {
     };
 
     template <IsQuery Query>
-    constexpr auto exists(Query query) {
-        return ExistsExpr<Query>{std::move(query)};
+    constexpr auto exists(Query&& query) {
+        return ExistsExpr<std::remove_cvref_t<Query>>{std::forward<Query>(query)};
     }
 }  // namespace demiplane::db

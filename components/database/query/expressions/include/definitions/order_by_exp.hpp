@@ -7,13 +7,14 @@ namespace demiplane::db {
 
     class OrderBy : public ColumnHolder {
     public:
-        constexpr explicit OrderBy(DynamicColumn col, const OrderDirection dir = OrderDirection::ASC)
-            : ColumnHolder{std::move(col)},
-              direction_(dir) {
+        template <typename DynamicColumnTp>
+            requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+        constexpr explicit OrderBy(DynamicColumnTp&& col, const OrderDirection dir = OrderDirection::ASC) noexcept
+            : ColumnHolder{std::forward<DynamicColumnTp>(col)},
+              direction_{dir} {
         }
 
-
-        [[nodiscard]] constexpr OrderDirection direction() const {
+        [[nodiscard]] constexpr OrderDirection direction() const noexcept {
             return direction_;
         }
 
@@ -22,39 +23,45 @@ namespace demiplane::db {
     };
 
     template <typename T>
-    constexpr OrderBy asc(const TableColumn<T>& col) {
+    constexpr OrderBy asc(const TableColumn<T>& col) noexcept {
         return OrderBy{col.as_dynamic(), OrderDirection::ASC};
     }
 
     template <typename T>
-    constexpr OrderBy desc(const TableColumn<T>& col) {
+    constexpr OrderBy desc(const TableColumn<T>& col) noexcept {
         return OrderBy{col.as_dynamic(), OrderDirection::DESC};
     }
 
-    inline OrderBy asc(DynamicColumn col) {
-        return OrderBy{std::move(col), OrderDirection::ASC};
+    template <typename DynamicColumnTp>
+        requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+    constexpr OrderBy asc(DynamicColumnTp&& col) noexcept {
+        return OrderBy{std::forward<DynamicColumnTp>(col), OrderDirection::ASC};
     }
 
-    inline OrderBy desc(DynamicColumn col) {
-        return OrderBy{std::move(col), OrderDirection::DESC};
+    template <typename DynamicColumnTp>
+        requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+    constexpr OrderBy desc(DynamicColumnTp&& col) noexcept {
+        return OrderBy{std::forward<DynamicColumnTp>(col), OrderDirection::DESC};
     }
 
     template <IsQuery Query, IsOrderBy... Orders>
     class OrderByExpr : public Expression<OrderByExpr<Query, Orders...>>,
                         public QueryOperations<OrderByExpr<Query, Orders...>, AllowLimit> {
     public:
-        constexpr explicit OrderByExpr(Query q, Orders... o)
-            : query_(std::move(q)),
-              orders_(o...) {
+        template <typename QueryTp, typename... OrdersTp>
+            requires std::constructible_from<Query, QueryTp> && (std::constructible_from<Orders, OrdersTp> && ...)
+        constexpr explicit OrderByExpr(QueryTp&& q, OrdersTp&&... o) noexcept
+            : query_{std::forward<QueryTp>(q)},
+              orders_{std::forward<OrdersTp>(o)...} {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {
             return std::forward<Self>(self).query_;
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& orders(this Self&& self) {
+        [[nodiscard]] constexpr auto&& orders(this Self&& self) noexcept {
             return std::forward<Self>(self).orders_;
         }
 

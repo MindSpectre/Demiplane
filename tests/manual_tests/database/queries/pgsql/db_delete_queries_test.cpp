@@ -71,9 +71,8 @@ TEST_F(DeleteQueryTest, DeleteWithoutWhereExpression) {
 
 // Test DELETE WHERE expression
 TEST_F(DeleteQueryTest, DeleteWhereExpression) {
-    const auto delete_query = delete_from(users_schema);
-    auto query              = DeleteWhereExpr{delete_query, user_active == false};
-    auto result             = compiler->compile(query);
+    const auto delete_query = delete_from(users_schema).where(user_active == false);
+    auto result             = compiler->compile(delete_query);
     EXPECT_FALSE(result.sql().empty());
     SCROLL_LOG_INF() << result.sql();
 }

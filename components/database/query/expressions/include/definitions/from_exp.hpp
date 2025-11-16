@@ -1,36 +1,36 @@
 #pragma once
 
-#include <algorithm>
 #include <utility>
 
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsQuery Select>
-    class FromTableExpr
-        : public AliasableExpression<FromTableExpr<Select>>,
-          public QueryOperations<FromTableExpr<Select>, AllowGroupBy, AllowOrderBy, AllowLimit, AllowJoin, AllowWhere> {
+    template <IsQuery Select, IsTable TableT>
+    class FromTableExpr : public AliasableExpression<FromTableExpr<Select, TableT>>,
+                          public QueryOperations<FromTableExpr<Select, TableT>,
+                                                 AllowGroupBy,
+                                                 AllowOrderBy,
+                                                 AllowLimit,
+                                                 AllowJoin,
+                                                 AllowWhere>,
+                          public TableHolder<TableT> {
     public:
-        constexpr FromTableExpr(Select select_q, TablePtr table)
-            : select_(std::move(select_q)),
-              table_(std::move(table)) {
+        template <typename SelectTp = std::remove_cv_t<Select>, typename TableTp = std::remove_cv_t<TableT>>
+        constexpr FromTableExpr(SelectTp&& select_q, TableTp&& table)
+            : TableHolder<TableT>{std::forward<TableTp>(table)},
+              select_{std::forward<SelectTp>(select_q)} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& select(this Self&& self) {
+        [[nodiscard]] constexpr auto&& select(this Self&& self) noexcept {
             return std::forward<Self>(self).select_;
-        }
-
-        [[nodiscard]] constexpr const TablePtr& table() const {
-            return table_;
         }
 
     private:
         Select select_;
-        TablePtr table_;
     };
 
-    // FromQueryExpr with proper inheritance order
+    // TODO:? is it even tested?
     template <IsQuery Select, IsCteExpr CteQuery>
     class FromCteExpr : public Expression<FromCteExpr<Select, CteQuery>>,
                         public QueryOperations<FromCteExpr<Select, CteQuery>,
@@ -40,18 +40,19 @@ namespace demiplane::db {
                                                AllowJoin,
                                                AllowWhere> {
     public:
-        constexpr FromCteExpr(Select select_q, CteQuery&& expr)
-            : select_(std::move(select_q)),
-              query_(std::forward<CteQuery>(expr)) {
+        template <typename SelectTp = std::remove_cv_t<Select>, typename CteQueryTp = std::remove_cv_t<CteQuery>>
+        constexpr FromCteExpr(SelectTp&& select_q, CteQueryTp&& expr)
+            : select_{std::forward<SelectTp>(select_q)},
+              query_{std::forward<CteQueryTp>(expr)} {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& select(this Self&& self) {
+        [[nodiscard]] constexpr auto&& select(this Self&& self) noexcept {
             return std::forward<Self>(self).select_;
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& cte_query(this Self&& self) {
+        [[nodiscard]] constexpr auto&& cte_query(this Self&& self) noexcept {
             return std::forward<Self>(self).query_;
         }
 

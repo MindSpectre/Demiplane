@@ -5,7 +5,7 @@
 
 #include "../basic.hpp"
 
-
+//TODO: finish perfect forwarding
 namespace demiplane::db {
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr : public Expression<BinaryExpr<Left, Right, Op>> {
@@ -138,7 +138,12 @@ namespace demiplane::db {
     constexpr auto in(const TableColumn<T>& col, std::initializer_list<T> values) {
         return BinaryExpr<TableColumn<T>, std::vector<T>, OpIn>{col, std::vector<T>(values)};
     }
-
+// template <typename T, typename... Values>
+//         requires(std::convertible_to<Values, T> && ...) && (sizeof...(Values) > 0)
+//     constexpr auto in(const TableColumn<T>& col, Values... values) {
+//         return InListExpr<TableColumn<T>, decltype(Literal{static_cast<T>(values)})...>{
+//             col, Literal{static_cast<T>(values)}...}; //TODO: ?? IS it actually InList?
+//     }
     template <typename T, IsQuery Query>
     constexpr auto in(const TableColumn<T>& col, const Subquery<Query>& sq) {
         return BinaryExpr<TableColumn<T>, Subquery<Query>, OpIn>{col, sq};

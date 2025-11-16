@@ -1,31 +1,31 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <typename Left, typename Right>
+    template <IsQuery Left, IsQuery Right>
     class SetOpExpr : public Expression<SetOpExpr<Left, Right>>,
                       public QueryOperations<SetOpExpr<Left, Right>, AllowOrderBy, AllowLimit> {
     public:
-        constexpr SetOpExpr(Left l, Right r, const SetOperation o)
-            : left_(std::move(l)),
-              right_(std::move(r)),
-              op_(o) {
+        template <typename LeftTp, typename RightTp>
+            requires std::constructible_from<Left, LeftTp> && std::constructible_from<Right, RightTp>
+        constexpr SetOpExpr(LeftTp&& l, RightTp&& r, const SetOperation o) noexcept
+            : left_{std::forward<LeftTp>(l)},
+              right_{std::forward<RightTp>(r)},
+              op_{o} {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& left(this Self&& self) {
+        [[nodiscard]] constexpr auto&& left(this Self&& self) noexcept {
             return std::forward<Self>(self).left_;
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& right(this Self&& self) {
+        [[nodiscard]] constexpr auto&& right(this Self&& self) noexcept {
             return std::forward<Self>(self).right_;
         }
 
-        [[nodiscard]] constexpr SetOperation op() const {
+        [[nodiscard]] constexpr SetOperation op() const noexcept {
             return op_;
         }
 
@@ -36,23 +36,29 @@ namespace demiplane::db {
     };
 
     // Set operation functions
-    template <typename L, typename R>
-    constexpr auto union_query(L left, R right) {
-        return SetOpExpr<L, R>{std::move(left), std::move(right), SetOperation::UNION};
+    template <typename LeftTp, typename RightTp>
+    constexpr auto union_query(LeftTp&& left, RightTp&& right) {
+        return SetOpExpr<std::remove_cvref_t<LeftTp>, std::remove_cvref_t<RightTp>>{
+            std::forward<LeftTp>(left), std::forward<RightTp>(right), SetOperation::UNION};
     }
 
-    template <typename L, typename R>
-    constexpr auto union_all(L left, R right) {
-        return SetOpExpr<L, R>{std::move(left), std::move(right), SetOperation::UNION_ALL};
+    template <typename LeftTp, typename RightTp>
+    constexpr auto union_all(LeftTp&& left, RightTp&& right) {
+        return SetOpExpr<std::remove_cvref_t<LeftTp>, std::remove_cvref_t<RightTp>>{
+            std::forward<LeftTp>(left), std::forward<RightTp>(right), SetOperation::UNION_ALL};
     }
 
-    template <typename L, typename R>
-    constexpr auto intersect(L left, R right) {
-        return SetOpExpr<L, R>{std::move(left), std::move(right), SetOperation::INTERSECT};
+    template <typename LeftTp, typename RightTp>
+    constexpr auto intersect(LeftTp&& left, RightTp&& right) {
+        return SetOpExpr<std::remove_cvref_t<LeftTp>, std::remove_cvref_t<RightTp>>{
+            std::forward<LeftTp>(left), std::forward<RightTp>(right), SetOperation::INTERSECT};
     }
 
-    template <typename L, typename R>
-    constexpr auto except(L left, R right) {
-        return SetOpExpr<L, R>{std::move(left), std::move(right), SetOperation::EXCEPT};
+    template <typename LeftTp, typename RightTp>
+    constexpr auto except(LeftTp&& left, RightTp&& right) {
+        return SetOpExpr<std::remove_cvref_t<LeftTp>, std::remove_cvref_t<RightTp>>{
+            std::forward<LeftTp>(left), std::forward<RightTp>(right), SetOperation::EXCEPT};
     }
+
+    // TODO: add binary operation overload like || or && or - etc
 }  // namespace demiplane::db

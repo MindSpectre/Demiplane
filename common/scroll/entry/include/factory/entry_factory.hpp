@@ -3,7 +3,6 @@
 #include "custom_entry.hpp"
 #include "detailed_entry.hpp"
 #include "light_entry.hpp"
-#include "service_entry.hpp"
 
 namespace demiplane::scroll {
     template <class EntryT, class... Extra>

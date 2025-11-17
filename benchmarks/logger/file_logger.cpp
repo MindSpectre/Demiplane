@@ -106,9 +106,9 @@ int main() {
                                             .add_time_to_filename = false,
                                             .sort_entries         = true,
                                             .flush_each_batch     = true};
-    const auto file_logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
-    safe_write(file_logger);
-    // unsafe_write(file_logger);
     std::filesystem::remove(cfg.file);
+    const auto file_logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
+    // safe_write(file_logger);
+    unsafe_write(file_logger);
     return 0;
 }

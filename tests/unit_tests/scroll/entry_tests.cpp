@@ -70,22 +70,6 @@ TEST(TestEntries, LightEntry) {
     EXPECT_THROW(check_location_meta(output, loc), std::runtime_error);
 }
 
-TEST(TestEntries, ServiceEntry) {
-    constexpr auto message             = "Hello service";
-    constexpr std::source_location loc = std::source_location::current();
-
-    const auto entry = demiplane::scroll::make_entry<ServiceEntry<ServiceTest>>(INF, message, loc);
-    std::string output;
-    EXPECT_NO_THROW(output = entry.to_string());
-    std::cout << output;
-
-    EXPECT_NO_THROW({
-        check_message(output, message);
-        check_level(output, INF);
-        check_location_meta(output, loc);
-    });
-    EXPECT_TRUE(output.contains(ServiceTest::name));
-}
 
 TEST(TestEntries, CustomEntry) {
     constexpr auto message             = "Hello custom";

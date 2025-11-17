@@ -30,6 +30,23 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
 ##############################################################################
 
 ##############################################################################
+# Test Thread Pool
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Disruptor
+        disruptor/test_disruptor.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
+        PRIVATE
+        Demiplane::Common::Multithread
+        Demiplane::Common::Math
+        Demiplane::Common::Chrono
+        ${TEST_LIBS}
+
+)
+##############################################################################
+
+
+##############################################################################
 # Test scroll
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Scroll

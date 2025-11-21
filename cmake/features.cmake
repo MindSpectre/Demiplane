@@ -5,7 +5,7 @@ option(BUILD_COMPONENTS "Build components" ON)
 option(USE_TESTS "Tests activated" ON)
 option(DO_BENCHMARKS "Benchmarks activated" ON)
 option(DMP_COMPONENT_LOGGING "Enable logging in components" ON)
-option(DMP_ENABLE_LOGGING "Enable end user logging" ON)
+option(DMP_ENABLE_LOGGING "Enable end user logging" OFF)
 #Component option
 if (BUILD_COMPONENTS)
     option(BUILD_HTTP "Build http" ON)

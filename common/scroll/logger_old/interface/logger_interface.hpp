@@ -4,7 +4,7 @@
 #include <source_location>
 #include <string_view>
 
-#include "../entry_interface.hpp"
+#include "../../entry/include/entry_interface.hpp"
 #include "../log_level.hpp"
 
 

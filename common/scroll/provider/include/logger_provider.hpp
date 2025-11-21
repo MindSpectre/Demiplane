@@ -2,22 +2,25 @@
 
 #include <memory>
 
-#include "file_logger.hpp"
-#include "console_logger.hpp"
-
-// For test logger provider
-#include <factory/entry_factory.hpp>
+#include "console_sink.hpp"
+#include "detailed_entry.hpp"
+#include "file_sink.hpp"
+#include "logger.hpp"
 
 namespace demiplane::scroll {
+    /**
+     * @brief Logger provider - wraps logger instance
+     *
+     * Allows dependency injection and testing.
+     */
     class LoggerProvider {
     public:
         virtual ~LoggerProvider() = default;
 
         LoggerProvider() = default;
 
-        explicit LoggerProvider(const std::shared_ptr<Logger>& logger)
-            : logger_(logger) {
-        }
+        explicit LoggerProvider(std::shared_ptr<Logger> logger)
+            : logger_{std::move(logger)} {}
 
         [[nodiscard]] Logger* get_logger() noexcept {
             return logger_.get();
@@ -35,9 +38,15 @@ namespace demiplane::scroll {
         std::shared_ptr<Logger> logger_;
     };
 
+    /**
+     * @brief Global logger manager for component logging
+     *
+     * Provides static singleton access to logger instance.
+     * Used by COMPONENT_LOG_* macros.
+     */
     class ComponentLoggerManager {
     public:
-        static constexpr Logger* get() {
+        static Logger* get() {
             // Lazy initialization on first use
             if (!logger_) {
                 initialize();
@@ -47,20 +56,33 @@ namespace demiplane::scroll {
 
         static void initialize();
 
-        // Allow manual override for testing
-        static void set_logger(const std::shared_ptr<Logger>& logger) {
-            logger_ = logger;
+
+        // Allow manual override for testing or custom configuration
+        static void set_logger(std::shared_ptr<Logger> logger) {
+            logger_ = std::move(logger);
         }
 
     private:
         static inline std::shared_ptr<Logger> logger_ = nullptr;
     };
 
+    /**
+     * @brief Test logger provider with console output
+     *
+     * Convenience for testing - creates logger with console sink that flushes each entry.
+     */
     class TestLoggerProvider : public LoggerProvider {
     public:
-        explicit TestLoggerProvider()
-            : LoggerProvider(
-                  std::make_shared<ConsoleLogger<DetailedEntry>>(ConsoleLoggerConfig{.flush_each_entry = true})) {
+        explicit TestLoggerProvider() {
+            auto logger = std::make_shared<Logger>();
+            logger->add_sink(std::make_unique<ConsoleSink<DetailedEntry>>(
+                ConsoleSinkConfig{
+                    .threshold = LogLevel::Debug,
+                    .enable_colors = true,
+                    .flush_each_entry = true  // Important for tests
+                }
+            ));
+            set_logger(std::move(logger));
         }
     };
 }  // namespace demiplane::scroll

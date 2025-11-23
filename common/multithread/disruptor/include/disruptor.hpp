@@ -72,7 +72,7 @@
  * ## Usage Example
  *
  * ```cpp
- * using namespace demiplane::multithread::disruptor;
+ * using namespace demiplane::multithread;
  *
  * // 1. Create components
  * constexpr size_t BUFFER_SIZE = 1024;
@@ -175,6 +175,6 @@
 #include "wait_strategies/timeout_blocking.hpp"
 #include "wait_strategies/yielding_strategy.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
     // All components available via this single include
 }

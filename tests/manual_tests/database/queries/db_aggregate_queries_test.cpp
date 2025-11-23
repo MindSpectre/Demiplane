@@ -20,17 +20,14 @@ using namespace demiplane::db;
 class AggregateQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        demiplane::nexus::instance().register_singleton<demiplane::scroll::Logger>([] {
-            return std::make_shared<demiplane::scroll::ConsoleLogger<demiplane::scroll::LightEntry>>(
-                *demiplane::nexus::instance().get<demiplane::scroll::ConsoleLoggerConfig>());
-        });
-        demiplane::nexus::instance().register_singleton<demiplane::scroll::ConsoleLoggerConfig>(
-            [] { return std::make_shared<demiplane::scroll::ConsoleLoggerConfig>(); });
-        set_logger(demiplane::nexus::instance().get<demiplane::scroll::Logger>());
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -61,13 +58,13 @@ protected:
 
 // Test basic aggregate expressions
 TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
-    SCROLL_LOG_INF() << "Aggregate expressions:";
+    LOG_INF() << "Aggregate expressions:";
     {
         // COUNT
         auto count_query       = select(count(user_id)).from(users_schema);
         auto [sql, parameters] = compiler->compile(count_query);
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "COUNT: " << sql;
+        LOG_INF() << "COUNT: " << sql;
     }
 
     // SUM
@@ -75,7 +72,7 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto sum_query         = select(sum(user_age)).from(users_schema);
         auto [sql, parameters] = compiler->compile(sum_query);
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "SUM: " << sql;
+        LOG_INF() << "SUM: " << sql;
     }
 
     // AVG
@@ -83,7 +80,7 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto avg_query         = select(avg(user_age)).from(users_schema);
         auto [sql, parameters] = compiler->compile(avg_query);
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "AVG: " << sql;
+        LOG_INF() << "AVG: " << sql;
     }
 
     // MIN
@@ -91,14 +88,14 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto min_query         = select(min(user_age)).from(users_schema);
         auto [sql, parameters] = compiler->compile(min_query);
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "MIN: " << sql;
+        LOG_INF() << "MIN: " << sql;
     }
     // MAX
     {
         auto max_query         = select(max(user_age)).from(users_schema);
         auto [sql, parameters] = compiler->compile(max_query);
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "MAX: " << sql;
+        LOG_INF() << "MAX: " << sql;
     }
 }
 
@@ -114,7 +111,7 @@ TEST_F(AggregateQueryTest, AggregateWithAliasExpressions) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test COUNT DISTINCT
@@ -123,7 +120,7 @@ TEST_F(AggregateQueryTest, CountDistinctExpression) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test COUNT ALL
@@ -132,7 +129,7 @@ TEST_F(AggregateQueryTest, CountAllExpression) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregates with GROUP BY
@@ -141,7 +138,7 @@ TEST_F(AggregateQueryTest, AggregateWithGroupByExpression) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregates with HAVING
@@ -153,7 +150,7 @@ TEST_F(AggregateQueryTest, AggregateWithHavingExpression) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test multiple aggregates in same query
@@ -165,7 +162,7 @@ TEST_F(AggregateQueryTest, MultipleAggregatesExpression) {
     const auto [sql, parameters] = compiler->compile(std::move(query));
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregate with mixed column types
@@ -177,7 +174,7 @@ TEST_F(AggregateQueryTest, AggregateWithMixedTypesExpression) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregate method chaining
@@ -190,5 +187,5 @@ TEST_F(AggregateQueryTest, AggregateMethodChainingExpression) {
     const auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }

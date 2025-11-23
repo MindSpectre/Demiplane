@@ -9,25 +9,8 @@
 #include <vector>
 
 #include "sink_interface.hpp"
-
+#include "logger_config.hpp"
 namespace demiplane::scroll {
-    /**
-     * @brief Logger configuration
-     */
-    struct LoggerConfig {
-        /// @brief Ring buffer size (must be power of 2)
-        static constexpr size_t RING_BUFFER_SIZE = 8192;
-
-        /// @brief Wait strategy for consumer thread
-        enum class WaitStrategy {
-            BusySpin,  // Lowest latency (~50ns), 100% CPU
-            Yielding,  // Balanced (~200ns), 50-100% CPU (RECOMMENDED)
-            Blocking   // Lowest CPU (~5μs latency), condition variable
-        };
-
-        WaitStrategy wait_strategy = WaitStrategy::Yielding;
-    };
-
     /**
      * @brief High-performance asynchronous logger using Disruptor pattern
      *
@@ -60,11 +43,11 @@ namespace demiplane::scroll {
     class Logger {
         static constexpr size_t RING_BUFFER_SIZE = LoggerConfig::RING_BUFFER_SIZE;
 
-        using RingBufferType = multithread::disruptor::RingBuffer<LogEvent, RING_BUFFER_SIZE>;
-        using SequencerType  = multithread::disruptor::MultiProducerSequencer<RING_BUFFER_SIZE>;
+        using RingBufferType = multithread::RingBuffer<LogEvent, RING_BUFFER_SIZE>;
+        using SequencerType  = multithread::MultiProducerSequencer<RING_BUFFER_SIZE>;
 
     public:
-        explicit Logger(LoggerConfig cfg = {})
+        constexpr explicit Logger(const LoggerConfig cfg = {}) noexcept
             : sequencer_{create_wait_strategy(cfg.wait_strategy)} {
             running_.store(true, std::memory_order_release);
             consumer_thread_ = std::jthread([this] { consumer_loop(); });
@@ -81,7 +64,7 @@ namespace demiplane::scroll {
          * Thread-safe: Can be called before logging starts.
          * NOT thread-safe during logging.
          */
-        void add_sink(std::shared_ptr<Sink> sink) {
+        constexpr void add_sink(std::shared_ptr<Sink> sink) {
             sinks_.push_back(std::move(sink));
         }
 
@@ -97,16 +80,15 @@ namespace demiplane::scroll {
          *   logger.log(LogLevel::Info, "User {} has {} items", username, count);
          */
         template <typename... Args>
-        void log(LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
-            // 1. Format message (happens in producer thread)
+        constexpr void
+        log(const LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
+            // 1. Claim sequence
+            const std::int64_t seq    = sequencer_.next();
+            // 2. Format message (happens in producer thread)
             std::string formatted_msg = std::format(fmt, std::forward<Args>(args)...);
-
-            // 2. Claim sequence
-            int64_t seq = sequencer_.next();
-
             // 3. Write LogEvent to ring buffer
-            auto& event = ring_buffer_[seq];
-            event       = LogEvent{lvl, std::move(formatted_msg), loc};
+            auto& event               = ring_buffer_[seq];
+            event                     = LogEvent{lvl, std::move(formatted_msg), loc};
 
             // 4. Publish (makes visible to consumer)
             sequencer_.publish(seq);
@@ -118,11 +100,12 @@ namespace demiplane::scroll {
          * @param msg Message
          * @param loc Source location (auto-captured)
          */
-        void
-        log(LogLevel lvl, std::string_view msg, const std::source_location& loc = std::source_location::current()) {
-            int64_t seq = sequencer_.next();
-            auto& event = ring_buffer_[seq];
-            event       = LogEvent{lvl, std::string{msg}, loc};
+        void log(const LogLevel lvl,
+                 const std::string_view msg,
+                 const std::source_location& loc = std::source_location::current()) {
+            const std::int64_t seq = sequencer_.next();
+            auto& event            = ring_buffer_[seq];
+            event                  = LogEvent{lvl, std::string{msg}, loc};
             sequencer_.publish(seq);
         }
 
@@ -136,10 +119,12 @@ namespace demiplane::scroll {
          */
         class StreamProxy {
         public:
-            StreamProxy(Logger* logger, LogLevel lvl, std::source_location loc)
+            template <typename SourceLocationTp = std::source_location>
+                requires std::is_same_v<std::remove_cvref_t<SourceLocationTp>, std::source_location>
+            constexpr StreamProxy(Logger* logger, const LogLevel lvl, SourceLocationTp&& loc) noexcept
                 : logger_{logger},
                   level_{lvl},
-                  loc_{loc} {
+                  loc_{std::forward<SourceLocationTp>(loc)} {
             }
 
             template <typename T>
@@ -148,11 +133,11 @@ namespace demiplane::scroll {
                 return *this;
             }
 
-            ~StreamProxy() {
+            ~StreamProxy() noexcept {
                 // Publish when proxy is destroyed (end of statement)
-                int64_t seq = logger_->sequencer_.next();
-                auto& event = logger_->ring_buffer_[seq];
-                event       = LogEvent{level_, stream_.str(), loc_};
+                const std::int64_t seq = logger_->sequencer_.next();
+                auto& event            = logger_->ring_buffer_[seq];
+                event                  = LogEvent{level_, stream_.str(), loc_};
                 logger_->sequencer_.publish(seq);
             }
 
@@ -163,8 +148,10 @@ namespace demiplane::scroll {
             std::ostringstream stream_;
         };
 
-        StreamProxy stream(LogLevel lvl, const std::source_location& loc = std::source_location::current()) {
-            return StreamProxy{this, lvl, loc};
+        template <typename SourceLocationTp = std::source_location>
+            requires std::is_same_v<std::remove_cvref_t<SourceLocationTp>, std::source_location>
+        constexpr StreamProxy stream(const LogLevel lvl, SourceLocationTp loc = std::source_location::current()) {
+            return StreamProxy{this, lvl, std::forward<SourceLocationTp>(loc)};
         }
 
         /**
@@ -172,24 +159,13 @@ namespace demiplane::scroll {
          *
          * Called automatically by destructor.
          */
-        void shutdown() {
-            if (!running_.load(std::memory_order_acquire)) {
-                return;  // Already shut down
+        void shutdown();
+
+        void flush() const {
+            for (const auto& sink : sinks_) {
+                sink->flush();
             }
-
-            // Send shutdown signal
-            int64_t seq                       = sequencer_.next();
-            ring_buffer_[seq].shutdown_signal = true;
-            sequencer_.publish(seq);
-
-            // Wait for consumer to finish
-            if (consumer_thread_.joinable()) {
-                consumer_thread_.join();
-            }
-
-            running_.store(false, std::memory_order_release);
         }
-
     private:
         RingBufferType ring_buffer_;
         SequencerType sequencer_;
@@ -200,48 +176,14 @@ namespace demiplane::scroll {
         /**
          * @brief Consumer thread loop - processes events and dispatches to sinks
          */
-        void consumer_loop() {
-            int64_t next_seq = 0;
-
-            while (running_.load(std::memory_order_acquire)) {
-                // Wait for published sequences
-                int64_t available = sequencer_.get_highest_published(next_seq, sequencer_.get_cursor());
-
-                // Process batch
-                for (int64_t seq = next_seq; seq <= available; ++seq) {
-                    const auto& event = ring_buffer_[seq];
-
-                    if (event.shutdown_signal) {
-                        running_.store(false, std::memory_order_release);
-                        break;
-                    }
-
-                    // Dispatch to all sinks
-                    for (auto& sink : sinks_) {
-                        sink->process(event);
-                    }
-
-                    sequencer_.mark_consumed(seq);
-                }
-
-                if (available >= next_seq) {
-                    next_seq = available + 1;
-                    sequencer_.update_gating_sequence(available);
-                }
-            }
-
-            // Flush all sinks on shutdown
-            for (auto& sink : sinks_) {
-                sink->flush();
-            }
-        }
+        void consumer_loop();
 
         /**
          * @brief Create wait strategy based on config
          */
-        static std::unique_ptr<multithread::disruptor::WaitStrategy>
-        create_wait_strategy(LoggerConfig::WaitStrategy strategy) {
-            using namespace multithread::disruptor;
+        constexpr static std::unique_ptr<multithread::WaitStrategy>
+        create_wait_strategy(const LoggerConfig::WaitStrategy strategy) {
+            using namespace multithread;
 
             switch (strategy) {
                 case LoggerConfig::WaitStrategy::BusySpin:

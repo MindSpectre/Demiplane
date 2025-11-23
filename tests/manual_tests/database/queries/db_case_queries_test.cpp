@@ -20,11 +20,13 @@ using namespace demiplane::db;
 class CaseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<TableSchema>("users");
@@ -68,7 +70,7 @@ TEST_F(CaseQueryTest, BasicCaseExpression) {
             .from(users_schema);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE without ELSE
@@ -79,7 +81,7 @@ TEST_F(CaseQueryTest, CaseWithoutElseExpression) {
             .from(users_schema);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with multiple WHEN clauses
@@ -93,7 +95,7 @@ TEST_F(CaseQueryTest, MultipleWhenExpression) {
                      .from(users_schema);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with complex conditions
@@ -106,7 +108,7 @@ TEST_F(CaseQueryTest, CaseWithComplexConditionsExpression) {
                      .from(users_schema);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE in WHERE clause
@@ -116,7 +118,7 @@ TEST_F(CaseQueryTest, CaseInWhereExpression) {
                      .where(case_when(user_active == lit(true), user_salary).else_(lit(0.0)) > lit(40000.0));
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with aggregates
@@ -141,7 +143,7 @@ TEST_F(CaseQueryTest, CaseWithGroupByExpression) {
     auto query = select(age_group.as("age_group"), count(user_id).as("count")).from(users_schema).group_by(age_group);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test nested CASE expressions
@@ -153,7 +155,7 @@ TEST_F(CaseQueryTest, NestedCaseExpression) {
                      .from(users_schema);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with different data types
@@ -164,7 +166,7 @@ TEST_F(CaseQueryTest, CaseWithDifferentTypesExpression) {
                      .from(users_schema);
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with ORDER BY
@@ -177,5 +179,5 @@ TEST_F(CaseQueryTest, CaseWithOrderByExpression) {
     auto query = select(user_name, user_status).from(users_schema).order_by(/*asc(priority),*/ asc(user_name));
     auto [sql, parameters] = compiler->compile(query);
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }

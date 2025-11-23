@@ -2,7 +2,7 @@
 
 #include "wait_strategy.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
     /**
      * @brief Blocking wait strategy - lowest CPU usage, higher latency.
      *
@@ -99,4 +99,4 @@ namespace demiplane::multithread::disruptor {
         std::mutex mutex_;
         std::condition_variable cv_;
     };
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

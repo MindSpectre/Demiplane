@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace demiplane::multithread::disruptor;
+using namespace demiplane::multithread;
 
 /**
  * @brief Test fixture for Disruptor tests
@@ -570,88 +570,7 @@ TEST_F(DisruptorTest, TryNextNonBlocking) {
     EXPECT_NE(seq, -1);  // Should succeed
 }
 
-/*==============================================================================
- * PERFORMANCE BENCHMARK (Optional - can be disabled)
- *============================================================================*/
 
-TEST_F(DisruptorTest, PerformanceBenchmark) {
-    /**
-     * Rough throughput benchmark
-     * Run with: --gtest_also_run_disabled_tests
-     */
-    constexpr size_t BUFFER_SIZE       = 8192;
-    constexpr int NUM_PRODUCERS        = 4;
-    constexpr int ENTRIES_PER_PRODUCER = 1'000'000;
-    constexpr int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
-
-    RingBuffer<std::int64_t, BUFFER_SIZE> ring_buffer;
-    MultiProducerSequencer<BUFFER_SIZE> sequencer{std::make_unique<YieldingWaitStrategy>()};
-
-    std::barrier sync_point{NUM_PRODUCERS + 1};
-    const auto start_time = std::chrono::steady_clock::now();
-
-    // Consumer
-    std::thread consumer{[&]() {
-        sync_point.arrive_and_wait();
-
-        std::int64_t next_seq  = 0;
-        std::int64_t processed = 0;
-
-        while (processed < TOTAL_ENTRIES) {
-            const std::int64_t cursor = sequencer.get_cursor();
-
-
-            // SIZE_MAX means gap found, nothing available
-            if (const std::int64_t available = sequencer.get_highest_published(next_seq, cursor); available >= next_seq) {
-                for (std::int64_t seq = next_seq; seq <= available; ++seq) {
-                    [[maybe_unused]] volatile std::int64_t value = ring_buffer[seq];
-                    sequencer.mark_consumed(seq);
-                    ++processed;
-                }
-                next_seq = available + 1;
-                sequencer.update_gating_sequence(available);
-            } else {
-                std::this_thread::yield();
-            }
-
-            if (processed % 100000 == 0) {
-                std::cout << "\rProcessed " << processed << " entries" << std::flush;
-            }
-        }
-    }};
-
-    // Producers
-    std::vector<std::thread> producers;
-    producers.reserve(NUM_PRODUCERS);
-    for (int tid = 0; tid < NUM_PRODUCERS; ++tid) {
-        producers.emplace_back([&]() {
-            sync_point.arrive_and_wait();
-
-            for (int i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
-                const std::int64_t seq  = sequencer.next();
-                ring_buffer[seq] = seq;
-                sequencer.publish(seq);
-            }
-            std::cout << "\rPublished " << ENTRIES_PER_PRODUCER << " entries" << std::flush;
-        });
-    }
-
-    for (auto& p : producers) {
-        p.join();
-    }
-    consumer.join();
-
-    const auto elapsed      = std::chrono::steady_clock::now() - start_time;
-    const double elapsed_ms = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-
-    const double throughput = (TOTAL_ENTRIES * 1000.0) / elapsed_ms;
-
-    std::cout << "\n=== Disruptor Performance ===\n";
-    std::cout << "Total entries: " << TOTAL_ENTRIES << "\n";
-    std::cout << "Elapsed time: " << elapsed_ms << " ms\n";
-    std::cout << "Throughput: " << static_cast<std::int64_t>(throughput) << " entries/sec\n";
-    std::cout << "Avg latency: " << (elapsed_ms * 1000000.0 / TOTAL_ENTRIES) << " ns/entry\n";
-}
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

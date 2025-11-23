@@ -2,7 +2,7 @@
 
 #include "wait_strategy.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
 
     /**
      * @brief Busy-spin wait strategy - lowest latency, highest CPU usage.
@@ -66,4 +66,4 @@ namespace demiplane::multithread::disruptor {
         }
     };
 
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

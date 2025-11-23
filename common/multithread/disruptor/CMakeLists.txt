@@ -33,7 +33,4 @@ target_link_libraries(${DMP_MULTITHREAD}.Disruptor INTERFACE
         Threads::Threads
         Demiplane::Common::Gears
 )
-
-add_library(Demiplane::Common::Multithread::Disruptor ALIAS ${DMP_MULTITHREAD}.Disruptor)
-
 ##############################################################################

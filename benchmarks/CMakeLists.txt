@@ -6,3 +6,5 @@ if (BUILD_HTTP)
 endif ()
 
 add_subdirectory(logger)
+
+add_subdirectory(disruptor)

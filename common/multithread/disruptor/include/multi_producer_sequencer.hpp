@@ -9,7 +9,7 @@
 #include "sequence.hpp"
 #include "wait_strategies/wait_strategy.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
 
     /**
      * @brief Multi-producer sequencer with claim/publish protocol.
@@ -443,4 +443,4 @@ namespace demiplane::multithread::disruptor {
         std::unique_ptr<WaitStrategy> wait_strategy_;
     };
 
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

@@ -86,6 +86,8 @@ target_link_libraries(${DMP_SCROLL}.Sink.Console PUBLIC
 ##############################################################################
 add_library(${DMP_SCROLL}.Logger STATIC
         logger/include/logger.hpp
+        logger/source/logger.cpp
+        logger/include/logger_config.hpp
 )
 target_include_directories(${DMP_SCROLL}.Logger PUBLIC
         logger/include
@@ -95,7 +97,6 @@ target_link_libraries(${DMP_SCROLL}.Logger
         PUBLIC
         ${DMP_SCROLL}.Sink.Console
         ${DMP_SCROLL}.Sink.File
-        Demiplane::Common::Multithread::Disruptor
 )
 ##############################################################################
 

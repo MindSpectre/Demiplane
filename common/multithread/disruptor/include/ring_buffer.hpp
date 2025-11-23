@@ -4,7 +4,7 @@
 #include <bit>
 #include <cstddef>
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
 
     /**
      * @brief Fixed-size ring buffer with power-of-2 sizing for O(1) indexing.
@@ -176,4 +176,4 @@ namespace demiplane::multithread::disruptor {
     // This will cause compile error (not power of 2):
     // RingBuffer<int, 1000> bad_buffer;  // Error: 1000 is not power of 2
 
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

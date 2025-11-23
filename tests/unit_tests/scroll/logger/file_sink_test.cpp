@@ -7,8 +7,10 @@
 
 class FileSinkTest : public ::testing::Test {
 protected:
-    demiplane::scroll::FileSinkConfig cfg = {
-        .threshold = demiplane::scroll::DBG, .file = "test.log", .add_time_to_filename = false};
+    demiplane::scroll::FileSinkConfig cfg = {.threshold            = demiplane::scroll::DBG,
+                                             .file                 = "test.log",
+                                             .add_time_to_filename = false,
+                                             .flush_each_entry     = true};
 
     std::unique_ptr<demiplane::scroll::Logger> logger;
     std::shared_ptr<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>> file_sink;
@@ -275,10 +277,5 @@ void multithread_write(demiplane::scroll::Logger* logger,
 
 TEST_F(FileSinkTest, MultithreadWrite) {
     // Note: FileSink doesn't have sort_entries - ordering is determined by Logger's Disruptor
-    multithread_write(logger.get(), file_sink.get());
-}
-
-TEST_F(FileSinkTest, MultithreadWriteSafe) {
-    // Note: The new Logger with Disruptor provides better ordering guarantees
     multithread_write(logger.get(), file_sink.get());
 }

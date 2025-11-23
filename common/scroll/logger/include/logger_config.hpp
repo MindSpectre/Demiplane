@@ -1,0 +1,48 @@
+#pragma once
+
+#include "gears_class_traits.hpp"
+
+#include <json/value.h>
+
+namespace demiplane::scroll {
+    /**
+     * @brief Logger configuration
+     */
+    class LoggerConfig final : public gears::ConfigInterface<LoggerConfig, Json::Value> {
+    public:
+        void validate() override {
+            if (std::popcount() ring_buffer_size_)
+        }
+        Json::Value serialize() const override {
+            throw std::logic_error("Not implemented");
+        }
+        static LoggerConfig deserialize(const Json::Value& config) {
+            gears::unused_value(config);
+            std::unreachable();
+        }
+        /// @brief Ring buffer size (must be power of 2)
+
+        /// @brief Wait strategy for consumer thread
+        enum class WaitStrategy {
+            BusySpin,  // Lowest latency
+            Yielding,  // Balanced
+            Blocking   // Lowest CPU
+        };
+
+        LoggerConfig& ring_buffer_size(const std::size_t ring_buffer_size) {
+            ring_buffer_size_ = ring_buffer_size;
+            return *this;
+        }
+
+        template <WaitStrategy WaitStrategyT>
+        LoggerConfig& wait_strategy() {
+            wait_strategy_ = WaitStrategyT;
+            return *this;
+        }
+
+    private:
+        std::size_t ring_buffer_size_ = 8192;
+
+        WaitStrategy wait_strategy_ = WaitStrategy::Yielding;
+    };
+}  // namespace demiplane::scroll

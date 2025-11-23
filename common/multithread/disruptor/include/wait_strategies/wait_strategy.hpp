@@ -8,7 +8,7 @@
 
 #include "../sequence.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
 
     /**
      * @brief Base interface for consumer wait strategies.
@@ -86,4 +86,4 @@ namespace demiplane::multithread::disruptor {
 
 
 
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

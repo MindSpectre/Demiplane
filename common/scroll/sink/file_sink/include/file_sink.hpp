@@ -16,11 +16,14 @@ namespace demiplane::scroll {
         std::filesystem::path file;
 
         /// @brief Add time to a file name. Current is iso8601
-        bool add_time_to_filename = true;
+        bool add_time_to_filename            = true;
         std::string time_format_in_file_name = chrono::clock_formats::iso8601;
 
         /// @brief The default size is 100 mb.
         std::uint64_t max_file_size = gears::literals::operator""_mb(100);
+
+        /// @brief Disabled by default. Only for debug purposes
+        bool flush_each_entry = false;
     };
 
     /**
@@ -57,7 +60,9 @@ namespace demiplane::scroll {
         }
 
         ~FileSink() override {
+            std::lock_guard lock{mutex_};
             if (file_stream_.is_open()) {
+                file_stream_.flush();
                 file_stream_.close();
             }
         }
@@ -68,14 +73,20 @@ namespace demiplane::scroll {
             }
 
             // Convert LogEvent → EntryType using existing factory pattern
-            EntryType entry = make_entry_from_event<EntryType>(event);
-            std::string formatted = entry.to_string();
 
-            std::lock_guard lock{mutex_};
+            // Lock only for the actual write (supports multiple loggers sharing this sink)
+            {
+                EntryType entry             = make_entry_from_event<EntryType>(event);
+                const std::string formatted = entry.to_string();
+                std::lock_guard lock{mutex_};
+                file_stream_ << formatted;
 
-            file_stream_ << formatted;
+                if (config_.flush_each_entry) {
+                    file_stream_.flush();
+                }
+            }
 
-            // Check if rotation needed
+            // Check if rotation needed (outside lock to minimize contention)
             if (should_rotate()) {
                 rotate_log();
             }
@@ -106,17 +117,18 @@ namespace demiplane::scroll {
         FileSinkConfig config_;
         std::ofstream file_stream_;
         std::filesystem::path file_path_;
-        mutable std::mutex mutex_;
+        std::mutex mutex_;
+        alignas(64) char stream_buffer_[64 * (1 << 16)];  // 64KB static buffer, cache-line aligned
 
         void init() {
             std::filesystem::path full_path = config_.file;
 
             if (config_.add_time_to_filename) {
-                const std::string stem = full_path.stem().string();
-                const std::string ext = full_path.extension().string();
+                const std::string stem             = full_path.stem().string();
+                const std::string ext              = full_path.extension().string();
                 const std::filesystem::path parent = full_path.parent_path();
-                const std::string time = chrono::LocalClock::current_time(config_.time_format_in_file_name);
-                full_path = parent / (stem + "_" + time + ext);
+                const std::string time             = chrono::LocalClock::current_time(config_.time_format_in_file_name);
+                full_path                          = parent / (stem + "_" + time + ext);
             }
 
             if (!full_path.parent_path().empty()) {
@@ -128,10 +140,15 @@ namespace demiplane::scroll {
                 throw std::runtime_error{"Failed to open log file: " + full_path.string()};
             }
 
+            // Configure ofstream buffer for better batching of syscalls
+            file_stream_.rdbuf()->pubsetbuf(stream_buffer_, sizeof(stream_buffer_));
             file_path_ = full_path;
         }
 
         bool should_rotate() {
+            if (!config_.add_time_to_filename) {
+                return false;  // Can't rotate to same file
+            }
             std::uint64_t sz = 0;
             if (const auto pos = file_stream_.tellp(); pos >= 0) {
                 sz = static_cast<std::uint64_t>(pos);
@@ -146,6 +163,7 @@ namespace demiplane::scroll {
         }
 
         void rotate_log() {
+            std::lock_guard lock{mutex_};
             file_stream_.flush();
             file_stream_.close();
             init();

@@ -2,7 +2,7 @@
 
 #include "wait_strategy.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
 
     /**
      * @brief Yielding wait strategy - balanced latency and CPU usage.
@@ -77,4 +77,4 @@ namespace demiplane::multithread::disruptor {
     };
 
 
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

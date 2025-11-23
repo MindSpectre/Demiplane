@@ -2,7 +2,7 @@
 
 #include "wait_strategy.hpp"
 
-namespace demiplane::multithread::disruptor {
+namespace demiplane::multithread {
 
     /**
      * @brief Timeout-based blocking strategy with configurable timeout.
@@ -56,4 +56,4 @@ namespace demiplane::multithread::disruptor {
         std::condition_variable cv_;
         std::chrono::milliseconds timeout_;
     };
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

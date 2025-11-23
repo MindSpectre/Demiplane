@@ -2,7 +2,9 @@
 
 #include <atomic>
 
-namespace demiplane::multithread::disruptor {
+#include "gears_utils.hpp"
+
+namespace demiplane::multithread {
 
     /**
      * @brief Cache-line aligned atomic sequence counter.
@@ -56,6 +58,7 @@ namespace demiplane::multithread::disruptor {
          */
         explicit Sequence(const std::int64_t initial_value = -1) noexcept
             : value_{initial_value} {
+            gears::unused_value(padding_);
         }
 
         /**
@@ -76,7 +79,7 @@ namespace demiplane::multithread::disruptor {
          * Uses release ordering to ensure all our previous writes are visible
          * to threads that do acquire loads.
          */
-        void set(std::int64_t new_value) noexcept {
+        void set(const std::int64_t new_value) noexcept {
             value_.store(new_value, std::memory_order_release);
         }
 
@@ -96,7 +99,7 @@ namespace demiplane::multithread::disruptor {
          * @param delta Amount to add
          * @return New value after addition
          */
-        [[nodiscard]] std::int64_t add_and_get(std::int64_t delta) noexcept {
+        [[nodiscard]] std::int64_t add_and_get(const std::int64_t delta) noexcept {
             return value_.fetch_add(delta, std::memory_order_acq_rel) + delta;
         }
 
@@ -121,7 +124,7 @@ namespace demiplane::multithread::disruptor {
          * return next;  // Successfully claimed sequence 'next'
          * ```
          */
-        bool compare_and_set(std::int64_t& expected, std::int64_t desired) noexcept {
+        bool compare_and_set(std::int64_t& expected, const std::int64_t desired) noexcept {
             return value_.compare_exchange_weak(
                 expected, desired, std::memory_order_acq_rel, std::memory_order_acquire);
         }
@@ -140,11 +143,11 @@ namespace demiplane::multithread::disruptor {
         std::atomic<std::int64_t> value_;
 
         // Padding to ensure 64-byte cache-line alignment
-        // char padding_[64 - sizeof(std::atomic<std::int64_t>)];
+        char padding_[64 - sizeof(std::atomic<std::int64_t>)];
     };
 
     // Compile-time verification that our alignment worked
     static_assert(sizeof(Sequence) == 64, "Sequence must be exactly 64 bytes (one cache line)");
     static_assert(alignof(Sequence) == 64, "Sequence must be 64-byte aligned");
 
-}  // namespace demiplane::multithread::disruptor
+}  // namespace demiplane::multithread

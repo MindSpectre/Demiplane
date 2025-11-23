@@ -1,114 +1,139 @@
-#include <demiplane/math>
-#include <demiplane/nexus>
 #include <demiplane/scroll>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <source_location>
 #include <thread>
+#include <vector>
 
-#include <printing_stopwatch.hpp>
+#include <stopwatch.hpp>
 
-inline std::chrono::milliseconds parse_sec_ms(std::string_view line) {
-    // indexes for "… HH:MM:SS.mmmZ"
-    //            012345678901234567890123
-    //            ----------^  ^   ^
-    //            pos 17      20  23 (Z)
+namespace {
 
-    if (line.size() < 23) {
-        return std::chrono::milliseconds{0};
-    }
+    constexpr std::size_t THREAD_COUNT           = 4;
+    constexpr std::size_t RECORDS_PER_THREAD     = 1'000'000;
+    constexpr std::size_t TOTAL_EXPECTED_RECORDS = THREAD_COUNT * RECORDS_PER_THREAD;
 
-    const int sec = std::stoi(std::string{line.substr(17, 2)});
-    const int ms  = std::stoi(std::string{line.substr(20, 3)});
+    struct BenchmarkResult {
+        std::size_t total_entries        = 0;
+        std::chrono::nanoseconds elapsed = std::chrono::nanoseconds{0};
+        double entries_per_second        = 0.0;
+        double avg_latency_ns            = 0.0;
+    };
 
-    return std::chrono::seconds{sec} + std::chrono::milliseconds{ms};
-}
-
-template <typename T>
-void multithread_write(const T& file_logger) {
-    std::vector<std::thread> threads;
-    // Launch multiple threads to acquire and release objects
-    std::size_t t_num = 10;
-    std::size_t r_num = 10'000;
-    std::chrono::nanoseconds process_time{50};
-    demiplane::math::random::RandomTimeGenerator time_generator;
-    demiplane::gears::unused_value(process_time);
-    threads.reserve(t_num);
-    demiplane::chrono::PrintingStopwatch<> twp;
-    twp.start();
-    for (std::size_t i = 0; i < t_num; ++i) {
-        threads.emplace_back([&] {
-            for (std::size_t j = 0; j < r_num; ++j) {
-                SCROLL_LOG_DIRECT_STREAM_DBG(file_logger.get()) << "asdasd";
-                std::this_thread::sleep_for(process_time);
-            }
-        });
-    }
-
-    // Join all threads
-    for (auto& thread : threads) {
-        thread.join();
-    }
-    file_logger->graceful_shutdown();
-    twp.finish();
-    std::ifstream in(file_logger->file_path());
-    if (!in.is_open()) {
-        std::cout << "File not found" << '\n';
-    }
-    std::string line;
-    std::chrono::milliseconds prev{};
-    bool first                     = true;
-    std::uint32_t monotonic_errors = 0;  // how many times we go backwards?
-    std::uint32_t total_lines      = 0;
-    std::string prevl;
-    while (std::getline(in, line)) {
-        auto ts = parse_sec_ms(line);
-
-        if (!first) {
-            if (ts < prev) {
-                // std::cout << "Non-monotonic line: " << prevl << "\n" << line << '\n';
-                ++monotonic_errors;  // or store the offending line
-                std::cout << total_lines << '\n';
-            }
-        } else {
-            first = false;
+    BenchmarkResult count_log_entries(const std::string& filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Failed to open log file: " << filename << '\n';
+            return {};
         }
-        prev = ts;
-        // prevl = line;
-        total_lines++;
+
+        std::size_t count = 0;
+        std::string line;
+        while (std::getline(file, line)) {
+            count++;
+        }
+
+        return {.total_entries = count};
     }
 
-    std::cout << "Non-monotonic lines: " << monotonic_errors << " " << total_lines << '\n';
-    std::cout << "Non-monotonic lines%: "
-              << static_cast<double>(100 * monotonic_errors) / (static_cast<double>(t_num) * static_cast<double>(r_num))
-              << '\n';
-}
+    void print_benchmark_results(const BenchmarkResult& result) {
+        std::cout << "\n"
+                     "╔════════════════════════════════════════╗\n";
+        std::cout << "║     File Logger Benchmark Results      ║\n";
+        std::cout << "╠════════════════════════════════════════╣\n";
+        std::cout << "║ Threads:           " << std::setw(18) << THREAD_COUNT << "  ║\n";
+        std::cout << "║ Entries/thread:    " << std::setw(18) << RECORDS_PER_THREAD << "  ║\n";
+        std::cout << "║ Total entries:     " << std::setw(18) << TOTAL_EXPECTED_RECORDS << "  ║\n";
+        std::cout << "╠════════════════════════════════════════╣\n";
+        std::cout << "║ Elapsed time:      " << std::setw(10) << std::fixed << std::setprecision(3)
+                  << static_cast<double>(result.elapsed.count()) / 1e9 << "s    ║\n";
+        std::cout << "║ Throughput:        " << std::setw(10) << std::fixed << std::setprecision(0)
+                  << result.entries_per_second << " ops/s ║\n";
+        std::cout << "║ Avg latency:       " << std::setw(10) << std::fixed << std::setprecision(2)
+                  << result.avg_latency_ns << " ns   ║\n";
+        std::cout << "╠════════════════════════════════════════╣\n";
+        std::cout << "║ Entries logged:    " << std::setw(15) << result.total_entries << " ║\n";
 
-template <typename T>
-void unsafe_write(const T& file_logger) {
-    file_logger->config().sort_entries = false;
+        if (result.total_entries == TOTAL_EXPECTED_RECORDS) {
+            std::cout << "║ Status:            " << std::setw(15) << "PASSED ✓" << " ║\n";
+        } else {
+            std::cout << "║ Status:            " << std::setw(15) << "FAILED ✗" << " ║\n";
+            std::cout << "║ Missing:           " << std::setw(15) << (TOTAL_EXPECTED_RECORDS - result.total_entries)
+                      << " ║\n";
+        }
 
-    multithread_write(file_logger);
-}
+        std::cout << "╚════════════════════════════════════════╝\n";
+    }
 
-template <typename T>
-void safe_write(const T& file_logger) {
-    file_logger->config().sort_entries = true;
-    file_logger->config().batch_size   = 1 << 10;
-    // TODO: result out of order between batches
-    file_logger->reload();
-    multithread_write(file_logger);
+}  // namespace
+
+void run_throughput_benchmark(
+    const std::shared_ptr<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>& sink) {
+    auto logger = std::make_unique<demiplane::scroll::Logger>(
+        demiplane::scroll::LoggerConfig{.wait_strategy = demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin});
+    logger->add_sink(sink);
+
+    std::vector<std::thread> threads;
+    threads.reserve(THREAD_COUNT);
+
+
+    const auto elapsed = demiplane::chrono::Stopwatch<std::chrono::nanoseconds>::measure([&threads, &logger] {
+        // Launch worker threads - each logs as fast as possible
+        for (std::size_t i = 0; i < THREAD_COUNT; ++i) {
+            threads.emplace_back([&logger, thread_id = i] {
+                for (std::size_t j = 0; j < RECORDS_PER_THREAD; ++j) {
+                    logger->log(demiplane::scroll::LogLevel::Debug,
+                                "Thread {} iteration {} - benchmark message",
+                                std::source_location::current(),
+                                thread_id,
+                                j);
+                }
+            });
+        }
+
+        // Wait for all threads to complete
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        logger->shutdown();
+    });
+
+    // Count entries in file
+    auto result    = count_log_entries(sink->config().file);
+    result.elapsed = elapsed;
+
+    // Calculate throughput and latency
+    const double elapsed_seconds = static_cast<double>(elapsed.count()) / 1e9;
+    result.entries_per_second    = static_cast<double>(result.total_entries) / elapsed_seconds;
+    result.avg_latency_ns        = static_cast<double>(elapsed.count()) / static_cast<double>(result.total_entries);
+
+    print_benchmark_results(result);
 }
 
 int main() {
-    demiplane::scroll::FileLoggerConfig cfg{.threshold            = demiplane::scroll::DBG,
-                                            .file                 = "test.log",
-                                            .add_time_to_filename = false,
-                                            .sort_entries         = true,
-                                            .flush_each_batch     = true};
-    std::filesystem::remove(cfg.file);
-    const auto file_logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(cfg);
-    // safe_write(file_logger);
-    unsafe_write(file_logger);
+    std::cout << "Starting File Logger Throughput Benchmark...\n";
+    std::cout << "Configuration: " << THREAD_COUNT << " threads × " << RECORDS_PER_THREAD
+              << " entries = " << TOTAL_EXPECTED_RECORDS << " total\n";
+
+    demiplane::scroll::FileSinkConfig config{
+        .threshold            = demiplane::scroll::LogLevel::Debug,
+        .file                 = "benchmark_throughput.log",
+        .add_time_to_filename = false,
+        .max_file_size        = demiplane::gears::literals::operator""_mb(500),
+        .flush_each_entry     = false,  // Maximum throughput mode
+    };
+
+    std::filesystem::remove(config.file);
+
+    const auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(config);
+
+    run_throughput_benchmark(file_sink);
+
+    std::cout << "\nLog file: " << config.file << "\n";
+
     return 0;
 }

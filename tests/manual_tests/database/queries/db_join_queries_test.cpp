@@ -20,11 +20,13 @@ using namespace demiplane::db;
 class JoinQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -95,7 +97,7 @@ TEST_F(JoinQueryTest, InnerJoinExpression) {
     auto query  = select(user_name, post_title).from(users_schema).join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test LEFT JOIN
@@ -104,7 +106,7 @@ TEST_F(JoinQueryTest, LeftJoinExpression) {
         select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::LEFT).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test RIGHT JOIN
@@ -115,7 +117,7 @@ TEST_F(JoinQueryTest, RightJoinExpression) {
                      .on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test FULL OUTER JOIN
@@ -124,7 +126,7 @@ TEST_F(JoinQueryTest, FullJoinExpression) {
         select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::FULL).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test CROSS JOIN (simplified - cross join typically doesn't need ON clause)
@@ -133,7 +135,7 @@ TEST_F(JoinQueryTest, CrossJoinExpression) {
         select(user_name, post_title).from(users_schema).join(posts_schema, JoinType::CROSS).on(user_id > lit(0));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test multiple JOINs (simplified to single join for now)
@@ -141,7 +143,7 @@ TEST_F(JoinQueryTest, MultipleJoinsExpression) {
     auto query  = select(user_name, post_title).from(users_schema).join(posts_schema).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test JOIN with complex conditions
@@ -152,7 +154,7 @@ TEST_F(JoinQueryTest, JoinWithComplexConditionsExpression) {
                      .on(post_user_id == user_id && post_published == lit(true));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test JOIN with WHERE clause
@@ -164,7 +166,7 @@ TEST_F(JoinQueryTest, JoinWithWhereExpression) {
                      .where(user_active == lit(true));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test JOIN with aggregates (simplified without GROUP BY for now)
@@ -175,7 +177,7 @@ TEST_F(JoinQueryTest, JoinWithAggregatesExpression) {
                      .on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test JOIN with ORDER BY
@@ -187,5 +189,5 @@ TEST_F(JoinQueryTest, JoinWithOrderByExpression) {
                      .order_by(asc(user_name), desc(post_title));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }

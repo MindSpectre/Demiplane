@@ -2,6 +2,7 @@
 #include <demiplane/scroll>
 
 #include <gtest/gtest.h>
+
 using namespace demiplane::scroll;
 
 
@@ -44,7 +45,7 @@ void check_level(const std::string& data, const LogLevel level) {
 TEST(TestEntries, DetailedEntry) {
     constexpr auto message             = "Hello Detailed";
     constexpr std::source_location loc = std::source_location::current();
-    const auto entry                   = demiplane::scroll::make_entry<DetailedEntry>(INF, message, loc);
+    const auto entry                   = make_entry<DetailedEntry>(INF, message, loc);
     std::string output;
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;
@@ -58,7 +59,7 @@ TEST(TestEntries, DetailedEntry) {
 TEST(TestEntries, LightEntry) {
     constexpr auto message             = "Hello light";
     constexpr std::source_location loc = std::source_location::current();
-    const auto entry                   = demiplane::scroll::make_entry<LightEntry>(INF, message, loc);
+    const auto entry                   = make_entry<LightEntry>(INF, message, loc);
     std::string output;
     EXPECT_NO_THROW(output = entry.to_string());
     std::cout << output;
@@ -70,41 +71,24 @@ TEST(TestEntries, LightEntry) {
     EXPECT_THROW(check_location_meta(output, loc), std::runtime_error);
 }
 
-TEST(TestEntries, ServiceEntry) {
-    constexpr auto message             = "Hello service";
-    constexpr std::source_location loc = std::source_location::current();
+TEST(TestEntries, MakeEntryFromEvent) {
+    // Test the new make_entry_from_event function
+    LogEvent event{INF, "Test message from event", std::source_location::current()};
 
-    const auto entry = demiplane::scroll::make_entry<ServiceEntry<ServiceTest>>(INF, message, loc);
-    std::string output;
-    EXPECT_NO_THROW(output = entry.to_string());
-    std::cout << output;
+    // Create DetailedEntry from LogEvent
+    auto detailed_entry = make_entry_from_event<DetailedEntry>(event);
+    std::string detailed_output = detailed_entry.to_string();
 
-    EXPECT_NO_THROW({
-        check_message(output, message);
-        check_level(output, INF);
-        check_location_meta(output, loc);
-    });
-    EXPECT_TRUE(output.contains(ServiceTest::name));
+    EXPECT_TRUE(detailed_output.find("Test message from event") != std::string::npos);
+    EXPECT_TRUE(detailed_output.find("INF") != std::string::npos);
+
+    // Create LightEntry from same LogEvent
+    auto light_entry = make_entry_from_event<LightEntry>(event);
+    std::string light_output = light_entry.to_string();
+
+    EXPECT_TRUE(light_output.find("Test message from event") != std::string::npos);
+    EXPECT_TRUE(light_output.find("INF") != std::string::npos);
 }
 
-TEST(TestEntries, CustomEntry) {
-    constexpr auto message             = "Hello custom";
-    constexpr std::source_location loc = std::source_location::current();
-    auto cfg_ptr                       = std::make_shared<CustomEntryConfig>(CustomEntryConfig{});
 
-    std::string output;
-    auto mk_entry = [&] { return demiplane::scroll::make_entry<CustomEntry>(INF, message, loc, cfg_ptr); };
 
-    auto entry = mk_entry();
-    EXPECT_NO_THROW(output = entry.to_string());
-    std::cout << output;
-    check_message(output, message);
-    check_level(output, INF);
-    EXPECT_FALSE(output.contains(loc.function_name()));
-
-    cfg_ptr->add_pretty_function = true;
-    entry                        = mk_entry();
-    EXPECT_NO_THROW(output = entry.to_string());
-    std::cout << output;
-    EXPECT_TRUE(output.contains(loc.function_name()));
-}

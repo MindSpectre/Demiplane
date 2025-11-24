@@ -29,4 +29,18 @@ namespace demiplane::gears {
     template <typename T, typename... Args>
     concept OneOfDecayed = (std::is_same_v<std::remove_cvref_t<Args>, T> || ...);
 
+
+    template <typename T, typename SerializeStruct>
+    concept IsDeserializable = requires(const SerializeStruct& data) {
+        { T::deserialize(data) } -> std::same_as<T>;
+    };
+
+    template <typename T, typename SerializeStruct>
+    concept IsSerializable = requires(const T& config) {
+        { config.serialize() } -> std::same_as<SerializeStruct>;
+    };
+
+    template <typename T, typename SerializeStruct>
+    concept IsConfigSerializable = IsSerializable<T, SerializeStruct> && IsDeserializable<T, SerializeStruct>;
+
 }  // namespace demiplane::gears

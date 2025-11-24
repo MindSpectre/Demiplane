@@ -4,12 +4,8 @@
 // There are main macros
 
 
-#define SCROLL_LOG_DBG() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::DBG)
-#define SCROLL_LOG_INF() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::INF)
-#define SCROLL_LOG_WRN() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::WRN)
-#define SCROLL_LOG_ERR() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::ERR)
-#define SCROLL_LOG_FAT() SCROLL_LOG_STREAM_ENTRY(this->get_logger(), demiplane::scroll::FAT)
-#define SCROLL_ENTER_FUNCTION() SCROLL_LOG_INF() << "Entering function " << __func__
+
+#define SCROLL_ENTER_FUNCTION() SLOG_INF() << "Entering function " << __func__
 
 // Addons
 #define COUNT_ARGS(...) COUNT_ARGS_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)

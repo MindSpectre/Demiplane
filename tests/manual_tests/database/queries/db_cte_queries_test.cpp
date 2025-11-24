@@ -20,11 +20,13 @@ using namespace demiplane::db;
 class CteQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schemas
         employees_schema = std::make_shared<TableSchema>("employees");
@@ -89,7 +91,7 @@ TEST_F(CteQueryTest, BasicCteExpression) {
                                     .where(emp_salary > lit(75000.0) && emp_active == lit(true)));
     auto result          = compiler->compile(high_performers);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Basic CTE: " << result.sql;
+    LOG_INF() << "Basic CTE: " << result.sql;
 }
 
 // Test CTE with aggregation
@@ -104,7 +106,7 @@ TEST_F(CteQueryTest, CteWithAggregationExpression) {
                                .group_by(emp_department));
     auto result     = compiler->compile(dept_stats);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "CTE with aggregation: " << result.sql;
+    LOG_INF() << "CTE with aggregation: " << result.sql;
 }
 
 // Test CTE used in main query
@@ -121,7 +123,7 @@ TEST_F(CteQueryTest, CteUsedInMainQueryExpression) {
 
     auto result = compiler->compile(main_query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "CTE used in main query: " << result.sql;
+    LOG_INF() << "CTE used in main query: " << result.sql;
 }
 
 // Test multiple CTEs
@@ -140,7 +142,7 @@ TEST_F(CteQueryTest, MultipleCteExpression) {
                           .from(active_employees);
     auto result = compiler->compile(main_query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Multiple CTE: " << result.sql;
+    LOG_INF() << "Multiple CTE: " << result.sql;
 }
 
 
@@ -173,5 +175,5 @@ TEST_F(CteQueryTest, CteWithSubqueriesExpression) {
 
     auto result = compiler->compile(top_performers);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "CTE with subqueries: " << result.sql;
+    LOG_INF() << "CTE with subqueries: " << result.sql;
 }

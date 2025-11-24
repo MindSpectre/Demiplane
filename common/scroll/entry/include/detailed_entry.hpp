@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../entry_interface.hpp"
+#include "entry_interface.hpp"
 
 namespace demiplane::scroll {
     class DetailedEntry final

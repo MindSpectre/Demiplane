@@ -75,7 +75,7 @@ namespace demiplane::chrono {
 
         // Function to measure execution time of a lambda function
         template <typename Func>
-        duration measure(Func&& func) {
+        static duration measure(Func&& func) {
             auto start_time = clock::now();
             std::forward<Func>(func)();  // Execute the lambda function
             auto end_time = clock::now();

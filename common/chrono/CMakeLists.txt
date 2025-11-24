@@ -67,6 +67,8 @@ target_link_libraries(${DMP_CHRONO}.Timer PUBLIC
 # Chrono exported library
 ##############################################################################
 add_combined_library(${DMP_CHRONO}
+        SOURCES
+        export/demiplane/chrono
         DIRECTORIES
         export
         LIBRARIES

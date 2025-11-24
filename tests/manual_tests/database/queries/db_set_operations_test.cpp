@@ -20,11 +20,13 @@ using namespace demiplane::db;
 class SetOperationsTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -89,7 +91,7 @@ TEST_F(SetOperationsTest, UnionExpression) {
     auto query  = union_query(active_users, young_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test UNION ALL operation
@@ -101,7 +103,7 @@ TEST_F(SetOperationsTest, UnionAllExpression) {
     auto query  = union_all(all_users, all_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test INTERSECT operation
@@ -113,7 +115,7 @@ TEST_F(SetOperationsTest, IntersectExpression) {
     auto query  = intersect(it_users, it_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test EXCEPT operation
@@ -125,7 +127,7 @@ TEST_F(SetOperationsTest, ExceptExpression) {
     auto query  = except(all_user_names, inactive_user_names);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test multiple UNION operations
@@ -143,7 +145,7 @@ TEST_F(SetOperationsTest, MultipleUnionExpression) {
     auto query  = union_all(union_all(young_users, senior_employees), high_salary_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test SET operation with ORDER BY
@@ -158,7 +160,7 @@ TEST_F(SetOperationsTest, SetOperationWithOrderByExpression) {
     auto query          = union_all(active_users, employees).order_by(asc(als_name), desc(als_age));
     auto result         = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test SET operation with LIMIT
@@ -170,7 +172,7 @@ TEST_F(SetOperationsTest, SetOperationWithLimitExpression) {
     auto query  = union_all(users, employees).limit(10);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test SET operation with different column counts (should match)
@@ -185,7 +187,7 @@ TEST_F(SetOperationsTest, SetOperationMatchingColumnsExpression) {
     auto query  = union_all(user_summary, employee_summary);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test complex SET operations with subqueries
@@ -202,5 +204,5 @@ TEST_F(SetOperationsTest, ComplexSetOperationsWithSubqueriesExpression) {
     auto query  = union_all(dept_users, dept_employees);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }

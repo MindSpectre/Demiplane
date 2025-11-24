@@ -80,10 +80,11 @@ namespace demiplane::scroll::colors {
     constexpr std::string_view hi_background_white   = "\033[0;107m";
 
     // Helper function to wrap text in a given ANSI color code.
-    inline std::string colorize(const std::string_view code, const std::string_view text) {
-        std::ostringstream result;
-        result << code << text << reset;
-        return result.str();
+    constexpr std::string colorize(const std::string_view code, const std::string_view text) {
+        std::string result;
+        result.reserve(code.size() + text.size() + reset.size());
+        result.append(code).append(text).append(reset);
+        return result;
     }
 
     // Regular colors

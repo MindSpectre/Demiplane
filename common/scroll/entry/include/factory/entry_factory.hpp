@@ -1,15 +1,13 @@
 #pragma once
 
-#include "custom_entry.hpp"
 #include "detailed_entry.hpp"
 #include "light_entry.hpp"
-#include "service_entry.hpp"
 
 namespace demiplane::scroll {
     template <class EntryT, class... Extra>
     EntryT make_entry(LogLevel lvl, const std::string_view msg, const std::source_location& loc, Extra&&... extra) {
         // Use cached thread-local values
-        auto available = std::tuple{detail::MetaTimePoint{chrono::Clock::now()},
+        auto available = std::tuple{detail::MetaTimePoint{},
                                     detail::MetaSource{loc},
                                     // Already lightweight
                                     detail::MetaThread{},

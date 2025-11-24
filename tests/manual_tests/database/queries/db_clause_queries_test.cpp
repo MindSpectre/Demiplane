@@ -20,11 +20,13 @@ using namespace demiplane::db;
 class ClauseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -93,8 +95,8 @@ TEST_F(ClauseQueryTest, FromClauseExpression) {
     auto result2 = compiler->compile(query2);
     EXPECT_FALSE(result2.sql.empty());
 
-    SCROLL_LOG_INF() << "FROM schema: " << result1.sql;
-    SCROLL_LOG_INF() << "FROM string: " << result2.sql;
+    LOG_INF() << "FROM schema: " << result1.sql;
+    LOG_INF() << "FROM string: " << result2.sql;
 }
 
 // Test WHERE clause with various conditions
@@ -121,10 +123,10 @@ TEST_F(ClauseQueryTest, WhereClauseExpression) {
     auto result4 = compiler->compile(query4);
     EXPECT_FALSE(result4.sql.empty());
 
-    SCROLL_LOG_INF() << "WHERE simple: " << result1.sql;
-    SCROLL_LOG_INF() << "WHERE complex: " << result2.sql;
-    SCROLL_LOG_INF() << "WHERE IN: " << result3.sql;
-    SCROLL_LOG_INF() << "WHERE BETWEEN: " << result4.sql;
+    LOG_INF() << "WHERE simple: " << result1.sql;
+    LOG_INF() << "WHERE complex: " << result2.sql;
+    LOG_INF() << "WHERE IN: " << result3.sql;
+    LOG_INF() << "WHERE BETWEEN: " << result4.sql;
 }
 
 // Test GROUP BY clause
@@ -149,9 +151,9 @@ TEST_F(ClauseQueryTest, GroupByClauseExpression) {
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql.empty());
 
-    SCROLL_LOG_INF() << "GROUP BY single: " << result1.sql;
-    SCROLL_LOG_INF() << "GROUP BY multiple: " << result2.sql;
-    SCROLL_LOG_INF() << "GROUP BY with WHERE: " << result3.sql;
+    LOG_INF() << "GROUP BY single: " << result1.sql;
+    LOG_INF() << "GROUP BY multiple: " << result2.sql;
+    LOG_INF() << "GROUP BY with WHERE: " << result3.sql;
 }
 
 // Test HAVING clause
@@ -181,9 +183,9 @@ TEST_F(ClauseQueryTest, HavingClauseExpression) {
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql.empty());
 
-    SCROLL_LOG_INF() << "HAVING simple: " << result1.sql;
-    SCROLL_LOG_INF() << "HAVING multiple: " << result2.sql;
-    SCROLL_LOG_INF() << "HAVING with WHERE/GROUP BY: " << result3.sql;
+    LOG_INF() << "HAVING simple: " << result1.sql;
+    LOG_INF() << "HAVING multiple: " << result2.sql;
+    LOG_INF() << "HAVING with WHERE/GROUP BY: " << result3.sql;
 }
 
 // Test ORDER BY clause
@@ -210,10 +212,10 @@ TEST_F(ClauseQueryTest, OrderByClauseExpression) {
     auto result4 = compiler->compile(query4);
     EXPECT_FALSE(result4.sql.empty());
 
-    SCROLL_LOG_INF() << "ORDER BY ASC: " << result1.sql;
-    SCROLL_LOG_INF() << "ORDER BY DESC: " << result2.sql;
-    SCROLL_LOG_INF() << "ORDER BY multiple: " << result3.sql;
-    SCROLL_LOG_INF() << "ORDER BY expression: " << result4.sql;
+    LOG_INF() << "ORDER BY ASC: " << result1.sql;
+    LOG_INF() << "ORDER BY DESC: " << result2.sql;
+    LOG_INF() << "ORDER BY multiple: " << result3.sql;
+    LOG_INF() << "ORDER BY expression: " << result4.sql;
 }
 
 // Test LIMIT clause
@@ -237,9 +239,9 @@ TEST_F(ClauseQueryTest, LimitClauseExpression) {
     auto result3 = compiler->compile(query3);
     EXPECT_FALSE(result3.sql.empty());
 
-    SCROLL_LOG_INF() << "LIMIT basic: " << result1.sql;
-    SCROLL_LOG_INF() << "LIMIT with ORDER BY: " << result2.sql;
-    SCROLL_LOG_INF() << "LIMIT with WHERE/ORDER BY: " << result3.sql;
+    LOG_INF() << "LIMIT basic: " << result1.sql;
+    LOG_INF() << "LIMIT with ORDER BY: " << result2.sql;
+    LOG_INF() << "LIMIT with WHERE/ORDER BY: " << result3.sql;
 }
 
 // Test complex query with all clauses
@@ -257,7 +259,7 @@ TEST_F(ClauseQueryTest, ComplexQueryWithAllClausesExpression) {
     // todo: desc accept aggregate
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Complex query: " << result.sql;
+    LOG_INF() << "Complex query: " << result.sql;
 }
 
 // Test clause combinations with JOINs
@@ -274,5 +276,5 @@ TEST_F(ClauseQueryTest, ClausesWithJoinsExpression) {
 
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << "Clauses with JOIN: " << result.sql;
+    LOG_INF() << "Clauses with JOIN: " << result.sql;
 }

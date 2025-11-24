@@ -3,7 +3,7 @@
 #include <sstream>
 #include <string>
 
-#include "../entry_interface.hpp"
+#include "entry_interface.hpp"
 
 namespace demiplane::scroll {
     class LightEntry final : public detail::EntryBase<detail::MetaNone>  // only level+msg

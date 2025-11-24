@@ -20,11 +20,13 @@ using namespace demiplane::db;
 class ConditionQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileLoggerConfig cfg;
+        demiplane::scroll::FileSinkConfig cfg;
         cfg.file                 = "query_test.log";
         cfg.add_time_to_filename = false;
 
-        auto logger = std::make_shared<demiplane::scroll::FileLogger<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<TableSchema>("users");
@@ -104,12 +106,12 @@ TEST_F(ConditionQueryTest, BinaryConditionExpressions) {
     auto lte_result = compiler->compile(lte_query);
     EXPECT_FALSE(lte_result.sql.empty());
 
-    SCROLL_LOG_INF() << "EQ: " << eq_result.sql;
-    SCROLL_LOG_INF() << "NEQ: " << neq_result.sql;
-    SCROLL_LOG_INF() << "GT: " << gt_result.sql;
-    SCROLL_LOG_INF() << "GTE: " << gte_result.sql;
-    SCROLL_LOG_INF() << "LT: " << lt_result.sql;
-    SCROLL_LOG_INF() << "LTE: " << lte_result.sql;
+    LOG_INF() << "EQ: " << eq_result.sql;
+    LOG_INF() << "NEQ: " << neq_result.sql;
+    LOG_INF() << "GT: " << gt_result.sql;
+    LOG_INF() << "GTE: " << gte_result.sql;
+    LOG_INF() << "LT: " << lt_result.sql;
+    LOG_INF() << "LTE: " << lte_result.sql;
 }
 
 // Test logical condition expressions
@@ -124,8 +126,8 @@ TEST_F(ConditionQueryTest, LogicalConditionExpressions) {
     auto or_result = compiler->compile(or_query);
     EXPECT_FALSE(or_result.sql.empty());
 
-    SCROLL_LOG_INF() << "AND: " << and_result.sql;
-    SCROLL_LOG_INF() << "OR: " << or_result.sql;
+    LOG_INF() << "AND: " << and_result.sql;
+    LOG_INF() << "OR: " << or_result.sql;
 }
 
 // Test unary condition expressions
@@ -135,7 +137,7 @@ TEST_F(ConditionQueryTest, UnaryConditionExpressions) {
     auto not_result = compiler->compile(not_query);
     EXPECT_FALSE(not_result.sql.empty());
 
-    SCROLL_LOG_INF() << "NOT condition: " << not_result.sql;
+    LOG_INF() << "NOT condition: " << not_result.sql;
 }
 
 // Test string comparison expressions (placeholder for LIKE when available)
@@ -145,7 +147,7 @@ TEST_F(ConditionQueryTest, StringComparisonExpressions) {
     auto str_eq_result = compiler->compile(str_eq_query);
     EXPECT_FALSE(str_eq_result.sql.empty());
 
-    SCROLL_LOG_INF() << "String equality: " << str_eq_result.sql;
+    LOG_INF() << "String equality: " << str_eq_result.sql;
 }
 
 // Test BETWEEN expressions
@@ -153,7 +155,7 @@ TEST_F(ConditionQueryTest, BetweenExpressions) {
     auto query  = select(user_name).from(users_schema).where(between(user_age, lit(18), lit(65)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test IN LIST expressions
@@ -161,7 +163,7 @@ TEST_F(ConditionQueryTest, InListExpressions) {
     auto query  = select(user_name).from(users_schema).where(in(user_age, lit(18), lit(25), lit(30)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test EXISTS expressions
@@ -171,7 +173,7 @@ TEST_F(ConditionQueryTest, ExistsExpressions) {
     auto query  = select(user_name).from(users_schema).where(exists(subquery));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test SUBQUERY conditions
@@ -181,7 +183,7 @@ TEST_F(ConditionQueryTest, SubqueryConditions) {
     auto query  = select(post_title).from(posts_schema).where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }
 
 // Test complex nested conditions
@@ -192,5 +194,5 @@ TEST_F(ConditionQueryTest, ComplexNestedConditions) {
             .where((user_age > lit(18) && user_age < lit(65)) || (user_active == lit(true) && user_age >= lit(65)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql.empty());
-    SCROLL_LOG_INF() << result.sql;
+    LOG_INF() << result.sql;
 }

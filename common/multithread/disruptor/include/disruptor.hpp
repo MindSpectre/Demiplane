@@ -167,6 +167,8 @@
  * - Lock-Free Programming: https://preshing.com/20120612/an-introduction-to-lock-free-programming/
  */
 
+#include "dynamic_multi_producer_sequencer.hpp"
+#include "dynamic_ring_buffer.hpp"
 #include "multi_producer_sequencer.hpp"
 #include "ring_buffer.hpp"
 #include "sequence.hpp"
@@ -177,4 +179,60 @@
 
 namespace demiplane::multithread {
     // All components available via this single include
-}
+    template <typename T, std::size_t BUFFER_SIZE>
+    class Disruptor : gears::Immutable {
+    public:
+        constexpr explicit Disruptor(std::unique_ptr<WaitStrategy> wait_strategy, std::int64_t initial_cursor = -1)
+            : sequencer_{std::move(wait_strategy), initial_cursor} {
+        }
+        ~Disruptor() = default;
+
+        [[nodiscard]] MultiProducerSequencer<BUFFER_SIZE>& sequencer() noexcept {
+            return sequencer_;
+        }
+        [[nodiscard]] const MultiProducerSequencer<BUFFER_SIZE>& sequencer() const noexcept {
+            return sequencer_;
+        }
+
+        [[nodiscard]] RingBuffer<T, BUFFER_SIZE>& ring_buffer() noexcept {
+            return ring_buffer_;
+        }
+        [[nodiscard]] const RingBuffer<T, BUFFER_SIZE>& ring_buffer() const noexcept {
+            return ring_buffer_;
+        }
+
+    private:
+        MultiProducerSequencer<BUFFER_SIZE> sequencer_;
+        RingBuffer<T, BUFFER_SIZE> ring_buffer_;
+    };
+
+    template <typename T>
+    class DynamicDisruptor : gears::Immutable {
+    public:
+        constexpr DynamicDisruptor(const std::size_t buffer_size,
+                                   std::unique_ptr<WaitStrategy> wait_strategy,
+                                   const std::int64_t initial_cursor = -1)
+            : sequencer_{buffer_size, (std::move(wait_strategy)), initial_cursor},
+              ring_buffer_{buffer_size} {
+        }
+        ~DynamicDisruptor() = default;
+
+        [[nodiscard]] DynamicMultiProducerSequencer& sequencer() noexcept {
+            return sequencer_;
+        }
+        [[nodiscard]] const DynamicMultiProducerSequencer& sequencer() const noexcept {
+            return sequencer_;
+        }
+
+        [[nodiscard]] DynamicRingBuffer<T>& ring_buffer() noexcept {
+            return ring_buffer_;
+        }
+        [[nodiscard]] const DynamicRingBuffer<T>& ring_buffer() const noexcept {
+            return ring_buffer_;
+        }
+
+    private:
+        DynamicMultiProducerSequencer sequencer_;
+        DynamicRingBuffer<T> ring_buffer_;
+    };
+}  // namespace demiplane::multithread

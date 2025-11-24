@@ -7,9 +7,9 @@ namespace demiplane::scroll {
         }
 
         // Send shutdown signal
-        const std::int64_t seq            = sequencer_.next();
-        ring_buffer_[seq].shutdown_signal = true;
-        sequencer_.publish(seq);
+        const std::int64_t seq            = disruptor_.sequencer().next();
+        disruptor_.ring_buffer()[seq].shutdown_signal = true;
+        disruptor_.sequencer().publish(seq);
 
         // Wait for consumer to finish
         if (consumer_thread_.joinable()) {
@@ -23,11 +23,11 @@ namespace demiplane::scroll {
 
         while (running_.load(std::memory_order_acquire)) {
             // Wait for published sequences
-            const std::int64_t available = sequencer_.get_highest_published(next_seq, sequencer_.get_cursor());
+            const std::int64_t available = disruptor_.sequencer().get_highest_published(next_seq, disruptor_.sequencer().get_cursor());
 
             // Process batch
             for (std::int64_t seq = next_seq; seq <= available; ++seq) {
-                const auto& event = ring_buffer_[seq];
+                const auto& event = disruptor_.ring_buffer()[seq];
 
                 if (event.shutdown_signal) {
                     running_.store(false, std::memory_order_release);
@@ -39,12 +39,12 @@ namespace demiplane::scroll {
                     sink->process(event);
                 }
 
-                sequencer_.mark_consumed(seq);
+                disruptor_.sequencer().mark_consumed(seq);
             }
 
             if (available >= next_seq) {
                 next_seq = available + 1;
-                sequencer_.update_gating_sequence(available);
+                disruptor_.sequencer().update_gating_sequence(available);
             }
         }
 

@@ -16,6 +16,8 @@
 add_library(${DMP_MULTITHREAD}.Disruptor INTERFACE
         include/disruptor.hpp
         include/multi_producer_sequencer.hpp
+        include/dynamic_multi_producer_sequencer.hpp
+        include/dynamic_ring_buffer.hpp
         include/ring_buffer.hpp
         include/sequence.hpp
         include/wait_strategies/wait_strategy.hpp

@@ -8,8 +8,8 @@
 #include <thread>
 #include <vector>
 
-#include "sink_interface.hpp"
 #include "logger_config.hpp"
+#include "sink_interface.hpp"
 namespace demiplane::scroll {
     /**
      * @brief High-performance asynchronous logger using Disruptor pattern
@@ -41,14 +41,9 @@ namespace demiplane::scroll {
      *   logger.stream(LogLevel::Info) << "User " << username << " logged in";
      */
     class Logger {
-        static constexpr size_t RING_BUFFER_SIZE = LoggerConfig::RING_BUFFER_SIZE;
-
-        using RingBufferType = multithread::RingBuffer<LogEvent, RING_BUFFER_SIZE>;
-        using SequencerType  = multithread::MultiProducerSequencer<RING_BUFFER_SIZE>;
-
     public:
-        constexpr explicit Logger(const LoggerConfig cfg = {}) noexcept
-            : sequencer_{create_wait_strategy(cfg.wait_strategy)} {
+        constexpr explicit Logger(const LoggerConfig& cfg = {}) noexcept
+            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())} {
             running_.store(true, std::memory_order_release);
             consumer_thread_ = std::jthread([this] { consumer_loop(); });
         }
@@ -83,15 +78,15 @@ namespace demiplane::scroll {
         constexpr void
         log(const LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
             // 1. Claim sequence
-            const std::int64_t seq    = sequencer_.next();
+            const std::int64_t seq    = disruptor_.sequencer().next();
             // 2. Format message (happens in producer thread)
             std::string formatted_msg = std::format(fmt, std::forward<Args>(args)...);
             // 3. Write LogEvent to ring buffer
-            auto& event               = ring_buffer_[seq];
+            auto& event               = disruptor_.ring_buffer()[seq];
             event                     = LogEvent{lvl, std::move(formatted_msg), loc};
 
             // 4. Publish (makes visible to consumer)
-            sequencer_.publish(seq);
+            disruptor_.sequencer().publish(seq);
         }
 
         /**
@@ -103,10 +98,10 @@ namespace demiplane::scroll {
         void log(const LogLevel lvl,
                  const std::string_view msg,
                  const std::source_location& loc = std::source_location::current()) {
-            const std::int64_t seq = sequencer_.next();
-            auto& event            = ring_buffer_[seq];
+            const std::int64_t seq = disruptor_.sequencer().next();
+            auto& event            = disruptor_.ring_buffer()[seq];
             event                  = LogEvent{lvl, std::string{msg}, loc};
-            sequencer_.publish(seq);
+            disruptor_.sequencer().publish(seq);
         }
 
         /**
@@ -135,10 +130,10 @@ namespace demiplane::scroll {
 
             ~StreamProxy() noexcept {
                 // Publish when proxy is destroyed (end of statement)
-                const std::int64_t seq = logger_->sequencer_.next();
-                auto& event            = logger_->ring_buffer_[seq];
+                const std::int64_t seq = logger_->disruptor_.sequencer().next();
+                auto& event            = logger_->disruptor_.ring_buffer()[seq];
                 event                  = LogEvent{level_, stream_.str(), loc_};
-                logger_->sequencer_.publish(seq);
+                logger_->disruptor_.sequencer().publish(seq);
             }
 
         private:
@@ -166,9 +161,9 @@ namespace demiplane::scroll {
                 sink->flush();
             }
         }
+
     private:
-        RingBufferType ring_buffer_;
-        SequencerType sequencer_;
+        multithread::DynamicDisruptor<LogEvent> disruptor_;
         std::vector<std::shared_ptr<Sink>> sinks_;
         std::jthread consumer_thread_;
         std::atomic<bool> running_{false};

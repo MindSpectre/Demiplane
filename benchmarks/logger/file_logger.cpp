@@ -73,7 +73,9 @@ namespace {
 void run_throughput_benchmark(
     const std::shared_ptr<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>& sink) {
     auto logger = std::make_unique<demiplane::scroll::Logger>(
-        demiplane::scroll::LoggerConfig{.wait_strategy = demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin});
+        demiplane::scroll::LoggerConfig{}
+            .wait_strategy<demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin>()
+            .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium));
     logger->add_sink(sink);
 
     std::vector<std::thread> threads;

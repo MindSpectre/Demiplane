@@ -16,7 +16,14 @@ using namespace demiplane::db;
 class DeleteQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        SET_COMMON_LOGGER();
+        demiplane::scroll::FileSinkConfig cfg;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
+
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -50,7 +57,7 @@ TEST_F(DeleteQueryTest, BasicDeleteExpression) {
     auto query  = delete_from(users_schema).where(user_active == false);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE with table name string
@@ -58,7 +65,7 @@ TEST_F(DeleteQueryTest, DeleteWithTableNameExpression) {
     auto query  = delete_from("users").where(user_id > 0);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE without WHERE clause
@@ -66,7 +73,7 @@ TEST_F(DeleteQueryTest, DeleteWithoutWhereExpression) {
     auto delete_query = delete_from(users_schema);
     auto result       = compiler->compile(delete_query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE WHERE expression
@@ -74,7 +81,7 @@ TEST_F(DeleteQueryTest, DeleteWhereExpression) {
     const auto delete_query = delete_from(users_schema).where(user_active == false);
     auto result             = compiler->compile(delete_query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE with complex WHERE conditions
@@ -82,7 +89,7 @@ TEST_F(DeleteQueryTest, DeleteComplexWhereExpression) {
     auto query  = delete_from(users_schema).where(user_active == false && user_age < 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE with IN condition
@@ -90,7 +97,7 @@ TEST_F(DeleteQueryTest, DeleteWithInExpression) {
     auto query  = delete_from(users_schema).where(in(user_age, 18, 19, 20));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE with BETWEEN condition
@@ -98,7 +105,7 @@ TEST_F(DeleteQueryTest, DeleteWithBetweenExpression) {
     auto query  = delete_from(users_schema).where(between(user_age, 18, 25));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test DELETE with subquery condition
@@ -108,5 +115,5 @@ TEST_F(DeleteQueryTest, DeleteWithSubqueryExpression) {
     auto query  = delete_from(users_schema).where(in(user_id, subquery(inactive_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }

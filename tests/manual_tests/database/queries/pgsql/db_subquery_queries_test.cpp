@@ -18,7 +18,14 @@ using namespace demiplane::db;
 class SubqueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        SET_COMMON_LOGGER();
+        demiplane::scroll::FileSinkConfig cfg;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
+
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -90,7 +97,7 @@ TEST_F(SubqueryTest, SubqueryInWhereExpression) {
     auto query  = select(post_title).from(posts_schema).where(in(post_user_id, subquery(active_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test EXISTS expression
@@ -101,7 +108,7 @@ TEST_F(SubqueryTest, ExistsExpression) {
     auto query  = select(user_name).from(users_schema).where(exists(published_posts_subquery));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test NOT EXISTS expression
@@ -112,7 +119,7 @@ TEST_F(SubqueryTest, NotExistsExpression) {
     auto query  = select(user_name).from(users_schema).where(!exists(pending_orders_subquery));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test basic subquery compilation
@@ -122,7 +129,7 @@ TEST_F(SubqueryTest, BasicSubqueryCompilationExpression) {
     auto query  = subquery(post_count_subquery);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test subquery structure
@@ -132,7 +139,7 @@ TEST_F(SubqueryTest, SubqueryStructureExpression) {
     auto sub    = subquery(user_post_count);
     auto result = compiler->compile(sub);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test IN with multiple values subquery
@@ -146,7 +153,7 @@ TEST_F(SubqueryTest, InSubqueryMultipleValuesExpression) {
     auto query  = select(user_name).from(users_schema).where(in(user_id, subquery(high_value_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test nested subqueries
@@ -159,7 +166,7 @@ TEST_F(SubqueryTest, NestedSubqueriesExpression) {
     auto query  = select(user_name).from(users_schema).where(in(user_id, subquery(posts_by_active_users)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test subquery with aggregates
@@ -173,7 +180,7 @@ TEST_F(SubqueryTest, SubqueryWithAggregatesExpression) {
                      .where(order_amount > subquery(avg_order_amount));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test subquery with DISTINCT
@@ -183,5 +190,5 @@ TEST_F(SubqueryTest, SubqueryWithDistinctExpression) {
     auto query  = select(user_name).from(users_schema).where(in(user_id, subquery(unique_publishers)));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }

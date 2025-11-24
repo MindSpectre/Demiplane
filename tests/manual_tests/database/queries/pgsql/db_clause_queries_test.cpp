@@ -17,7 +17,14 @@ using namespace demiplane::db;
 class ClauseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        SET_COMMON_LOGGER();
+        demiplane::scroll::FileSinkConfig cfg;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
+
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")

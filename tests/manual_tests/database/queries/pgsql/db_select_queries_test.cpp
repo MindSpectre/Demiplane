@@ -17,7 +17,14 @@ using namespace demiplane::db;
 class SelectQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        SET_COMMON_LOGGER();
+        demiplane::scroll::FileSinkConfig cfg;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
+
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schemas
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -69,7 +76,7 @@ TEST_F(SelectQueryTest, BasicSelectExpression) {
     const auto query = select(user_id, user_name);
     auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with ALL columns
@@ -77,7 +84,7 @@ TEST_F(SelectQueryTest, SelectAllColumnsExpression) {
     const auto query = select(all("users"));
     auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT DISTINCT
@@ -85,7 +92,7 @@ TEST_F(SelectQueryTest, SelectDistinctExpression) {
     const auto query = select_distinct(user_name, user_age);
     auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with mixed types (columns, literals, aggregates)
@@ -93,7 +100,7 @@ TEST_F(SelectQueryTest, SelectMixedTypesExpression) {
     const auto query = select(user_name, "constant", count(user_id).as("total"));
     auto result      = compiler->compile(query.from(users_schema));
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT from Record
@@ -105,7 +112,7 @@ TEST_F(SelectQueryTest, SelectFromRecordExpression) {
     auto query  = select(user_name).from(test_record);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT from table name string
@@ -113,7 +120,7 @@ TEST_F(SelectQueryTest, SelectFromTableNameExpression) {
     auto query  = select(1).from("test_table");
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with WHERE clause
@@ -121,7 +128,7 @@ TEST_F(SelectQueryTest, SelectWithWhereExpression) {
     auto query  = select(user_name).from(users_schema).where(user_age > 18);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with JOIN
@@ -130,7 +137,7 @@ TEST_F(SelectQueryTest, SelectWithJoinExpression) {
         select(user_name, post_title).from(users_schema).join(posts_schema->table_name()).on(post_user_id == user_id);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with GROUP BY
@@ -138,7 +145,7 @@ TEST_F(SelectQueryTest, SelectWithGroupByExpression) {
     auto query  = select(user_active, count(user_id).as("user_count")).from(users_schema).group_by(user_active);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with HAVING
@@ -149,7 +156,7 @@ TEST_F(SelectQueryTest, SelectWithHavingExpression) {
                      .having(count(user_id) > 5);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with ORDER BY
@@ -157,7 +164,7 @@ TEST_F(SelectQueryTest, SelectWithOrderByExpression) {
     auto query  = select(user_name).from(users_schema).order_by(asc(user_name));
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }
 
 // Test SELECT with LIMIT
@@ -165,5 +172,5 @@ TEST_F(SelectQueryTest, SelectWithLimitExpression) {
     auto query  = select(user_name).from(users_schema).limit(10);
     auto result = compiler->compile(query);
     EXPECT_FALSE(result.sql().empty());
-    SCROLL_LOG_INF() << result.sql();
+    LOG_INF() << result.sql();
 }

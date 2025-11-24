@@ -18,7 +18,14 @@ using namespace demiplane::db;
 class AggregateQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        SET_COMMON_LOGGER();
+        demiplane::scroll::FileSinkConfig cfg;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
+
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -49,14 +56,14 @@ protected:
 
 // Test basic aggregate expressions
 TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
-    SCROLL_LOG_INF() << "Aggregate expressions:";
+    LOG_INF() << "Aggregate expressions:";
     {
         // COUNT
         auto count_query = select(count(user_id)).from(users_schema);
         auto q           = compiler->compile(count_query);
         const auto sql   = q.sql();
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "COUNT: " << sql;
+        LOG_INF() << "COUNT: " << sql;
     }
 
     // SUM
@@ -65,7 +72,7 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto q         = compiler->compile(sum_query);
         const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "SUM: " << sql;
+        LOG_INF() << "SUM: " << sql;
     }
 
     // AVG
@@ -74,7 +81,7 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto q         = compiler->compile(avg_query);
         const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "AVG: " << sql;
+        LOG_INF() << "AVG: " << sql;
     }
 
     // MIN
@@ -83,7 +90,7 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto q         = compiler->compile(min_query);
         const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "MIN: " << sql;
+        LOG_INF() << "MIN: " << sql;
     }
     // MAX
     {
@@ -91,7 +98,7 @@ TEST_F(AggregateQueryTest, BasicAggregateExpressions) {
         auto q         = compiler->compile(max_query);
         const auto sql = q.sql();
         EXPECT_FALSE(sql.empty());
-        SCROLL_LOG_INF() << "MAX: " << sql;
+        LOG_INF() << "MAX: " << sql;
     }
 }
 
@@ -108,7 +115,7 @@ TEST_F(AggregateQueryTest, AggregateWithAliasExpressions) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test COUNT DISTINCT
@@ -118,7 +125,7 @@ TEST_F(AggregateQueryTest, CountDistinctExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test COUNT ALL
@@ -128,7 +135,7 @@ TEST_F(AggregateQueryTest, CountAllExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregates with GROUP BY
@@ -138,7 +145,7 @@ TEST_F(AggregateQueryTest, AggregateWithGroupByExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregates with HAVING
@@ -151,7 +158,7 @@ TEST_F(AggregateQueryTest, AggregateWithHavingExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test multiple aggregates in same query
@@ -164,7 +171,7 @@ TEST_F(AggregateQueryTest, MultipleAggregatesExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregate with mixed column types
@@ -177,7 +184,7 @@ TEST_F(AggregateQueryTest, AggregateWithMixedTypesExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test aggregate method chaining
@@ -191,5 +198,5 @@ TEST_F(AggregateQueryTest, AggregateMethodChainingExpression) {
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
 
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }

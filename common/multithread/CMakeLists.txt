@@ -4,7 +4,7 @@ set(DMP_MULTITHREAD ${DMP_COMMON}.Multithread)
 # Synchronized resource class - wraps resource with mutex
 ##############################################################################
 add_library(${DMP_MULTITHREAD}.ThreadSafeResource INTERFACE
-
+        thread_safe_resource/include/thread_safe_resource.hpp
 )
 target_include_directories(${DMP_MULTITHREAD}.ThreadSafeResource
         INTERFACE
@@ -39,14 +39,24 @@ target_link_libraries(${DMP_MULTITHREAD}.ThreadPool PUBLIC
 
 
 ##############################################################################
+# Disruptor - Lock-free ring buffer for high-performance messaging
+##############################################################################
+add_subdirectory(disruptor)
+##############################################################################
+
+
+##############################################################################
 # Multithread exported library
 ##############################################################################
 add_combined_library(${DMP_MULTITHREAD}
+        SOURCES
+        export/demiplane/multithread
         DIRECTORIES
         export
         LIBRARIES
         ${DMP_MULTITHREAD}.ThreadPool
         ${DMP_MULTITHREAD}.ThreadSafeResource
+        ${DMP_MULTITHREAD}.Disruptor
 )
 
 add_library(Demiplane::Common::Multithread ALIAS ${DMP_MULTITHREAD})

@@ -17,7 +17,14 @@ using namespace demiplane::db;
 class CaseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        SET_COMMON_LOGGER();
+        demiplane::scroll::FileSinkConfig cfg;
+        cfg.file                 = "query_test.log";
+        cfg.add_time_to_filename = false;
+
+        auto logger = std::make_shared<demiplane::scroll::Logger>();
+        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        logger->add_sink(std::move(file_sink));
+        set_logger(std::move(logger));
         // Create test schema
         users_schema = std::make_shared<Table>("users");
         users_schema->add_field<int>("id", "INTEGER")
@@ -59,7 +66,7 @@ TEST_F(CaseQueryTest, BasicCaseExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE without ELSE
@@ -69,7 +76,7 @@ TEST_F(CaseQueryTest, CaseWithoutElseExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with multiple WHEN clauses
@@ -84,7 +91,7 @@ TEST_F(CaseQueryTest, MultipleWhenExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with complex conditions
@@ -98,7 +105,7 @@ TEST_F(CaseQueryTest, CaseWithComplexConditionsExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE in WHERE clause
@@ -109,7 +116,7 @@ TEST_F(CaseQueryTest, CaseInWhereExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with aggregates
@@ -134,7 +141,7 @@ TEST_F(CaseQueryTest, CaseWithGroupByExpression) {
     const auto q = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test nested CASE expressions
@@ -147,7 +154,7 @@ TEST_F(CaseQueryTest, NestedCaseExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with different data types
@@ -159,7 +166,7 @@ TEST_F(CaseQueryTest, CaseWithDifferentTypesExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }
 
 // Test CASE with ORDER BY
@@ -173,5 +180,5 @@ TEST_F(CaseQueryTest, CaseWithOrderByExpression) {
     const auto q   = compiler->compile(query);
     const auto sql = q.sql();
     EXPECT_FALSE(sql.empty());
-    SCROLL_LOG_INF() << sql;
+    LOG_INF() << sql;
 }

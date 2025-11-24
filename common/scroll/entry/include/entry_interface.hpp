@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include <demiplane/chrono>
 #include <demiplane/gears>
 #include <source_location>
 #include <thread>
@@ -61,6 +61,10 @@ namespace demiplane::scroll::detail {
 
     struct MetaTimePoint {
         std::chrono::time_point<std::chrono::system_clock> time_point;
+
+        MetaTimePoint()
+            : time_point{chrono::Clock::now()} {
+        }
     };
 
     template <class... Metas>

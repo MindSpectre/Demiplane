@@ -1,21 +1,13 @@
 #pragma once
 
-#include <iostream>
 #include <mutex>
 
 #include <colors.hpp>
-#include <sink_interface.hpp>
+
+#include "console_sink_config.hpp"
 
 namespace demiplane::scroll {
-    /**
-     * @brief Configuration for console output
-     */
-    struct ConsoleSinkConfig {
-        LogLevel threshold = LogLevel::Debug;
-        bool enable_colors = true;
-        bool flush_each_entry = false;
-        std::ostream* output = &std::cout;  // Can redirect to &std::cerr
-    };
+
 
     /**
      * @brief Console sink with ANSI color support
@@ -35,20 +27,15 @@ namespace demiplane::scroll {
      * - ERR: Red
      * - FAT: Bold red
      *
-     * Usage:
-     *   auto console = std::make_unique<ConsoleSink<DetailedEntry>>(
-     *       ConsoleSinkConfig{
-     *           .threshold = LogLevel::Info,
-     *           .enable_colors = true
-     *       }
-     *   );
-     *   logger.add_sink(std::move(console));
      */
     template <detail::EntryConcept EntryType>
     class ConsoleSink final : public Sink {
     public:
-        explicit ConsoleSink(ConsoleSinkConfig cfg = {}) noexcept
-            : config_{cfg} {}
+        template <typename ConsoleSinkConfigTp = ConsoleSinkConfig>
+            requires std::constructible_from<ConsoleSinkConfig, ConsoleSinkConfigTp>
+        explicit ConsoleSink(ConsoleSinkConfigTp&& cfg = {}) noexcept
+            : config_{std::forward<ConsoleSinkConfigTp>(cfg)} {
+        }
 
         void process(const LogEvent& event) override {
             if (!should_log(event.level)) {
@@ -56,37 +43,37 @@ namespace demiplane::scroll {
             }
 
             // Convert LogEvent → EntryType using existing factory pattern
-            EntryType entry = make_entry_from_event<EntryType>(event);
-            std::string formatted = entry.to_string();
+            EntryType entry             = make_entry_from_event<EntryType>(event);
+            const std::string formatted = entry.to_string();
 
             std::lock_guard lock{mutex_};
 
-            if (config_.enable_colors) {
-                *config_.output << colorize_by_level(formatted, entry.level());
+            if (config_.is_enable_colors()) {
+                *config_.get_output() << colorize_by_level(formatted, entry.level());
             } else {
-                *config_.output << formatted;
+                *config_.get_output() << formatted;
             }
 
-            if (config_.flush_each_entry) {
-                config_.output->flush();
+            if (config_.is_flush_each_entry()) {
+                config_.get_output()->flush();
             }
         }
 
         void flush() override {
             std::lock_guard lock{mutex_};
-            config_.output->flush();
+            config_.get_output()->flush();
         }
 
         [[nodiscard]] bool should_log(LogLevel lvl) const noexcept override {
-            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.threshold);
+            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.get_threshold());
         }
 
         // Allow runtime config changes
-        ConsoleSinkConfig& config() noexcept {
+        constexpr ConsoleSinkConfig& config() noexcept {
             return config_;
         }
 
-        [[nodiscard]] const ConsoleSinkConfig& config() const noexcept {
+        [[nodiscard]] constexpr const ConsoleSinkConfig& config() const noexcept {
             return config_;
         }
 
@@ -100,7 +87,7 @@ namespace demiplane::scroll {
          * @param lvl Log level determining color
          * @return Colorized text with ANSI codes
          */
-        [[nodiscard]] static std::string colorize_by_level(std::string_view text, LogLevel lvl) {
+        [[nodiscard]] static std::string colorize_by_level(const std::string_view text, const LogLevel lvl) {
             using namespace colors;
 
             switch (lvl) {

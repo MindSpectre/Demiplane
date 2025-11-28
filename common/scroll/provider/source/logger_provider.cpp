@@ -17,5 +17,5 @@ void demiplane::scroll::ComponentLoggerManager::initialize() {
 
     // Default configuration: Console sink with colored output
     logger_->add_sink(std::make_unique<ConsoleSink<DetailedEntry>>(
-        ConsoleSinkConfig{.threshold = LogLevel::Trace, .enable_colors = true, .flush_each_entry = false}));
+        ConsoleSinkConfig{}.threshold(LogLevel::Debug).enable_colors(true).flush_each_entry(false)));
 }

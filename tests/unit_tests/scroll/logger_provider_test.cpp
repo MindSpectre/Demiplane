@@ -1,9 +1,9 @@
 
+#include <chrono>
 #include <demiplane/scroll>
+#include <thread>
 
 #include <gtest/gtest.h>
-#include <thread>
-#include <chrono>
 
 
 class ServiceX final : demiplane::scroll::TestLoggerProvider {
@@ -46,17 +46,16 @@ TEST(LoggerProviderTest, StreamStyleLogging) {
 TEST(LoggerProviderTest, FormatStyleLogging) {
     auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
-        demiplane::scroll::ConsoleSinkConfig{
-            .threshold = demiplane::scroll::LogLevel::Debug,
-            .enable_colors = false,
-            .flush_each_entry = true
-        }
-    ));
+        demiplane::scroll::ConsoleSinkConfig{}
+            .threshold(demiplane::scroll::LogLevel::Debug)
+            .enable_colors(false)
+            .flush_each_entry(true)
+            .finalize()));
 
     testing::internal::CaptureStdout();
 
     std::string username = "alice";
-    int count = 42;
+    int count            = 42;
 
     LOG_DIRECT_FMT_INF(logger, "User {} has {} items", username, count);
     LOG_DIRECT_FMT_DBG(logger, "Debug message with value {}", 123);
@@ -72,12 +71,11 @@ TEST(LoggerProviderTest, FormatStyleLogging) {
 TEST(LoggerProviderTest, OverloadedMacros) {
     const auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
-        demiplane::scroll::ConsoleSinkConfig{
-            .threshold = demiplane::scroll::LogLevel::Debug,
-            .enable_colors = false,
-            .flush_each_entry = true
-        }
-    ));
+        demiplane::scroll::ConsoleSinkConfig{}
+            .threshold(demiplane::scroll::LogLevel::Debug)
+            .enable_colors(false)
+            .flush_each_entry(true)
+            .finalize()));
 
 
     testing::internal::CaptureStdout();

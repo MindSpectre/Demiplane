@@ -7,10 +7,11 @@
 
 class FileSinkTest : public ::testing::Test {
 protected:
-    demiplane::scroll::FileSinkConfig cfg = {.threshold            = demiplane::scroll::DBG,
-                                             .file                 = "test.log",
-                                             .add_time_to_filename = false,
-                                             .flush_each_entry     = true};
+    demiplane::scroll::FileSinkConfig cfg = demiplane::scroll::FileSinkConfig{}
+                                                .threshold(demiplane::scroll::DBG)
+                                                .file("test.log")
+                                                .add_time_to_filename(false).rotation(false)
+                                                .flush_each_entry(true).finalize();
 
     std::unique_ptr<demiplane::scroll::Logger> logger;
     std::shared_ptr<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>> file_sink;
@@ -27,7 +28,7 @@ protected:
         // Clean up logger and log file after test
         logger->shutdown();
         logger.reset();
-        std::filesystem::remove(cfg.file);
+        std::filesystem::remove(cfg.get_file());
     }
 
     [[nodiscard]] std::string read_log_file() const {
@@ -55,7 +56,7 @@ TEST_F(FileSinkTest, LogsEntryWhenAboveThreshold) {
 // Test that messages below the threshold are not logged
 TEST_F(FileSinkTest, FiltersEntriesBelowThreshold) {
     // Set threshold to ERROR
-    file_sink->config().threshold = demiplane::scroll::ERR;
+    file_sink->config().threshold(demiplane::scroll::ERR);
 
     // Log an INFO message (below the threshold)
     logger->log(demiplane::scroll::INF, "This should not appear");
@@ -89,11 +90,11 @@ TEST_F(FileSinkTest, ThresholdChangeAffectsLogging) {
 
     // Clean up file for next test
     logger->shutdown();
-    std::filesystem::remove(cfg.file);
+    std::filesystem::remove(cfg.get_file());
 
     // Recreate logger with new threshold
-    logger        = std::make_unique<demiplane::scroll::Logger>();
-    cfg.threshold = demiplane::scroll::WRN;
+    logger = std::make_unique<demiplane::scroll::Logger>();
+    cfg.threshold(demiplane::scroll::WRN);
     auto sink     = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(cfg);
     file_sink     = sink;
     logger->add_sink(std::move(sink));
@@ -125,7 +126,7 @@ TEST_F(FileSinkTest, AllLogLevels) {
     for (const auto& [level, levelName] : levels) {
         // Clean up file before each level test
         logger->shutdown();
-        std::filesystem::remove(cfg.file);
+        std::filesystem::remove(cfg.get_file());
 
         // Recreate logger for each test
         logger    = std::make_unique<demiplane::scroll::Logger>();
@@ -167,7 +168,7 @@ TEST_F(FileSinkTest, FileCreationAndAppending) {
 TEST_F(FileSinkTest, FilePathHandling) {
     // Clean up logger first
     logger->shutdown();
-    std::filesystem::remove(cfg.file);
+    std::filesystem::remove(cfg.get_file());
 
     // Create a logger with a path that includes directories
     const std::filesystem::path nested_path = "test_dir/nested/test_log.txt";
@@ -176,7 +177,7 @@ TEST_F(FileSinkTest, FilePathHandling) {
     std::filesystem::remove_all("test_dir");
 
     // Create logger with nested path
-    cfg.file  = nested_path;
+    cfg.file(nested_path);
     logger    = std::make_unique<demiplane::scroll::Logger>();
     auto sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(cfg);
     file_sink = sink;

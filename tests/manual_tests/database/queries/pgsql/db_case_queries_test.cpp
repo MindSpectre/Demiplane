@@ -17,9 +17,9 @@ using namespace demiplane::db;
 class CaseQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileSinkConfig cfg;
-        cfg.file                 = "query_test.log";
-        cfg.add_time_to_filename = false;
+        demiplane::scroll::FileSinkConfig cfg = demiplane::scroll::FileSinkConfig{}
+                                                   .file("query_test.log")
+                                                   .add_time_to_filename(false);
 
         auto logger = std::make_shared<demiplane::scroll::Logger>();
         auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));

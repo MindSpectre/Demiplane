@@ -53,7 +53,10 @@ namespace demiplane::gears {
             validate();
             return std::move(static_cast<Derived&>(*this));
         }
-
+        Derived finalize() & {
+            validate();
+            return static_cast<Derived&>(*this);
+        }
         // Serialization - use the SerializeStruct template param
         virtual SerializeStruct serialize() const = 0;
 

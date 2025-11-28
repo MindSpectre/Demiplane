@@ -7,3 +7,8 @@
 // Concatenation macros
 #define CONCAT(A, B) CONCAT_IMPL(A, B)
 #define CONCAT_IMPL(A, B) A##B
+
+
+#define GEARS_UNREACHABLE(TYPE, TEXT)                                                                                  \
+    static_assert(demiplane::gears::dependent_false_v<TYPE>, TEXT);                                                    \
+    std::unreachable();

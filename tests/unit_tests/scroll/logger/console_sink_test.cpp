@@ -1,23 +1,25 @@
 #include <demiplane/scroll>
 
 #include <gtest/gtest.h>
-
+using namespace demiplane::scroll;
 class ConsoleSinkTest : public ::testing::Test {
 protected:
-    std::unique_ptr<demiplane::scroll::Logger> logger;
-    std::shared_ptr<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>> console_sink;
-    demiplane::scroll::ConsoleSinkConfig cfg = {.threshold      = demiplane::scroll::DBG,
-                                                     .enable_colors  = false,
-                                                     .flush_each_entry = false};
+    std::unique_ptr<Logger> logger;
+    std::shared_ptr<ConsoleSink<LightEntry>> console_sink;
+    ConsoleSinkConfig cfg =
+        ConsoleSinkConfig{}.threshold(LogLevel::Debug).enable_colors(false).flush_each_entry(false).finalize();
     void TearDown() override {
         logger->shutdown();
         logger.reset();
     }
 
     void SetUp() override {
+        reinit_logger(cfg);
+    }
 
-        logger = std::make_unique<demiplane::scroll::Logger>();
-        auto sink = std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(cfg);
+    void reinit_logger(ConsoleSinkConfig config) {
+        logger       = std::make_unique<Logger>();
+        auto sink    = std::make_shared<ConsoleSink<LightEntry>>(std::move(config));
         console_sink = sink;
         logger->add_sink(std::move(sink));
     }
@@ -29,7 +31,7 @@ TEST_F(ConsoleSinkTest, LogsEntryWhenAboveThreshold) {
     testing::internal::CaptureStdout();
 
     // Log the message
-    logger->log(demiplane::scroll::INF, "Test message");
+    logger->log(INF, "Test message");
 
     // Small delay to allow async logging
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -40,17 +42,17 @@ TEST_F(ConsoleSinkTest, LogsEntryWhenAboveThreshold) {
 
     // Verify output contains the message
     EXPECT_TRUE(output.find("Test message") != std::string::npos);
-    EXPECT_TRUE(output.find(demiplane::scroll::log_level_to_string(demiplane::scroll::INF)) != std::string::npos);
+    EXPECT_TRUE(output.find(log_level_to_string(INF)) != std::string::npos);
 }
 
 // Test that messages below the threshold are not logged
 TEST_F(ConsoleSinkTest, FiltersEntriesBelowThreshold) {
     // Set threshold to ERROR
     testing::internal::CaptureStdout();
-    console_sink->config().threshold = demiplane::scroll::ERR;
+    console_sink->config().threshold(ERR);
 
     // Log an INFO message (below the threshold)
-    logger->log(demiplane::scroll::INF, "This should not appear");
+    logger->log(INF, "This should not appear");
 
     // Small delay to allow async logging
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -64,7 +66,7 @@ TEST_F(ConsoleSinkTest, FiltersEntriesBelowThreshold) {
 TEST_F(ConsoleSinkTest, DirectLoggingWithSourceLocation) {
     // Log directly with a message
     testing::internal::CaptureStdout();
-    logger->log(demiplane::scroll::WRN, "Warning message");
+    logger->log(WRN, "Warning message");
 
     // Small delay to allow async logging
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -74,14 +76,14 @@ TEST_F(ConsoleSinkTest, DirectLoggingWithSourceLocation) {
 
     // Verify output
     EXPECT_TRUE(output.find("Warning message") != std::string::npos);
-    EXPECT_TRUE(output.find(demiplane::scroll::log_level_to_string(demiplane::scroll::WRN)) != std::string::npos);
+    EXPECT_TRUE(output.find(log_level_to_string(WRN)) != std::string::npos);
 }
 
 // Test threshold changes
 TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
     // First log with a DEBUG threshold
     testing::internal::CaptureStdout();
-    logger->log(demiplane::scroll::DBG, "Debug message");
+    logger->log(DBG, "Debug message");
 
     // Small delay to allow async logging
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -92,38 +94,32 @@ TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
     EXPECT_TRUE(output1.find("Debug message") != std::string::npos);
 
     // Recreate logger with new threshold
-    demiplane::scroll::ConsoleSinkConfig cfg{.threshold      = demiplane::scroll::WRN,
-                                             .enable_colors  = false,
-                                             .flush_each_entry = false};
-    logger = std::make_unique<demiplane::scroll::Logger>();
-    auto sink = std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(cfg);
-    console_sink = sink;
-    logger->add_sink(std::move(sink));
+    const ConsoleSinkConfig cfg = ConsoleSinkConfig{}.threshold(WRN).enable_colors(false).flush_each_entry(true).finalize();
 
+    reinit_logger(cfg);
     // Recapture for next test
     testing::internal::CaptureStdout();
 
     // Try to log the DEBUG message again
-    logger->log(demiplane::scroll::DBG, "Another debug message");
+    logger->log(DBG, "Another debug message");
 
     // Small delay to allow async logging
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     logger->shutdown();
 
     // Verify nothing was logged
-    EXPECT_TRUE(testing::internal::GetCapturedStdout().empty());
+    const std::string svg =  testing::internal::GetCapturedStdout();
+    std::cout << svg << std::endl;
+    EXPECT_TRUE(svg.empty());
 
     // Recreate logger again for final test
-    logger = std::make_unique<demiplane::scroll::Logger>();
-    sink = std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(cfg);
-    console_sink = sink;
-    logger->add_sink(std::move(sink));
+    reinit_logger(cfg);
 
     // Recapture for next test
     testing::internal::CaptureStdout();
 
     // Log WARNING message which should appear
-    logger->log(demiplane::scroll::WRN, "Warning message");
+    logger->log(WRN, "Warning message");
 
     // Small delay to allow async logging
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -137,15 +133,15 @@ TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
 // Test all log levels
 TEST_F(ConsoleSinkTest, AllLogLevels) {
     // Make sure a threshold is at the lowest level
-    console_sink->config().threshold = demiplane::scroll::DBG;
+    console_sink->config().threshold(DBG);
 
     // Test each log level
-    std::vector<std::pair<demiplane::scroll::LogLevel, std::string>> levels = {
-        {demiplane::scroll::DBG, "DEBUG"  },
-        {demiplane::scroll::INF, "INFO"   },
-        {demiplane::scroll::WRN, "WARNING"},
-        {demiplane::scroll::ERR, "ERROR"  },
-        {demiplane::scroll::FAT, "FATAL"  }
+    std::vector<std::pair<LogLevel, std::string>> levels = {
+        {DBG, "DEBUG"  },
+        {INF, "INFO"   },
+        {WRN, "WARNING"},
+        {ERR, "ERROR"  },
+        {FAT, "FATAL"  }
     };
 
     for (const auto& [level, levelName] : levels) {
@@ -168,14 +164,9 @@ TEST_F(ConsoleSinkTest, AllLogLevels) {
         EXPECT_TRUE(output.find(message) != std::string::npos) << "Message for " << levelName << " not found in output";
 
         // Recreate logger for next iteration
-        if (level != demiplane::scroll::FAT) {
-            demiplane::scroll::ConsoleSinkConfig cfg{.threshold      = demiplane::scroll::DBG,
-                                                     .enable_colors  = false,
-                                                     .flush_each_entry = false};
-            logger = std::make_unique<demiplane::scroll::Logger>();
-            auto sink = std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(cfg);
-            console_sink = sink;
-            logger->add_sink(std::move(sink));
+        if (level != FAT) {
+            auto cfg     = ConsoleSinkConfig{}.threshold(DBG).enable_colors(true).flush_each_entry(false).finalize();
+            reinit_logger(std::move(cfg));
         }
     }
 }

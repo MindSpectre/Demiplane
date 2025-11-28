@@ -1,30 +1,12 @@
 #pragma once
 
-#include <demiplane/chrono>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
 
-#include <sink_interface.hpp>
+#include "file_sink_config.hpp"
 
 namespace demiplane::scroll {
-    /**
-     * @brief Configuration for file output with rotation
-     */
-    struct FileSinkConfig {
-        LogLevel threshold = LogLevel::Debug;
-        std::filesystem::path file;
-
-        /// @brief Add time to a file name. Current is iso8601
-        bool add_time_to_filename            = true;
-        std::string time_format_in_file_name = chrono::clock_formats::iso8601;
-
-        /// @brief The default size is 100 mb.
-        std::uint64_t max_file_size = gears::literals::operator""_mb(100);
-
-        /// @brief Disabled by default. Only for debug purposes
-        bool flush_each_entry = false;
-    };
 
     /**
      * @brief File sink with automatic rotation
@@ -42,20 +24,14 @@ namespace demiplane::scroll {
      *   - app_2025-01-18T10:00:00.log (old file, closed)
      *   - app_2025-01-18T12:30:45.log (new file, active)
      *
-     * Usage:
-     *   auto file = std::make_unique<FileSink<DetailedEntry>>(
-     *       FileSinkConfig{
-     *           .file = "/var/log/myapp.log",
-     *           .max_file_size = gears::literals::operator""_mb(50)
-     *       }
-     *   );
-     *   logger.add_sink(std::move(file));
      */
     template <detail::EntryConcept EntryType>
     class FileSink final : public Sink {
     public:
-        explicit FileSink(FileSinkConfig cfg)
-            : config_{std::move(cfg)} {
+        template <typename FileSinkConfigTp = FileSinkConfig>
+            requires std::constructible_from<FileSinkConfig, FileSinkConfigTp>
+        explicit FileSink(FileSinkConfigTp&& cfg = {}) noexcept
+            : config_{std::forward<FileSinkConfigTp>(cfg)} {
             init();
         }
 
@@ -81,7 +57,7 @@ namespace demiplane::scroll {
                 std::lock_guard lock{mutex_};
                 file_stream_ << formatted;
 
-                if (config_.flush_each_entry) {
+                if (config_.is_flush_each_entry()) {
                     file_stream_.flush();
                 }
             }
@@ -98,14 +74,14 @@ namespace demiplane::scroll {
         }
 
         [[nodiscard]] bool should_log(LogLevel lvl) const noexcept override {
-            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.threshold);
+            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.get_threshold());
         }
 
-        FileSinkConfig& config() noexcept {
+        constexpr FileSinkConfig& config() noexcept {
             return config_;
         }
 
-        [[nodiscard]] const FileSinkConfig& config() const noexcept {
+        [[nodiscard]] constexpr const FileSinkConfig& config() const noexcept {
             return config_;
         }
 
@@ -121,13 +97,13 @@ namespace demiplane::scroll {
         alignas(64) char stream_buffer_[64 * (1 << 16)];  // 64KB static buffer, cache-line aligned
 
         void init() {
-            std::filesystem::path full_path = config_.file;
+            std::filesystem::path full_path = config_.get_file();
 
-            if (config_.add_time_to_filename) {
+            if (config_.is_add_time_to_filename()) {
                 const std::string stem             = full_path.stem().string();
                 const std::string ext              = full_path.extension().string();
                 const std::filesystem::path parent = full_path.parent_path();
-                const std::string time             = chrono::LocalClock::current_time(config_.time_format_in_file_name);
+                const std::string time             = chrono::LocalClock::current_time(config_.get_time_format_in_file_name());
                 full_path                          = parent / (stem + "_" + time + ext);
             }
 
@@ -146,7 +122,7 @@ namespace demiplane::scroll {
         }
 
         bool should_rotate() {
-            if (!config_.add_time_to_filename) {
+            if (!config_.is_add_time_to_filename()) {
                 return false;  // Can't rotate to same file
             }
             std::uint64_t sz = 0;
@@ -154,12 +130,12 @@ namespace demiplane::scroll {
                 sz = static_cast<std::uint64_t>(pos);
             } else {
                 try {
-                    sz = std::filesystem::file_size(config_.file);
+                    sz = std::filesystem::file_size(config_.get_file());
                 } catch (...) {
                     sz = 0;
                 }
             }
-            return sz > config_.max_file_size;
+            return sz > config_.get_max_file_size();
         }
 
         void rotate_log() {

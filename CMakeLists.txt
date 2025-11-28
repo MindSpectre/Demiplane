@@ -34,7 +34,7 @@ message("_______________________________________________________________________
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 list(APPEND general_compile_options
-        -O2
+        -O3
         -Wall -Wextra -Wpedantic
         -Wconversion -Wshadow
         -Wdouble-promotion -Wnull-dereference

@@ -18,10 +18,21 @@ using namespace demiplane::db::postgres;
 class CompiledUpdateTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        demiplane::nexus::instance()
+            .register_singleton<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>([] {
+                return std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>(
+                    demiplane::scroll::ConsoleSinkConfig{}
+                        .flush_each_entry(true)
+                        .threshold(demiplane::scroll::TRC)
+                        .finalize());
+            });
+
+
         demiplane::nexus::instance().register_singleton<demiplane::scroll::Logger>([] {
-            return std::make_shared<demiplane::scroll::ConsoleLogger<demiplane::scroll::DetailedEntry>>(
-                demiplane::scroll::ConsoleLoggerConfig{.threshold        = demiplane::scroll::LogLevel::Trace,
-                                                       .flush_each_entry = true});
+            auto logger = std::make_shared<demiplane::scroll::Logger>();
+            logger->add_sink(
+                demiplane::nexus::instance().get<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>());
+            return logger;
         });
         // Get connection parameters from environment or use defaults
         const char* host     = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
@@ -31,12 +42,12 @@ protected:
         const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
 
         // Create connection string
-        std::string conninfo = "host=" + std::string(host) + " port=" + std::string(port) +
-                               " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                               " password=" + std::string(password);
+        std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
+                                " dbname=" + std::string(dbname) + " user=" + std::string(user) +
+                                " password=" + std::string(password);
 
         // Connect to database
-        conn_ = PQconnectdb(conninfo.c_str());
+        conn_ = PQconnectdb(conn_info.c_str());
 
         // Check connection status
         if (PQstatus(conn_) != CONNECTION_OK) {

@@ -57,6 +57,7 @@ target_link_libraries(${DMP_SCROLL}.Sink.Interface INTERFACE
 ##############################################################################
 add_library(${DMP_SCROLL}.Sink.File STATIC
         sink/file_sink/include/file_sink.hpp
+        sink/file_sink/include/file_sink_config.hpp
 )
 target_include_directories(${DMP_SCROLL}.Sink.File PUBLIC
         sink/file_sink/include

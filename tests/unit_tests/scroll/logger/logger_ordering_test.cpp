@@ -145,12 +145,11 @@ TEST(LoggerOrderingTest, FileSinkPreservesConsumerOrder) {
     const std::string test_file = "test_ordering.log";
     std::filesystem::remove(test_file);
 
-    demiplane::scroll::FileSinkConfig config{
-        .threshold            = demiplane::scroll::LogLevel::Info,
-        .file                 = test_file,
-        .add_time_to_filename = false,
-        .flush_each_entry     = true  // Ensure immediate write
-    };
+    demiplane::scroll::FileSinkConfig config = demiplane::scroll::FileSinkConfig{}
+                                                   .threshold(demiplane::scroll::LogLevel::Info)
+                                                   .file(test_file)
+                                                   .add_time_to_filename(false).rotation(false)
+                                                   .flush_each_entry(true).finalize();  // Ensure immediate write
 
     auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(config);
     demiplane::scroll::Logger logger;

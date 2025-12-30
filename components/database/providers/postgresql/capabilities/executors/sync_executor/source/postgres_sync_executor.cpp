@@ -65,15 +65,4 @@ namespace demiplane::db::postgres {
         return execute(query.sql(), *params_ptr);
     }
 
-    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::process_result(PGresult* result) {
-        // Extract error if present
-        if (auto error_ctx = extract_error(result)) {
-            PQclear(result);
-            return gears::Err(std::move(*error_ctx));
-        }
-
-        // Success - wrap result in ResultBlock (takes ownership)
-        return ResultBlock(result);
-    }
-
 }  // namespace demiplane::db::postgres

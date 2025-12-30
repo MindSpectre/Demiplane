@@ -22,16 +22,16 @@ protected:
         const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
 
         // Create connection string
-        std::string conninfo = "host=" + std::string(host) + " port=" + std::string(port) +
+        const std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
                                " dbname=" + std::string(dbname) + " user=" + std::string(user) +
                                " password=" + std::string(password);
 
         // Connect to database
-        conn_ = PQconnectdb(conninfo.c_str());
+        conn_ = PQconnectdb(conn_info.c_str());
 
         // Check connection status
         if (PQstatus(conn_) != CONNECTION_OK) {
-            std::string error = PQerrorMessage(conn_);
+            const std::string error = PQerrorMessage(conn_);
             PQfinish(conn_);
             conn_ = nullptr;
             GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error
@@ -85,7 +85,7 @@ TEST_F(SyncExecutorTest, ExecuteSimpleSelect) {
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.cols(), 2);
 }
@@ -126,7 +126,7 @@ TEST_F(SyncExecutorTest, ExecuteEmptyResultSet) {
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 0);
     EXPECT_TRUE(block.empty());
 }
@@ -141,7 +141,7 @@ TEST_F(SyncExecutorTest, ExecuteParameterizedInsert) {
     sink.push(FieldValue{40});
     sink.push(FieldValue{std::string{"dave@test.com"}});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     auto result = executor_->execute("INSERT INTO test_users (name, age, email) VALUES ($1, $2, $3)", *params);
 
@@ -156,13 +156,13 @@ TEST_F(SyncExecutorTest, ExecuteParameterizedSelect) {
     std::pmr::unsynchronized_pool_resource pool;
     postgres::ParamSink sink(&pool);
     sink.push(FieldValue{std::string{"Eve"}});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     auto result = executor_->execute("SELECT name, age FROM test_users WHERE name = $1", *params);
 
     ASSERT_TRUE(result.is_success()) << "Parameterized select failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
 
@@ -195,7 +195,7 @@ TEST_F(SyncExecutorTest, ExecuteNullParameter) {
     sink.push(FieldValue{std::string{"NullEmailUser"}});
     sink.push(FieldValue{std::monostate{}});  // NULL value
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     auto result = executor_->execute("INSERT INTO test_users (name, email) VALUES ($1, $2)", *params);
 
@@ -213,7 +213,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicSingleParameter) {
 
     ASSERT_TRUE(result.is_success()) << "Variadic single parameter failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
 
@@ -244,7 +244,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicIntegerTypes) {
 
     ASSERT_TRUE(result.is_success()) << "Variadic int parameters failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
 }
 
@@ -310,7 +310,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicComplexQuery) {
 
     ASSERT_TRUE(result.is_success()) << "Variadic complex query failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // ActiveUser1 and ActiveUser2
 }
 
@@ -321,7 +321,7 @@ TEST_F(SyncExecutorTest, SyntaxError) {
 
     ASSERT_FALSE(result.is_success()) << "Should have failed with syntax error";
 
-    auto& error = result.error<ErrorContext>();
+    const auto& error = result.error<ErrorContext>();
     EXPECT_FALSE(error.sqlstate.empty());
     EXPECT_EQ(error.sqlstate.substr(0, 2), "42");  // Class 42 = Syntax Error or Access Rule Violation
     EXPECT_FALSE(error.message.empty());
@@ -336,7 +336,7 @@ TEST_F(SyncExecutorTest, UniqueConstraintViolation) {
 
     ASSERT_FALSE(result.is_success()) << "Should have failed with unique constraint violation";
 
-    auto& error = result.error<ErrorContext>();
+    const auto& error = result.error<ErrorContext>();
     EXPECT_EQ(error.sqlstate, "23505");  // Unique violation
     EXPECT_TRUE(error.code.is_server_error());
     EXPECT_EQ(error.code, ServerErrorCode::UniqueViolation);
@@ -347,7 +347,7 @@ TEST_F(SyncExecutorTest, NotNullConstraintViolation) {
 
     ASSERT_FALSE(result.is_success()) << "Should have failed with NOT NULL constraint violation";
 
-    auto& error = result.error<ErrorContext>();
+    const auto& error = result.error<ErrorContext>();
     EXPECT_EQ(error.sqlstate, "23502");  // NOT NULL violation
     EXPECT_EQ(error.code, ServerErrorCode::NotNullViolation);
 }
@@ -357,20 +357,20 @@ TEST_F(SyncExecutorTest, TableNotFound) {
 
     ASSERT_FALSE(result.is_success()) << "Should have failed with table not found error";
 
-    auto& error = result.error<ErrorContext>();
+    const auto& error = result.error<ErrorContext>();
     EXPECT_EQ(error.sqlstate, "42P01");  // Undefined table
     EXPECT_EQ(error.code, ServerErrorCode::TableNotFound);
 }
 
 TEST_F(SyncExecutorTest, InvalidConnectionError) {
     // Create executor with null connection
-    SyncExecutor invalid_executor(nullptr);
+    const SyncExecutor invalid_executor(nullptr);
 
     auto result = invalid_executor.execute("SELECT 1");
 
     ASSERT_FALSE(result.is_success()) << "Should have failed with connection error";
 
-    auto& error = result.error<ErrorContext>();
+    const auto& error = result.error<ErrorContext>();
     EXPECT_TRUE(error.code.is_client_error());
     EXPECT_EQ(error.code, ClientErrorCode::NotConnected);
 }
@@ -387,7 +387,7 @@ TEST_F(SyncExecutorTest, MultipleRowsResult) {
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 3);
     EXPECT_EQ(block.cols(), 2);
 }
@@ -399,11 +399,11 @@ TEST_F(SyncExecutorTest, NullValuesInResult) {
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
 
-    auto& block = result.value();
+    const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 
     // Check NULL value handling
-    auto age_opt = block.get_opt<int>(0, 1);
+    const auto age_opt = block.get_opt<int>(0, 1);
     EXPECT_FALSE(age_opt.has_value()) << "Age should be NULL";
 }
 
@@ -414,7 +414,7 @@ TEST_F(SyncExecutorTest, EmptyQuery) {
 
     // Empty query should result in error
     ASSERT_FALSE(result.is_success()) << "Empty query should fail";
-    auto& error = result.error<ErrorContext>();
+    const auto& error = result.error<ErrorContext>();
 
     // PGRES_EMPTY_QUERY doesn't provide SQLSTATE, falls back to status-based mapping
     EXPECT_TRUE(error.sqlstate.empty()) << "Empty query has no SQLSTATE";

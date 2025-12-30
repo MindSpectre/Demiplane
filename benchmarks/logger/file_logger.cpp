@@ -75,7 +75,8 @@ void run_throughput_benchmark(
     auto logger = std::make_unique<demiplane::scroll::Logger>(
         demiplane::scroll::LoggerConfig{}
             .wait_strategy<demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin>()
-            .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium).finalize());
+            .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium)
+            .finalize());
     logger->add_sink(sink);
 
     std::vector<std::thread> threads;
@@ -100,10 +101,8 @@ void run_throughput_benchmark(
         for (auto& thread : threads) {
             thread.join();
         }
-
-        logger->shutdown();
     });
-
+    logger->shutdown();
     // Count entries in file
     auto result    = count_log_entries(sink->config().get_file());
     result.elapsed = elapsed;
@@ -126,7 +125,9 @@ int main() {
                                                    .file("benchmark_throughput.log")
                                                    .add_time_to_filename(false)
                                                    .max_file_size(demiplane::gears::literals::operator""_mb(500))
-                                                   .flush_each_entry(false).rotation(false).finalize();  // Maximum throughput mode
+                                                   .flush_each_entry(false)
+                                                   .rotation(false)
+                                                   .finalize();  // Maximum throughput mode
 
     std::filesystem::remove(config.get_file());
 

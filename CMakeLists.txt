@@ -34,14 +34,12 @@ message("_______________________________________________________________________
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 list(APPEND general_compile_options
-        -O3
         -Wall -Wextra -Wpedantic
         -Wconversion -Wshadow
         -Wdouble-promotion -Wnull-dereference
         -Wnon-virtual-dtor
         -Werror
         -fstack-protector-strong
-        -D_FORTIFY_SOURCE=2
         -fvisibility=hidden
         $<$<CONFIG:Release>:-fomit-frame-pointer>
 )

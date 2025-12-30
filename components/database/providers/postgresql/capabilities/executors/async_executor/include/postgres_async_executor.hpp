@@ -1,119 +1,132 @@
 #pragma once
+
+#include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/io_context.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <gears_outcome.hpp>
-#include <libpq-fe.h>
-#include <postgres_result.hpp>
+#include <postgres_executor.hpp>
 
-#include "compiled_query.hpp"
-#include "db_error_codes.hpp"
-#include "postgres_params.hpp"
 namespace demiplane::db::postgres {
-    class AsyncExecutor {
+
+    /**
+     * @brief Modern async PostgreSQL executor with coroutine support
+     *
+     * Provides co_await-able query execution using libpq's async API
+     * integrated with Boost.Asio. Designed for exclusive connection access
+     * (typically acquired from a pool).
+     *
+     * Usage:
+     *   auto exec = AsyncExecutor(conn, co_await asio::this_coro::executor);
+     *   auto result = co_await exec.execute("SELECT * FROM users WHERE id = $1", 42);
+     *   if (result) { process(result.value()); }
+     *
+     * Thread safety: NOT thread-safe. Use strand if concurrent access needed.
+     * Cancellation: Supports asio cancellation_slot for query cancellation.
+     */
+    class AsyncExecutor : gears::NonCopyable {
     public:
-        AsyncExecutor(PGconn* conn, boost::asio::io_context& io)
-            : conn_(conn),
-              io_(io),
-              socket_(io, PQsocket(conn)) {
-            PQsetnonblocking(conn_, 1);
+        using executor_type = boost::asio::any_io_executor;
+
+        /**
+         * @brief Construct executor with exclusive connection access
+         * @param conn PostgreSQL connection (must be valid, caller retains ownership)
+         * @param executor Asio executor for async operations
+         * @throws std::runtime_error if connection invalid or socket unavailable
+         *
+         * Sets connection to non-blocking mode. Connection must remain valid
+         * for executor lifetime.result_type
+         */
+        explicit AsyncExecutor(PGconn* conn, executor_type executor);
+
+        ~AsyncExecutor();
+
+        // Movable
+        AsyncExecutor(AsyncExecutor&& other) noexcept;
+        AsyncExecutor& operator=(AsyncExecutor&& other) noexcept;
+
+        /**
+         * @brief Execute simple query
+         * @param query SQL query string
+         * @return Awaitable result
+         */
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute(std::string_view query) const;
+
+        /**
+         * @brief Execute parameterized query
+         * @param query SQL with placeholders ($1, $2, ...)
+         * @param params Parameter pack
+         * @return Awaitable result
+         */
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute(std::string_view query, const Params& params) const;
+
+        /**
+         * @brief Execute with variadic parameters (convenience)
+         * @param query SQL with placeholders
+         * @param args Values convertible to FieldValue
+         * @return Awaitable result
+         *
+         * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", 42);
+         */
+        template <typename... Args>
+            requires(db::IsFieldValueType<Args> && ...)
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> execute(const std::string_view query,
+                                                                                                Args&&... args) {
+            // NOT a coroutine - runs synchronously to completion
+            // Temporaries are still alive here
+
+            auto pool = std::make_shared<std::pmr::unsynchronized_pool_resource>();
+            ParamSink sink(pool.get());
+
+            (sink.push(FieldValue{std::forward<Args>(args)}), ...);
+
+            // Pass ownership to coroutine (shared_ptrs copied to coroutine frame before initial_suspend)
+            return execute_with_resources(query, std::move(pool), sink.native_packet());
         }
 
-        // Simple query without params
-        boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorCode>> execute(std::string_view query) {
-            co_return co_await execute(query, {});
+        /**
+         * @brief Execute compiled query
+         * @param query CompiledQuery object
+         * @return Awaitable result
+         */
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute(const CompiledQuery& query) const;
+
+        // Accessors
+        [[nodiscard]] executor_type get_executor() const noexcept {
+            return executor_;
         }
-
-        // Query with params
-        boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorCode>> execute(std::string_view query,
-                                                                               const Params& params) {
-            // Send query
-            int status = params.values.empty() ? PQsendQuery(conn_, query.data())
-                                               : PQsendQueryParams(conn_,
-                                                                   query.data(),
-                                                                   static_cast<int>(params.values.size()),
-                                                                   params.oids.data(),
-                                                                   params.values.data(),
-                                                                   params.lengths.data(),
-                                                                   params.formats.data(),
-                                                                   1);  // binary result format
-
-            if (!status) {
-                co_return ErrorCode::SendFailed;
-            }
-
-            // Flush and wait
-            co_await flush_async();
-
-            // Collect results
-            co_return co_await consume_results();
+        [[nodiscard]] PGconn* native_handle() const noexcept {
+            return conn_;
         }
-
-        // CompiledQuery overload
-        boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorCode>> execute(const CompiledQuery& query,
-                                                                               const Params& params) {
-            co_return co_await execute(query.sql(), params);
+        [[nodiscard]] bool valid() const noexcept {
+            return conn_ != nullptr && socket_ != nullptr;
         }
 
     private:
         PGconn* conn_;
-        boost::asio::io_context& io_;
-        boost::asio::posix::stream_descriptor socket_;
+        executor_type executor_;
+        std::unique_ptr<boost::asio::posix::stream_descriptor> socket_;
+        std::int32_t cached_socket_fd_ = -1;  // For detecting reconnection
 
-        boost::asio::awaitable<void> flush_async() {
-            while (PQflush(conn_) > 0) {
-                co_await socket_.async_wait(boost::asio::posix::stream_descriptor::wait_write,
-                                            boost::asio::use_awaitable);
-            }
-        }
+        // Core implementation
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+            execute_with_resources(std::string_view query,
+                                   std::shared_ptr<std::pmr::memory_resource> pool,
+                                   std::shared_ptr<Params> params) const;
 
-        boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorCode>> consume_results() {
-            // Wait for read ready
-            co_await socket_.async_wait(boost::asio::posix::stream_descriptor::wait_read, boost::asio::use_awaitable);
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute_impl(const char* query, const Params* params) const;
 
-            // Consume input
-            if (!PQconsumeInput(conn_)) {
-                co_return ;
-            }
+        // Async primitives
+        [[nodiscard]] boost::asio::awaitable<std::optional<ErrorContext>> async_flush() const;
+        [[nodiscard]] boost::asio::awaitable<std::optional<ErrorContext>> async_consume_until_ready() const;
 
-            // Collect all result sets
-            std::vector<PGresult*> results;
-            while (PQisBusy(conn_) == 0) {
-                PGresult* res = PQgetResult(conn_);
-                if (!res)
-                    break;  // No more results
+        // Result collection
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> collect_single_result() const;
 
-                results.push_back(res);
-            }
-
-            // If still busy, need to wait more
-            if (PQisBusy(conn_)) {
-                co_return co_await consume_results();  // Recursive wait
-            }
-
-            // Check results
-            if (results.empty()) {
-                co_return ErrorCode::NoResult;  // ?
-            }
-
-            // Take last result (others might be from multi-statement)
-            auto last_result = results.back();
-
-            // Clean up intermediate results
-            for (size_t i = 0; i < results.size() - 1; ++i) {
-                PQclear(results[i]);
-            }
-
-            // Check status
-            auto status = PQresultStatus(last_result);
-            if (status != PGRES_COMMAND_OK && status != PGRES_TUPLES_OK) {
-                ErrorCode ec = map_postgres_error(status);
-                PQclear(last_result);
-                co_return gears::Err(ec);
-            }
-
-            co_return ResultBlock(last_result);  // Your Result wrapper takes ownership
-        }
+        // Validation
+        [[nodiscard]] std::optional<ErrorContext> validate_state() const;
     };
+
 }  // namespace demiplane::db::postgres

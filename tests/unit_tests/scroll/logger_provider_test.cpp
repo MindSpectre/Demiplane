@@ -44,7 +44,7 @@ TEST(LoggerProviderTest, StreamStyleLogging) {
 }
 
 TEST(LoggerProviderTest, FormatStyleLogging) {
-    auto logger = std::make_shared<demiplane::scroll::Logger>();
+    const auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
         demiplane::scroll::ConsoleSinkConfig{}
             .threshold(demiplane::scroll::LogLevel::Debug)

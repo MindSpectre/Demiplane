@@ -15,9 +15,9 @@
 #include "postgres_result.hpp"
 
 using namespace demiplane::db;
-using demiplane::db::postgres::ErrorContext;
-using demiplane::db::postgres::FormatRegistry;
-using demiplane::db::postgres::TypeRegistry;
+using postgres::ErrorContext;
+using postgres::FormatRegistry;
+using postgres::TypeRegistry;
 
 // Test fixture for PostgreSQL params
 class PostgresParamsTest : public ::testing::Test {
@@ -31,16 +31,16 @@ protected:
         const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
 
         // Create connection string
-        std::string conninfo = "host=" + std::string(host) + " port=" + std::string(port) +
+        const std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
                                " dbname=" + std::string(dbname) + " user=" + std::string(user) +
                                " password=" + std::string(password);
 
         // Connect to database
-        conn_ = PQconnectdb(conninfo.c_str());
+        conn_ = PQconnectdb(conn_info.c_str());
 
         // Check connection status
         if (PQstatus(conn_) != CONNECTION_OK) {
-            std::string error = PQerrorMessage(conn_);
+            const std::string error = PQerrorMessage(conn_);
             PQfinish(conn_);
             conn_ = nullptr;
             GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error
@@ -62,11 +62,11 @@ protected:
 
 TEST_F(PostgresParamsTest, BindNull) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::monostate{}});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     EXPECT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->values[0], nullptr);
@@ -77,11 +77,11 @@ TEST_F(PostgresParamsTest, BindNull) {
 
 TEST_F(PostgresParamsTest, BindBoolTrue) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{true});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_NE(params->values[0], nullptr);
@@ -95,11 +95,11 @@ TEST_F(PostgresParamsTest, BindBoolTrue) {
 
 TEST_F(PostgresParamsTest, BindBoolFalse) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{false});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->lengths[0], 1);
@@ -108,12 +108,12 @@ TEST_F(PostgresParamsTest, BindBoolFalse) {
 
 TEST_F(PostgresParamsTest, BindInt32) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    const int32_t value = 42;
+    constexpr int32_t value = 42;
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_NE(params->values[0], nullptr);
@@ -129,11 +129,11 @@ TEST_F(PostgresParamsTest, BindInt32) {
 
 TEST_F(PostgresParamsTest, BindInt32Negative) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::int32_t{-100}});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     uint32_t net_value;
     std::memcpy(&net_value, params->values[0], 4);
@@ -142,12 +142,12 @@ TEST_F(PostgresParamsTest, BindInt32Negative) {
 
 TEST_F(PostgresParamsTest, BindInt32MinMax) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::numeric_limits<std::int32_t>::min()});
     sink.push(FieldValue{std::numeric_limits<std::int32_t>::max()});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     EXPECT_EQ(params->values.size(), 2);
 
@@ -164,12 +164,12 @@ TEST_F(PostgresParamsTest, BindInt32MinMax) {
 
 TEST_F(PostgresParamsTest, BindInt64) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    const int64_t value = 9223372036854775807LL;  // Max int64
+    constexpr int64_t value = 9223372036854775807LL;  // Max int64
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->lengths[0], 8);
@@ -184,12 +184,12 @@ TEST_F(PostgresParamsTest, BindInt64) {
 
 TEST_F(PostgresParamsTest, BindFloat) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    const float value = 3.14159f;
+    constexpr float value = 3.14159f;
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->lengths[0], 4);
@@ -207,12 +207,12 @@ TEST_F(PostgresParamsTest, BindFloat) {
 
 TEST_F(PostgresParamsTest, BindDouble) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    const double value = 2.718281828459045;
+    constexpr double value = 2.718281828459045;
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->lengths[0], 8);
@@ -230,12 +230,12 @@ TEST_F(PostgresParamsTest, BindDouble) {
 
 TEST_F(PostgresParamsTest, BindString) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::string value = "Hello, PostgreSQL!";
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_NE(params->values[0], nullptr);
@@ -244,35 +244,35 @@ TEST_F(PostgresParamsTest, BindString) {
     EXPECT_EQ(params->oids[0], TypeRegistry::oid_text);
 
     // Verify string content
-    std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
+    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
     EXPECT_EQ(result, value);
 }
 
 TEST_F(PostgresParamsTest, BindStringView) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::string_view value = "String view test";
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->lengths[0], static_cast<int>(value.size()));
     EXPECT_EQ(params->formats[0], FormatRegistry::text);
     EXPECT_EQ(params->oids[0], TypeRegistry::oid_text);
 
-    std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
+    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
     EXPECT_EQ(result, value);
 }
 
 TEST_F(PostgresParamsTest, BindEmptyString) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::string{""}});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_EQ(params->lengths[0], 0);
@@ -281,25 +281,25 @@ TEST_F(PostgresParamsTest, BindEmptyString) {
 
 TEST_F(PostgresParamsTest, BindStringWithSpecialChars) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::string value = "Line1\nLine2\tTab'Quote\"DoubleQuote\\Backslash";
     sink.push(FieldValue{value});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
-    std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
+    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
     EXPECT_EQ(result, value);
 }
 
 TEST_F(PostgresParamsTest, BindByteArray) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::vector<uint8_t> bytes = {0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD};
     sink.push(FieldValue{bytes});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     ASSERT_EQ(params->values.size(), 1);
     EXPECT_NE(params->values[0], nullptr);
@@ -317,14 +317,14 @@ TEST_F(PostgresParamsTest, BindByteArray) {
 
 TEST_F(PostgresParamsTest, BindMultipleParameters) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::int32_t{42}});
     sink.push(FieldValue{std::string{"test"}});
     sink.push(FieldValue{true});
     sink.push(FieldValue{std::monostate{}});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     EXPECT_EQ(params->values.size(), 4);
     EXPECT_EQ(params->lengths.size(), 4);
@@ -342,7 +342,7 @@ TEST_F(PostgresParamsTest, BindMultipleParameters) {
 
 TEST_F(PostgresParamsTest, StringLifetime) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     {
         std::string temp = "Temporary string";
@@ -350,23 +350,23 @@ TEST_F(PostgresParamsTest, StringLifetime) {
         // temp goes out of scope
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     // String should still be valid (copied into str_data)
-    std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
+    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
     EXPECT_EQ(result, "Temporary string");
 }
 
 TEST_F(PostgresParamsTest, MultipleStringsLifetime) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     for (int i = 0; i < 10; ++i) {
         std::string temp = "String " + std::to_string(i);
         sink.push(FieldValue{temp});
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     EXPECT_EQ(params->values.size(), 10);
 
@@ -381,10 +381,10 @@ TEST_F(PostgresParamsTest, MultipleStringsLifetime) {
 
 TEST_F(PostgresParamsTest, RoundTripInt32) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::int32_t{12345}});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     // Execute with PQexecParams
     PGresult* result = PQexecParams(conn_,
@@ -411,10 +411,10 @@ TEST_F(PostgresParamsTest, RoundTripInt32) {
 
 TEST_F(PostgresParamsTest, RoundTripInt64) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::int64_t{9223372036854775807LL}});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::int8",
@@ -438,10 +438,10 @@ TEST_F(PostgresParamsTest, RoundTripInt64) {
 
 TEST_F(PostgresParamsTest, RoundTripBool) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{true});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::bool",
@@ -462,10 +462,10 @@ TEST_F(PostgresParamsTest, RoundTripBool) {
 
 TEST_F(PostgresParamsTest, RoundTripFloat) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{3.14159f});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::float4",
@@ -491,10 +491,10 @@ TEST_F(PostgresParamsTest, RoundTripFloat) {
 
 TEST_F(PostgresParamsTest, RoundTripDouble) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{2.718281828459045});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::float8",
@@ -520,10 +520,10 @@ TEST_F(PostgresParamsTest, RoundTripDouble) {
 
 TEST_F(PostgresParamsTest, RoundTripString) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::string{"Hello, PostgreSQL!"}});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::text",
@@ -538,7 +538,7 @@ TEST_F(PostgresParamsTest, RoundTripString) {
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
 
-    std::string result_str = PQgetvalue(result, 0, 0);
+    const std::string result_str = PQgetvalue(result, 0, 0);
     EXPECT_EQ(result_str, "Hello, PostgreSQL!");
 
     PQclear(result);
@@ -546,10 +546,10 @@ TEST_F(PostgresParamsTest, RoundTripString) {
 
 TEST_F(PostgresParamsTest, RoundTripNull) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::monostate{}});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1",
@@ -570,14 +570,14 @@ TEST_F(PostgresParamsTest, RoundTripNull) {
 
 TEST_F(PostgresParamsTest, RoundTripMultipleTypes) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::int32_t{42}});
     sink.push(FieldValue{std::string{"test"}});
     sink.push(FieldValue{true});
     sink.push(FieldValue{3.14});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::int4, $2::text, $3::bool, $4::float8",
@@ -599,8 +599,8 @@ TEST_F(PostgresParamsTest, RoundTripMultipleTypes) {
     EXPECT_EQ(static_cast<int32_t>(ntohl(int_val)), 42);
 
     // Verify text (binary format returns text as-is)
-    int text_len = PQgetlength(result, 0, 1);
-    std::string text_val(PQgetvalue(result, 0, 1), static_cast<size_t>(text_len));
+    const int text_len = PQgetlength(result, 0, 1);
+    const std::string text_val(PQgetvalue(result, 0, 1), static_cast<size_t>(text_len));
     EXPECT_EQ(text_val, "test");
 
     // Verify bool
@@ -619,11 +619,11 @@ TEST_F(PostgresParamsTest, RoundTripMultipleTypes) {
 
 TEST_F(PostgresParamsTest, RoundTripByteArray) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::vector<uint8_t> bytes = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0xFF};
     sink.push(FieldValue{bytes});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::bytea",
@@ -639,7 +639,7 @@ TEST_F(PostgresParamsTest, RoundTripByteArray) {
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
 
     // Verify bytea content
-    int result_len          = PQgetlength(result, 0, 0);
+    const int result_len          = PQgetlength(result, 0, 0);
     const char* result_data = PQgetvalue(result, 0, 0);
 
     ASSERT_EQ(result_len, static_cast<int>(bytes.size()));
@@ -654,9 +654,9 @@ TEST_F(PostgresParamsTest, RoundTripByteArray) {
 
 TEST_F(PostgresParamsTest, Int32EdgeCases) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    std::vector<std::int32_t> test_values = {
+    const std::vector<std::int32_t> test_values = {
         0,
         1,
         -1,
@@ -672,7 +672,7 @@ TEST_F(PostgresParamsTest, Int32EdgeCases) {
         sink.push(FieldValue{val});
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
     ASSERT_EQ(params->values.size(), test_values.size());
 
     for (size_t i = 0; i < test_values.size(); ++i) {
@@ -695,9 +695,9 @@ TEST_F(PostgresParamsTest, Int32EdgeCases) {
 
 TEST_F(PostgresParamsTest, Int64EdgeCases) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    std::vector<std::int64_t> test_values = {
+    const std::vector<std::int64_t> test_values = {
         0LL,
         1LL,
         -1LL,
@@ -713,7 +713,7 @@ TEST_F(PostgresParamsTest, Int64EdgeCases) {
         sink.push(FieldValue{val});
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     for (size_t i = 0; i < test_values.size(); ++i) {
         PGresult* result = PQexecParams(conn_,
@@ -735,7 +735,7 @@ TEST_F(PostgresParamsTest, Int64EdgeCases) {
 
 TEST_F(PostgresParamsTest, FloatSpecialValues) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::numeric_limits<float>::infinity()});
     sink.push(FieldValue{-std::numeric_limits<float>::infinity()});
@@ -745,7 +745,7 @@ TEST_F(PostgresParamsTest, FloatSpecialValues) {
     sink.push(FieldValue{std::numeric_limits<float>::min()});
     sink.push(FieldValue{std::numeric_limits<float>::max()});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     // Test infinity
     PGresult* result = PQexecParams(conn_,
@@ -800,7 +800,7 @@ TEST_F(PostgresParamsTest, FloatSpecialValues) {
 
 TEST_F(PostgresParamsTest, VeryLargeString) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::string large_string(1024 * 1024, 'A');
     for (size_t i = 0; i < large_string.size(); i += 100) {
@@ -808,7 +808,7 @@ TEST_F(PostgresParamsTest, VeryLargeString) {
     }
 
     sink.push(FieldValue{large_string});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT length($1::text), $1::text",
@@ -828,9 +828,9 @@ TEST_F(PostgresParamsTest, VeryLargeString) {
 
 TEST_F(PostgresParamsTest, UnicodeStrings) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
-    std::vector<std::string> unicode_strings = {
+    const std::vector<std::string> unicode_strings = {
         "Hello, 世界",
         "Привет мир",
         "مرحبا بالعالم",
@@ -846,7 +846,7 @@ TEST_F(PostgresParamsTest, UnicodeStrings) {
         sink.push(FieldValue{str});
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     for (size_t i = 0; i < unicode_strings.size(); ++i) {
         PGresult* result = PQexecParams(conn_,
@@ -866,7 +866,7 @@ TEST_F(PostgresParamsTest, UnicodeStrings) {
 
 TEST_F(PostgresParamsTest, BinaryAllByteValues) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     std::vector<uint8_t> all_bytes;
     all_bytes.reserve(256);
@@ -875,7 +875,7 @@ TEST_F(PostgresParamsTest, BinaryAllByteValues) {
     }
 
     sink.push(FieldValue{all_bytes});
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::bytea",
@@ -888,7 +888,7 @@ TEST_F(PostgresParamsTest, BinaryAllByteValues) {
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
-    int result_len = PQgetlength(result, 0, 0);
+    const int result_len = PQgetlength(result, 0, 0);
     ASSERT_EQ(result_len, 256);
     const char* result_data = PQgetvalue(result, 0, 0);
     for (int i = 0; i < 256; ++i) {
@@ -899,7 +899,7 @@ TEST_F(PostgresParamsTest, BinaryAllByteValues) {
 
 TEST_F(PostgresParamsTest, ManyParameters) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     for (int i = 0; i < 100; ++i) {
         switch (i % 7) {
@@ -929,7 +929,7 @@ TEST_F(PostgresParamsTest, ManyParameters) {
         }
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
     EXPECT_EQ(params->values.size(), 100);
 
     for (size_t i = 0; i < params->values.size(); ++i) {
@@ -943,7 +943,7 @@ TEST_F(PostgresParamsTest, ManyParameters) {
 
 TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     for (int i = 0; i < 50; ++i) {
         sink.push(FieldValue{std::string{"String "} + std::to_string(i)});
@@ -952,17 +952,17 @@ TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
         sink.push(FieldValue{static_cast<float>(i) * 1.5f});
         sink.push(FieldValue{static_cast<double>(i) * 2.5});
         sink.push(FieldValue{i % 2 == 0});
-        std::vector<uint8_t> bytes = {
+        std::vector bytes = {
             static_cast<uint8_t>(i), static_cast<uint8_t>(i + 1), static_cast<uint8_t>(i + 2)};
         sink.push(FieldValue{bytes});
     }
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
     EXPECT_EQ(params->values.size(), 350);
 
     // Verify strings
     for (int i = 0; i < 50; ++i) {
-        size_t idx           = static_cast<size_t>(i) * 7;
+        const size_t idx           = static_cast<size_t>(i) * 7;
         std::string expected = "String " + std::to_string(i);
         std::string actual(params->values[idx], static_cast<size_t>(params->lengths[idx]));
         EXPECT_EQ(actual, expected);
@@ -970,7 +970,7 @@ TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
 
     // Verify binary data
     for (int i = 0; i < 50; ++i) {
-        size_t idx = static_cast<size_t>(i) * 7 + 6;
+        const size_t idx = static_cast<size_t>(i) * 7 + 6;
         EXPECT_EQ(params->lengths[idx], 3);
         EXPECT_EQ(static_cast<uint8_t>(params->values[idx][0]), static_cast<uint8_t>(i));
         EXPECT_EQ(static_cast<uint8_t>(params->values[idx][1]), static_cast<uint8_t>(i + 1));
@@ -987,7 +987,7 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
     ASSERT_EQ(PQresultStatus(create_result), PGRES_COMMAND_OK) << PQerrorMessage(conn_);
     PQclear(create_result);
 
-    demiplane::db::postgres::ParamSink insert_sink(&pool);
+    postgres::ParamSink insert_sink(&pool);
     std::string name = "John Doe";
     insert_sink.push(FieldValue{name});
     insert_sink.push(FieldValue{std::int32_t{30}});
@@ -996,7 +996,7 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
     std::vector<uint8_t> data = {0xAA, 0xBB, 0xCC};
     insert_sink.push(FieldValue{data});
 
-    auto insert_params = insert_sink.native_packet();
+    const auto insert_params = insert_sink.native_packet();
 
     PGresult* insert_result =
         PQexecParams(conn_,
@@ -1009,12 +1009,12 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
                      0);
 
     ASSERT_EQ(PQresultStatus(insert_result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
-    int id = std::atoi(PQgetvalue(insert_result, 0, 0));
+    const int id = std::atoi(PQgetvalue(insert_result, 0, 0));
     PQclear(insert_result);
 
-    demiplane::db::postgres::ParamSink select_sink(&pool);
+    postgres::ParamSink select_sink(&pool);
     select_sink.push(FieldValue{std::int32_t{id}});
-    auto select_params = select_sink.native_packet();
+    const auto select_params = select_sink.native_packet();
 
     PGresult* select_result = PQexecParams(conn_,
                                            "SELECT name, age, salary, active, data FROM test_data WHERE id = $1",
@@ -1038,7 +1038,7 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
 
 TEST_F(PostgresParamsTest, VerifyOIDs) {
     std::pmr::unsynchronized_pool_resource pool;
-    demiplane::db::postgres::ParamSink sink(&pool);
+    postgres::ParamSink sink(&pool);
 
     sink.push(FieldValue{std::monostate{}});
     sink.push(FieldValue{true});
@@ -1050,7 +1050,7 @@ TEST_F(PostgresParamsTest, VerifyOIDs) {
     std::vector<uint8_t> bytes = {1, 2, 3};
     sink.push(FieldValue{bytes});
 
-    auto params = sink.native_packet();
+    const auto params = sink.native_packet();
 
     EXPECT_EQ(params->oids[0], 0);
     EXPECT_EQ(params->oids[1], 16);

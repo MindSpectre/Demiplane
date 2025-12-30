@@ -254,7 +254,7 @@ namespace demiplane::nexus {
         mutable std::shared_mutex mtx_;                             ///< Read-write lock for thread safety
         std::jthread janitor_;                                      ///< Background cleanup thread
         std::atomic<bool> stop_                           = false;  ///< Stop flag for janitor
-        std::atomic<std::chrono::seconds> sweep_interval_ = std::chrono::seconds(5);  ///< Cleanup interval
+        std::atomic<std::chrono::seconds> sweep_interval_ = std::chrono::seconds(2);  ///< Cleanup interval
     };
 
     /**

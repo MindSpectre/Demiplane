@@ -18,20 +18,24 @@ namespace demiplane::db {
         }
     };
 
+    // 1. Pointer
     template <typename TablePtrTp>
-        requires std::constructible_from<TablePtr, std::remove_cvref_t<TablePtrTp>>
+        requires std::constructible_from<TablePtr, std::remove_cvref_t<TablePtrTp>> &&
+                 (!gears::IsStringLike<TablePtrTp>)
     auto delete_from(TablePtrTp&& table) noexcept {
         return DeleteExpr<TablePtr>{std::forward<TablePtrTp>(table)};
     }
 
+    // 2. std::string (general)
     template <typename StringTp>
-        requires std::constructible_from<std::string, std::remove_cvref_t<StringTp>>
-    auto delete_from(StringTp&& table_name) noexcept {
+        requires gears::IsStringLike<StringTp> && (!gears::IsStringViewLike<StringTp>)
+    constexpr auto delete_from(StringTp&& table_name) noexcept {
         return DeleteExpr<std::string>{std::forward<StringTp>(table_name)};
     }
+
+    // 3. string_view (more specific - wins due to subsumption)
     template <typename StringTp>
-        requires std::is_same_v<std::remove_cvref_t<StringTp>, std::string_view> ||
-                 std::is_same_v<std::remove_cvref_t<StringTp>, const char*>
+        requires gears::IsStringViewLike<StringTp>
     constexpr auto delete_from(StringTp&& table_name) noexcept {
         return DeleteExpr<std::string_view>{std::forward<StringTp>(table_name)};
     }

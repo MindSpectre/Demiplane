@@ -43,4 +43,11 @@ namespace demiplane::gears {
     template <typename T, typename SerializeStruct>
     concept IsConfigSerializable = IsSerializable<T, SerializeStruct> && IsDeserializable<T, SerializeStruct>;
 
+    template <typename T>
+    concept IsStringLike = std::constructible_from<std::string, std::remove_cvref_t<T>>;
+
+    template <typename T>
+    concept IsStringViewLike = IsStringLike<T> && std::convertible_to<std::remove_cvref_t<T>, std::string_view>;
+
+
 }  // namespace demiplane::gears

@@ -1,12 +1,6 @@
 #pragma once
-#include <array>
-#include <memory_resource>
 
-#include <compiled_query.hpp>
-#include <gears_outcome.hpp>
-#include <postgres_errors.hpp>
-#include <postgres_params.hpp>
-#include <postgres_result.hpp>
+#include <postgres_executor.hpp>
 
 namespace demiplane::db::postgres {
     /**
@@ -59,7 +53,7 @@ namespace demiplane::db::postgres {
         [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const std::string_view query,
                                                                         Args&&... args) const {
             // Stack buffer for small parameter sets (avoids heap allocation)
-            std::array<std::byte, 2048> stack_buffer;
+            std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
 
             ParamSink sink(&pool);
@@ -81,12 +75,5 @@ namespace demiplane::db::postgres {
 
     private:
         PGconn* conn_;
-
-        /**
-         * @brief Process result and check for errors
-         * @param result Raw PGresult pointer (takes ownership)
-         * @return ResultBlock on success, ErrorContext on error
-         */
-        static gears::Outcome<ResultBlock, ErrorContext> process_result(PGresult* result);
     };
 }  // namespace demiplane::db::postgres

@@ -1,12 +1,11 @@
 // Compiled DELETE Query Functional Tests
 // Tests query compilation + execution with SyncExecutor
 
-#include "postgres_sync_executor.hpp"
-
 #include <gtest/gtest.h>
 
 #include "postgres_dialect.hpp"
 #include "postgres_params.hpp"
+#include "postgres_sync_executor.hpp"
 #include "query_compiler.hpp"
 
 using namespace demiplane::db;
@@ -67,8 +66,8 @@ protected:
                 active BOOLEAN
             )
         )");
-        ASSERT_TRUE(create_result.is_success()) << "Failed to create test table: "
-                                                << create_result.error<ErrorContext>();
+        ASSERT_TRUE(create_result.is_success())
+            << "Failed to create test table: " << create_result.error<ErrorContext>();
 
         // Clean table
         CleanTestTable();
@@ -188,7 +187,7 @@ TEST_F(CompiledDeleteTest, DeleteWithComplexWhere) {
     EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User4', 40, true)"));
 
     // Build and compile DELETE query with complex WHERE (AND condition)
-    auto query = delete_from(users_schema_).where((user_age_ >= 30) && (user_active_ == true));
+    auto query          = delete_from(users_schema_).where((user_age_ >= 30) && (user_active_ == true));
     auto compiled_query = compiler_->compile(query);
 
     // Execute compiled query

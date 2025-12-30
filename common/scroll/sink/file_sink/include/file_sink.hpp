@@ -94,7 +94,7 @@ namespace demiplane::scroll {
         std::ofstream file_stream_;
         std::filesystem::path file_path_;
         std::mutex mutex_;
-        alignas(64) char stream_buffer_[64 * (1 << 16)];  // 64KB static buffer, cache-line aligned
+        alignas(64) char stream_buffer_[64 * 1024]{};  // 64KB static buffer, cache-line aligned
 
         void init() {
             std::filesystem::path full_path = config_.get_file();

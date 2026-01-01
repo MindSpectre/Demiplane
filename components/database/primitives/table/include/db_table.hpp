@@ -1,4 +1,5 @@
 #pragma once
+#include <concepts>
 #include <memory>
 #include <string>
 #include <typeindex>
@@ -68,12 +69,12 @@ namespace demiplane::db {
     using TablePtr = std::shared_ptr<const Table>;
 
     template <typename TablePtrT>
-    concept IsTablePtr = std::is_constructible_v<TablePtr, std::remove_cvref_t<TablePtrT>>;
+    concept IsTablePtr = std::constructible_from<TablePtr, std::remove_cvref_t<TablePtrT>>;
 
     template <typename TableT>
     concept IsTable =
-        IsTablePtr<std::remove_cvref_t<TableT>> || std::is_constructible_v<std::string, std::remove_cvref_t<TableT>> ||
-        std::is_constructible_v<std::string_view, std::remove_cvref_t<TableT>>;
+        IsTablePtr<std::remove_cvref_t<TableT>> || std::constructible_from<std::string, std::remove_cvref_t<TableT>> ||
+        std::constructible_from<std::string_view, std::remove_cvref_t<TableT>>;
 
 }  // namespace demiplane::db
 

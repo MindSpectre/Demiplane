@@ -51,7 +51,7 @@ protected:
 
         // Check connection status
         if (PQstatus(conn_) != CONNECTION_OK) {
-            std::string error = PQerrorMessage(conn_);
+            const std::string error = PQerrorMessage(conn_);
             PQfinish(conn_);
             conn_ = nullptr;
             GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;

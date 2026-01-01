@@ -1,4 +1,5 @@
 #pragma once
+#include <concepts>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -25,5 +26,5 @@ namespace demiplane::db {
                                     >;
 
     template <typename T>
-    concept IsFieldValueType = std::is_constructible_v<FieldValue, T>;
+    concept IsFieldValueType = std::constructible_from<FieldValue, T>;
 }  // namespace demiplane::db

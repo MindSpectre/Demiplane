@@ -32,12 +32,12 @@ protected:
         conn_ = PQconnectdb(conninfo.c_str());
 
         // Check connection status
-        // if (PQstatus(conn_) != CONNECTION_OK) {
-        //     std::string error = PQerrorMessage(conn_);
-        //     PQfinish(conn_);
-        //     conn_ = nullptr;
-        //     GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;
-        // }
+        if (PQstatus(conn_) != CONNECTION_OK) {
+            std::string error = PQerrorMessage(conn_);
+            PQfinish(conn_);
+            conn_ = nullptr;
+            GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;
+        }
 
         // Create executor
         executor_ = std::make_unique<SyncExecutor>(conn_);
@@ -82,11 +82,9 @@ protected:
         ASSERT_TRUE(result.is_success()) << "Failed to clean test table: " << result.error<ErrorContext>();
     }
 
-    int CountRows() const {
-        auto result = executor_->execute("SELECT COUNT(*) FROM test_users");
-        if (result.is_success()) {
-            auto& block = result.value();
-            if (block.rows() > 0) {
+    [[nodiscard]] int CountRows() const {
+        if (auto result = executor_->execute("SELECT COUNT(*) FROM test_users"); result.is_success()) {
+            if (const auto& block = result.value(); block.rows() > 0) {
                 return block.get<int>(0, 0);
             }
         }

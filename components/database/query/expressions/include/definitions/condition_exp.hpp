@@ -1,27 +1,27 @@
 #pragma once
 
 #include <algorithm>
-#include <vector>
 
 #include "../basic.hpp"
 
-//TODO: finish perfect forwarding
 namespace demiplane::db {
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr : public Expression<BinaryExpr<Left, Right, Op>> {
     public:
-        constexpr BinaryExpr(Left l, Right r)
-            : left_(std::move(l)),
-              right_(std::move(r)) {
+        template <typename LeftTp, typename RightTp>
+            requires std::constructible_from<Left, LeftTp> && std::constructible_from<Right, RightTp>
+        constexpr BinaryExpr(LeftTp&& l, RightTp&& r) noexcept
+            : left_(std::forward<LeftTp>(l)),
+              right_(std::forward<RightTp>(r)) {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& left(this Self&& self) {
+        [[nodiscard]] constexpr auto&& left(this Self&& self) noexcept {
             return std::forward<Self>(self).left_;
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& right(this Self&& self) {
+        [[nodiscard]] constexpr auto&& right(this Self&& self) noexcept {
             return std::forward<Self>(self).right_;
         }
 
@@ -33,12 +33,14 @@ namespace demiplane::db {
     template <typename Operand, IsOperator Op>
     class UnaryExpr : public Expression<UnaryExpr<Operand, Op>> {
     public:
-        constexpr explicit UnaryExpr(Operand op)
-            : operand_(std::move(op)) {
+        template <typename OperandTp>
+            requires std::constructible_from<Operand, OperandTp>
+        constexpr explicit UnaryExpr(OperandTp&& op) noexcept
+            : operand_(std::forward<OperandTp>(op)) {
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& operand(this Self&& self) {
+        [[nodiscard]] constexpr auto&& operand(this Self&& self) noexcept {
             return std::forward<Self>(self).operand_;
         }
 
@@ -46,7 +48,7 @@ namespace demiplane::db {
         Operand operand_;
     };
 
-    template <typename T>
+    template <IsDbOperand T>
     constexpr auto operator!(T operand) {
         return UnaryExpr<T, OpNot>{std::move(operand)};
     }
@@ -62,15 +64,17 @@ namespace demiplane::db {
         return UnaryExpr<T, OpIsNotNull>{std::move(operand)};
     }
 
-    // Comparison operators
-    template <typename LL, typename RR>
-    constexpr auto operator==(LL left, RR right) {
+    // Comparison operators - constrained to require at least one database operand
+    template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
+    constexpr auto operator==(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
         return BinaryExpr<decltype(lv), decltype(rv), OpEqual>{std::move(lv), std::move(rv)};
     }
 
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator!=(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
@@ -78,6 +82,7 @@ namespace demiplane::db {
     }
 
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator<(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
@@ -85,6 +90,7 @@ namespace demiplane::db {
     }
 
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator<=(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
@@ -92,6 +98,7 @@ namespace demiplane::db {
     }
 
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator>(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
@@ -99,14 +106,16 @@ namespace demiplane::db {
     }
 
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator>=(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
         return BinaryExpr<decltype(lv), decltype(rv), OpGreaterEqual>{std::move(lv), std::move(rv)};
     }
 
-    // Logical operators
+    // Logical operators - constrained to require at least one database operand
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator&&(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
@@ -114,6 +123,7 @@ namespace demiplane::db {
     }
 
     template <typename L, typename R>
+        requires(IsDbOperand<L> || IsDbOperand<R>)
     constexpr auto operator||(L left, R right) {
         auto lv = detail::make_literal_if_needed(std::move(left));
         auto rv = detail::make_literal_if_needed(std::move(right));
@@ -134,16 +144,7 @@ namespace demiplane::db {
         return BinaryExpr<decltype(lv), decltype(rv), OpNotLike>{std::move(lv), std::move(rv)};
     }
 
-    template <typename T>
-    constexpr auto in(const TableColumn<T>& col, std::initializer_list<T> values) {
-        return BinaryExpr<TableColumn<T>, std::vector<T>, OpIn>{col, std::vector<T>(values)};
-    }
-// template <typename T, typename... Values>
-//         requires(std::convertible_to<Values, T> && ...) && (sizeof...(Values) > 0)
-//     constexpr auto in(const TableColumn<T>& col, Values... values) {
-//         return InListExpr<TableColumn<T>, decltype(Literal{static_cast<T>(values)})...>{
-//             col, Literal{static_cast<T>(values)}...}; //TODO: ?? IS it actually InList?
-//     }
+    // IN with subquery - for variadic IN with individual values, use in() from in_list_exp.hpp
     template <typename T, IsQuery Query>
     constexpr auto in(const TableColumn<T>& col, const Subquery<Query>& sq) {
         return BinaryExpr<TableColumn<T>, Subquery<Query>, OpIn>{col, sq};

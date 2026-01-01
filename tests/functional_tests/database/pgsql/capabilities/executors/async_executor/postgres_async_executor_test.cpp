@@ -92,7 +92,7 @@ protected:
     template <typename CoroFunc>
     auto run_async(CoroFunc&& func) {
         using awaitable_type = std::invoke_result_t<CoroFunc>;
-        using result_type = typename awaitable_type::value_type;
+        using result_type = awaitable_type::value_type;
 
         std::optional<result_type> result;
         std::exception_ptr eptr;
@@ -615,12 +615,12 @@ TEST_F(AsyncExecutorTest, SequentialOperations) {
 }
 
 TEST_F(AsyncExecutorTest, MultipleQueriesInSingleCoroutine) {
-    auto results = run_async([this]() -> boost::asio::awaitable<std::vector<demiplane::gears::Outcome<ResultBlock, ErrorContext>>> {
-        std::vector<demiplane::gears::Outcome<ResultBlock, ErrorContext>> results;
-        results.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('A')"));
-        results.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('B')"));
-        results.push_back(co_await executor_->execute("SELECT COUNT(*) FROM test_users"));
-        co_return results;
+    const auto results = run_async([this]() -> boost::asio::awaitable<std::vector<demiplane::gears::Outcome<ResultBlock, ErrorContext>>> {
+        std::vector<demiplane::gears::Outcome<ResultBlock, ErrorContext>> results_;
+        results_.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('A')"));
+        results_.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('B')"));
+        results_.push_back(co_await executor_->execute("SELECT COUNT(*) FROM test_users"));
+        co_return results_;
     });
 
     // Verify all succeeded

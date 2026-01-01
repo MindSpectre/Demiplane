@@ -15,8 +15,9 @@ namespace demiplane::db {
                                                  AllowWhere>,
                           public TableHolder<TableT> {
     public:
-        template <typename SelectTp = std::remove_cv_t<Select>, typename TableTp = std::remove_cv_t<TableT>>
-        constexpr FromTableExpr(SelectTp&& select_q, TableTp&& table)
+        template <typename SelectTp, typename TableTp>
+            requires std::constructible_from<Select, SelectTp> && std::constructible_from<TableT, TableTp>
+        constexpr FromTableExpr(SelectTp&& select_q, TableTp&& table) noexcept
             : TableHolder<TableT>{std::forward<TableTp>(table)},
               select_{std::forward<SelectTp>(select_q)} {
         }
@@ -30,7 +31,6 @@ namespace demiplane::db {
         Select select_;
     };
 
-    // TODO:? is it even tested?
     template <IsQuery Select, IsCteExpr CteQuery>
     class FromCteExpr : public Expression<FromCteExpr<Select, CteQuery>>,
                         public QueryOperations<FromCteExpr<Select, CteQuery>,
@@ -40,8 +40,9 @@ namespace demiplane::db {
                                                AllowJoin,
                                                AllowWhere> {
     public:
-        template <typename SelectTp = std::remove_cv_t<Select>, typename CteQueryTp = std::remove_cv_t<CteQuery>>
-        constexpr FromCteExpr(SelectTp&& select_q, CteQueryTp&& expr)
+        template <typename SelectTp, typename CteQueryTp>
+            requires std::constructible_from<Select, SelectTp> && std::constructible_from<CteQuery, CteQueryTp>
+        constexpr FromCteExpr(SelectTp&& select_q, CteQueryTp&& expr) noexcept
             : select_{std::forward<SelectTp>(select_q)},
               query_{std::forward<CteQueryTp>(expr)} {
         }

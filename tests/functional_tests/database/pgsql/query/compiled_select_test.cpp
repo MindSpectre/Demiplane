@@ -31,14 +31,13 @@ protected:
         // Connect to database
         conn_ = PQconnectdb(conninfo.c_str());
 
-        // TODO: CE bcuz of try of B expression postgres
         // Check connection status
-        // if (PQstatus(conn_) != CONNECTION_OK) {
-        //     std::string error = PQerrorMessage(conn_);
-        //     PQfinish(conn_);
-        //     conn_ = nullptr;
-        //     GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;
-        // }
+        if (PQstatus(conn_) != CONNECTION_OK) {
+            std::string error = PQerrorMessage(conn_);
+            PQfinish(conn_);
+            conn_ = nullptr;
+            GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;
+        }
 
         // Create executor
         executor_ = std::make_unique<SyncExecutor>(conn_);

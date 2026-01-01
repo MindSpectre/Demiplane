@@ -36,13 +36,13 @@ namespace demiplane::db {
     class BinaryExpr;
 
     template <typename T>
-    concept IsBinaryOperator = gears::is_specialization_of_v<std::remove_cvref_t<T>, BinaryExpr>;
+    concept IsBinaryExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, BinaryExpr>;
 
     template <typename Operand, IsOperator Op>
     class UnaryExpr;
 
     template <typename T>
-    concept IsUnaryOperator = gears::is_specialization_of_v<std::remove_cvref_t<T>, UnaryExpr>;
+    concept IsUnaryExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, UnaryExpr>;
 
 
     template <IsQuery Query>
@@ -67,8 +67,7 @@ namespace demiplane::db {
 
     template <typename T>
     concept IsCondition =
-        IsBinaryOperator<T> || IsUnaryOperator<T> || IsExistExpr<T> || IsInListExpr<T> || IsBetweenExpr<T>;
-
+        IsBinaryExpr<T> || IsUnaryExpr<T> || IsExistExpr<T> || IsInListExpr<T> || IsBetweenExpr<T>;
 
     class CountExpr;
 
@@ -97,6 +96,16 @@ namespace demiplane::db {
 
     template <typename T>
     concept IsAggregate = IsCountExpr<T> || IsSumExpr<T> || IsAvgExpr<T> || IsMaxExpr<T> || IsMinExpr<T>;
+
+    /**
+     * @brief Concept to check if a type is a valid database operand for comparison/logical operators.
+     *
+     * This concept ensures that custom operators (==, !=, <, >, &&, ||, etc.) only apply
+     * to database expression types and don't interfere with unrelated types (e.g., libpq types).
+     * At least one operand must satisfy this concept for the operator overloads to be selected.
+     */
+    template <typename T>
+    concept IsDbOperand = IsColumn<T> || IsLiteral<T> || IsCondition<T> || IsAggregate<T>;
 
     // OrderBy expression concept
     class OrderBy;

@@ -60,5 +60,28 @@ namespace demiplane::db {
             std::forward<LeftTp>(left), std::forward<RightTp>(right), SetOperation::EXCEPT};
     }
 
-    // TODO: add binary operation overload like || or && or - etc
+    // Set operation binary operators
+    // | for UNION (set union without duplicates)
+    template <IsQuery L, IsQuery R>
+    constexpr auto operator|(L&& left, R&& right) {
+        return union_query(std::forward<L>(left), std::forward<R>(right));
+    }
+
+    // + for UNION ALL (set union with duplicates)
+    template <IsQuery L, IsQuery R>
+    constexpr auto operator+(L&& left, R&& right) {
+        return union_all(std::forward<L>(left), std::forward<R>(right));
+    }
+
+    // & for INTERSECT (set intersection)
+    template <IsQuery L, IsQuery R>
+    constexpr auto operator&(L&& left, R&& right) {
+        return intersect(std::forward<L>(left), std::forward<R>(right));
+    }
+
+    // - for EXCEPT (set difference)
+    template <IsQuery L, IsQuery R>
+    constexpr auto operator-(L&& left, R&& right) {
+        return except(std::forward<L>(left), std::forward<R>(right));
+    }
 }  // namespace demiplane::db

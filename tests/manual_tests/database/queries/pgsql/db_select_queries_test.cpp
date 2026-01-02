@@ -17,12 +17,9 @@ using namespace demiplane::db;
 class SelectQueryTest : public ::testing::Test, public demiplane::scroll::LoggerProvider {
 protected:
     void SetUp() override {
-        demiplane::scroll::FileSinkConfig cfg = demiplane::scroll::FileSinkConfig{}
-                                                   .file("query_test.log")
-                                                   .add_time_to_filename(false);
-
+        demiplane::scroll::ConsoleSinkConfig cfg = demiplane::scroll::ConsoleSinkConfig{}.threshold(demiplane::scroll::TRC).finalize();
         auto logger = std::make_shared<demiplane::scroll::Logger>();
-        auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
+        auto file_sink = std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>(std::move(cfg));
         logger->add_sink(std::move(file_sink));
         set_logger(std::move(logger));
         // Create test schemas

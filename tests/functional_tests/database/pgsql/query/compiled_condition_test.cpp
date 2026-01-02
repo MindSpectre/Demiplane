@@ -1,4 +1,4 @@
-// Compiled SELECT Query Functional Tests
+// Compiled CONDITION Query Functional Tests
 // Tests query compilation + execution with SyncExecutor using QueryLibrary
 
 #include <demiplane/nexus>
@@ -14,7 +14,7 @@ using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 using namespace demiplane::test;
 
-class CompiledSelectTest : public ::testing::Test {
+class CompiledConditionTest : public ::testing::Test {
 protected:
     void SetUp() override {
         demiplane::nexus::instance()
@@ -56,6 +56,7 @@ protected:
         library_  = std::make_unique<QueryLibrary>(std::make_unique<Dialect>());
 
         CreateTables();
+        InsertTestData();
     }
 
     void TearDown() override {
@@ -67,6 +68,7 @@ protected:
     }
 
     void CreateTables() {
+        // Create users table
         auto result = executor_->execute(R"(
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -77,6 +79,7 @@ protected:
         )");
         ASSERT_TRUE(result.is_success()) << "Failed to create users table";
 
+        // Create posts table
         result = executor_->execute(R"(
             CREATE TABLE IF NOT EXISTS posts (
                 id SERIAL PRIMARY KEY,
@@ -86,8 +89,6 @@ protected:
             )
         )");
         ASSERT_TRUE(result.is_success()) << "Failed to create posts table";
-
-        CleanTables();
     }
 
     void DropTables() {
@@ -95,18 +96,24 @@ protected:
         (void)executor_->execute("DROP TABLE IF EXISTS users CASCADE");
     }
 
-    void CleanTables() {
-        (void)executor_->execute("TRUNCATE TABLE posts RESTART IDENTITY CASCADE");
-        (void)executor_->execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
-    }
+    void InsertTestData() {
+        // Insert users with varied data for condition testing
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active) VALUES (1, 'john', 25, true)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active) VALUES (2, 'jane', 30, true)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active) VALUES (3, 'bob', 18, false)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active) VALUES (4, 'alice', 65, true)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active) VALUES (5, 'charlie', 70, false)"));
 
-    void InsertTestUsers() {
+        // Insert posts
         ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
+            "INSERT INTO posts (id, user_id, title, published) VALUES (1, 1, 'Post 1', true)"));
         ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (2, 'Bob', 25, false)"));
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (3, 'Charlie', 35, true)"));
+            "INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post 2', true)"));
     }
 
     PGconn* conn_{nullptr};
@@ -114,52 +121,28 @@ protected:
     std::unique_ptr<QueryLibrary> library_;
 };
 
-// ============== Basic SELECT Tests ==============
+// ============== Binary Comparison Tests ==============
 
-TEST_F(CompiledSelectTest, BasicSelect) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::BasicSelect>();
+TEST_F(CompiledConditionTest, BinaryEqual) {
+    auto query  = library_->produce<condition::BinaryEqual>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);
-    EXPECT_EQ(block.cols(), 2);  // id, name
+    EXPECT_EQ(block.rows(), 1);  // Only john has age == 25
 }
 
-TEST_F(CompiledSelectTest, SelectAllColumns) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectAllColumns>();
+TEST_F(CompiledConditionTest, BinaryNotEqual) {
+    auto query  = library_->produce<condition::BinaryNotEqual>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);
+    EXPECT_EQ(block.rows(), 4);  // Everyone except age == 25
 }
 
-TEST_F(CompiledSelectTest, SelectDistinct) {
-    // Insert duplicate data
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (2, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (3, 'Bob', 25, false)"));
-
-    auto query  = library_->produce<sel::SelectDistinct>();
-    auto result = executor_->execute(query);
-
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-    auto& block = result.value();
-    EXPECT_EQ(block.rows(), 2);  // Only 2 distinct (name, age) combinations
-}
-
-TEST_F(CompiledSelectTest, SelectWithWhere) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectWithWhere>();
+TEST_F(CompiledConditionTest, BinaryGreater) {
+    auto query  = library_->produce<condition::BinaryGreater>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -167,104 +150,120 @@ TEST_F(CompiledSelectTest, SelectWithWhere) {
     EXPECT_GE(block.rows(), 1);  // Users with age > 18
 }
 
-TEST_F(CompiledSelectTest, SelectWithJoin) {
-    InsertTestUsers();
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO posts (id, user_id, title, published) VALUES (1, 1, 'Post by Alice', true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post by Bob', true)"));
-
-    auto query  = library_->produce<sel::SelectWithJoin>();
+TEST_F(CompiledConditionTest, BinaryGreaterEqual) {
+    auto query  = library_->produce<condition::BinaryGreaterEqual>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 2);  // Two users with posts
+    EXPECT_GE(block.rows(), 1);  // Users with age >= 18
 }
 
-TEST_F(CompiledSelectTest, SelectWithGroupBy) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectWithGroupBy>();
+TEST_F(CompiledConditionTest, BinaryLess) {
+    auto query  = library_->produce<condition::BinaryLess>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 2);  // Two groups: active=true, active=false
+    EXPECT_GE(block.rows(), 1);  // Users with age < 65
 }
 
-TEST_F(CompiledSelectTest, SelectWithHaving) {
-    // Insert more users to have groups with count > 5
-    for (int i = 1; i <= 7; ++i) {
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', 25, true)"));
-    }
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (name, age, active) VALUES ('Inactive', 30, false)"));
-
-    auto query  = library_->produce<sel::SelectWithHaving>();
+TEST_F(CompiledConditionTest, BinaryLessEqual) {
+    auto query  = library_->produce<condition::BinaryLessEqual>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 1);  // Only group with count > 5
+    EXPECT_GE(block.rows(), 1);  // Users with age <= 65
 }
 
-TEST_F(CompiledSelectTest, SelectWithOrderBy) {
-    // Insert in random order
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (1, 'Zebra', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (2, 'Alpha', 25, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (3, 'Beta', 35, true)"));
+// ============== Logical Operator Tests ==============
 
-    auto query  = library_->produce<sel::SelectWithOrderBy>();
+TEST_F(CompiledConditionTest, LogicalAnd) {
+    auto query  = library_->produce<condition::LogicalAnd>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);
-    // Results should be ordered: Alpha, Beta, Zebra
+    // Users with age > 18 AND active == true
+    EXPECT_GE(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectWithLimit) {
-    // Insert 10 users
-    for (int i = 1; i <= 10; ++i) {
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', " +
-            std::to_string(20 + i) + ", true)"));
-    }
-
-    auto query  = library_->produce<sel::SelectWithLimit>();
+TEST_F(CompiledConditionTest, LogicalOr) {
+    auto query  = library_->produce<condition::LogicalOr>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_LE(block.rows(), 10);  // Limited to 10
+    // Users with age < 18 OR age > 65
+    EXPECT_GE(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectMixedTypes) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectMixedTypes>();
+TEST_F(CompiledConditionTest, UnaryCondition) {
+    auto query  = library_->produce<condition::UnaryCondition>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);  // One row per unique name (Alice, Bob, Charlie)
-    EXPECT_EQ(block.cols(), 3);  // name, constant, total
+    // Users with active == false
+    EXPECT_EQ(block.rows(), 2);  // bob and charlie
 }
 
-// ============== Empty Result Tests ==============
+// ============== String Comparison Tests ==============
 
-TEST_F(CompiledSelectTest, SelectEmptyResult) {
-    // Don't insert any data
-    auto query  = library_->produce<sel::BasicSelect>();
+TEST_F(CompiledConditionTest, StringComparison) {
+    auto query  = library_->produce<condition::StringComparison>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 0);
-    EXPECT_TRUE(block.empty());
+    EXPECT_EQ(block.rows(), 1);  // Only john
+}
+
+// ============== Range Tests ==============
+
+TEST_F(CompiledConditionTest, Between) {
+    auto query  = library_->produce<condition::Between>();
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    auto& block = result.value();
+    // Users with age BETWEEN 18 AND 65
+    EXPECT_GE(block.rows(), 1);
+}
+
+TEST_F(CompiledConditionTest, InList) {
+    auto query  = library_->produce<condition::InList>();
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    auto& block = result.value();
+    // Users with age IN (18, 25, 30)
+    EXPECT_GE(block.rows(), 1);
+}
+
+// ============== Exists Tests ==============
+
+TEST_F(CompiledConditionTest, ExistsCondition) {
+    auto query  = library_->produce<condition::ExistsCondition>();
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+}
+
+TEST_F(CompiledConditionTest, SubqueryCondition) {
+    auto query  = library_->produce<condition::SubqueryCondition>();
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+}
+
+// ============== Complex Nested Tests ==============
+
+TEST_F(CompiledConditionTest, ComplexNested) {
+    auto query  = library_->produce<condition::ComplexNested>();
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    // Complex nested: (age > 18 && age < 65) || (active == true && age >= 65)
 }

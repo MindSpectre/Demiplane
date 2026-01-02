@@ -1,5 +1,5 @@
 // Compiled UPDATE Query Functional Tests
-// Tests query compilation + execution with SyncExecutor
+// Tests query compilation + execution with SyncExecutor using QueryLibrary
 
 #include <demiplane/nexus>
 #include <demiplane/scroll>
@@ -9,10 +9,11 @@
 #include "postgres_dialect.hpp"
 #include "postgres_params.hpp"
 #include "postgres_sync_executor.hpp"
-#include "query_compiler.hpp"
+#include "query_library.hpp"
 
-
+using namespace demiplane::db;
 using namespace demiplane::db::postgres;
+using namespace demiplane::test;
 
 // Test fixture for compiled UPDATE queries
 class CompiledUpdateTest : public ::testing::Test {
@@ -27,29 +28,25 @@ protected:
                         .finalize());
             });
 
-
         demiplane::nexus::instance().register_singleton<demiplane::scroll::Logger>([] {
             auto logger = std::make_shared<demiplane::scroll::Logger>();
             logger->add_sink(
                 demiplane::nexus::instance().get<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>());
             return logger;
         });
-        // Get connection parameters from environment or use defaults
+
         const char* host     = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
         const char* port     = std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433";
         const char* dbname   = std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db";
         const char* user     = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
         const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
 
-        // Create connection string
         std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
                                 " dbname=" + std::string(dbname) + " user=" + std::string(user) +
                                 " password=" + std::string(password);
 
-        // Connect to database
         conn_ = PQconnectdb(conn_info.c_str());
 
-        // Check connection status
         if (PQstatus(conn_) != CONNECTION_OK) {
             const std::string error = PQerrorMessage(conn_);
             PQfinish(conn_);
@@ -57,28 +54,23 @@ protected:
             GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;
         }
 
-        // Create executor
         executor_ = std::make_unique<SyncExecutor>(conn_);
+        library_  = std::make_unique<QueryLibrary>(std::make_unique<Dialect>());
 
-        // Create query compiler with PostgreSQL dialect
-        compiler_ = std::make_unique<demiplane::db::QueryCompiler>(std::make_unique<Dialect>(), false);
+        CreateTable();
+    }
 
-        // Create test schema
-        users_schema_ = std::make_shared<demiplane::db::Table>("test_users");
-        users_schema_->add_field<int>("id", "SERIAL PRIMARY KEY")
-            .add_field<std::string>("name", "VARCHAR(100)")
-            .add_field<int>("age", "INTEGER")
-            .add_field<bool>("active", "BOOLEAN");
+    void TearDown() override {
+        if (conn_) {
+            DropTable();
+            PQfinish(conn_);
+            conn_ = nullptr;
+        }
+    }
 
-        // Create column references
-        user_id_     = users_schema_->column<int>("id");
-        user_name_   = users_schema_->column<std::string>("name");
-        user_age_    = users_schema_->column<int>("age");
-        user_active_ = users_schema_->column<bool>("active");
-
-        // Create actual table in database
+    void CreateTable() {
         auto create_result = executor_->execute(R"(
-            CREATE TABLE IF NOT EXISTS test_users (
+            CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100),
                 age INTEGER,
@@ -86,54 +78,38 @@ protected:
             )
         )");
         ASSERT_TRUE(create_result.is_success())
-            << "Failed to create test table: " << create_result.error<ErrorContext>();
-
-        // Clean table
-        CleanTestTable();
+            << "Failed to create table: " << create_result.error<ErrorContext>();
+        CleanTable();
     }
 
-    void TearDown() override {
-        if (conn_) {
-            // Drop test table
-            EXPECT_TRUE(executor_->execute("DROP TABLE IF EXISTS test_users CASCADE"));
-            PQfinish(conn_);
-            conn_ = nullptr;
-        }
+    void DropTable() {
+        (void)executor_->execute("DROP TABLE IF EXISTS users CASCADE");
     }
 
-    void CleanTestTable() const {
-        auto result = executor_->execute("TRUNCATE TABLE test_users RESTART IDENTITY CASCADE");
-        ASSERT_TRUE(result.is_success()) << "Failed to clean test table: " << result.error<ErrorContext>();
+    void CleanTable() const {
+        auto result = executor_->execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
+        ASSERT_TRUE(result.is_success()) << "Failed to clean table: " << result.error<ErrorContext>();
     }
 
     PGconn* conn_{nullptr};
     std::unique_ptr<SyncExecutor> executor_;
-    std::unique_ptr<demiplane::db::QueryCompiler> compiler_;
-
-    std::shared_ptr<demiplane::db::Table> users_schema_;
-    demiplane::db::TableColumn<int> user_id_{nullptr, ""};
-    demiplane::db::TableColumn<std::string> user_name_{nullptr, ""};
-    demiplane::db::TableColumn<int> user_age_{nullptr, ""};
-    demiplane::db::TableColumn<bool> user_active_{nullptr, ""};
+    std::unique_ptr<QueryLibrary> library_;
 };
-using namespace demiplane::db;
+
 // ============== Basic UPDATE Tests ==============
 
 TEST_F(CompiledUpdateTest, UpdateSingleColumn) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('Alice', 30, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('Alice', 30, true)"));
 
-    // Build and compile UPDATE query
-    auto query          = update(users_schema_).set("age", 31).where(user_name_ == std::string{"Alice"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("age", 31).where(s.name == std::string{"Alice"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT age FROM test_users WHERE name = 'Alice'");
+    auto select_result = executor_->execute("SELECT age FROM users WHERE name = 'Alice'");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -141,20 +117,17 @@ TEST_F(CompiledUpdateTest, UpdateSingleColumn) {
 }
 
 TEST_F(CompiledUpdateTest, UpdateMultipleColumns) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('Bob', 25, false)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('Bob', 25, false)"));
 
-    // Build and compile UPDATE query with multiple columns
-    auto query = update(users_schema_).set("age", 26).set("active", true).where(user_name_ == std::string{"Bob"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query = update(s.table).set("age", 26).set("active", true).where(s.name == std::string{"Bob"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT age, active FROM test_users WHERE name = 'Bob'");
+    auto select_result = executor_->execute("SELECT age, active FROM users WHERE name = 'Bob'");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -163,25 +136,22 @@ TEST_F(CompiledUpdateTest, UpdateMultipleColumns) {
 }
 
 TEST_F(CompiledUpdateTest, UpdateWithInitializerList) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('Charlie', 35, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('Charlie', 35, true)"));
 
-    // Build and compile UPDATE query with initializer list
-    auto query = update(users_schema_)
+    const auto& s = library_->schemas().users();
+    auto query = update(s.table)
                      .set({
                          {"age",    36   },
                          {"active", false}
     })
-                     .where(user_name_ == std::string{"Charlie"});
-    auto compiled_query = compiler_->compile(query);
+                     .where(s.name == std::string{"Charlie"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT age, active FROM test_users WHERE name = 'Charlie'");
+    auto select_result = executor_->execute("SELECT age, active FROM users WHERE name = 'Charlie'");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -192,64 +162,55 @@ TEST_F(CompiledUpdateTest, UpdateWithInitializerList) {
 // ============== UPDATE with WHERE Conditions ==============
 
 TEST_F(CompiledUpdateTest, UpdateWithSimpleWhere) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User1', 20, true)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User2', 30, true)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User3', 40, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User1', 20, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User3', 40, true)"));
 
-    // Build and compile UPDATE query with WHERE condition
-    auto query          = update(users_schema_).set("active", false).where(user_age_ > 25);
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("active", false).where(s.age > 25);
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update - only User2 and User3 should be updated
-    auto select_result = executor_->execute("SELECT COUNT(*) FROM test_users WHERE active = false");
+    auto select_result = executor_->execute("SELECT COUNT(*) FROM users WHERE active = false");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }
 
 TEST_F(CompiledUpdateTest, UpdateWithComplexWhere) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User1', 25, true)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User2', 30, true)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User3', 35, false)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User1', 25, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User3', 35, false)"));
 
-    // Build and compile UPDATE query with complex WHERE (AND condition)
-    auto query          = update(users_schema_).set("age", 40).where((user_age_ >= 25) && (user_active_ == true));
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("age", 40).where((s.age >= 25) && (s.active == true));
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update - only User1 and User2 should be updated
-    auto select_result = executor_->execute("SELECT COUNT(*) FROM test_users WHERE age = 40");
+    auto select_result = executor_->execute("SELECT COUNT(*) FROM users WHERE age = 40");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }
 
 TEST_F(CompiledUpdateTest, UpdateWithOrCondition) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User1', 20, true)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User2', 30, false)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User3', 40, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User1', 20, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, false)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User3', 40, true)"));
 
-    // Build and compile UPDATE query with OR condition
-    auto query          = update(users_schema_).set("age", 50).where((user_age_ < 25) || (user_age_ > 35));
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("age", 50).where((s.age < 25) || (s.age > 35));
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update - User1 and User3 should be updated
-    auto select_result = executor_->execute("SELECT COUNT(*) FROM test_users WHERE age = 50");
+    auto select_result = executor_->execute("SELECT COUNT(*) FROM users WHERE age = 50");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }
@@ -257,22 +218,16 @@ TEST_F(CompiledUpdateTest, UpdateWithOrCondition) {
 // ============== UPDATE without WHERE (all rows) ==============
 
 TEST_F(CompiledUpdateTest, UpdateAllRows) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User1', 25, true)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User2', 30, false)"));
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('User3', 35, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User1', 25, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, false)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age, active) VALUES ('User3', 35, true)"));
 
-    // Build and compile UPDATE query without WHERE (updates all rows)
-    auto query          = update(users_schema_).set("active", false);
-    auto compiled_query = compiler_->compile(query);
-
-    // Execute compiled query
-    auto result = executor_->execute(compiled_query);
+    auto query = library_->produce<upd::UpdateWithoutWhere>();
+    auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify all rows are updated
-    auto select_result = executor_->execute("SELECT COUNT(*) FROM test_users WHERE active = false");
+    auto select_result = executor_->execute("SELECT COUNT(*) FROM users WHERE active = true");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 3);
 }
@@ -280,20 +235,17 @@ TEST_F(CompiledUpdateTest, UpdateAllRows) {
 // ============== UPDATE with Different Data Types ==============
 
 TEST_F(CompiledUpdateTest, UpdateString) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('OldName', 30)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age) VALUES ('OldName', 30)"));
 
-    // Build and compile UPDATE query with string
-    auto query          = update(users_schema_).set("name", std::string{"NewName"}).where(user_age_ == 30);
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("name", std::string{"NewName"}).where(s.age == 30);
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT name FROM test_users WHERE age = 30");
+    auto select_result = executor_->execute("SELECT name FROM users WHERE age = 30");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -301,20 +253,17 @@ TEST_F(CompiledUpdateTest, UpdateString) {
 }
 
 TEST_F(CompiledUpdateTest, UpdateBoolean) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, active) VALUES ('TestUser', true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, active) VALUES ('TestUser', true)"));
 
-    // Build and compile UPDATE query with boolean
-    auto query          = update(users_schema_).set("active", false).where(user_name_ == std::string{"TestUser"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("active", false).where(s.name == std::string{"TestUser"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT active FROM test_users WHERE name = 'TestUser'");
+    auto select_result = executor_->execute("SELECT active FROM users WHERE name = 'TestUser'");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -322,20 +271,17 @@ TEST_F(CompiledUpdateTest, UpdateBoolean) {
 }
 
 TEST_F(CompiledUpdateTest, UpdateInteger) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('TestUser', 25)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    // Build and compile UPDATE query with integer
-    auto query          = update(users_schema_).set("age", 50).where(user_name_ == std::string{"TestUser"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("age", 50).where(s.name == std::string{"TestUser"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT age FROM test_users WHERE name = 'TestUser'");
+    auto select_result = executor_->execute("SELECT age FROM users WHERE name = 'TestUser'");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -345,20 +291,17 @@ TEST_F(CompiledUpdateTest, UpdateInteger) {
 // ============== UPDATE with NULL Values ==============
 
 TEST_F(CompiledUpdateTest, UpdateToNull) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('TestUser', 30)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age) VALUES ('TestUser', 30)"));
 
-    // Build and compile UPDATE query setting to NULL
-    auto query = update(users_schema_).set("age", std::monostate{}).where(user_name_ == std::string{"TestUser"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query = update(s.table).set("age", std::monostate{}).where(s.name == std::string{"TestUser"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update to NULL failed: " << result.error<ErrorContext>();
 
-    // Verify NULL was set
-    auto select_result = executor_->execute("SELECT age FROM test_users WHERE name = 'TestUser'");
+    auto select_result = executor_->execute("SELECT age FROM users WHERE name = 'TestUser'");
     ASSERT_TRUE(select_result.is_success());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -369,20 +312,17 @@ TEST_F(CompiledUpdateTest, UpdateToNull) {
 // ============== UPDATE with Table Name String ==============
 
 TEST_F(CompiledUpdateTest, UpdateWithTableName) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('TestUser', 25)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    // Build and compile UPDATE query using table name string
-    auto query          = update("test_users").set("age", 35).where(user_name_ == std::string{"TestUser"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update("users").set("age", 35).where(s.name == std::string{"TestUser"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify update
-    auto select_result = executor_->execute("SELECT age FROM test_users WHERE name = 'TestUser'");
+    auto select_result = executor_->execute("SELECT age FROM users WHERE name = 'TestUser'");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 35);
 }
@@ -390,57 +330,47 @@ TEST_F(CompiledUpdateTest, UpdateWithTableName) {
 // ============== UPDATE Edge Cases ==============
 
 TEST_F(CompiledUpdateTest, UpdateNoMatch) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('TestUser', 25)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    // Build and compile UPDATE query that matches no rows
-    auto query          = update(users_schema_).set("age", 50).where(user_age_ > 100);
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("age", 50).where(s.age > 100);
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify no rows were updated
-    auto select_result = executor_->execute("SELECT age FROM test_users WHERE name = 'TestUser'");
+    auto select_result = executor_->execute("SELECT age FROM users WHERE name = 'TestUser'");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 25);  // Original value
 }
 
 TEST_F(CompiledUpdateTest, UpdateEmptyTable) {
-    // Don't insert any data
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("active", false);
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Build and compile UPDATE query on empty table
-    auto query          = update(users_schema_).set("active", false);
-    auto compiled_query = compiler_->compile(query);
-
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify table is still empty
-    auto select_result = executor_->execute("SELECT COUNT(*) FROM test_users");
+    auto select_result = executor_->execute("SELECT COUNT(*) FROM users");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 0);
 }
 
 TEST_F(CompiledUpdateTest, UpdateToSameValue) {
-    // Insert test data
-    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('TestUser', 30)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO users (name, age) VALUES ('TestUser', 30)"));
 
-    // Build and compile UPDATE query setting to same value
-    auto query          = update(users_schema_).set("age", 30).where(user_name_ == std::string{"TestUser"});
-    auto compiled_query = compiler_->compile(query);
+    const auto& s = library_->schemas().users();
+    auto query          = update(s.table).set("age", 30).where(s.name == std::string{"TestUser"});
+    auto compiled_query = library_->compiler().compile(query);
 
-    // Execute compiled query
     auto result = executor_->execute(compiled_query);
 
     ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
 
-    // Verify value is still the same
-    auto select_result = executor_->execute("SELECT age FROM test_users WHERE name = 'TestUser'");
+    auto select_result = executor_->execute("SELECT age FROM users WHERE name = 'TestUser'");
     ASSERT_TRUE(select_result.is_success());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 30);
 }

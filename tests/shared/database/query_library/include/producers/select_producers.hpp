@@ -43,8 +43,10 @@ template <>
 struct QueryProducer<sel::SelectMixedTypes> {
     static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
         using namespace db;
-        // Mirrors: select(user_name, "constant", count(user_id).as("total"))
-        auto query = select(s.users().name, "constant", count(s.users().id).as("total")).from(s.users().table);
+        // Mirrors: select(user_name, "constant", count(user_id).as("total")) with GROUP BY
+        auto query = select(s.users().name, "constant", count(s.users().id).as("total"))
+                         .from(s.users().table)
+                         .group_by(s.users().name);
         return c.compile(query);
     }
 };

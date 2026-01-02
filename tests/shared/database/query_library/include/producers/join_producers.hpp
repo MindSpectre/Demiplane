@@ -117,11 +117,12 @@ template <>
 struct QueryProducer<join::JoinWithAggregates> {
     static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
         using namespace db;
-        // Mirrors: select(user_name, count(post_id).as("post_count"))...
+        // Mirrors: select(user_name, count(post_id).as("post_count"))...group_by(user_name)
         auto query = select(s.users().name, count(s.posts().id).as("post_count"))
                          .from(s.users().table)
                          .join(s.posts().table, JoinType::LEFT)
-                         .on(s.posts().user_id == s.users().id);
+                         .on(s.posts().user_id == s.users().id)
+                         .group_by(s.users().name);
         return c.compile(query);
     }
 };

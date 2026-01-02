@@ -231,6 +231,7 @@ struct QueryProducer<clause::ComplexAllClauses> {
     static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
         using namespace db;
         // Mirrors: Complex query with all clauses
+        // ORDER BY uses columns from GROUP BY
         auto query = select(s.users_extended().department,
                             count(s.users_extended().id).as("employee_count"),
                             avg(s.users_extended().salary).as("avg_salary"),
@@ -239,7 +240,7 @@ struct QueryProducer<clause::ComplexAllClauses> {
                          .where(s.users_extended().active == true && s.users_extended().age >= 21)
                          .group_by(s.users_extended().department)
                          .having(count(s.users_extended().id) >= 3 && avg(s.users_extended().salary) > lit(40000.0))
-                         .order_by(desc(s.users_extended().salary), asc(s.users_extended().department))
+                         .order_by(asc(s.users_extended().department))
                          .limit(10);
         return c.compile(query);
     }
@@ -250,6 +251,7 @@ struct QueryProducer<clause::ClausesWithJoins> {
     static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
         using namespace db;
         // Mirrors: Clauses with JOINs
+        // ORDER BY uses columns from GROUP BY
         auto query = select(s.users_extended().name, s.users_extended().department, sum(s.orders_extended().amount).as("total_orders"))
                          .from(s.users_extended().table)
                          .join(s.orders_extended().table->table_name())
@@ -257,7 +259,7 @@ struct QueryProducer<clause::ClausesWithJoins> {
                          .where(s.users_extended().active == true && s.orders_extended().status == "completed")
                          .group_by(s.users_extended().id, s.users_extended().name, s.users_extended().department)
                          .having(sum(s.orders_extended().amount) > lit(1000.0))
-                         .order_by(desc(s.orders_extended().amount))
+                         .order_by(desc(s.users_extended().name))
                          .limit(5);
         return c.compile(query);
     }

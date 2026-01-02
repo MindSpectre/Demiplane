@@ -1,4 +1,4 @@
-// Compiled SELECT Query Functional Tests
+// Compiled AGGREGATE Query Functional Tests
 // Tests query compilation + execution with SyncExecutor using QueryLibrary
 
 #include <demiplane/nexus>
@@ -14,7 +14,7 @@ using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 using namespace demiplane::test;
 
-class CompiledSelectTest : public ::testing::Test {
+class CompiledAggregateTest : public ::testing::Test {
 protected:
     void SetUp() override {
         demiplane::nexus::instance()
@@ -56,6 +56,7 @@ protected:
         library_  = std::make_unique<QueryLibrary>(std::make_unique<Dialect>());
 
         CreateTables();
+        InsertTestData();
     }
 
     void TearDown() override {
@@ -67,46 +68,63 @@ protected:
     }
 
     void CreateTables() {
+        // Create users table with department and salary for aggregate tests
         auto result = executor_->execute(R"(
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255),
                 age INTEGER,
-                active BOOLEAN
+                active BOOLEAN,
+                department VARCHAR(100),
+                salary DECIMAL(10,2)
             )
         )");
         ASSERT_TRUE(result.is_success()) << "Failed to create users table";
 
+        // Create orders table
         result = executor_->execute(R"(
-            CREATE TABLE IF NOT EXISTS posts (
+            CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                title VARCHAR(255),
-                published BOOLEAN
+                user_id INTEGER,
+                amount DECIMAL(10,2),
+                completed BOOLEAN
             )
         )");
-        ASSERT_TRUE(result.is_success()) << "Failed to create posts table";
-
-        CleanTables();
+        ASSERT_TRUE(result.is_success()) << "Failed to create orders table";
     }
 
     void DropTables() {
-        (void)executor_->execute("DROP TABLE IF EXISTS posts CASCADE");
+        (void)executor_->execute("DROP TABLE IF EXISTS orders CASCADE");
         (void)executor_->execute("DROP TABLE IF EXISTS users CASCADE");
     }
 
-    void CleanTables() {
-        (void)executor_->execute("TRUNCATE TABLE posts RESTART IDENTITY CASCADE");
-        (void)executor_->execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
-    }
+    void InsertTestData() {
+        // Insert users with department and salary
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active, department, salary) VALUES "
+            "(1, 'Alice', 30, true, 'Engineering', 75000.00)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active, department, salary) VALUES "
+            "(2, 'Bob', 25, true, 'Engineering', 65000.00)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active, department, salary) VALUES "
+            "(3, 'Charlie', 35, false, 'Sales', 55000.00)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active, department, salary) VALUES "
+            "(4, 'Diana', 28, true, 'Sales', 60000.00)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO users (id, name, age, active, department, salary) VALUES "
+            "(5, 'Eve', 32, true, 'Marketing', 70000.00)"));
 
-    void InsertTestUsers() {
+        // Insert orders
         ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
+            "INSERT INTO orders (id, user_id, amount, completed) VALUES (1, 1, 100.00, true)"));
         ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (2, 'Bob', 25, false)"));
+            "INSERT INTO orders (id, user_id, amount, completed) VALUES (2, 1, 200.00, false)"));
         ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (3, 'Charlie', 35, true)"));
+            "INSERT INTO orders (id, user_id, amount, completed) VALUES (3, 2, 150.00, true)"));
+        ASSERT_TRUE(executor_->execute(
+            "INSERT INTO orders (id, user_id, amount, completed) VALUES (4, 3, 300.00, true)"));
     }
 
     PGconn* conn_{nullptr};
@@ -114,157 +132,109 @@ protected:
     std::unique_ptr<QueryLibrary> library_;
 };
 
-// ============== Basic SELECT Tests ==============
+// ============== Basic Aggregate Tests ==============
 
-TEST_F(CompiledSelectTest, BasicSelect) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::BasicSelect>();
+TEST_F(CompiledAggregateTest, Count) {
+    auto query  = library_->produce<aggregate::Count>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);
-    EXPECT_EQ(block.cols(), 2);  // id, name
+    EXPECT_EQ(block.rows(), 1);
+    EXPECT_EQ(block.cols(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectAllColumns) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectAllColumns>();
+TEST_F(CompiledAggregateTest, Sum) {
+    auto query  = library_->produce<aggregate::Sum>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);
+    EXPECT_EQ(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectDistinct) {
-    // Insert duplicate data
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (2, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (3, 'Bob', 25, false)"));
-
-    auto query  = library_->produce<sel::SelectDistinct>();
+TEST_F(CompiledAggregateTest, Avg) {
+    auto query  = library_->produce<aggregate::Avg>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 2);  // Only 2 distinct (name, age) combinations
+    EXPECT_EQ(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectWithWhere) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectWithWhere>();
+TEST_F(CompiledAggregateTest, Min) {
+    auto query  = library_->produce<aggregate::Min>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_GE(block.rows(), 1);  // Users with age > 18
+    EXPECT_EQ(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectWithJoin) {
-    InsertTestUsers();
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO posts (id, user_id, title, published) VALUES (1, 1, 'Post by Alice', true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post by Bob', true)"));
-
-    auto query  = library_->produce<sel::SelectWithJoin>();
+TEST_F(CompiledAggregateTest, Max) {
+    auto query  = library_->produce<aggregate::Max>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 2);  // Two users with posts
+    EXPECT_EQ(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectWithGroupBy) {
-    InsertTestUsers();
+// ============== Advanced Aggregate Tests ==============
 
-    auto query  = library_->produce<sel::SelectWithGroupBy>();
+TEST_F(CompiledAggregateTest, AggregateWithAlias) {
+    auto query  = library_->produce<aggregate::AggregateWithAlias>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-    auto& block = result.value();
-    EXPECT_EQ(block.rows(), 2);  // Two groups: active=true, active=false
 }
 
-TEST_F(CompiledSelectTest, SelectWithHaving) {
-    // Insert more users to have groups with count > 5
-    for (int i = 1; i <= 7; ++i) {
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', 25, true)"));
-    }
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (name, age, active) VALUES ('Inactive', 30, false)"));
-
-    auto query  = library_->produce<sel::SelectWithHaving>();
+TEST_F(CompiledAggregateTest, CountDistinct) {
+    auto query  = library_->produce<aggregate::CountDistinct>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-    auto& block = result.value();
-    EXPECT_EQ(block.rows(), 1);  // Only group with count > 5
 }
 
-TEST_F(CompiledSelectTest, SelectWithOrderBy) {
-    // Insert in random order
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (1, 'Zebra', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (2, 'Alpha', 25, true)"));
-    ASSERT_TRUE(executor_->execute(
-        "INSERT INTO users (id, name, age, active) VALUES (3, 'Beta', 35, true)"));
-
-    auto query  = library_->produce<sel::SelectWithOrderBy>();
+TEST_F(CompiledAggregateTest, CountAll) {
+    auto query  = library_->produce<aggregate::CountAll>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);
-    // Results should be ordered: Alpha, Beta, Zebra
+    EXPECT_EQ(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectWithLimit) {
-    // Insert 10 users
-    for (int i = 1; i <= 10; ++i) {
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', " +
-            std::to_string(20 + i) + ", true)"));
-    }
-
-    auto query  = library_->produce<sel::SelectWithLimit>();
+TEST_F(CompiledAggregateTest, AggregateGroupBy) {
+    auto query  = library_->produce<aggregate::AggregateGroupBy>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_LE(block.rows(), 10);  // Limited to 10
+    // Should have groups for Engineering, Sales, Marketing
+    EXPECT_GE(block.rows(), 1);
 }
 
-TEST_F(CompiledSelectTest, SelectMixedTypes) {
-    InsertTestUsers();
-
-    auto query  = library_->produce<sel::SelectMixedTypes>();
+TEST_F(CompiledAggregateTest, AggregateHaving) {
+    auto query  = library_->produce<aggregate::AggregateHaving>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-    auto& block = result.value();
-    EXPECT_EQ(block.rows(), 3);  // One row per unique name (Alice, Bob, Charlie)
-    EXPECT_EQ(block.cols(), 3);  // name, constant, total
 }
 
-// ============== Empty Result Tests ==============
-
-TEST_F(CompiledSelectTest, SelectEmptyResult) {
-    // Don't insert any data
-    auto query  = library_->produce<sel::BasicSelect>();
+TEST_F(CompiledAggregateTest, MultipleAggregates) {
+    auto query  = library_->produce<aggregate::MultipleAggregates>();
     auto result = executor_->execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    EXPECT_EQ(block.rows(), 0);
-    EXPECT_TRUE(block.empty());
+    // Multiple aggregate columns
+    EXPECT_GE(block.cols(), 2);
+}
+
+TEST_F(CompiledAggregateTest, AggregateMixedTypes) {
+    auto query  = library_->produce<aggregate::AggregateMixedTypes>();
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }

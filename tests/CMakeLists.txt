@@ -1,7 +1,9 @@
+set(TESTS_SHARED ${PROJECT_NAME}.Tests.Shared)
 set(UNIT_TESTING_TARGET ${PROJECT_NAME}.Tests.Unit)
 set(FUNCTIONAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Functional)
 set(INTEGRATION_TESTING_TARGET ${PROJECT_NAME}.Tests.Integration)
 set(MANUAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Manual)
+
 set(TEST_LIBS
         GTest::gtest
         GTest::gtest_main
@@ -33,6 +35,7 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database tests will be built")
+    add_subdirectory(shared/database)
     add_subdirectory(unit_tests/database)
     add_subdirectory(manual_tests/database)
     add_subdirectory(functional_tests/database)

@@ -5,6 +5,7 @@
 #include "../basic.hpp"
 
 namespace demiplane::db {
+    //todo: add constraint (concepts)
     template <typename Operand, typename Lower, typename Upper>
     class BetweenExpr : public Expression<BetweenExpr<Operand, Lower, Upper>> {
     public:

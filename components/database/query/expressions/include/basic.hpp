@@ -4,9 +4,8 @@
 #include <utility>
 
 #include <db_core_objects.hpp>
-
-#include "db_expressions_fwd.hpp"
 #include <gears_concepts.hpp>
+#include "db_expressions_fwd.hpp"
 namespace demiplane::db {
     template <class Derived>
     class Expression {
@@ -68,7 +67,7 @@ namespace demiplane::db {
             return std::forward<decltype(self)>(self).value_;
         }
 
-        [[nodiscard]] const std::optional<std::string>& alias() const {
+        [[nodiscard]] const std::string& alias() const {
             return alias_;
         }
 
@@ -78,10 +77,10 @@ namespace demiplane::db {
             : value_{std::forward<T>(v)} {
         }
 
-        template <typename Self, typename T>
-            requires std::constructible_from<std::optional<std::string>, T>
-        constexpr decltype(auto) as(this Self&& self, T&& alias) {
-            std::forward<Self>(self).alias_ = std::forward<T>(alias);
+        template <typename Self, typename Tp>
+            requires gears::IsStringLike<Tp>
+        constexpr decltype(auto) as(this Self&& self, Tp&& alias) {
+            std::forward<Self>(self).alias_ = std::forward<Tp>(alias);
             return std::forward<Self>(self);
         }
 
@@ -89,7 +88,7 @@ namespace demiplane::db {
 
     private:
         FieldValue value_;
-        std::optional<std::string> alias_;
+        std::string alias_;
     };
 
     template <typename T>
@@ -124,14 +123,14 @@ namespace demiplane::db {
     template <typename Derived>
     class AliasableExpression : public Expression<Derived> {
     public:
-        template <typename T>
-            requires std::constructible_from<std::optional<std::string>, T>
-        constexpr explicit AliasableExpression(T&& alias)
-            : alias_(std::forward<T>(alias)) {
+        template <typename Tp>
+            requires gears::IsStringLike<Tp>
+        constexpr explicit AliasableExpression(Tp&& alias)
+            : alias_(std::forward<Tp>(alias)) {
         }
 
         template <typename Self, typename T>
-            requires std::constructible_from<std::optional<std::string>, T>
+            requires std::constructible_from<std::string, T>
         constexpr decltype(auto) as(this Self&& self, T&& name) {
             std::forward<Self>(self).alias_ = std::forward<T>(name);
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
@@ -144,7 +143,7 @@ namespace demiplane::db {
         }
 
     protected:
-        std::optional<std::string> alias_;
+        std::string alias_;
         constexpr AliasableExpression() = default;
     };
 
@@ -179,10 +178,10 @@ namespace demiplane::db {
               type_{type} {
         }
 
-        template <typename Self, typename T>
-            requires std::constructible_from<std::optional<std::string>, T>
-        constexpr decltype(auto) as(this Self&& self, T&& name) {
-            std::forward<Self>(self).right_alias_ = std::forward<T>(name);
+        template <typename Self, typename Tp>
+            requires gears::IsStringLike<Tp>
+        constexpr decltype(auto) as(this Self&& self, Tp&& name) {
+            std::forward<Self>(self).right_alias_ = std::forward<Tp>(name);
             return std::forward<Self>(self);
         }
 
@@ -199,7 +198,7 @@ namespace demiplane::db {
         Parent parent_;
         TablePtr right_table_name_;
         JoinType type_;
-        std::optional<std::string> right_alias_;
+        std::string right_alias_;
     };
 
     class ColumnHolder {

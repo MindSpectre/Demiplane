@@ -9,7 +9,8 @@ namespace demiplane::db {
     class CountExpr : public AliasableExpression<CountExpr>, public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp> && (!std::same_as<std::remove_cvref_t<DynamicColumnTp>, AllColumns>)
+            requires std::constructible_from<DynamicColumn, DynamicColumnTp> &&
+                         (!std::same_as<std::remove_cvref_t<DynamicColumnTp>, AllColumns>)
         constexpr CountExpr(DynamicColumnTp&& col, const bool dist) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(col)},
               distinct_{dist} {

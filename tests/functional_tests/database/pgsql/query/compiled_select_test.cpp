@@ -1,117 +1,27 @@
 // Compiled SELECT Query Functional Tests
 // Tests query compilation + execution with SyncExecutor using QueryLibrary
 
-#include <demiplane/nexus>
-#include <demiplane/scroll>
-
-#include <gtest/gtest.h>
-
-#include "postgres_dialect.hpp"
-#include "postgres_sync_executor.hpp"
-#include "query_library.hpp"
+#include <test_fixture.hpp>
 
 using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 using namespace demiplane::test;
 
-class CompiledSelectTest : public ::testing::Test {
+class CompiledSelectTest : public PgsqlTestFixture {
 protected:
     void SetUp() override {
-        demiplane::nexus::instance()
-            .register_singleton<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>([] {
-                return std::make_shared<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>(
-                    demiplane::scroll::ConsoleSinkConfig{}
-                        .flush_each_entry(true)
-                        .threshold(demiplane::scroll::TRC)
-                        .finalize());
-            });
-
-        demiplane::nexus::instance().register_singleton<demiplane::scroll::Logger>([] {
-            auto logger = std::make_shared<demiplane::scroll::Logger>();
-            logger->add_sink(
-                demiplane::nexus::instance().get<demiplane::scroll::ConsoleSink<demiplane::scroll::DetailedEntry>>());
-            return logger;
-        });
-
-        const char* host     = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
-        const char* port     = std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433";
-        const char* dbname   = std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db";
-        const char* user     = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
-        const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
-
-        std::string conninfo = "host=" + std::string(host) + " port=" + std::string(port) +
-                               " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                               " password=" + std::string(password);
-
-        conn_ = PQconnectdb(conninfo.c_str());
-
-        if (PQstatus(conn_) != CONNECTION_OK) {
-            std::string error = PQerrorMessage(conn_);
-            PQfinish(conn_);
-            conn_ = nullptr;
-            GTEST_SKIP() << "Failed to connect to PostgreSQL: " << error;
-        }
-
-        executor_ = std::make_unique<SyncExecutor>(conn_);
-        library_  = std::make_unique<QueryLibrary>(std::make_unique<Dialect>());
-
-        CreateTables();
+        PgsqlTestFixture::SetUp();
+        if (connection() == nullptr) return;
+        CreateStandardTables();
+        TruncateStandardTables();
     }
 
     void TearDown() override {
-        if (conn_) {
-            DropTables();
-            PQfinish(conn_);
-            conn_ = nullptr;
+        if (connection()) {
+            DropStandardTables();
         }
+        PgsqlTestFixture::TearDown();
     }
-
-    void CreateTables() {
-        auto result = executor_->execute(R"(
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255),
-                age INTEGER,
-                active BOOLEAN
-            )
-        )");
-        ASSERT_TRUE(result.is_success()) << "Failed to create users table";
-
-        result = executor_->execute(R"(
-            CREATE TABLE IF NOT EXISTS posts (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id),
-                title VARCHAR(255),
-                published BOOLEAN
-            )
-        )");
-        ASSERT_TRUE(result.is_success()) << "Failed to create posts table";
-
-        CleanTables();
-    }
-
-    void DropTables() {
-        (void)executor_->execute("DROP TABLE IF EXISTS posts CASCADE");
-        (void)executor_->execute("DROP TABLE IF EXISTS users CASCADE");
-    }
-
-    void CleanTables() {
-        (void)executor_->execute("TRUNCATE TABLE posts RESTART IDENTITY CASCADE");
-        (void)executor_->execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
-    }
-
-    void InsertTestUsers() {
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (2, 'Bob', 25, false)"));
-        ASSERT_TRUE(executor_->execute(
-            "INSERT INTO users (id, name, age, active) VALUES (3, 'Charlie', 35, true)"));
-    }
-
-    PGconn* conn_{nullptr};
-    std::unique_ptr<SyncExecutor> executor_;
-    std::unique_ptr<QueryLibrary> library_;
 };
 
 // ============== Basic SELECT Tests ==============
@@ -119,8 +29,8 @@ protected:
 TEST_F(CompiledSelectTest, BasicSelect) {
     InsertTestUsers();
 
-    auto query  = library_->produce<sel::BasicSelect>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::BasicSelect>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -131,8 +41,8 @@ TEST_F(CompiledSelectTest, BasicSelect) {
 TEST_F(CompiledSelectTest, SelectAllColumns) {
     InsertTestUsers();
 
-    auto query  = library_->produce<sel::SelectAllColumns>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectAllColumns>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -141,15 +51,15 @@ TEST_F(CompiledSelectTest, SelectAllColumns) {
 
 TEST_F(CompiledSelectTest, SelectDistinct) {
     // Insert duplicate data
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (id, name, age, active) VALUES (2, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (id, name, age, active) VALUES (3, 'Bob', 25, false)"));
 
-    auto query  = library_->produce<sel::SelectDistinct>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectDistinct>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -159,8 +69,8 @@ TEST_F(CompiledSelectTest, SelectDistinct) {
 TEST_F(CompiledSelectTest, SelectWithWhere) {
     InsertTestUsers();
 
-    auto query  = library_->produce<sel::SelectWithWhere>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectWithWhere>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -169,13 +79,13 @@ TEST_F(CompiledSelectTest, SelectWithWhere) {
 
 TEST_F(CompiledSelectTest, SelectWithJoin) {
     InsertTestUsers();
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO posts (id, user_id, title, published) VALUES (1, 1, 'Post by Alice', true)"));
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post by Bob', true)"));
 
-    auto query  = library_->produce<sel::SelectWithJoin>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectWithJoin>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -185,8 +95,8 @@ TEST_F(CompiledSelectTest, SelectWithJoin) {
 TEST_F(CompiledSelectTest, SelectWithGroupBy) {
     InsertTestUsers();
 
-    auto query  = library_->produce<sel::SelectWithGroupBy>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectWithGroupBy>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -196,14 +106,14 @@ TEST_F(CompiledSelectTest, SelectWithGroupBy) {
 TEST_F(CompiledSelectTest, SelectWithHaving) {
     // Insert more users to have groups with count > 5
     for (int i = 1; i <= 7; ++i) {
-        ASSERT_TRUE(executor_->execute(
+        ASSERT_TRUE(executor().execute(
             "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', 25, true)"));
     }
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (name, age, active) VALUES ('Inactive', 30, false)"));
 
-    auto query  = library_->produce<sel::SelectWithHaving>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectWithHaving>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -212,15 +122,15 @@ TEST_F(CompiledSelectTest, SelectWithHaving) {
 
 TEST_F(CompiledSelectTest, SelectWithOrderBy) {
     // Insert in random order
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (id, name, age, active) VALUES (1, 'Zebra', 30, true)"));
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (id, name, age, active) VALUES (2, 'Alpha', 25, true)"));
-    ASSERT_TRUE(executor_->execute(
+    ASSERT_TRUE(executor().execute(
         "INSERT INTO users (id, name, age, active) VALUES (3, 'Beta', 35, true)"));
 
-    auto query  = library_->produce<sel::SelectWithOrderBy>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectWithOrderBy>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -231,13 +141,13 @@ TEST_F(CompiledSelectTest, SelectWithOrderBy) {
 TEST_F(CompiledSelectTest, SelectWithLimit) {
     // Insert 10 users
     for (int i = 1; i <= 10; ++i) {
-        ASSERT_TRUE(executor_->execute(
+        ASSERT_TRUE(executor().execute(
             "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', " +
             std::to_string(20 + i) + ", true)"));
     }
 
-    auto query  = library_->produce<sel::SelectWithLimit>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectWithLimit>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -247,8 +157,8 @@ TEST_F(CompiledSelectTest, SelectWithLimit) {
 TEST_F(CompiledSelectTest, SelectMixedTypes) {
     InsertTestUsers();
 
-    auto query  = library_->produce<sel::SelectMixedTypes>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::SelectMixedTypes>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -260,8 +170,8 @@ TEST_F(CompiledSelectTest, SelectMixedTypes) {
 
 TEST_F(CompiledSelectTest, SelectEmptyResult) {
     // Don't insert any data
-    auto query  = library_->produce<sel::BasicSelect>();
-    auto result = executor_->execute(query);
+    auto query  = library().produce<sel::BasicSelect>();
+    auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();

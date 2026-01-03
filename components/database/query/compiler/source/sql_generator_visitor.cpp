@@ -8,9 +8,9 @@ namespace demiplane::db {
 
 
     void SqlGeneratorVisitor::visit_table_column_impl(const FieldSchema* schema,
-                                                      const std::shared_ptr<std::string>& table,
-                                                      const std::optional<std::string>& alias) {
-        if (table) {
+                                                      const std::string_view table,
+                                                      const std::string_view alias) {
+        if (!table.empty()) {
             visit_table_impl(table);
             sql_ += ".";
         }
@@ -18,10 +18,9 @@ namespace demiplane::db {
         visit_alias_impl(alias);
     }
 
-    void SqlGeneratorVisitor::visit_dynamic_column_impl(const std::string& name,
-                                                        const std::optional<std::string>& table) {
-        if (table) {
-            visit_table_impl(table.value());
+    void SqlGeneratorVisitor::visit_dynamic_column_impl(const std::string_view name, const std::string_view table) {
+        if (!table.empty()) {
+            visit_table_impl(table);
             sql_ += ".";
         }
         dialect_->quote_identifier(sql_, name);
@@ -59,30 +58,21 @@ namespace demiplane::db {
 
 
     void SqlGeneratorVisitor::visit_table_impl(const TablePtr& table) {
+        if (!table) return;
         dialect_->quote_identifier(sql_, table->table_name());
     }
 
 
     void SqlGeneratorVisitor::visit_table_impl(const std::string_view table_name) {
+        if (table_name.empty()) return;
         dialect_->quote_identifier(sql_, table_name);
     }
 
-    void SqlGeneratorVisitor::visit_table_impl(const std::shared_ptr<std::string>& table) {
-        if (table) {
-            dialect_->quote_identifier(sql_, *table);
-        }
-    }
 
     void SqlGeneratorVisitor::visit_alias_impl(const std::string_view alias) {
+        if (alias.empty()) return;
         sql_ += " AS ";
         dialect_->quote_identifier(sql_, alias);
-    }
-
-    void SqlGeneratorVisitor::visit_alias_impl(const std::optional<std::string>& alias) {
-        if (alias.has_value()) {
-            sql_ += " AS ";
-            dialect_->quote_identifier(sql_, alias.value());
-        }
     }
 
 
@@ -208,7 +198,7 @@ namespace demiplane::db {
         sql_ += "MIN(";
     }
 
-    void SqlGeneratorVisitor::visit_aggregate_end(const std::optional<std::string>& alias) {
+    void SqlGeneratorVisitor::visit_aggregate_end(const std::string_view alias) {
         sql_ += ")";
         visit_alias_impl(alias);
     }

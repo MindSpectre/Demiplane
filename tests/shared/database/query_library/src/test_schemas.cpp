@@ -6,7 +6,7 @@ namespace demiplane::test {
 namespace pgsql_ddl {
     constexpr std::string_view users_table = R"(
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255),
     age INTEGER,
     active BOOLEAN
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 
     constexpr std::string_view users_extended_table = R"(
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255),
     age INTEGER,
     active BOOLEAN,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 
     constexpr std::string_view posts_table = R"(
 CREATE TABLE IF NOT EXISTS posts (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER,
     title VARCHAR(255),
     published BOOLEAN
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS posts (
 
     constexpr std::string_view orders_table = R"(
 CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER,
     amount DECIMAL(10,2),
     completed BOOLEAN
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
     constexpr std::string_view orders_extended_table = R"(
 CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER,
     amount DECIMAL(10,2),
     completed BOOLEAN,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
     constexpr std::string_view comments_table = R"(
 CREATE TABLE IF NOT EXISTS comments (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     post_id INTEGER,
     user_id INTEGER,
     content TEXT

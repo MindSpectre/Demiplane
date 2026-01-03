@@ -54,12 +54,12 @@ namespace demiplane::db {
     }
 
     // Helper functions for special operators
-    template <typename T>
+    template <IsDbOperand T>
     constexpr auto is_null(T operand) {
         return UnaryExpr<T, OpIsNull>{std::move(operand)};
     }
 
-    template <typename T>
+    template <IsDbOperand T>
     constexpr auto is_not_null(T operand) {
         return UnaryExpr<T, OpIsNotNull>{std::move(operand)};
     }

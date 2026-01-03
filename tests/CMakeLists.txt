@@ -11,8 +11,6 @@ set(TEST_LIBS
         GTest::gmock_main
 )
 
-add_subdirectory(manual_tests)
-
 add_subdirectory(unit_tests)
 
 add_subdirectory(integration_tests)
@@ -37,7 +35,6 @@ if (BUILD_DATABASE)
     message("Database tests will be built")
     add_subdirectory(shared/database)
     add_subdirectory(unit_tests/database)
-    add_subdirectory(manual_tests/database)
     add_subdirectory(functional_tests/database)
 endif ()
 ##############################################################################

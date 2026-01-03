@@ -16,6 +16,9 @@ if(EXISTS "${PGSQL_ENV_FILE}")
     endforeach()
 endif()
 
+set(FUNCTIONAL_POSTGRESQL_TESTS ${FUNCTIONAL_TESTING_TARGET}.Database.PostgreSQL)
+
 add_subdirectory(capabilities)
 add_subdirectory(params)
 add_subdirectory(query)
+add_subdirectory(fixture)

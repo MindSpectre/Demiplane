@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../basic.hpp"
-
+#include <gears_concepts.hpp>
 namespace demiplane::db {
     template <IsTable TableT>
     class DeleteExpr : public Expression<DeleteExpr<TableT>>, public TableHolder<TableT> {

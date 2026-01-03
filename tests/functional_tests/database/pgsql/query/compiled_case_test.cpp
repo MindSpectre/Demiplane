@@ -1,4 +1,4 @@
-// Compiled SUBQUERY Query Functional Tests
+// Compiled CASE Expression Query Functional Tests
 // Tests query compilation + execution with SyncExecutor using QueryLibrary
 
 #include <test_fixture.hpp>
@@ -7,90 +7,79 @@ using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 using namespace demiplane::test;
 
-class CompiledSubqueryTest : public PgsqlTestFixture {
+class CompiledCaseTest : public PgsqlTestFixture {
 protected:
     void SetUp() override {
         PgsqlTestFixture::SetUp();
         if (connection() == nullptr) return;
         CreateUsersTable();
-        CreatePostsTable();
         CreateOrdersTable();
-        InsertSubqueryTestData();
+        InsertTestUsers();
+        InsertTestOrders();
     }
 
     void TearDown() override {
         if (connection()) {
             DropOrdersTable();
-            DropPostsTable();
             DropUsersTable();
         }
         PgsqlTestFixture::TearDown();
     }
 };
 
-// ============== Subquery in WHERE Tests ==============
+// ============== Simple CASE Tests ==============
 
-TEST_F(CompiledSubqueryTest, SubqueryInWhere) {
-    auto query  = library().produce<subq::SubqueryInWhere>();
+TEST_F(CompiledCaseTest, SimpleCaseWhen) {
+    auto query  = library().produce<case_expr::SimpleCaseWhen>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    // Should return posts by active users
     EXPECT_GE(block.rows(), 1);
+    EXPECT_GE(block.cols(), 2);  // name and status columns
 }
 
-// ============== EXISTS Tests ==============
-
-TEST_F(CompiledSubqueryTest, Exists) {
-    auto query  = library().produce<subq::Exists>();
+TEST_F(CompiledCaseTest, CaseWithElse) {
+    auto query  = library().produce<case_expr::CaseWithElse>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
-    // Should return users who have published posts
     EXPECT_GE(block.rows(), 1);
 }
 
-TEST_F(CompiledSubqueryTest, NotExists) {
-    auto query  = library().produce<subq::NotExists>();
+TEST_F(CompiledCaseTest, CaseMultipleWhen) {
+    auto query  = library().produce<case_expr::CaseMultipleWhen>();
+    auto result = executor().execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    auto& block = result.value();
+    EXPECT_GE(block.rows(), 1);
+    EXPECT_GE(block.cols(), 3);  // name, age, age_group
+}
+
+TEST_F(CompiledCaseTest, CaseInSelect) {
+    auto query  = library().produce<case_expr::CaseInSelect>();
+    auto result = executor().execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    auto& block = result.value();
+    // Should return orders with size category
+    EXPECT_GE(block.cols(), 3);  // id, amount, order_size
+}
+
+TEST_F(CompiledCaseTest, CaseWithComparison) {
+    auto query  = library().produce<case_expr::CaseWithComparison>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
-// ============== IN Subquery Tests ==============
-
-TEST_F(CompiledSubqueryTest, InSubqueryMultiple) {
-    auto query  = library().produce<subq::InSubqueryMultiple>();
+TEST_F(CompiledCaseTest, CaseNested) {
+    auto query  = library().produce<case_expr::CaseNested>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-}
-
-// ============== Nested Subquery Tests ==============
-
-TEST_F(CompiledSubqueryTest, NestedSubqueries) {
-    auto query  = library().produce<subq::NestedSubqueries>();
-    auto result = executor().execute(query);
-
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-}
-
-// ============== Subquery with Aggregates ==============
-
-TEST_F(CompiledSubqueryTest, SubqueryWithAggregates) {
-    auto query  = library().produce<subq::SubqueryWithAggregates>();
-    auto result = executor().execute(query);
-
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
-}
-
-// ============== Subquery with DISTINCT ==============
-
-TEST_F(CompiledSubqueryTest, SubqueryWithDistinct) {
-    auto query  = library().produce<subq::SubqueryWithDistinct>();
-    auto result = executor().execute(query);
-
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    auto& block = result.value();
+    EXPECT_GE(block.rows(), 1);
 }

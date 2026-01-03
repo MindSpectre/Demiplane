@@ -3,7 +3,7 @@
 ##############################################################################
 
 add_functional_test(
-        ${FUNCTIONAL_TESTING_TARGET}.PostgreSQL.Params
+        ${FUNCTIONAL_POSTGRESQL_TESTS}.Params
         postgres_params_test.cpp
         LINK_LIBS
             Demiplane::Component::Database::PostgreSQL

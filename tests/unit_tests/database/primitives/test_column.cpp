@@ -25,7 +25,7 @@ TEST_F(ColumnTest, TypedColumnConstruction) {
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_FALSE(column.alias().has_value());
+    EXPECT_TRUE(column.alias().empty());
     EXPECT_EQ(column.name(), "test_field");
 }
 
@@ -34,7 +34,7 @@ TEST_F(ColumnTest, TypedColumnWithAlias) {
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_EQ(column.alias().value(), "t");
+    EXPECT_EQ(column.alias(), "t");
     EXPECT_EQ(column.name(), "test_field");
 }
 
@@ -42,8 +42,8 @@ TEST_F(ColumnTest, TypedColumnAliasing) {
     const TableColumn<int> original(&test_schema, "test_table");
     const TableColumn<int> aliased = original.as("t");
 
-    EXPECT_FALSE(original.alias().has_value());
-    EXPECT_EQ(aliased.alias().value(), "t");
+    EXPECT_TRUE(original.alias().empty());
+    EXPECT_EQ(aliased.alias(), "t");
     EXPECT_EQ(aliased.table_name(), "test_table");
     EXPECT_EQ(aliased.schema(), &test_schema);
 }
@@ -53,7 +53,7 @@ TEST_F(ColumnTest, VoidColumnConstruction) {
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_FALSE(column.alias().has_value());
+    EXPECT_TRUE(column.alias().empty());
     EXPECT_EQ(column.name(), "test_field");
 }
 
@@ -62,7 +62,7 @@ TEST_F(ColumnTest, VoidColumnWithAlias) {
 
     EXPECT_EQ(column.schema(), &test_schema);
     EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_EQ(column.alias().value(), "t");
+    EXPECT_EQ(column.alias(), "t");
     EXPECT_EQ(column.name(), "test_field");
 }
 
@@ -136,9 +136,9 @@ TEST_F(ColumnTest, ColumnWithComplexAlias) {
     const TableColumn<int> column(&test_schema, "very_long_table_name", "short");
 
     EXPECT_EQ(column.table_name(), "very_long_table_name");
-    EXPECT_EQ(column.alias().value(), "short");
+    EXPECT_EQ(column.alias(), "short");
 
     const TableColumn<int> aliased = column.as("even_shorter");
-    EXPECT_EQ(aliased.alias().value(), "even_shorter");
+    EXPECT_EQ(aliased.alias(), "even_shorter");
     EXPECT_EQ(aliased.table_name(), "very_long_table_name");
 }

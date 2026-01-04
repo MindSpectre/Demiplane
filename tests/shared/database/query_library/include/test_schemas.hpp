@@ -83,22 +83,22 @@ namespace demiplane::test {
 
         static TestSchemas create();
 
-        [[nodiscard]] const UsersSchema& users() const {
+        [[nodiscard]] constexpr const UsersSchema& users() const {
             return users_;
         }
-        [[nodiscard]] const UsersExtendedSchema& users_extended() const {
+        [[nodiscard]] constexpr const UsersExtendedSchema& users_extended() const {
             return users_extended_;
         }
-        [[nodiscard]] const PostsSchema& posts() const {
+        [[nodiscard]] constexpr const PostsSchema& posts() const {
             return posts_;
         }
-        [[nodiscard]] const OrdersSchema& orders() const {
+        [[nodiscard]] constexpr const OrdersSchema& orders() const {
             return orders_;
         }
-        [[nodiscard]] const OrdersExtendedSchema& orders_extended() const {
+        [[nodiscard]] constexpr const OrdersExtendedSchema& orders_extended() const {
             return orders_extended_;
         }
-        [[nodiscard]] const CommentsSchema& comments() const {
+        [[nodiscard]] constexpr const CommentsSchema& comments() const {
             return comments_;
         }
 

@@ -3,6 +3,7 @@
 ##############################################################################
 add_library(${DMP_DATABASE}.Primitives.Field STATIC
         include/db_field.hpp
+        include/db_field_def.hpp
         include/db_field_schema.hpp
         include/db_field_value.hpp
         source/db_field.cpp

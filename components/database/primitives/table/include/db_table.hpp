@@ -6,17 +6,29 @@
 #include <vector>
 
 #include <boost/unordered_map.hpp>
+#include <db_field_def.hpp>
 #include <db_field_schema.hpp>
 #include <gears_hash.hpp>
-
+#include <gears_concepts.hpp>
 namespace demiplane::db {
-    // Enhanced Table with type-safe column access
+    // Forward declarations
     template <typename T>
     class TableColumn;
 
+    // Concept for schema types that have a fields type_list
+    template <typename T>
+    concept HasSchemaFields = requires { typename T::fields; };
+
     class Table {
     public:
-        explicit Table(std::string table_name);
+        template <gears::IsStringLike StringTp>
+        constexpr explicit Table(StringTp&& table_name) noexcept
+            : table_name_{std::forward<StringTp>(table_name)} {
+        }
+        // ✨ Schema-aware constructor - auto-initializes fields from Schema::fields
+        template <HasSchemaFields Schema>
+        explicit Table(std::string table_name, Schema schema);
+
         // Enhanced builder pattern with type information
         template <typename T>
         Table& add_field(std::string name, std::string db_type);
@@ -24,17 +36,53 @@ namespace demiplane::db {
         // Overload for runtime type specification
         Table& add_field(std::string name, std::string db_type, std::type_index cpp_type);
 
-        // Type-safe column accessor
+        // ═══════════════════════════════════════════════════════════════
+        // COLUMN ACCESSORS - Runtime and Compile-Time Overloads
+        // ═══════════════════════════════════════════════════════════════
+
+        // Runtime type-safe column accessor (existing API)
         template <typename T>
         [[nodiscard]] TableColumn<T> column(std::string_view field_name) const;
 
+        // ✨ COMPILE-TIME type-safe column accessor (new API)
+        template <IsFieldDef FieldDefT>
+        [[nodiscard]] constexpr TableColumn<typename FieldDefT::value_type> column(FieldDefT field_def) const;
 
-        // Existing methods
+
+        // ═══════════════════════════════════════════════════════════════
+        // BUILDER METHODS - Runtime and Compile-Time Overloads
+        // ═══════════════════════════════════════════════════════════════
+
+        // Runtime builders (existing API)
         Table& primary_key(std::string_view field_name);
         Table& nullable(std::string_view field_name, bool is_null = true);
         Table& foreign_key(std::string_view field_name, std::string_view ref_table, std::string_view ref_column);
         Table& unique(std::string_view field_name);
         Table& indexed(std::string_view field_name);
+
+        // ✨ COMPILE-TIME builders (new API - FieldDef overloads)
+        template <IsFieldDef FieldDefT>
+        Table& primary_key(FieldDefT field_def);
+
+        template <IsFieldDef FieldDefT>
+        Table& nullable(FieldDefT field_def, bool is_null = true);
+
+        template <IsFieldDef FieldDefT>
+        Table& foreign_key(FieldDefT field_def, std::string_view ref_table, std::string_view ref_column);
+
+        template <IsFieldDef FieldDefT>
+        Table& unique(FieldDefT field_def);
+
+        template <IsFieldDef FieldDefT>
+        Table& indexed(FieldDefT field_def);
+
+        // Set database type for a field (compile-time overload)
+        template <IsFieldDef FieldDefT>
+        Table& set_db_type(FieldDefT field_def, std::string db_type);
+
+        // Add database-specific attributes (compile-time overload)
+        template <IsFieldDef FieldDefT>
+        Table& add_db_attribute(FieldDefT field_def, std::string key, std::string value);
 
         [[nodiscard]] const FieldSchema* get_field_schema(std::string_view name) const;
         FieldSchema* get_field_schema(std::string_view name);

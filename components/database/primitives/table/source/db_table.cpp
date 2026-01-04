@@ -1,10 +1,6 @@
 #include "db_table.hpp"
 
 namespace demiplane::db {
-    Table::Table(std::string table_name)
-        : table_name_(std::move(table_name)) {
-    }
-
     Table& Table::add_field(std::string name, std::string db_type, const std::type_index cpp_type) {
         auto field      = std::make_unique<FieldSchema>();
         field->name     = std::move(name);

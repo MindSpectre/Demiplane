@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-//TODO: get rid of moves non benefit
+// TODO: get rid of moves non benefit
 
 namespace demiplane::db {
 
@@ -26,7 +26,7 @@ namespace demiplane::db {
         dialect_->quote_identifier(sql_, name);
     }
 
-    void SqlGeneratorVisitor::visit_value_impl(const FieldValue& value)  {
+    void SqlGeneratorVisitor::visit_value_impl(const FieldValue& value) {
         if (use_params_) {
             const std::size_t idx = sink_->push(value);
             dialect_->placeholder(sql_, idx);
@@ -58,19 +58,22 @@ namespace demiplane::db {
 
 
     void SqlGeneratorVisitor::visit_table_impl(const TablePtr& table) {
-        if (!table) return;
+        if (!table)
+            return;
         dialect_->quote_identifier(sql_, table->table_name());
     }
 
 
     void SqlGeneratorVisitor::visit_table_impl(const std::string_view table_name) {
-        if (table_name.empty()) return;
+        if (table_name.empty())
+            return;
         dialect_->quote_identifier(sql_, table_name);
     }
 
 
     void SqlGeneratorVisitor::visit_alias_impl(const std::string_view alias) {
-        if (alias.empty()) return;
+        if (alias.empty())
+            return;
         sql_ += " AS ";
         dialect_->quote_identifier(sql_, alias);
     }
@@ -296,7 +299,7 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_insert_columns(const std::vector<std::string>& columns) {
         sql_       += " (";
-        bool first = true;
+        bool first  = true;
         for (const auto& col : columns) {
             if (!first)
                 sql_ += ", ";
@@ -308,7 +311,7 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_insert_columns(std::vector<std::string>&& columns) {
         sql_       += " (";
-        bool first = true;
+        bool first  = true;
         for (const auto& col : columns) {
             if (!first)
                 sql_ += ", ";
@@ -325,7 +328,7 @@ namespace demiplane::db {
                 sql_ += ", ";
             first_row       = false;
             sql_           += "(";
-            bool first_val = true;
+            bool first_val  = true;
             for (const auto& val : row) {
                 if (!first_val)
                     sql_ += ", ";
@@ -342,8 +345,8 @@ namespace demiplane::db {
             if (!first_row)
                 sql_ += ", ";
             first_row       = false;
-            sql_ += "(";
-            bool first_val = true;
+            sql_           += "(";
+            bool first_val  = true;
             for (auto&& val : std::move(row)) {
                 if (!first_val)
                     sql_ += ", ";
@@ -362,8 +365,8 @@ namespace demiplane::db {
     }
 
     void SqlGeneratorVisitor::visit_update_set(const std::vector<std::pair<std::string, FieldValue>>& assignments) {
-        sql_ += " SET ";
-        bool first = true;
+        sql_       += " SET ";
+        bool first  = true;
         for (const auto& [col, val] : assignments) {
             if (!first)
                 sql_ += ", ";
@@ -375,8 +378,8 @@ namespace demiplane::db {
     }
 
     void SqlGeneratorVisitor::visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) {
-        sql_ += " SET ";
-        bool first = true;
+        sql_       += " SET ";
+        bool first  = true;
         for (auto&& [col, val] : std::move(assignments)) {
             if (!first)
                 sql_ += ", ";
@@ -463,6 +466,83 @@ namespace demiplane::db {
 
     void SqlGeneratorVisitor::visit_cte_end() {
         sql_ += " ";
+    }
+
+    void SqlGeneratorVisitor::visit_create_table_start(const bool if_not_exists) {
+        sql_ += "CREATE TABLE ";
+        if (if_not_exists) {
+            sql_ += "IF NOT EXISTS ";
+        }
+    }
+
+    void SqlGeneratorVisitor::visit_create_table_columns(const TablePtr& table) {
+        if (!table)
+            return;
+
+        sql_       += " (";
+        bool first  = true;
+
+        for (const auto& field : table->fields()) {
+            if (!first)
+                sql_ += ", ";
+            first = false;
+
+            // Column name
+            dialect_->quote_identifier(sql_, field->name);
+            sql_ += " ";
+
+            // Column type
+            sql_ += field->db_type;
+
+            // PRIMARY KEY constraint
+            if (field->is_primary_key) {
+                sql_ += " PRIMARY KEY";
+            }
+
+            // NOT NULL constraint (skip if primary key - already implies NOT NULL)
+            if (!field->is_nullable && !field->is_primary_key) {
+                sql_ += " NOT NULL";
+            }
+
+            // UNIQUE constraint (skip if primary key - already unique)
+            if (field->is_unique && !field->is_primary_key) {
+                sql_ += " UNIQUE";
+            }
+
+            // DEFAULT value
+            if (!field->default_value.empty()) {
+                sql_ += " DEFAULT ";
+                sql_ += field->default_value;
+            }
+
+            // FOREIGN KEY constraint
+            if (field->is_foreign_key && !field->foreign_table.empty()) {
+                sql_ += " REFERENCES ";
+                dialect_->quote_identifier(sql_, field->foreign_table);
+                sql_ += "(";
+                dialect_->quote_identifier(sql_, field->foreign_column);
+                sql_ += ")";
+            }
+        }
+        sql_ += ")";
+    }
+
+    void SqlGeneratorVisitor::visit_create_table_end() {
+        // PostgreSQL doesn't need anything here
+        // Other dialects might add ENGINE, CHARSET, etc.
+    }
+
+    void SqlGeneratorVisitor::visit_drop_table_start(const bool if_exists) {
+        sql_ += "DROP TABLE ";
+        if (if_exists) {
+            sql_ += "IF EXISTS ";
+        }
+    }
+
+    void SqlGeneratorVisitor::visit_drop_table_end(const bool cascade) {
+        if (cascade) {
+            sql_ += " CASCADE";
+        }
     }
 
     void SqlGeneratorVisitor::visit_column_separator() {

@@ -173,4 +173,18 @@ namespace demiplane::test {
         struct MixedSetOps : QueryTag {};            // Mixed set operations
     }  // namespace set_op
 
+    // DDL (Data Definition Language) query tags
+    namespace ddl {
+        struct CreateTableBasic : QueryTag {};            // Basic CREATE TABLE
+        struct CreateTableIfNotExists : QueryTag {};      // CREATE TABLE IF NOT EXISTS
+        struct CreateTableWithConstraints : QueryTag {};  // CREATE TABLE with PK, NOT NULL, UNIQUE
+        struct CreateTableWithForeignKey : QueryTag {};   // CREATE TABLE with FK
+        struct CreateTableWithDefault : QueryTag {};      // CREATE TABLE with DEFAULT
+        struct DropTableBasic : QueryTag {};              // Basic DROP TABLE
+        struct DropTableIfExists : QueryTag {};           // DROP TABLE IF EXISTS
+        struct DropTableCascade : QueryTag {};            // DROP TABLE CASCADE
+        struct DropTableIfExistsCascade : QueryTag {};    // DROP TABLE IF EXISTS CASCADE
+        struct DropTableByName : QueryTag {};             // DROP TABLE by string name
+    }  // namespace ddl
+
 }  // namespace demiplane::test

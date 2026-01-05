@@ -119,3 +119,12 @@ add_functional_test(
         LABELS "pgsql"
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
+
+# DDL query tests (CREATE TABLE, DROP TABLE)
+add_functional_test(
+        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledDdl
+        compiled_ddl_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)

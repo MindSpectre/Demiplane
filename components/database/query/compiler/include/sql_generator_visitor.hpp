@@ -9,11 +9,11 @@ namespace demiplane::db {
     class SqlGeneratorVisitor final : public QueryVisitor {
     public:
         constexpr SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
-                                             std::pmr::memory_resource* mr,
-                                             const bool use_params)
-        : use_params_{use_params},
-          dialect_{std::move(d)},
-          sql_{mr} {
+                                      std::pmr::memory_resource* mr,
+                                      const bool use_params)
+            : use_params_{use_params},
+              dialect_{std::move(d)},
+              sql_{mr} {
             if (use_params_) {
                 packet_ = dialect_->make_param_sink(mr);
                 sink_   = packet_.sink.get();
@@ -38,7 +38,8 @@ namespace demiplane::db {
 
     protected:
         // Column and value implementations
-        void visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias) override;
+        void
+        visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias) override;
         void visit_dynamic_column_impl(std::string_view name, std::string_view table) override;
         void visit_value_impl(const FieldValue& value) override;
         void visit_value_impl(FieldValue&& value) override;
@@ -197,6 +198,18 @@ namespace demiplane::db {
         void visit_cte_as_end() override;
 
         void visit_cte_end() override;
+
+        // DDL - CREATE TABLE
+        void visit_create_table_start(bool if_not_exists) override;
+
+        void visit_create_table_columns(const TablePtr& table) override;
+
+        void visit_create_table_end() override;
+
+        // DDL - DROP TABLE
+        void visit_drop_table_start(bool if_exists) override;
+
+        void visit_drop_table_end(bool cascade) override;
 
         // Set operations
         void visit_set_op_impl(SetOperation op) override;

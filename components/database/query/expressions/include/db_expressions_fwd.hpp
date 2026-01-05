@@ -66,8 +66,7 @@ namespace demiplane::db {
     concept IsInListExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, InListExpr>;
 
     template <typename T>
-    concept IsCondition =
-        IsBinaryExpr<T> || IsUnaryExpr<T> || IsExistExpr<T> || IsInListExpr<T> || IsBetweenExpr<T>;
+    concept IsCondition = IsBinaryExpr<T> || IsUnaryExpr<T> || IsExistExpr<T> || IsInListExpr<T> || IsBetweenExpr<T>;
 
     class CountExpr;
 
@@ -244,4 +243,20 @@ namespace demiplane::db {
 
     template <typename T>
     concept IsSelectExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, SelectExpr>;
+
+    // DDL expression concepts
+    template <IsTable TableT>
+    class CreateTableExpr;
+
+    template <typename T>
+    concept IsCreateTableExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, CreateTableExpr>;
+
+    template <IsTable TableT>
+    class DropTableExpr;
+
+    template <typename T>
+    concept IsDropTableExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, DropTableExpr>;
+
+    template <typename T>
+    concept IsDdlExpr = IsCreateTableExpr<T> || IsDropTableExpr<T>;
 }  // namespace demiplane::db

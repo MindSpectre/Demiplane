@@ -533,6 +533,38 @@ namespace demiplane::db {
             visit_cte_end();
         }
 
+        // DDL operations - CREATE TABLE
+        template <IsTable TableT>
+        void visit(CreateTableExpr<TableT>&& expr) {
+            visit_create_table_start(expr.if_not_exists());
+            visit_table_impl(std::move(expr).table());
+            visit_create_table_columns(std::move(expr).table());
+            visit_create_table_end();
+        }
+
+        template <IsTable TableT>
+        void visit(const CreateTableExpr<TableT>& expr) {
+            visit_create_table_start(expr.if_not_exists());
+            visit_table_impl(expr.table());
+            visit_create_table_columns(expr.table());
+            visit_create_table_end();
+        }
+
+        // DDL operations - DROP TABLE
+        template <IsTable TableT>
+        void visit(DropTableExpr<TableT>&& expr) {
+            visit_drop_table_start(expr.if_exists());
+            visit_table_impl(std::move(expr).table());
+            visit_drop_table_end(expr.cascade());
+        }
+
+        template <IsTable TableT>
+        void visit(const DropTableExpr<TableT>& expr) {
+            visit_drop_table_start(expr.if_exists());
+            visit_table_impl(expr.table());
+            visit_drop_table_end(expr.cascade());
+        }
+
     protected:
         // Virtual interface methods - now with move support for appropriate parameters
         virtual void visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias)                            = 0;
@@ -650,6 +682,15 @@ namespace demiplane::db {
         virtual void visit_cte_as_start()                       = 0;
         virtual void visit_cte_as_end()                         = 0;
         virtual void visit_cte_end()                            = 0;
+
+        // DDL - CREATE TABLE
+        virtual void visit_create_table_start(bool if_not_exists)      = 0;
+        virtual void visit_create_table_columns(const TablePtr& table) = 0;
+        virtual void visit_create_table_end()                          = 0;
+
+        // DDL - DROP TABLE
+        virtual void visit_drop_table_start(bool if_exists) = 0;
+        virtual void visit_drop_table_end(bool cascade)     = 0;
 
         // Column separator
         virtual void visit_column_separator() = 0;

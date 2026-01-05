@@ -30,3 +30,11 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.Field
         Demiplane.Common.Gears
         Demiplane.Component.Database.Primitives
 )
+
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.SchemaMember
+        test_schema_member.cpp
+        LINK_LIBS
+        ${TEST_LIBS}
+        Demiplane.Common.Gears
+        Demiplane.Component.Database.Primitives
+)

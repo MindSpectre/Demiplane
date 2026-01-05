@@ -8,8 +8,9 @@
 #include <boost/unordered_map.hpp>
 #include <db_field_def.hpp>
 #include <db_field_schema.hpp>
-#include <gears_hash.hpp>
+#include <db_schema_member.hpp>
 #include <gears_concepts.hpp>
+#include <gears_hash.hpp>
 namespace demiplane::db {
     // Forward declarations
     template <typename T>
@@ -106,6 +107,12 @@ namespace demiplane::db {
 
         [[nodiscard]] static std::shared_ptr<Table> make_ptr(std::string name) {
             return std::make_shared<Table>(std::move(name));
+        }
+
+        // ✨ Create Table from Schema (extracts table_name automatically)
+        template <HasSchemaInfo Schema>
+        [[nodiscard]] static std::shared_ptr<Table> make() {
+            return std::make_shared<Table>(std::string(Schema::table_name), Schema{});
         }
 
     private:

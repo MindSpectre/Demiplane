@@ -33,12 +33,6 @@ namespace demiplane::db {
 
         virtual void limit_clause(std::pmr::string& query, std::size_t limit, std::size_t offset) const = 0;
 
-        // Type mapping
-        [[nodiscard]] virtual std::string map_type(const std::string_view db_type) const {
-            return std::string(db_type);
-            // TODO do proper mapping Issue#40
-        }
-
         // Feature support
         [[nodiscard]] constexpr virtual bool supports_returning() const {
             return false;

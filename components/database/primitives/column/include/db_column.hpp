@@ -131,6 +131,7 @@ namespace demiplane::db {
         }
 
         [[nodiscard]] constexpr DynamicColumn as_dynamic() const {
+            //? Does it work for all dialects?
             return DynamicColumn{"*", table_name()};
         }
 

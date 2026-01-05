@@ -11,10 +11,15 @@
 #include <db_schema_member.hpp>
 #include <gears_concepts.hpp>
 #include <gears_hash.hpp>
+
 namespace demiplane::db {
+
+    enum class SupportedProviders : std::uint8_t;
     // Forward declarations
     template <typename T>
     class TableColumn;
+
+    class SqlDialect;  // Forward declaration - keeps primitives as base layer
 
     // Concept for schema types that have a fields type_list
     template <typename T>
@@ -36,6 +41,22 @@ namespace demiplane::db {
 
         // Overload for runtime type specification
         Table& add_field(std::string name, std::string db_type, std::type_index cpp_type);
+
+        // ═══════════════════════════════════════════════════════════════
+        // TYPE-INFERRED ADD_FIELD - SQL type derived from C++ type
+        // ═══════════════════════════════════════════════════════════════
+
+        // Infer SQL type from dialect reference
+        template <typename T>
+        Table& add_field(std::string name, const SqlDialect& dialect);
+
+        // Infer SQL type from dialect pointer
+        template <typename T>
+        Table& add_field(std::string name, const SqlDialect* dialect);
+
+        // Infer SQL type from provider enum (compile-time)
+        template <typename T>
+        Table& add_field(std::string name, SupportedProviders provider);
 
         // ═══════════════════════════════════════════════════════════════
         // COLUMN ACCESSORS - Runtime and Compile-Time Overloads

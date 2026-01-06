@@ -283,8 +283,13 @@ TEST_F(TableAddFieldTest, MixedAddFieldApis) {
 
 TEST(TypeMappingConcept, SupportedTypesHaveMapping) {
     static_assert(HasSqlTypeMapping<bool, SupportedProviders::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<char, SupportedProviders::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::int16_t, SupportedProviders::PostgreSQL>);
     static_assert(HasSqlTypeMapping<std::int32_t, SupportedProviders::PostgreSQL>);
     static_assert(HasSqlTypeMapping<std::int64_t, SupportedProviders::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::uint16_t, SupportedProviders::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::uint32_t, SupportedProviders::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::uint64_t, SupportedProviders::PostgreSQL>);
     static_assert(HasSqlTypeMapping<float, SupportedProviders::PostgreSQL>);
     static_assert(HasSqlTypeMapping<double, SupportedProviders::PostgreSQL>);
     static_assert(HasSqlTypeMapping<std::string, SupportedProviders::PostgreSQL>);
@@ -295,8 +300,6 @@ TEST(TypeMappingConcept, SupportedTypesHaveMapping) {
 
 TEST(TypeMappingConcept, UnsupportedTypesDoNotHaveMapping) {
     // These should not have mappings for PostgreSQL
-    static_assert(!HasSqlTypeMapping<char, SupportedProviders::PostgreSQL>);
-    static_assert(!HasSqlTypeMapping<unsigned int, SupportedProviders::PostgreSQL>);
     static_assert(!HasSqlTypeMapping<std::vector<int>, SupportedProviders::PostgreSQL>);
 
     // Nothing should have mapping for None provider

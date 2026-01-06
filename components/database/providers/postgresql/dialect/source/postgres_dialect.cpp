@@ -79,20 +79,4 @@ namespace demiplane::db::postgres {
     constexpr SupportedProviders Dialect::type() const {
         return SupportedProviders::PostgreSQL;
     }
-
-    std::string Dialect::escape_string(const std::string_view str) {
-        std::string result;
-        result.reserve(str.size() * 2);  // Reserve space for potential escaping
-
-        for (const char c : str) {
-            if (c == '\'') {
-                result += "''";  // SQL standard: escape single quote with double single quote
-            } else if (c == '\\') {
-                result += "\\\\";  // Escape backslash
-            } else {
-                result += c;
-            }
-        }
-        return result;
-    }
 }  // namespace demiplane::db::postgres

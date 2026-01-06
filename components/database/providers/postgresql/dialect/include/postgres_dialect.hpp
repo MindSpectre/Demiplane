@@ -45,8 +45,13 @@ namespace demiplane::db::postgres {
     private:
         template <typename String>
         static void format_value_impl(String& query, const FieldValue& value);
+
         // Helper methods for formatting
-        static std::string escape_string(std::string_view str);
+        template <typename String>
+        static void escape_char(String& out, char c);
+
+        template <typename String>
+        static void escape_string(String& out, std::string_view str);
 
         template <typename Container>
         static std::string format_binary_data(const Container& data);

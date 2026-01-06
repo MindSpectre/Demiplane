@@ -31,6 +31,18 @@ namespace demiplane::db::postgres {
         return sv == "t" || sv == "true" || sv == "1" || sv == "TRUE" || sv == "T";
     }
 
+    char FieldView::decode_char() const {
+        if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_char) {
+            return *ptr_;
+        }
+        // Text format - take first character
+        const auto sv = as_sv();
+        if (sv.empty()) {
+            return '\0';
+        }
+        return sv[0];
+    }
+
     int16_t FieldView::decode_int16() const {
         if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_int2) {
             uint16_t be;
@@ -56,6 +68,46 @@ namespace demiplane::db::postgres {
             return static_cast<int64_t>(gears::ntoh64(be));
         }
         return decode_integer_text<int64_t>();
+    }
+
+    uint16_t FieldView::decode_uint16() const {
+        // PostgreSQL stores unsigned as larger signed types
+        if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_int4) {
+            uint32_t be;
+            std::memcpy(&be, ptr_, 4);
+            return static_cast<uint16_t>(ntohl(be));
+        }
+        if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_int2) {
+            uint16_t be;
+            std::memcpy(&be, ptr_, 2);
+            return ntohs(be);
+        }
+        return decode_integer_text<uint16_t>();
+    }
+
+    uint32_t FieldView::decode_uint32() const {
+        // PostgreSQL stores unsigned 32-bit as int8 (bigint)
+        if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_int8) {
+            uint64_t be;
+            std::memcpy(&be, ptr_, 8);
+            return static_cast<uint32_t>(gears::ntoh64(be));
+        }
+        if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_int4) {
+            uint32_t be;
+            std::memcpy(&be, ptr_, 4);
+            return ntohl(be);
+        }
+        return decode_integer_text<uint32_t>();
+    }
+
+    uint64_t FieldView::decode_uint64() const {
+        // PostgreSQL stores unsigned 64-bit as NUMERIC (text format)
+        if (format_ == FormatRegistry::binary && oid_ == TypeRegistry::oid_int8) {
+            uint64_t be;
+            std::memcpy(&be, ptr_, 8);
+            return gears::ntoh64(be);
+        }
+        return decode_integer_text<uint64_t>();
     }
 
     float FieldView::decode_float() const {

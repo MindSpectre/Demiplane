@@ -49,12 +49,20 @@ namespace demiplane::db::postgres {
                 return std::monostate{};
             } else if constexpr (std::is_same_v<T, bool>) {
                 return decode_bool();
+            } else if constexpr (std::is_same_v<T, char>) {
+                return decode_char();
             } else if constexpr (std::is_same_v<T, int16_t>) {
                 return decode_int16();
             } else if constexpr (std::is_same_v<T, int32_t>) {
                 return decode_int32();
             } else if constexpr (std::is_same_v<T, int64_t>) {
                 return decode_int64();
+            } else if constexpr (std::is_same_v<T, uint16_t>) {
+                return decode_uint16();
+            } else if constexpr (std::is_same_v<T, uint32_t>) {
+                return decode_uint32();
+            } else if constexpr (std::is_same_v<T, uint64_t>) {
+                return decode_uint64();
             } else if constexpr (std::is_same_v<T, float>) {
                 return decode_float();
             } else if constexpr (std::is_same_v<T, double>) {
@@ -70,8 +78,9 @@ namespace demiplane::db::postgres {
             } else {
                 GEARS_UNREACHABLE(T,
                                   "Unsupported type for FieldView::as<T>(). "
-                                  "Supported types: bool, int16_t, int32_t, int64_t, "
-                                  "float, double, string, string_view, span<const uint8_t>");
+                                  "Supported types: bool, char, int16_t, int32_t, int64_t, "
+                                  "uint16_t, uint32_t, uint64_t, float, double, string, "
+                                  "string_view, span<const uint8_t>");
             }
         }
 
@@ -90,11 +99,19 @@ namespace demiplane::db::postgres {
         // Individual type decoders
         [[nodiscard]] bool decode_bool() const;
 
+        [[nodiscard]] char decode_char() const;
+
         [[nodiscard]] int16_t decode_int16() const;
 
         [[nodiscard]] int32_t decode_int32() const;
 
         [[nodiscard]] int64_t decode_int64() const;
+
+        [[nodiscard]] uint16_t decode_uint16() const;
+
+        [[nodiscard]] uint32_t decode_uint32() const;
+
+        [[nodiscard]] uint64_t decode_uint64() const;
 
         [[nodiscard]] float decode_float() const;
 

@@ -21,6 +21,16 @@ namespace demiplane::db {
     };
 
     template <>
+    struct SqlTypeMapping<char, SupportedProviders::PostgreSQL> {
+        static constexpr std::string_view sql_type = "CHAR(1)";
+    };
+
+    template <>
+    struct SqlTypeMapping<std::int16_t, SupportedProviders::PostgreSQL> {
+        static constexpr std::string_view sql_type = "SMALLINT";
+    };
+
+    template <>
     struct SqlTypeMapping<std::int32_t, SupportedProviders::PostgreSQL> {
         static constexpr std::string_view sql_type = "INTEGER";
     };
@@ -28,6 +38,21 @@ namespace demiplane::db {
     template <>
     struct SqlTypeMapping<std::int64_t, SupportedProviders::PostgreSQL> {
         static constexpr std::string_view sql_type = "BIGINT";
+    };
+
+    template <>
+    struct SqlTypeMapping<std::uint16_t, SupportedProviders::PostgreSQL> {
+        static constexpr std::string_view sql_type = "INTEGER";
+    };
+
+    template <>
+    struct SqlTypeMapping<std::uint32_t, SupportedProviders::PostgreSQL> {
+        static constexpr std::string_view sql_type = "BIGINT";
+    };
+
+    template <>
+    struct SqlTypeMapping<std::uint64_t, SupportedProviders::PostgreSQL> {
+        static constexpr std::string_view sql_type = "NUMERIC(20,0)";
     };
 
     template <>

@@ -24,6 +24,31 @@ namespace demiplane::db::postgres {
         params_->oids.push_back(TypeRegistry::oid_bool);
     }
 
+    void ParamSink::bind_one(const char c) const {
+        // PostgreSQL "char" type is 1 byte
+        params_->binary_chunks.emplace_back();
+        params_->binary_chunks.back().push_back(static_cast<std::byte>(c));
+
+        params_->values.push_back(reinterpret_cast<const char*>(params_->binary_chunks.back().data()));
+        params_->lengths.push_back(1);
+        params_->formats.push_back(FormatRegistry::binary);
+        params_->oids.push_back(TypeRegistry::oid_char);
+    }
+
+    void ParamSink::bind_one(const std::int16_t i) const {
+        // Binary format - network byte order
+        params_->binary_chunks.emplace_back(2);
+        auto* ptr = params_->binary_chunks.back().data();
+
+        const uint16_t net = htons(static_cast<uint16_t>(i));
+        std::memcpy(ptr, &net, 2);
+
+        params_->values.push_back(reinterpret_cast<const char*>(ptr));
+        params_->lengths.push_back(2);
+        params_->formats.push_back(FormatRegistry::binary);
+        params_->oids.push_back(TypeRegistry::oid_int2);
+    }
+
     void ParamSink::bind_one(const std::int32_t i) const {
         // Binary format - network byte order
         params_->binary_chunks.emplace_back(4);
@@ -51,6 +76,46 @@ namespace demiplane::db::postgres {
         params_->lengths.push_back(8);
         params_->formats.push_back(FormatRegistry::binary);
         params_->oids.push_back(TypeRegistry::oid_int8);
+    }
+
+    void ParamSink::bind_one(const std::uint16_t i) const {
+        // PostgreSQL doesn't have unsigned types, promote to int4 (signed 32-bit)
+        params_->binary_chunks.emplace_back(4);
+        auto* ptr = params_->binary_chunks.back().data();
+
+        const uint32_t net = htonl(i);
+        std::memcpy(ptr, &net, 4);
+
+        params_->values.push_back(reinterpret_cast<const char*>(ptr));
+        params_->lengths.push_back(4);
+        params_->formats.push_back(FormatRegistry::binary);
+        params_->oids.push_back(TypeRegistry::oid_int4);
+    }
+
+    void ParamSink::bind_one(const std::uint32_t i) const {
+        // PostgreSQL doesn't have unsigned types, promote to int8 (signed 64-bit)
+        params_->binary_chunks.emplace_back(8);
+        auto* ptr = params_->binary_chunks.back().data();
+
+        const uint64_t net = htobe64(i);
+        std::memcpy(ptr, &net, 8);
+
+        params_->values.push_back(reinterpret_cast<const char*>(ptr));
+        params_->lengths.push_back(8);
+        params_->formats.push_back(FormatRegistry::binary);
+        params_->oids.push_back(TypeRegistry::oid_int8);
+    }
+
+    void ParamSink::bind_one(const std::uint64_t i) const {
+        // PostgreSQL doesn't have unsigned 64-bit, use text format for NUMERIC
+        auto str = std::to_string(i);
+        std::pmr::string pmr_str{str, mr_};
+        params_->str_data.emplace_back(std::move(pmr_str));
+
+        params_->values.push_back(params_->str_data.back().c_str());
+        params_->lengths.push_back(static_cast<int>(params_->str_data.back().size()));
+        params_->formats.push_back(FormatRegistry::text);
+        params_->oids.push_back(TypeRegistry::oid_numeric);
     }
 
     void ParamSink::bind_one(const float f) const {

@@ -54,9 +54,19 @@ namespace demiplane::db::postgres {
 
         void bind_one(bool b) const;
 
+        void bind_one(char c) const;
+
+        void bind_one(std::int16_t i) const;
+
         void bind_one(std::int32_t i) const;
 
         void bind_one(std::int64_t i) const;
+
+        void bind_one(std::uint16_t i) const;
+
+        void bind_one(std::uint32_t i) const;
+
+        void bind_one(std::uint64_t i) const;
 
         void bind_one(float f) const;
 

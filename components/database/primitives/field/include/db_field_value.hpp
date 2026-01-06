@@ -15,8 +15,13 @@ namespace demiplane::db {
      */
     using FieldValue = std::variant<std::monostate,
                                     bool,
+                                    char,
+                                    std::int16_t,
                                     std::int32_t,
                                     std::int64_t,
+                                    std::uint16_t,
+                                    std::uint32_t,
+                                    std::uint64_t,
                                     float,
                                     double,
                                     std::string,

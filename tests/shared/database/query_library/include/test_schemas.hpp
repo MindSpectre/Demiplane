@@ -5,20 +5,17 @@
 
 #include <db_column.hpp>
 #include <db_table.hpp>
-
 namespace demiplane::test {
-
-    enum class DialectType { PostgreSQL, MySQL, SQLite };
 
     // DDL strings for schema setup (workaround until DDL builder exists)
     struct SchemaDDL {
-        static std::string_view users_table(DialectType dialect);
-        static std::string_view users_extended_table(DialectType dialect);
-        static std::string_view posts_table(DialectType dialect);
-        static std::string_view orders_table(DialectType dialect);
-        static std::string_view orders_extended_table(DialectType dialect);
-        static std::string_view comments_table(DialectType dialect);
-        static std::string_view drop_all(DialectType dialect);
+        static std::string_view users_table(db::SupportedProviders dialect);
+        static std::string_view users_extended_table(db::SupportedProviders dialect);
+        static std::string_view posts_table(db::SupportedProviders dialect);
+        static std::string_view orders_table(db::SupportedProviders dialect);
+        static std::string_view orders_extended_table(db::SupportedProviders dialect);
+        static std::string_view comments_table(db::SupportedProviders dialect);
+        static std::string_view drop_all(db::SupportedProviders dialect);
     };
 
     class TestSchemas {
@@ -71,7 +68,6 @@ namespace demiplane::test {
             db::TableColumn<std::string> status{nullptr, ""};
             db::TableColumn<std::string> created_date{nullptr, ""};
         };
-
         // comments: id, post_id, user_id, content
         struct CommentsSchema {
             std::shared_ptr<db::Table> table;

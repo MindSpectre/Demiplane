@@ -144,33 +144,33 @@ namespace demiplane::test {
 
     // CTE (Common Table Expression) query tags
     namespace cte {
-        struct BasicCte : QueryTag {};               // Basic WITH clause
-        struct CteWithSelect : QueryTag {};          // CTE used in SELECT
-        struct CteWithJoin : QueryTag {};            // CTE joined with table
-        struct MultipleCtes : QueryTag {};           // Multiple CTEs
-        struct CteWithAggregates : QueryTag {};      // CTE with aggregate functions
+        struct BasicCte : QueryTag {};           // Basic WITH clause
+        struct CteWithSelect : QueryTag {};      // CTE used in SELECT
+        struct CteWithJoin : QueryTag {};        // CTE joined with table
+        struct MultipleCtes : QueryTag {};       // Multiple CTEs
+        struct CteWithAggregates : QueryTag {};  // CTE with aggregate functions
     }  // namespace cte
 
     // CASE expression query tags
     namespace case_expr {
-        struct SimpleCaseWhen : QueryTag {};         // Simple CASE WHEN
-        struct CaseWithElse : QueryTag {};           // CASE with ELSE
-        struct CaseMultipleWhen : QueryTag {};       // CASE with multiple WHEN clauses
-        struct CaseInSelect : QueryTag {};           // CASE in SELECT columns
-        struct CaseWithComparison : QueryTag {};     // CASE with comparison operators
-        struct CaseNested : QueryTag {};             // Nested CASE expressions
+        struct SimpleCaseWhen : QueryTag {};      // Simple CASE WHEN
+        struct CaseWithElse : QueryTag {};        // CASE with ELSE
+        struct CaseMultipleWhen : QueryTag {};    // CASE with multiple WHEN clauses
+        struct CaseInSelect : QueryTag {};        // CASE in SELECT columns
+        struct CaseWithComparison : QueryTag {};  // CASE with comparison operators
+        struct CaseNested : QueryTag {};          // Nested CASE expressions
     }  // namespace case_expr
 
     // SET operation query tags
     namespace set_op {
-        struct UnionBasic : QueryTag {};             // Basic UNION
-        struct UnionAll : QueryTag {};               // UNION ALL
-        struct Intersect : QueryTag {};              // INTERSECT
-        struct Except : QueryTag {};                 // EXCEPT
-        struct UnionWithOrderBy : QueryTag {};       // UNION with ORDER BY
-        struct UnionWithLimit : QueryTag {};         // UNION with LIMIT
-        struct MultipleUnions : QueryTag {};         // Chained UNIONs
-        struct MixedSetOps : QueryTag {};            // Mixed set operations
+        struct UnionBasic : QueryTag {};        // Basic UNION
+        struct UnionAll : QueryTag {};          // UNION ALL
+        struct Intersect : QueryTag {};         // INTERSECT
+        struct Except : QueryTag {};            // EXCEPT
+        struct UnionWithOrderBy : QueryTag {};  // UNION with ORDER BY
+        struct UnionWithLimit : QueryTag {};    // UNION with LIMIT
+        struct MultipleUnions : QueryTag {};    // Chained UNIONs
+        struct MixedSetOps : QueryTag {};       // Mixed set operations
     }  // namespace set_op
 
     // DDL (Data Definition Language) query tags

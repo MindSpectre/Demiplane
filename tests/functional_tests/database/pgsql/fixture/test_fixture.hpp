@@ -88,34 +88,38 @@ namespace demiplane::test {
 
         // Table creation helpers using SchemaDDL
         void CreateUsersTable() const {
-            const auto result = executor_->execute(std::string(SchemaDDL::users_table(DialectType::PostgreSQL)));
+            const auto result =
+                executor_->execute(std::string(SchemaDDL::users_table(db::SupportedProviders::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create users table";
         }
 
         void CreateUsersExtendedTable() const {
             const auto result =
-                executor_->execute(std::string(SchemaDDL::users_extended_table(DialectType::PostgreSQL)));
+                executor_->execute(std::string(SchemaDDL::users_extended_table(db::SupportedProviders::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create users_extended table";
         }
 
         void CreatePostsTable() const {
-            const auto result = executor_->execute(std::string(SchemaDDL::posts_table(DialectType::PostgreSQL)));
+            const auto result =
+                executor_->execute(std::string(SchemaDDL::posts_table(db::SupportedProviders::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create posts table";
         }
 
         void CreateOrdersTable() const {
-            const auto result = executor_->execute(std::string(SchemaDDL::orders_table(DialectType::PostgreSQL)));
+            const auto result =
+                executor_->execute(std::string(SchemaDDL::orders_table(db::SupportedProviders::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create orders table";
         }
 
         void CreateOrdersExtendedTable() const {
             const auto result =
-                executor_->execute(std::string(SchemaDDL::orders_extended_table(DialectType::PostgreSQL)));
+                executor_->execute(std::string(SchemaDDL::orders_extended_table(db::SupportedProviders::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create orders_extended table";
         }
 
         void CreateCommentsTable() const {
-            const auto result = executor_->execute(std::string(SchemaDDL::comments_table(DialectType::PostgreSQL)));
+            const auto result =
+                executor_->execute(std::string(SchemaDDL::comments_table(db::SupportedProviders::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create comments table";
         }
 

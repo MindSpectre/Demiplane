@@ -297,9 +297,9 @@ TEST_F(TableTest, TablePtr) {
     static_assert(IsTable<TablePtr>);
 }
 
-// ═══════════════════════════════════════════════════════════════
+
 // UNIFIED API TESTS (compile-time + runtime)
-// ═══════════════════════════════════════════════════════════════
+
 
 TEST_F(TableTest, CompileTimeColumnAccess) {
     Table users("users");
@@ -399,9 +399,9 @@ TEST_F(TableTest, MultipleTablesIndependent) {
     EXPECT_EQ(product_id_schema->db_type, "BIGINT");
 }
 
-// ═══════════════════════════════════════════════════════════════
+
 // SCHEMA-AWARE CONSTRUCTOR TESTS
-// ═══════════════════════════════════════════════════════════════
+
 
 // Schema definition for testing auto-initialization
 struct TestSchemaFields {

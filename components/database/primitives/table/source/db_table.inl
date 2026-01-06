@@ -4,9 +4,9 @@
 #include <gears_templates.hpp>
 
 namespace demiplane::db {
-    // ═══════════════════════════════════════════════════════════════
+
     // CONSTRUCTORS
-    // ═══════════════════════════════════════════════════════════════
+
 
     // Schema-aware constructor - auto-initializes fields from Schema::fields
     template <HasSchemaFields Schema>
@@ -19,10 +19,8 @@ namespace demiplane::db {
         }(typename Schema::fields{}, this);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // FIELD MANAGEMENT
-    // ═══════════════════════════════════════════════════════════════
 
+    // FIELD MANAGEMENT
     template <typename T>
     Table& Table::add_field(std::string name, std::string db_type) {
         auto field      = std::make_unique<FieldSchema>();
@@ -35,18 +33,14 @@ namespace demiplane::db {
         return *this;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // COLUMN ACCESSORS
-    // ═══════════════════════════════════════════════════════════════
-
-    // Runtime column accessor (existing)
+    // Runtime column accessor
     template <typename T>
     TableColumn<T> Table::column(const std::string_view field_name) const {
         auto* field = get_field_schema(field_name);
         if (!field) {
             std::ostringstream ss;
             ss << "Unknown column: " << field_name << " in table " << table_name_;
-            throw std::runtime_error(ss.str());
+            throw std::runtime_error{ss.str()};
         }
         return field->as_column<T>(std::make_shared<std::string>(table_name_));
     }
@@ -56,16 +50,14 @@ namespace demiplane::db {
     constexpr TableColumn<typename FieldDefT::value_type> Table::column([[maybe_unused]] FieldDefT field_def) const {
         const auto* schema = get_field_schema(field_def.name());
         if (!schema) {
-            throw std::runtime_error(std::string("Field '") + std::string(field_def.name()) + "' not found in table '" +
-                                     table_name_ + "'");
+            throw std::runtime_error{std::string{"Field '"} + std::string{field_def.name()} + "' not found in table '" +
+                                     table_name_ + "'"};
         }
         return TableColumn<typename FieldDefT::value_type>{schema, std::make_shared<std::string>(table_name_)};
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // BUILDER METHODS - Compile-Time Overloads
-    // ═══════════════════════════════════════════════════════════════
 
+    // Builder methods
     template <IsFieldDef FieldDefT>
     Table& Table::primary_key(FieldDefT field_def) {
         return primary_key(field_def.name());
@@ -95,8 +87,8 @@ namespace demiplane::db {
     Table& Table::set_db_type(FieldDefT field_def, std::string db_type) {
         auto* schema = get_field_schema(field_def.name());
         if (!schema) {
-            throw std::runtime_error(std::string("Field '") + std::string(field_def.name()) + "' not found in table '" +
-                                     table_name_ + "'");
+            throw std::runtime_error{std::string{"Field '"} + std::string{field_def.name()} + "' not found in table '" +
+                                     table_name_ + "'"};
         }
         schema->db_type = std::move(db_type);
         return *this;
@@ -106,8 +98,8 @@ namespace demiplane::db {
     Table& Table::add_db_attribute(FieldDefT field_def, std::string key, std::string value) {
         auto* schema = get_field_schema(field_def.name());
         if (!schema) {
-            throw std::runtime_error(std::string("Field '") + std::string(field_def.name()) + "' not found in table '" +
-                                     table_name_ + "'");
+            throw std::runtime_error{std::string{"Field '"} + std::string{field_def.name()} + "' not found in table '" +
+                                     table_name_ + "'"};
         }
         schema->db_attributes[std::move(key)] = std::move(value);
         return *this;

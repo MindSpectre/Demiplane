@@ -45,10 +45,7 @@ namespace demiplane::nexus {
          */
         ~Nexus() noexcept;
 
-        // ═══════════════════════════════════════════════════════════════════════
         // Registration Methods
-        // ═══════════════════════════════════════════════════════════════════════
-
         /**
          * @brief Registers a singleton factory function
          *
@@ -128,10 +125,7 @@ namespace demiplane::nexus {
             requires std::is_object_v<T>
         void register_instance(T value, nexus_id_t id, Lifetime lt = get_nexus_policy<T>());
 
-        // ═══════════════════════════════════════════════════════════════════════
         // Access Methods
-        // ═══════════════════════════════════════════════════════════════════════
-
         /**
          * @brief Retrieves a service instance
          *
@@ -151,10 +145,7 @@ namespace demiplane::nexus {
         template <class Interface>
         std::shared_ptr<Interface> get(nexus_id_t id = 0);
 
-        // ═══════════════════════════════════════════════════════════════════════
         // Management Methods
-        // ═══════════════════════════════════════════════════════════════════════
-
         /**
          * @brief Resets a service instance (Resettable lifetime only)
          *

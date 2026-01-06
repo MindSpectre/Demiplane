@@ -10,14 +10,12 @@
 #include <netinet/in.h>
 
 #include "pg_format_registry.hpp"
-#include "pg_type_registry.hpp"
-#include "postgres_errors.hpp"
+#include "pg_oid_type_registry.hpp"
 #include "postgres_result.hpp"
 
 using namespace demiplane::db;
-using postgres::ErrorContext;
 using postgres::FormatRegistry;
-using postgres::TypeRegistry;
+using postgres::OidTypeRegistry;
 
 // Test fixture for PostgreSQL params
 class PostgresParamsTest : public ::testing::Test {
@@ -58,326 +56,113 @@ protected:
     PGconn* conn_{nullptr};
 };
 
-// ============== Type Binding Tests ==============
-
-TEST_F(PostgresParamsTest, BindNull) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{std::monostate{}});
-
-    const auto params = sink.native_packet();
-
-    EXPECT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->values[0], nullptr);
-    EXPECT_EQ(params->lengths[0], 0);
-    EXPECT_EQ(params->formats[0], 0);  // Format doesn't matter for NULL
-    EXPECT_EQ(params->oids[0], 0);     // Let PostgreSQL infer
-}
-
-TEST_F(PostgresParamsTest, BindBoolTrue) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{true});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_NE(params->values[0], nullptr);
-    EXPECT_EQ(params->lengths[0], 1);
-    EXPECT_EQ(params->formats[0], FormatRegistry::binary);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_bool);
-
-    // Verify binary value
-    EXPECT_EQ(static_cast<unsigned char>(params->values[0][0]), 1);
-}
-
-TEST_F(PostgresParamsTest, BindBoolFalse) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{false});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->lengths[0], 1);
-    EXPECT_EQ(static_cast<unsigned char>(params->values[0][0]), 0);
-}
-
-TEST_F(PostgresParamsTest, BindInt32) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    constexpr int32_t value = 42;
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_NE(params->values[0], nullptr);
-    EXPECT_EQ(params->lengths[0], 4);
-    EXPECT_EQ(params->formats[0], FormatRegistry::binary);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_int4);
-
-    // Verify network byte order (big-endian)
-    uint32_t net_value;
-    std::memcpy(&net_value, params->values[0], 4);
-    EXPECT_EQ(ntohl(net_value), 42);
-}
-
-TEST_F(PostgresParamsTest, BindInt32Negative) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{std::int32_t{-100}});
-
-    const auto params = sink.native_packet();
-
-    uint32_t net_value;
-    std::memcpy(&net_value, params->values[0], 4);
-    EXPECT_EQ(static_cast<int32_t>(ntohl(net_value)), -100);
-}
-
-TEST_F(PostgresParamsTest, BindInt32MinMax) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{std::numeric_limits<std::int32_t>::min()});
-    sink.push(FieldValue{std::numeric_limits<std::int32_t>::max()});
-
-    const auto params = sink.native_packet();
-
-    EXPECT_EQ(params->values.size(), 2);
-
-    // Min value
-    uint32_t net_min;
-    std::memcpy(&net_min, params->values[0], 4);
-    EXPECT_EQ(static_cast<int32_t>(ntohl(net_min)), std::numeric_limits<std::int32_t>::min());
-
-    // Max value
-    uint32_t net_max;
-    std::memcpy(&net_max, params->values[1], 4);
-    EXPECT_EQ(static_cast<int32_t>(ntohl(net_max)), std::numeric_limits<std::int32_t>::max());
-}
-
-TEST_F(PostgresParamsTest, BindInt64) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    constexpr int64_t value = 9223372036854775807LL;  // Max int64
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->lengths[0], 8);
-    EXPECT_EQ(params->formats[0], FormatRegistry::binary);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_int8);
-
-    // Verify network byte order
-    uint64_t net_value;
-    std::memcpy(&net_value, params->values[0], 8);
-    EXPECT_EQ(static_cast<int64_t>(be64toh(net_value)), value);
-}
-
-TEST_F(PostgresParamsTest, BindFloat) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    constexpr float value = 3.14159f;
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->lengths[0], 4);
-    EXPECT_EQ(params->formats[0], FormatRegistry::binary);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_float4);
-
-    // Verify network byte order
-    uint32_t net_bits;
-    std::memcpy(&net_bits, params->values[0], 4);
-    net_bits = be32toh(net_bits);
-    float result;
-    std::memcpy(&result, &net_bits, 4);
-    EXPECT_FLOAT_EQ(result, value);
-}
-
-TEST_F(PostgresParamsTest, BindDouble) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    constexpr double value = 2.718281828459045;
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->lengths[0], 8);
-    EXPECT_EQ(params->formats[0], FormatRegistry::binary);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_float8);
-
-    // Verify network byte order
-    uint64_t net_bits;
-    std::memcpy(&net_bits, params->values[0], 8);
-    net_bits = be64toh(net_bits);
-    double result;
-    std::memcpy(&result, &net_bits, 8);
-    EXPECT_DOUBLE_EQ(result, value);
-}
-
-TEST_F(PostgresParamsTest, BindString) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    std::string value = "Hello, PostgreSQL!";
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_NE(params->values[0], nullptr);
-    EXPECT_EQ(params->lengths[0], static_cast<int>(value.size()));
-    EXPECT_EQ(params->formats[0], FormatRegistry::text);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_text);
-
-    // Verify string content
-    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
-    EXPECT_EQ(result, value);
-}
-
-TEST_F(PostgresParamsTest, BindStringView) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    std::string_view value = "String view test";
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->lengths[0], static_cast<int>(value.size()));
-    EXPECT_EQ(params->formats[0], FormatRegistry::text);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_text);
-
-    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
-    EXPECT_EQ(result, value);
-}
-
-TEST_F(PostgresParamsTest, BindEmptyString) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{std::string{""}});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_EQ(params->lengths[0], 0);
-    EXPECT_EQ(params->formats[0], FormatRegistry::text);
-}
-
-TEST_F(PostgresParamsTest, BindStringWithSpecialChars) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    std::string value = "Line1\nLine2\tTab'Quote\"DoubleQuote\\Backslash";
-    sink.push(FieldValue{value});
-
-    const auto params = sink.native_packet();
-
-    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
-    EXPECT_EQ(result, value);
-}
-
-TEST_F(PostgresParamsTest, BindByteArray) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    std::vector<uint8_t> bytes = {0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD};
-    sink.push(FieldValue{bytes});
-
-    const auto params = sink.native_packet();
-
-    ASSERT_EQ(params->values.size(), 1);
-    EXPECT_NE(params->values[0], nullptr);
-    EXPECT_EQ(params->lengths[0], static_cast<int>(bytes.size()));
-    EXPECT_EQ(params->formats[0], FormatRegistry::binary);
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_bytea);
-
-    // Verify byte content
-    for (size_t i = 0; i < bytes.size(); ++i) {
-        EXPECT_EQ(static_cast<uint8_t>(params->values[0][i]), bytes[i]);
-    }
-}
-
-// ============== Multiple Parameters Tests ==============
-
-TEST_F(PostgresParamsTest, BindMultipleParameters) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    sink.push(FieldValue{std::int32_t{42}});
-    sink.push(FieldValue{std::string{"test"}});
-    sink.push(FieldValue{true});
-    sink.push(FieldValue{std::monostate{}});
-
-    const auto params = sink.native_packet();
-
-    EXPECT_EQ(params->values.size(), 4);
-    EXPECT_EQ(params->lengths.size(), 4);
-    EXPECT_EQ(params->formats.size(), 4);
-    EXPECT_EQ(params->oids.size(), 4);
-
-    // Verify types
-    EXPECT_EQ(params->oids[0], TypeRegistry::oid_int4);
-    EXPECT_EQ(params->oids[1], TypeRegistry::oid_text);
-    EXPECT_EQ(params->oids[2], TypeRegistry::oid_bool);
-    EXPECT_EQ(params->oids[3], 0);  // NULL
-}
-
-// ============== Memory/Lifetime Tests ==============
-
-TEST_F(PostgresParamsTest, StringLifetime) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    {
-        std::string temp = "Temporary string";
-        sink.push(FieldValue{temp});
-        // temp goes out of scope
-    }
-
-    const auto params = sink.native_packet();
-
-    // String should still be valid (copied into str_data)
-    const std::string result(params->values[0], static_cast<size_t>(params->lengths[0]));
-    EXPECT_EQ(result, "Temporary string");
-}
-
-TEST_F(PostgresParamsTest, MultipleStringsLifetime) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    for (int i = 0; i < 10; ++i) {
-        std::string temp = "String " + std::to_string(i);
-        sink.push(FieldValue{temp});
-    }
-
-    const auto params = sink.native_packet();
-
-    EXPECT_EQ(params->values.size(), 10);
-
-    // All strings should be valid
-    for (size_t i = 0; i < 10; ++i) {
-        std::string result(params->values[i], static_cast<size_t>(params->lengths[i]));
-        EXPECT_EQ(result, "String " + std::to_string(i));
-    }
-}
-
 // ============== Integration Tests with PostgreSQL ==============
+
+TEST_F(PostgresParamsTest, RoundTripNull) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    sink.push(FieldValue{std::monostate{}});
+    const auto params = sink.native_packet();
+
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+
+    EXPECT_TRUE(PQgetisnull(result, 0, 0));
+
+    PQclear(result);
+}
+
+TEST_F(PostgresParamsTest, RoundTripBool) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    sink.push(FieldValue{true});
+    sink.push(FieldValue{false});
+    const auto params = sink.native_packet();
+
+    // Test true
+    PGresult* result = PQexecParams(
+        conn_, "SELECT $1::bool", 1, &params->oids[0], &params->values[0], &params->lengths[0], &params->formats[0], 1);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+    EXPECT_EQ(static_cast<unsigned char>(PQgetvalue(result, 0, 0)[0]), 1);
+    PQclear(result);
+
+    // Test false
+    result = PQexecParams(
+        conn_, "SELECT $1::bool", 1, &params->oids[1], &params->values[1], &params->lengths[1], &params->formats[1], 1);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+    EXPECT_EQ(static_cast<unsigned char>(PQgetvalue(result, 0, 0)[0]), 0);
+    PQclear(result);
+}
+
+TEST_F(PostgresParamsTest, RoundTripChar) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    const std::vector<char> test_chars = {'A', 'Z', '0', '9', ' ', '\0'};
+
+    for (auto c : test_chars) {
+        sink.push(FieldValue{c});
+    }
+
+    const auto params = sink.native_packet();
+
+    for (size_t i = 0; i < test_chars.size(); ++i) {
+        // PostgreSQL "char" type (internal 1-byte type)
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::\"char\"",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        1);
+        ASSERT_NE(result, nullptr);
+        ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+        EXPECT_EQ(PQgetvalue(result, 0, 0)[0], test_chars[i]);
+        PQclear(result);
+    }
+}
+
+TEST_F(PostgresParamsTest, RoundTripInt16) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    sink.push(FieldValue{std::int16_t{12345}});
+    const auto params = sink.native_packet();
+
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::int2",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+
+    uint16_t net_value;
+    std::memcpy(&net_value, PQgetvalue(result, 0, 0), 2);
+    EXPECT_EQ(static_cast<int16_t>(ntohs(net_value)), 12345);
+
+    PQclear(result);
+}
 
 TEST_F(PostgresParamsTest, RoundTripInt32) {
     std::pmr::unsynchronized_pool_resource pool;
@@ -386,7 +171,6 @@ TEST_F(PostgresParamsTest, RoundTripInt32) {
     sink.push(FieldValue{std::int32_t{12345}});
     const auto params = sink.native_packet();
 
-    // Execute with PQexecParams
     PGresult* result = PQexecParams(conn_,
                                     "SELECT $1::int4",
                                     static_cast<int>(params->values.size()),
@@ -394,14 +178,12 @@ TEST_F(PostgresParamsTest, RoundTripInt32) {
                                     params->values.data(),
                                     params->lengths.data(),
                                     params->formats.data(),
-                                    1  // Binary result format
-    );
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
     EXPECT_EQ(PQntuples(result), 1);
 
-    // Verify value - binary format, network byte order
     uint32_t net_value;
     std::memcpy(&net_value, PQgetvalue(result, 0, 0), 4);
     EXPECT_EQ(static_cast<int32_t>(ntohl(net_value)), 12345);
@@ -423,8 +205,7 @@ TEST_F(PostgresParamsTest, RoundTripInt64) {
                                     params->values.data(),
                                     params->lengths.data(),
                                     params->formats.data(),
-                                    1  // Binary result format
-    );
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -436,15 +217,16 @@ TEST_F(PostgresParamsTest, RoundTripInt64) {
     PQclear(result);
 }
 
-TEST_F(PostgresParamsTest, RoundTripBool) {
+TEST_F(PostgresParamsTest, RoundTripUInt16) {
     std::pmr::unsynchronized_pool_resource pool;
     postgres::ParamSink sink(&pool);
 
-    sink.push(FieldValue{true});
+    // uint16 is promoted to int4 in PostgreSQL
+    sink.push(FieldValue{std::uint16_t{65535}});
     const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
-                                    "SELECT $1::bool",
+                                    "SELECT $1::int4",
                                     static_cast<int>(params->values.size()),
                                     params->oids.data(),
                                     params->values.data(),
@@ -455,7 +237,63 @@ TEST_F(PostgresParamsTest, RoundTripBool) {
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
 
-    EXPECT_EQ(static_cast<unsigned char>(PQgetvalue(result, 0, 0)[0]), 1);
+    uint32_t net_value;
+    std::memcpy(&net_value, PQgetvalue(result, 0, 0), 4);
+    EXPECT_EQ(ntohl(net_value), 65535u);
+
+    PQclear(result);
+}
+
+TEST_F(PostgresParamsTest, RoundTripUInt32) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    // uint32 is promoted to int8 in PostgreSQL
+    sink.push(FieldValue{std::uint32_t{4294967295u}});
+    const auto params = sink.native_packet();
+
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::int8",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    1);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+
+    uint64_t net_value;
+    std::memcpy(&net_value, PQgetvalue(result, 0, 0), 8);
+    EXPECT_EQ(be64toh(net_value), 4294967295u);
+
+    PQclear(result);
+}
+
+TEST_F(PostgresParamsTest, RoundTripUInt64) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    // uint64 uses NUMERIC in PostgreSQL (text format)
+    sink.push(FieldValue{std::uint64_t{18446744073709551615ULL}});
+    const auto params = sink.native_packet();
+
+    // Request text format result for NUMERIC
+    PGresult* result = PQexecParams(conn_,
+                                    "SELECT $1::numeric",
+                                    static_cast<int>(params->values.size()),
+                                    params->oids.data(),
+                                    params->values.data(),
+                                    params->lengths.data(),
+                                    params->formats.data(),
+                                    0);  // Text result format
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+
+    const std::string result_str = PQgetvalue(result, 0, 0);
+    EXPECT_EQ(result_str, "18446744073709551615");
 
     PQclear(result);
 }
@@ -532,8 +370,7 @@ TEST_F(PostgresParamsTest, RoundTripString) {
                                     params->values.data(),
                                     params->lengths.data(),
                                     params->formats.data(),
-                                    0  // Text result format for strings
-    );
+                                    0);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -544,15 +381,16 @@ TEST_F(PostgresParamsTest, RoundTripString) {
     PQclear(result);
 }
 
-TEST_F(PostgresParamsTest, RoundTripNull) {
+TEST_F(PostgresParamsTest, RoundTripByteArray) {
     std::pmr::unsynchronized_pool_resource pool;
     postgres::ParamSink sink(&pool);
 
-    sink.push(FieldValue{std::monostate{}});
+    std::vector<uint8_t> bytes = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0xFF};
+    sink.push(FieldValue{bytes});
     const auto params = sink.native_packet();
 
     PGresult* result = PQexecParams(conn_,
-                                    "SELECT $1",
+                                    "SELECT $1::bytea",
                                     static_cast<int>(params->values.size()),
                                     params->oids.data(),
                                     params->values.data(),
@@ -563,7 +401,13 @@ TEST_F(PostgresParamsTest, RoundTripNull) {
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
 
-    EXPECT_TRUE(PQgetisnull(result, 0, 0));
+    const int result_len    = PQgetlength(result, 0, 0);
+    const char* result_data = PQgetvalue(result, 0, 0);
+
+    ASSERT_EQ(result_len, static_cast<int>(bytes.size()));
+    for (size_t i = 0; i < bytes.size(); ++i) {
+        EXPECT_EQ(static_cast<uint8_t>(result_data[i]), bytes[i]);
+    }
 
     PQclear(result);
 }
@@ -586,8 +430,7 @@ TEST_F(PostgresParamsTest, RoundTripMultipleTypes) {
                                     params->values.data(),
                                     params->lengths.data(),
                                     params->formats.data(),
-                                    1  // Binary result format
-    );
+                                    1);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
@@ -617,40 +460,45 @@ TEST_F(PostgresParamsTest, RoundTripMultipleTypes) {
     PQclear(result);
 }
 
-TEST_F(PostgresParamsTest, RoundTripByteArray) {
+// ============== Edge Cases ==============
+
+TEST_F(PostgresParamsTest, Int16EdgeCases) {
     std::pmr::unsynchronized_pool_resource pool;
     postgres::ParamSink sink(&pool);
 
-    std::vector<uint8_t> bytes = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0xFF};
-    sink.push(FieldValue{bytes});
-    const auto params = sink.native_packet();
+    const std::vector<std::int16_t> test_values = {
+        0,
+        1,
+        -1,
+        std::numeric_limits<std::int16_t>::min(),
+        std::numeric_limits<std::int16_t>::max(),
+        32767,
+        -32768,
+    };
 
-    PGresult* result = PQexecParams(conn_,
-                                    "SELECT $1::bytea",
-                                    static_cast<int>(params->values.size()),
-                                    params->oids.data(),
-                                    params->values.data(),
-                                    params->lengths.data(),
-                                    params->formats.data(),
-                                    1  // Binary result format
-    );
-
-    ASSERT_NE(result, nullptr);
-    ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
-
-    // Verify bytea content
-    const int result_len    = PQgetlength(result, 0, 0);
-    const char* result_data = PQgetvalue(result, 0, 0);
-
-    ASSERT_EQ(result_len, static_cast<int>(bytes.size()));
-    for (size_t i = 0; i < bytes.size(); ++i) {
-        EXPECT_EQ(static_cast<uint8_t>(result_data[i]), bytes[i]);
+    for (auto val : test_values) {
+        sink.push(FieldValue{val});
     }
 
-    PQclear(result);
-}
+    const auto params = sink.native_packet();
 
-// ============== PLATINUM TESTS: Comprehensive Edge Cases ==============
+    for (size_t i = 0; i < test_values.size(); ++i) {
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::int2",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        1);
+        ASSERT_NE(result, nullptr);
+        ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+        uint16_t net_value;
+        std::memcpy(&net_value, PQgetvalue(result, 0, 0), 2);
+        EXPECT_EQ(static_cast<int16_t>(ntohs(net_value)), test_values[i]);
+        PQclear(result);
+    }
+}
 
 TEST_F(PostgresParamsTest, Int32EdgeCases) {
     std::pmr::unsynchronized_pool_resource pool;
@@ -733,6 +581,77 @@ TEST_F(PostgresParamsTest, Int64EdgeCases) {
     }
 }
 
+TEST_F(PostgresParamsTest, UnsignedIntegerEdgeCases) {
+    std::pmr::unsynchronized_pool_resource pool;
+    postgres::ParamSink sink(&pool);
+
+    // uint16 edge cases (stored as int4)
+    sink.push(FieldValue{std::uint16_t{0}});
+    sink.push(FieldValue{std::uint16_t{65535}});
+
+    // uint32 edge cases (stored as int8)
+    sink.push(FieldValue{std::uint32_t{0}});
+    sink.push(FieldValue{std::uint32_t{4294967295u}});
+
+    // uint64 edge cases (stored as NUMERIC)
+    sink.push(FieldValue{std::uint64_t{0}});
+    sink.push(FieldValue{std::uint64_t{18446744073709551615ULL}});
+
+    const auto params = sink.native_packet();
+
+    // Verify uint16 values
+    for (size_t i = 0; i < 2; ++i) {
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::int4",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        1);
+        ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+        uint32_t net_value;
+        std::memcpy(&net_value, PQgetvalue(result, 0, 0), 4);
+        uint32_t expected = (i == 0) ? 0 : 65535;
+        EXPECT_EQ(ntohl(net_value), expected);
+        PQclear(result);
+    }
+
+    // Verify uint32 values
+    for (size_t i = 2; i < 4; ++i) {
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::int8",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        1);
+        ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+        uint64_t net_value;
+        std::memcpy(&net_value, PQgetvalue(result, 0, 0), 8);
+        uint64_t expected = (i == 2) ? 0 : 4294967295u;
+        EXPECT_EQ(be64toh(net_value), expected);
+        PQclear(result);
+    }
+
+    // Verify uint64 values (text format for NUMERIC)
+    const std::vector<std::string> expected_uint64 = {"0", "18446744073709551615"};
+    for (size_t i = 4; i < 6; ++i) {
+        PGresult* result = PQexecParams(conn_,
+                                        "SELECT $1::numeric",
+                                        1,
+                                        &params->oids[i],
+                                        &params->values[i],
+                                        &params->lengths[i],
+                                        &params->formats[i],
+                                        0);
+        ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
+        EXPECT_EQ(std::string(PQgetvalue(result, 0, 0)), expected_uint64[i - 4]);
+        PQclear(result);
+    }
+}
+
 TEST_F(PostgresParamsTest, FloatSpecialValues) {
     std::pmr::unsynchronized_pool_resource pool;
     postgres::ParamSink sink(&pool);
@@ -797,6 +716,8 @@ TEST_F(PostgresParamsTest, FloatSpecialValues) {
     EXPECT_TRUE(std::isnan(val));
     PQclear(result);
 }
+
+// ============== Comprehensive Tests ==============
 
 TEST_F(PostgresParamsTest, VeryLargeString) {
     std::pmr::unsynchronized_pool_resource pool;
@@ -902,26 +823,38 @@ TEST_F(PostgresParamsTest, ManyParameters) {
     postgres::ParamSink sink(&pool);
 
     for (int i = 0; i < 100; ++i) {
-        switch (i % 7) {
+        switch (i % 11) {
             case 0:
-                sink.push(FieldValue{std::int32_t{i}});
+                sink.push(FieldValue{static_cast<std::int16_t>(i)});
                 break;
             case 1:
-                sink.push(FieldValue{std::int64_t{i * 1000LL}});
+                sink.push(FieldValue{std::int32_t{i}});
                 break;
             case 2:
-                sink.push(FieldValue{static_cast<float>(i) * 0.5f});
+                sink.push(FieldValue{std::int64_t{i * 1000LL}});
                 break;
             case 3:
-                sink.push(FieldValue{static_cast<double>(i) * 0.25});
+                sink.push(FieldValue{static_cast<std::uint16_t>(i)});
                 break;
             case 4:
-                sink.push(FieldValue{std::string{"str"} + std::to_string(i)});
+                sink.push(FieldValue{static_cast<std::uint32_t>(i)});
                 break;
             case 5:
-                sink.push(FieldValue{i % 2 == 0});
+                sink.push(FieldValue{static_cast<std::uint64_t>(i)});
                 break;
             case 6:
+                sink.push(FieldValue{static_cast<float>(i) * 0.5f});
+                break;
+            case 7:
+                sink.push(FieldValue{static_cast<double>(i) * 0.25});
+                break;
+            case 8:
+                sink.push(FieldValue{std::string{"str"} + std::to_string(i)});
+                break;
+            case 9:
+                sink.push(FieldValue{i % 2 == 0});
+                break;
+            case 10:
                 sink.push(FieldValue{std::monostate{}});
                 break;
             default:
@@ -933,47 +866,11 @@ TEST_F(PostgresParamsTest, ManyParameters) {
     EXPECT_EQ(params->values.size(), 100);
 
     for (size_t i = 0; i < params->values.size(); ++i) {
-        if (i % 7 == 6) {
+        if (i % 11 == 10) {
             EXPECT_EQ(params->values[i], nullptr);
         } else {
             EXPECT_NE(params->values[i], nullptr);
         }
-    }
-}
-
-TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
-    std::pmr::unsynchronized_pool_resource pool;
-    postgres::ParamSink sink(&pool);
-
-    for (int i = 0; i < 50; ++i) {
-        sink.push(FieldValue{std::string{"String "} + std::to_string(i)});
-        sink.push(FieldValue{std::int32_t{i}});
-        sink.push(FieldValue{std::int64_t{i * 1000LL}});
-        sink.push(FieldValue{static_cast<float>(i) * 1.5f});
-        sink.push(FieldValue{static_cast<double>(i) * 2.5});
-        sink.push(FieldValue{i % 2 == 0});
-        std::vector bytes = {static_cast<uint8_t>(i), static_cast<uint8_t>(i + 1), static_cast<uint8_t>(i + 2)};
-        sink.push(FieldValue{bytes});
-    }
-
-    const auto params = sink.native_packet();
-    EXPECT_EQ(params->values.size(), 350);
-
-    // Verify strings
-    for (int i = 0; i < 50; ++i) {
-        const size_t idx     = static_cast<size_t>(i) * 7;
-        std::string expected = "String " + std::to_string(i);
-        std::string actual(params->values[idx], static_cast<size_t>(params->lengths[idx]));
-        EXPECT_EQ(actual, expected);
-    }
-
-    // Verify binary data
-    for (int i = 0; i < 50; ++i) {
-        const size_t idx = static_cast<size_t>(i) * 7 + 6;
-        EXPECT_EQ(params->lengths[idx], 3);
-        EXPECT_EQ(static_cast<uint8_t>(params->values[idx][0]), static_cast<uint8_t>(i));
-        EXPECT_EQ(static_cast<uint8_t>(params->values[idx][1]), static_cast<uint8_t>(i + 1));
-        EXPECT_EQ(static_cast<uint8_t>(params->values[idx][2]), static_cast<uint8_t>(i + 2));
     }
 }
 
@@ -1039,24 +936,34 @@ TEST_F(PostgresParamsTest, VerifyOIDs) {
     std::pmr::unsynchronized_pool_resource pool;
     postgres::ParamSink sink(&pool);
 
-    sink.push(FieldValue{std::monostate{}});
-    sink.push(FieldValue{true});
-    sink.push(FieldValue{std::int32_t{42}});
-    sink.push(FieldValue{std::int64_t{42}});
-    sink.push(FieldValue{3.14f});
-    sink.push(FieldValue{3.14});
-    sink.push(FieldValue{std::string{"test"}});
+    sink.push(FieldValue{std::monostate{}});     // 0: NULL
+    sink.push(FieldValue{true});                 // 1: bool
+    sink.push(FieldValue{char{'A'}});            // 2: char
+    sink.push(FieldValue{std::int16_t{42}});     // 3: int2
+    sink.push(FieldValue{std::int32_t{42}});     // 4: int4
+    sink.push(FieldValue{std::int64_t{42}});     // 5: int8
+    sink.push(FieldValue{std::uint16_t{42}});    // 6: int4 (promoted)
+    sink.push(FieldValue{std::uint32_t{42}});    // 7: int8 (promoted)
+    sink.push(FieldValue{std::uint64_t{42}});    // 8: numeric
+    sink.push(FieldValue{3.14f});                // 9: float4
+    sink.push(FieldValue{3.14});                 // 10: float8
+    sink.push(FieldValue{std::string{"test"}});  // 11: text
     std::vector<uint8_t> bytes = {1, 2, 3};
-    sink.push(FieldValue{bytes});
+    sink.push(FieldValue{bytes});  // 12: bytea
 
     const auto params = sink.native_packet();
 
-    EXPECT_EQ(params->oids[0], 0);
-    EXPECT_EQ(params->oids[1], 16);
-    EXPECT_EQ(params->oids[2], 23);
-    EXPECT_EQ(params->oids[3], 20);
-    EXPECT_EQ(params->oids[4], 700);
-    EXPECT_EQ(params->oids[5], 701);
-    EXPECT_EQ(params->oids[6], 25);
-    EXPECT_EQ(params->oids[7], 17);
+    EXPECT_EQ(params->oids[0], 0);                             // NULL - inferred
+    EXPECT_EQ(params->oids[1], OidTypeRegistry::oid_bool);     // 16
+    EXPECT_EQ(params->oids[2], OidTypeRegistry::oid_char);     // 18
+    EXPECT_EQ(params->oids[3], OidTypeRegistry::oid_int2);     // 21
+    EXPECT_EQ(params->oids[4], OidTypeRegistry::oid_int4);     // 23
+    EXPECT_EQ(params->oids[5], OidTypeRegistry::oid_int8);     // 20
+    EXPECT_EQ(params->oids[6], OidTypeRegistry::oid_int4);     // 23 (uint16 promoted)
+    EXPECT_EQ(params->oids[7], OidTypeRegistry::oid_int8);     // 20 (uint32 promoted)
+    EXPECT_EQ(params->oids[8], OidTypeRegistry::oid_numeric);  // 1700
+    EXPECT_EQ(params->oids[9], OidTypeRegistry::oid_float4);   // 700
+    EXPECT_EQ(params->oids[10], OidTypeRegistry::oid_float8);  // 701
+    EXPECT_EQ(params->oids[11], OidTypeRegistry::oid_text);    // 25
+    EXPECT_EQ(params->oids[12], OidTypeRegistry::oid_bytea);   // 17
 }

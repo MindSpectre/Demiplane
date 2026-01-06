@@ -2,9 +2,7 @@
 
 #include <gears_macros.hpp>
 
-// ═══════════════════════════════════════════════════════════════════════════
 // DB_ENTITY - Define a database entity schema in one line
-// ═══════════════════════════════════════════════════════════════════════════
 //
 // Usage:
 //   struct Customer {
@@ -18,7 +16,6 @@
 //   auto table = Table::make<Customer::Schema>();
 //   auto col = table->column(Customer::Schema::id);  // TableColumn<int>
 //
-// ═══════════════════════════════════════════════════════════════════════════
 
 // clang-format off
 

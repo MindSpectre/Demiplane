@@ -11,9 +11,9 @@
 
 using namespace demiplane::db;
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // COMPILE-TIME API TESTS: sql_type_for<T, Provider>()
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST(TypeMappingCompileTime, BoolMapsToBoolean) {
     constexpr auto type = sql_type_for<bool, SupportedProviders::PostgreSQL>();
@@ -60,9 +60,9 @@ TEST(TypeMappingCompileTime, ByteSpanMapsToBytea) {
     EXPECT_EQ(type, "BYTEA");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // RUNTIME API TESTS: sql_type<T>(SupportedProviders)
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST(TypeMappingRuntime, BoolWithProviderEnum) {
     auto type = sql_type<bool>(SupportedProviders::PostgreSQL);
@@ -99,9 +99,9 @@ TEST(TypeMappingRuntime, ByteVectorWithProviderEnum) {
     EXPECT_EQ(type, "BYTEA");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // RUNTIME API TESTS: sql_type<T>(dialect)
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 class TypeMappingDialectTest : public ::testing::Test {
 protected:
@@ -158,9 +158,9 @@ TEST_F(TypeMappingDialectTest, StringWithDialectPtr) {
     EXPECT_EQ(type, "TEXT");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // CONVENIENCE API TESTS: postgres::sql_type_for<T>()
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST(PostgresConvenienceApi, BoolMapsToBoolean) {
     constexpr auto type = postgres::sql_type_for<bool>();
@@ -182,9 +182,9 @@ TEST(PostgresConvenienceApi, StringMapsToText) {
     EXPECT_EQ(type, "TEXT");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // TABLE ADD_FIELD INTEGRATION TESTS
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 class TableAddFieldTest : public ::testing::Test {
 protected:
@@ -277,9 +277,9 @@ TEST_F(TableAddFieldTest, MixedAddFieldApis) {
     EXPECT_EQ(active_field->db_type, "BOOLEAN");  // inferred
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // CONCEPT TESTS: HasSqlTypeMapping
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST(TypeMappingConcept, SupportedTypesHaveMapping) {
     static_assert(HasSqlTypeMapping<bool, SupportedProviders::PostgreSQL>);
@@ -308,9 +308,9 @@ TEST(TypeMappingConcept, UnsupportedTypesDoNotHaveMapping) {
     static_assert(!HasSqlTypeMapping<std::string, SupportedProviders::None>);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // CV-QUALIFIER HANDLING TESTS
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST(TypeMappingCvQualifiers, ConstTypesWork) {
     constexpr auto type = sql_type_for<const int, SupportedProviders::PostgreSQL>();

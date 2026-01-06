@@ -6,78 +6,79 @@
 #include <vector>
 
 #include <gears_templates.hpp>
+#include <pg_sql_type_registry.hpp>
 #include <sql_type_mapping.hpp>
 
 namespace demiplane::db {
 
     template <>
     struct SqlTypeMapping<bool, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "BOOLEAN";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::boolean;
     };
 
     template <>
     struct SqlTypeMapping<char, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "CHAR(1)";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::char_type<1>();
     };
 
     template <>
     struct SqlTypeMapping<std::int16_t, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "SMALLINT";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::smallint;
     };
 
     template <>
     struct SqlTypeMapping<std::int32_t, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "INTEGER";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::integer;
     };
 
     template <>
     struct SqlTypeMapping<std::int64_t, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "BIGINT";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::bigint;
     };
 
     template <>
     struct SqlTypeMapping<std::uint16_t, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "INTEGER";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::integer;
     };
 
     template <>
     struct SqlTypeMapping<std::uint32_t, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "BIGINT";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::bigint;
     };
 
     template <>
     struct SqlTypeMapping<std::uint64_t, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "NUMERIC(20,0)";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::numeric<20, 0>();
     };
 
     template <>
     struct SqlTypeMapping<float, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "REAL";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::real;
     };
 
     template <>
     struct SqlTypeMapping<double, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "DOUBLE PRECISION";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::double_precision;
     };
 
     template <>
     struct SqlTypeMapping<std::string, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "TEXT";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::text;
     };
 
     template <>
     struct SqlTypeMapping<std::string_view, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "TEXT";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::text;
     };
 
     template <>
     struct SqlTypeMapping<std::vector<std::uint8_t>, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "BYTEA";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::bytea;
     };
 
     template <>
     struct SqlTypeMapping<std::span<const std::uint8_t>, SupportedProviders::PostgreSQL> {
-        static constexpr std::string_view sql_type = "BYTEA";
+        static constexpr std::string_view sql_type = postgres::SqlTypeRegistry::bytea;
     };
 
 }  // namespace demiplane::db

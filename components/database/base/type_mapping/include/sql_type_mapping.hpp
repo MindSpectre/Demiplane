@@ -13,26 +13,26 @@ namespace demiplane::db {
     // Forward declaration - no hard dependency on SqlDialect
     class SqlDialect;
 
-    // ═══════════════════════════════════════════════════════════════════════════
+
     // PRIMARY TYPE TRAIT: Maps C++ types to SQL type strings
     // Unspecialized = compile error (no silent fallbacks)
-    // ═══════════════════════════════════════════════════════════════════════════
+
 
     template <typename T, SupportedProviders Provider>
     struct SqlTypeMapping;  // Primary template - intentionally undefined
 
-    // ═══════════════════════════════════════════════════════════════════════════
+
     // CONCEPT: Check if type mapping exists for T and Provider
-    // ═══════════════════════════════════════════════════════════════════════════
+
 
     template <typename T, SupportedProviders P>
     concept HasSqlTypeMapping = requires {
         { SqlTypeMapping<std::remove_cvref_t<T>, P>::sql_type } -> std::convertible_to<std::string_view>;
     };
 
-    // ═══════════════════════════════════════════════════════════════════════════
+
     // COMPILE-TIME API: sql_type_for<T, Provider>()
-    // ═══════════════════════════════════════════════════════════════════════════
+
 
     template <typename T, SupportedProviders P>
     constexpr std::string_view sql_type_for() {
@@ -42,10 +42,10 @@ namespace demiplane::db {
         return SqlTypeMapping<std::remove_cvref_t<T>, P>::sql_type;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+
     // RUNTIME API: sql_type<T>(provider_enum)
     // Compile-time dispatch via constexpr switch
-    // ═══════════════════════════════════════════════════════════════════════════
+
 
     template <typename T>
     constexpr std::string_view sql_type(const SupportedProviders provider) {
@@ -60,9 +60,9 @@ namespace demiplane::db {
         std::unreachable();
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
+
     // RUNTIME API: sql_type<T>(dialect) - dispatches via dialect.type()
-    // ═══════════════════════════════════════════════════════════════════════════
+
 
     template <typename T>
     std::string_view sql_type(const SqlDialect& dialect);

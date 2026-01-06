@@ -16,9 +16,7 @@ namespace demiplane::db {
         return sql_type<T>(dialect->type());
     }
 
-    // ═══════════════════════════════════════════════════════════════
     // TYPE-INFERRED ADD_FIELD
-    // ═══════════════════════════════════════════════════════════════
 
     template <typename T>
     Table& Table::add_field(std::string name, const SqlDialect& dialect) {
@@ -31,7 +29,7 @@ namespace demiplane::db {
     }
 
     template <typename T>
-    Table& Table::add_field(std::string name, SupportedProviders provider) {
-        return add_field<T>(std::move(name), std::string(sql_type<T>(provider)));
+    Table& Table::add_field(std::string name, const SupportedProviders provider) {
+        return add_field<T>(std::move(name), std::string{sql_type<T>(provider)});
     }
 }  // namespace demiplane::db

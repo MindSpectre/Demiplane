@@ -6,7 +6,7 @@
 #include <variant>
 #include <vector>
 
-#include <pg_type_registry.hpp>
+#include <pg_oid_type_registry.hpp>
 #include <sql_params.hpp>
 
 namespace demiplane::db::postgres {

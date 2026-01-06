@@ -21,7 +21,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(params_->binary_chunks.back().data()));
         params_->lengths.push_back(1);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_bool);
+        params_->oids.push_back(OidTypeRegistry::oid_bool);
     }
 
     void ParamSink::bind_one(const char c) const {
@@ -32,7 +32,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(params_->binary_chunks.back().data()));
         params_->lengths.push_back(1);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_char);
+        params_->oids.push_back(OidTypeRegistry::oid_char);
     }
 
     void ParamSink::bind_one(const std::int16_t i) const {
@@ -46,7 +46,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(2);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_int2);
+        params_->oids.push_back(OidTypeRegistry::oid_int2);
     }
 
     void ParamSink::bind_one(const std::int32_t i) const {
@@ -61,7 +61,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(4);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_int4);
+        params_->oids.push_back(OidTypeRegistry::oid_int4);
     }
 
     void ParamSink::bind_one(const std::int64_t i) const {
@@ -75,7 +75,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(8);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_int8);
+        params_->oids.push_back(OidTypeRegistry::oid_int8);
     }
 
     void ParamSink::bind_one(const std::uint16_t i) const {
@@ -89,7 +89,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(4);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_int4);
+        params_->oids.push_back(OidTypeRegistry::oid_int4);
     }
 
     void ParamSink::bind_one(const std::uint32_t i) const {
@@ -103,7 +103,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(8);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_int8);
+        params_->oids.push_back(OidTypeRegistry::oid_int8);
     }
 
     void ParamSink::bind_one(const std::uint64_t i) const {
@@ -115,7 +115,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(params_->str_data.back().c_str());
         params_->lengths.push_back(static_cast<int>(params_->str_data.back().size()));
         params_->formats.push_back(FormatRegistry::text);
-        params_->oids.push_back(TypeRegistry::oid_numeric);
+        params_->oids.push_back(OidTypeRegistry::oid_numeric);
     }
 
     void ParamSink::bind_one(const float f) const {
@@ -131,7 +131,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(4);
         params_->formats.push_back(FormatRegistry::binary);
-        params_->oids.push_back(TypeRegistry::oid_float4);
+        params_->oids.push_back(OidTypeRegistry::oid_float4);
     }
 
     void ParamSink::bind_one(const double d) const {
@@ -147,7 +147,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(ptr));
         params_->lengths.push_back(8);
         params_->formats.push_back(FormatRegistry::binary);  // Binary
-        params_->oids.push_back(TypeRegistry::oid_float8);
+        params_->oids.push_back(OidTypeRegistry::oid_float8);
     }
 
     void ParamSink::bind_one(const std::string& s) const {
@@ -157,7 +157,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(params_->str_data.back().c_str());
         params_->lengths.push_back(static_cast<int>(params_->str_data.back().size()));
         params_->formats.push_back(FormatRegistry::text);  // Text
-        params_->oids.push_back(TypeRegistry::oid_text);
+        params_->oids.push_back(OidTypeRegistry::oid_text);
     }
     void ParamSink::bind_one(const std::string_view s_view) const {
         std::pmr::string pmr_str{s_view, mr_};  // copy
@@ -165,7 +165,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(params_->str_data.back().c_str());
         params_->lengths.push_back(static_cast<int>(params_->str_data.back().size()));
         params_->formats.push_back(FormatRegistry::text);
-        params_->oids.push_back(TypeRegistry::oid_text);
+        params_->oids.push_back(OidTypeRegistry::oid_text);
     }
     void ParamSink::bind_one(const std::span<const std::uint8_t> bytes) const {
         // Binary data as BYTEA
@@ -175,7 +175,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(params_->binary_chunks.back().data()));
         params_->lengths.push_back(static_cast<int>(bytes.size()));
         params_->formats.push_back(FormatRegistry::binary);  // Binary
-        params_->oids.push_back(TypeRegistry::oid_bytea);
+        params_->oids.push_back(OidTypeRegistry::oid_bytea);
     }
     void ParamSink::bind_one(const std::vector<std::uint8_t>& bytes) const {
         params_->binary_chunks.emplace_back(bytes.size());
@@ -184,7 +184,7 @@ namespace demiplane::db::postgres {
         params_->values.push_back(reinterpret_cast<const char*>(params_->binary_chunks.back().data()));
         params_->lengths.push_back(static_cast<int>(bytes.size()));
         params_->formats.push_back(FormatRegistry::binary);  // Binary
-        params_->oids.push_back(TypeRegistry::oid_bytea);
+        params_->oids.push_back(OidTypeRegistry::oid_bytea);
     }
 
 

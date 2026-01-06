@@ -12,9 +12,9 @@ using namespace demiplane::db;
 using demiplane::gears::FixedString;
 using demiplane::gears::type_list;
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // Test Entity using DB_ENTITY macro
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 struct User {
     int id;
@@ -25,9 +25,9 @@ struct User {
     DB_ENTITY(User, "users", id, name, age, active);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // SchemaMember Compile-Time Tests
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 class SchemaMemberTest : public ::testing::Test {};
 
@@ -50,9 +50,9 @@ TEST_F(SchemaMemberTest, TableNameIsCorrect) {
     EXPECT_EQ(User::Schema::table_name, "users");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // SchemaMember satisfies IsFieldDef Concept
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST_F(SchemaMemberTest, SatisfiesIsFieldDefConcept) {
     static_assert(IsFieldDef<decltype(User::Schema::id)>);
@@ -67,9 +67,9 @@ TEST_F(SchemaMemberTest, SatisfiesHasSchemaInfoConcept) {
     SUCCEED();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // Table Integration Tests - Using Table::make<Schema>()
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 class SchemaTableIntegrationTest : public ::testing::Test {
 protected:
@@ -118,9 +118,9 @@ TEST_F(SchemaTableIntegrationTest, ColumnTableNameIsCorrect) {
     EXPECT_EQ(id_col.table_name(), "users");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // Type List Integration Tests
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 TEST(TypeListTest, FieldsTypeListIsCorrect) {
     using Fields = User::Schema::fields;
@@ -148,9 +148,9 @@ TEST(TypeListTest, IterateOverFields) {
     EXPECT_EQ(names[3], "active");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // DB_ENTITY Macro Tests - Various Entity Types
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 struct Product {
     int id;
@@ -212,9 +212,9 @@ TEST_F(EntityMacroTest, TableIntegrationWorks) {
     static_assert(std::is_same_v<typename decltype(price_col)::value_type, double>);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+
 // Edge Cases - Minimal and Large Entities
-// ═══════════════════════════════════════════════════════════════════════════
+
 
 // Single field entity
 struct MinimalEntity {

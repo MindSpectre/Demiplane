@@ -13,13 +13,14 @@
 #include <gears_hash.hpp>
 
 namespace demiplane::db {
+    // todo: perfect forwarding
 
     enum class SupportedProviders : std::uint8_t;
     // Forward declarations
     template <typename T>
     class TableColumn;
 
-    class SqlDialect;  // Forward declaration - keeps primitives as base layer
+    class SqlDialect;
 
     // Concept for schema types that have a fields type_list
     template <typename T>
@@ -42,9 +43,9 @@ namespace demiplane::db {
         // Overload for runtime type specification
         Table& add_field(std::string name, std::string db_type, std::type_index cpp_type);
 
-        // ═══════════════════════════════════════════════════════════════
+
         // TYPE-INFERRED ADD_FIELD - SQL type derived from C++ type
-        // ═══════════════════════════════════════════════════════════════
+
 
         // Infer SQL type from dialect reference
         template <typename T>
@@ -58,10 +59,6 @@ namespace demiplane::db {
         template <typename T>
         Table& add_field(std::string name, SupportedProviders provider);
 
-        // ═══════════════════════════════════════════════════════════════
-        // COLUMN ACCESSORS - Runtime and Compile-Time Overloads
-        // ═══════════════════════════════════════════════════════════════
-
         // Runtime type-safe column accessor (existing API)
         template <typename T>
         [[nodiscard]] TableColumn<T> column(std::string_view field_name) const;
@@ -70,19 +67,13 @@ namespace demiplane::db {
         template <IsFieldDef FieldDefT>
         [[nodiscard]] constexpr TableColumn<typename FieldDefT::value_type> column(FieldDefT field_def) const;
 
-
-        // ═══════════════════════════════════════════════════════════════
-        // BUILDER METHODS - Runtime and Compile-Time Overloads
-        // ═══════════════════════════════════════════════════════════════
-
-        // Runtime builders (existing API)
+        // Runtime builders
         Table& primary_key(std::string_view field_name);
         Table& nullable(std::string_view field_name, bool is_null = true);
         Table& foreign_key(std::string_view field_name, std::string_view ref_table, std::string_view ref_column);
         Table& unique(std::string_view field_name);
         Table& indexed(std::string_view field_name);
 
-        // ✨ COMPILE-TIME builders (new API - FieldDef overloads)
         template <IsFieldDef FieldDefT>
         Table& primary_key(FieldDefT field_def);
 
@@ -98,11 +89,11 @@ namespace demiplane::db {
         template <IsFieldDef FieldDefT>
         Table& indexed(FieldDefT field_def);
 
-        // Set database type for a field (compile-time overload)
+        // Set database type for a field
         template <IsFieldDef FieldDefT>
         Table& set_db_type(FieldDefT field_def, std::string db_type);
 
-        // Add database-specific attributes (compile-time overload)
+        // Add database-specific attribute
         template <IsFieldDef FieldDefT>
         Table& add_db_attribute(FieldDefT field_def, std::string key, std::string value);
 

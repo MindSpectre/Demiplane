@@ -7,9 +7,7 @@
 
 namespace demiplane::db {
 
-    // ═══════════════════════════════════════════════════════════════════════════
     // SchemaMember: Compile-time field definition for type-safe column access
-    // ═══════════════════════════════════════════════════════════════════════════
     //
     // Usage:
     //   struct Customer {
@@ -22,7 +20,6 @@ namespace demiplane::db {
     //   auto table = Table::make<Customer::Schema>();
     //   auto col = table->column(Customer::Schema::id);  // TableColumn<int>
     //
-    // ═══════════════════════════════════════════════════════════════════════════
 
     template <gears::FixedString Name, typename MemberType>
     struct SchemaMember {

@@ -4,7 +4,7 @@
 
 #include <db_field_value.hpp>
 #include <netinet/in.h>
-#include <pg_oid_type_registry.hpp>
+#include <postgres_oid_type_registry.hpp>
 
 namespace demiplane::db::postgres {
     namespace {
@@ -131,7 +131,7 @@ namespace demiplane::db::postgres {
                 return std::numeric_limits<float>::infinity();
             if (s == "-Infinity" || s == "-inf")
                 return -std::numeric_limits<float>::infinity();
-            throw std::runtime_error("Failed to parse float: " + s);
+            throw std::runtime_error{"Failed to parse float: " + s};
         }
         return result;
     }
@@ -157,7 +157,7 @@ namespace demiplane::db::postgres {
                 return std::numeric_limits<double>::infinity();
             if (s == "-Infinity" || s == "-inf")
                 return -std::numeric_limits<double>::infinity();
-            throw std::runtime_error("Failed to parse double: " + s);
+            throw std::runtime_error{"Failed to parse double: " + s};
         }
         return result;
     }
@@ -177,7 +177,7 @@ namespace demiplane::db::postgres {
             return {reinterpret_cast<const uint8_t*>(ptr_), static_cast<size_t>(len_)};
         }
         // Text format bytea needs hex decoding - can't return span
-        throw std::runtime_error("Cannot decode text-format bytea as span. Use vector<std::uint8_t> instead.");
+        throw std::runtime_error{"Cannot decode text-format bytea as span. Use vector<std::uint8_t> instead."};
     }
 
     std::vector<std::uint8_t> FieldView::decode_binary_vector() const {
@@ -208,6 +208,6 @@ namespace demiplane::db::postgres {
             return result;
         }
         // Legacy escape format - implement if needed
-        throw std::runtime_error("Unsupported bytea format");
+        throw std::runtime_error{"Unsupported bytea format"};
     }
 }  // namespace demiplane::db::postgres

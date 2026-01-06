@@ -1,7 +1,8 @@
 #include "test_schemas.hpp"
 
 #include "supported_providers.hpp"
-
+// todo: rewrite using sql mapping
+// todo: possible rewrite ddl(questionable)
 namespace demiplane::test {
 
     // DDL Strings for PostgreSQL

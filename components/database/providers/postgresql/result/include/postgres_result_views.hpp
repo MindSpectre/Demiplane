@@ -11,18 +11,18 @@
 #include <db_exceptions.hpp>
 #include <db_field_value.hpp>
 #include <libpq-fe.h>
-#include <pg_format_registry.hpp>
+#include <postgres_format_registry.hpp>
 
 namespace demiplane::db::postgres {
     class FieldView {
     public:
         FieldView(
             const char* const ptr, const std::size_t len, const bool is_null, const std::uint32_t format, const Oid oid)
-            : ptr_(ptr),
-              len_(len),
-              is_null_(is_null),
-              format_(format),
-              oid_(oid) {
+            : ptr_{ptr},
+              len_{len},
+              is_null_{is_null},
+              format_{format},
+              oid_{oid} {
         }
         [[nodiscard]] bool is_null() const noexcept {
             return is_null_;
@@ -41,6 +41,7 @@ namespace demiplane::db::postgres {
         template <typename T>
         [[nodiscard]] T as() const {
             if (is_null_ && !std::is_same_v<T, std::monostate>) {
+                //? do we really need exception here
                 null_conversion_error err;
                 err << column_info("unknown") << sqlstate_info("22002");
                 boost::throw_with_location(std::move(err));  // null_value_not_allowed
@@ -92,7 +93,7 @@ namespace demiplane::db::postgres {
             auto sv        = as_sv();
             auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), result);
             if (ec != std::errc{}) {
-                throw std::runtime_error("Failed to parse integer from: " + std::string(sv));
+                throw std::runtime_error{"Failed to parse integer from: " + std::string(sv)};
             }
             return result;
         }
@@ -127,7 +128,7 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] std::vector<std::uint8_t> decode_hex_bytea() const;
 
-        const char* ptr_{nullptr};
+        const char* ptr_      = nullptr;
         std::size_t len_      = 0;
         bool is_null_         = true;
         std::uint32_t format_ = FormatRegistry::text;  // 0=text, 1=binary
@@ -141,8 +142,8 @@ namespace demiplane::db::postgres {
     class RowView {
     public:
         RowView(PGresult* r, const std::size_t row)
-            : res_(r),
-              row_(row) {
+            : res_{r},
+              row_{row} {
         }
 
         [[nodiscard]] std::size_t cols() const noexcept {
@@ -167,12 +168,12 @@ namespace demiplane::db::postgres {
         [[nodiscard]] std::size_t col_index(const std::string_view name) const {
             const int idx = PQfnumber(res_, std::string(name).c_str());
             if (idx == -1)
-                throw std::out_of_range("Column is not found");
+                throw std::out_of_range{"Column is not found"};
             return static_cast<std::size_t>(idx);
         }
 
     private:
-        PGresult* res_{nullptr};
-        std::size_t row_{0};
+        PGresult* res_   = nullptr;
+        std::size_t row_ = 0;
     };
 }  // namespace demiplane::db::postgres

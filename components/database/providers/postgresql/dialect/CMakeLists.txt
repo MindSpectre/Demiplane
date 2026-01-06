@@ -3,7 +3,6 @@
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Dialect STATIC
         include/postgres_dialect.hpp
-        include/pg_sql_type_mapping.hpp
         source/postgres_dialect.cpp
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Dialect PUBLIC

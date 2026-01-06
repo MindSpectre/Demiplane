@@ -2,7 +2,7 @@
 
 #include <netinet/in.h>
 
-#include "pg_format_registry.hpp"
+#include "postgres_format_registry.hpp"
 
 namespace demiplane::db::postgres {
 

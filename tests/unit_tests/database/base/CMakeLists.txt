@@ -6,4 +6,5 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.Base.TypeMapping
         Demiplane.Common.Gears
         Demiplane.Component.Database.Primitives
         Demiplane.Component.Database.Providers.PostgreSQL.Dialect
+        Demiplane.Component.Database.Providers.PostgreSQL.TypeMapping
 )

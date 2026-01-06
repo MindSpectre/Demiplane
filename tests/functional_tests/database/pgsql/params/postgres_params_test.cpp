@@ -9,8 +9,8 @@
 #include <gtest/gtest.h>
 #include <netinet/in.h>
 
-#include "pg_format_registry.hpp"
-#include "pg_oid_type_registry.hpp"
+#include "postgres_format_registry.hpp"
+#include "postgres_oid_type_registry.hpp"
 #include "postgres_result.hpp"
 
 using namespace demiplane::db;

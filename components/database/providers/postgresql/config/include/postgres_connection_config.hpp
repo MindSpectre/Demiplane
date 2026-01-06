@@ -20,39 +20,39 @@ namespace demiplane::db::postgres {
 
     struct ConnectionConfig {
         // Basic connection
-        std::string host{"localhost"};
-        std::string port{"5432"};
+        std::string host = "localhost";
+        std::string port = "5432";
         std::string dbname;
         std::string user;
         std::string password;
 
         // Node information
-        NodeRole role{NodeRole::PRIMARY};
-        int priority{0};  // For replica selection (higher = preferred)
+        NodeRole role = NodeRole::PRIMARY;
+        int priority  = 0;  // For replica selection (higher = preferred)
         std::string cluster_name;
 
         // Timeouts
-        std::chrono::seconds connect_timeout{30};
-        std::chrono::seconds statement_timeout{0};
-        std::chrono::seconds idle_in_transaction_timeout{0};
-        std::chrono::seconds lock_timeout{0};
+        std::chrono::seconds connect_timeout             = std::chrono::seconds{30};
+        std::chrono::seconds statement_timeout           = std::chrono::seconds{0};
+        std::chrono::seconds idle_in_transaction_timeout = std::chrono::seconds{0};
+        std::chrono::seconds lock_timeout                = std::chrono::seconds{0};
 
         // SSL/TLS
-        SslMode ssl_mode{SslMode::PREFER};
+        SslMode ssl_mode = SslMode::PREFER;
         std::optional<std::string> ssl_cert;
         std::optional<std::string> ssl_key;
         std::optional<std::string> ssl_root_cert;
 
         // Protocol settings
-        bool binary_protocol{true};
-        bool auto_prepare{false};
-        bool pipeline_mode{true};  // Use if PG14+
+        bool binary_protocol = true;
+        bool auto_prepare    = false;
+        bool pipeline_mode   = true;  // Use if PG14+
         std::string application_name;
-        std::string search_path{"public"};
+        std::string search_path = "public";
 
         // Performance
-        size_t work_mem_mb{4};  // Per operation memory
-        bool jit{true};         // JIT compilation for queries
+        size_t work_mem_mb = 4;     // Per operation memory
+        bool jit           = true;  // JIT compilation for queries
 
         // Additional libpq options
         std::map<std::string, std::string> extra_options;

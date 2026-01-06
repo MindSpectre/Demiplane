@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <gears_templates.hpp>
-#include <pg_sql_type_registry.hpp>
+#include <postgres_sql_type_registry.hpp>
 #include <sql_type_mapping.hpp>
 
 namespace demiplane::db {

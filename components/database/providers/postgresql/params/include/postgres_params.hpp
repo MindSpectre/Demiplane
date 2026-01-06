@@ -6,7 +6,7 @@
 #include <variant>
 #include <vector>
 
-#include <pg_oid_type_registry.hpp>
+#include <postgres_oid_type_registry.hpp>
 #include <sql_params.hpp>
 
 namespace demiplane::db::postgres {
@@ -23,9 +23,9 @@ namespace demiplane::db::postgres {
     class ParamSink final : public db::ParamSink {
     public:
         explicit ParamSink(std::pmr::memory_resource* mr)
-            : mr_(mr),
-              params_(std::make_shared<Params>(
-                  Params{.values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .str_data{mr}, .binary_chunks{mr}})) {
+            : mr_{mr},
+              params_{std::make_shared<Params>(
+                  Params{.values{mr}, .lengths{mr}, .formats{mr}, .oids{mr}, .str_data{mr}, .binary_chunks{mr}})} {
         }
 
         std::size_t push(const FieldValue& v) override {

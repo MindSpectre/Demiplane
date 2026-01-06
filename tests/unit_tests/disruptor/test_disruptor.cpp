@@ -174,9 +174,9 @@ TEST_F(DisruptorTest, BusySpinWaitStrategyNoBlock) {
     const Sequence cursor{10};
 
     // Requesting sequence <= cursor should return immediately
-    const auto start         = std::chrono::steady_clock::now();
+    const auto start          = std::chrono::steady_clock::now();
     const std::int64_t result = strategy.wait_for(5, cursor);
-    const auto elapsed       = std::chrono::steady_clock::now() - start;
+    const auto elapsed        = std::chrono::steady_clock::now() - start;
 
     EXPECT_EQ(result, 10);
     EXPECT_LT(elapsed, std::chrono::microseconds{100});  // Should be nearly instant
@@ -538,7 +538,7 @@ TEST_F(DisruptorTest, MultiThreadedHighContention) {
             sync_point.arrive_and_wait();
 
             for (int i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
-                const std::int64_t seq  = disruptor.sequencer().next();
+                const std::int64_t seq       = disruptor.sequencer().next();
                 disruptor.ring_buffer()[seq] = seq;
                 disruptor.sequencer().publish(seq);
             }
@@ -858,7 +858,7 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorHighContention) {
             sync_point.arrive_and_wait();
 
             for (int i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
-                const std::int64_t seq        = disruptor.sequencer().next();
+                const std::int64_t seq       = disruptor.sequencer().next();
                 disruptor.ring_buffer()[seq] = seq;
                 disruptor.sequencer().publish(seq);
             }

@@ -73,8 +73,8 @@ namespace demiplane::test {
                 std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
 
             const std::string conninfo = "host=" + std::string(host) + " port=" + std::string(port) +
-                                   " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                                   " password=" + std::string(password);
+                                         " dbname=" + std::string(dbname) + " user=" + std::string(user) +
+                                         " password=" + std::string(password);
 
             conn_ = PQconnectdb(conninfo.c_str());
 

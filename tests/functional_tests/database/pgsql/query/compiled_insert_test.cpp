@@ -12,7 +12,8 @@ class CompiledInsertTest : public PgsqlTestFixture {
 protected:
     void SetUp() override {
         PgsqlTestFixture::SetUp();
-        if (connection() == nullptr) return;
+        if (connection() == nullptr)
+            return;
         CreateUsersTable();
         TruncateUsersTable();
     }
@@ -24,13 +25,15 @@ protected:
         PgsqlTestFixture::TearDown();
     }
 
-    [[nodiscard]] int CountRows() const { return CountUsersRows(); }
+    [[nodiscard]] int CountRows() const {
+        return CountUsersRows();
+    }
 };
 
 // ============== Basic INSERT Tests ==============
 
 TEST_F(CompiledInsertTest, InsertSingleRow) {
-    auto query = library().produce<ins::BasicInsert>();
+    auto query  = library().produce<ins::BasicInsert>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
@@ -38,10 +41,8 @@ TEST_F(CompiledInsertTest, InsertSingleRow) {
 }
 
 TEST_F(CompiledInsertTest, InsertMultipleColumns) {
-    const auto& s = library().schemas().users();
-    auto query = insert_into(s.table)
-                     .into({"name", "age", "active"})
-                     .values({std::string{"Bob"}, 25, false});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "age", "active"}).values({std::string{"Bob"}, 25, false});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -55,8 +56,8 @@ TEST_F(CompiledInsertTest, InsertMultipleColumns) {
 }
 
 TEST_F(CompiledInsertTest, InsertPartialColumns) {
-    const auto& s = library().schemas().users();
-    auto query = insert_into(s.table).into({"name", "age"}).values({std::string{"Charlie"}, 35});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Charlie"}, 35});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -72,7 +73,7 @@ TEST_F(CompiledInsertTest, InsertPartialColumns) {
 // ============== INSERT with Multiple Rows ==============
 
 TEST_F(CompiledInsertTest, InsertMultipleRows) {
-    auto query = library().produce<ins::InsertMultipleValues>();
+    auto query  = library().produce<ins::InsertMultipleValues>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
@@ -82,7 +83,7 @@ TEST_F(CompiledInsertTest, InsertMultipleRows) {
 // ============== INSERT with Record ==============
 
 TEST_F(CompiledInsertTest, InsertFromRecord) {
-    auto query = library().produce<ins::InsertWithRecord>();
+    auto query  = library().produce<ins::InsertWithRecord>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
@@ -94,7 +95,7 @@ TEST_F(CompiledInsertTest, InsertFromRecord) {
 }
 
 TEST_F(CompiledInsertTest, InsertBatchRecords) {
-    auto query = library().produce<ins::InsertBatch>();
+    auto query  = library().produce<ins::InsertBatch>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Batch insert failed: " << result.error<ErrorContext>();
@@ -104,8 +105,8 @@ TEST_F(CompiledInsertTest, InsertBatchRecords) {
 // ============== INSERT with Different Data Types ==============
 
 TEST_F(CompiledInsertTest, InsertWithBoolean) {
-    const auto& s = library().schemas().users();
-    auto query = insert_into(s.table).into({"name", "active"}).values({std::string{"Helen"}, true});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "active"}).values({std::string{"Helen"}, true});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -120,8 +121,8 @@ TEST_F(CompiledInsertTest, InsertWithBoolean) {
 }
 
 TEST_F(CompiledInsertTest, InsertWithInteger) {
-    const auto& s = library().schemas().users();
-    auto query = insert_into(s.table).into({"name", "age"}).values({std::string{"Ivan"}, 42});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Ivan"}, 42});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -137,8 +138,7 @@ TEST_F(CompiledInsertTest, InsertWithInteger) {
 
 TEST_F(CompiledInsertTest, InsertWithString) {
     const auto& s = library().schemas().users();
-    auto query =
-        insert_into(s.table).into({"name"}).values({std::string{"Long Name With Spaces And Special Ch@rs"}});
+    auto query = insert_into(s.table).into({"name"}).values({std::string{"Long Name With Spaces And Special Ch@rs"}});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -155,9 +155,8 @@ TEST_F(CompiledInsertTest, InsertWithString) {
 // ============== INSERT with NULL Values ==============
 
 TEST_F(CompiledInsertTest, InsertWithNullAge) {
-    const auto& s = library().schemas().users();
-    auto query =
-        insert_into(s.table).into({"name", "age"}).values({std::string{"Julia"}, std::monostate{}});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Julia"}, std::monostate{}});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -176,7 +175,7 @@ TEST_F(CompiledInsertTest, InsertWithNullAge) {
 // ============== INSERT with Table Name String ==============
 
 TEST_F(CompiledInsertTest, InsertWithTableName) {
-    auto query = library().produce<ins::InsertWithTableName>();
+    auto query  = library().produce<ins::InsertWithTableName>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
@@ -209,8 +208,8 @@ TEST_F(CompiledInsertTest, InsertLargeBatch) {
 // ============== INSERT Edge Cases ==============
 
 TEST_F(CompiledInsertTest, InsertEmptyString) {
-    const auto& s = library().schemas().users();
-    auto query = insert_into(s.table).into({"name", "age"}).values({std::string{""}, 25});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{""}, 25});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);
@@ -220,8 +219,8 @@ TEST_F(CompiledInsertTest, InsertEmptyString) {
 }
 
 TEST_F(CompiledInsertTest, InsertZeroValues) {
-    const auto& s = library().schemas().users();
-    auto query = insert_into(s.table).into({"name", "age"}).values({std::string{"Zero Age"}, 0});
+    const auto& s       = library().schemas().users();
+    auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Zero Age"}, 0});
     auto compiled_query = library().compiler().compile(query);
 
     auto result = executor().execute(compiled_query);

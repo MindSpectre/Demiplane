@@ -4,7 +4,6 @@
 #include <typeinfo>
 
 #include <db_core_objects.hpp>
-
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;

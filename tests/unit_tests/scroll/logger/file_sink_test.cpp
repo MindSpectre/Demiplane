@@ -10,8 +10,10 @@ protected:
     demiplane::scroll::FileSinkConfig cfg = demiplane::scroll::FileSinkConfig{}
                                                 .threshold(demiplane::scroll::DBG)
                                                 .file("test.log")
-                                                .add_time_to_filename(false).rotation(false)
-                                                .flush_each_entry(true).finalize();
+                                                .add_time_to_filename(false)
+                                                .rotation(false)
+                                                .flush_each_entry(true)
+                                                .finalize();
 
     std::unique_ptr<demiplane::scroll::Logger> logger;
     std::shared_ptr<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>> file_sink;
@@ -95,8 +97,8 @@ TEST_F(FileSinkTest, ThresholdChangeAffectsLogging) {
     // Recreate logger with new threshold
     logger = std::make_unique<demiplane::scroll::Logger>();
     cfg.threshold(demiplane::scroll::WRN);
-    auto sink     = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(cfg);
-    file_sink     = sink;
+    auto sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(cfg);
+    file_sink = sink;
     logger->add_sink(std::move(sink));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));

@@ -11,7 +11,8 @@ class CompiledConditionTest : public PgsqlTestFixture {
 protected:
     void SetUp() override {
         PgsqlTestFixture::SetUp();
-        if (connection() == nullptr) return;
+        if (connection() == nullptr)
+            return;
         CreateStandardTables();
         InsertConditionTestData();
     }

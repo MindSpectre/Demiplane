@@ -1,11 +1,10 @@
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <typeindex>
 #include <typeinfo>
-#include <type_traits>
 
 #include <db_core_objects.hpp>
-
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;

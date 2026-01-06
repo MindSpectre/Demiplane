@@ -5,10 +5,10 @@
 
 # Common link libraries for all query tests
 set(PGSQL_QUERY_TEST_LIBS
-    Demiplane::Component::Database::PostgreSQL
-    ${TESTS_SHARED}.Database.QueryLibrary
-    ${FUNCTIONAL_POSTGRESQL_TESTS}.TestFixture
-    ${TEST_LIBS}
+        Demiplane::Component::Database::PostgreSQL
+        ${TESTS_SHARED}.Database.QueryLibrary
+        ${FUNCTIONAL_POSTGRESQL_TESTS}.TestFixture
+        ${TEST_LIBS}
 )
 
 # SELECT query tests (using QueryLibrary)
@@ -16,7 +16,7 @@ add_functional_test(
         ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledSelect
         compiled_select_test.cpp
         LINK_LIBS
-            ${PGSQL_QUERY_TEST_LIBS}
+        ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )

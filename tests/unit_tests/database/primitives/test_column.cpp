@@ -4,7 +4,6 @@
 
 #include <db_column.hpp>
 #include <db_field_schema.hpp>
-
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;

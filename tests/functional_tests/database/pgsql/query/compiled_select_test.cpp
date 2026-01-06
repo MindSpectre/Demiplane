@@ -11,7 +11,8 @@ class CompiledSelectTest : public PgsqlTestFixture {
 protected:
     void SetUp() override {
         PgsqlTestFixture::SetUp();
-        if (connection() == nullptr) return;
+        if (connection() == nullptr)
+            return;
         CreateStandardTables();
         TruncateStandardTables();
     }
@@ -51,12 +52,9 @@ TEST_F(CompiledSelectTest, SelectAllColumns) {
 
 TEST_F(CompiledSelectTest, SelectDistinct) {
     // Insert duplicate data
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (id, name, age, active) VALUES (2, 'Alice', 30, true)"));
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (id, name, age, active) VALUES (3, 'Bob', 25, false)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (1, 'Alice', 30, true)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (2, 'Alice', 30, true)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (3, 'Bob', 25, false)"));
 
     auto query  = library().produce<sel::SelectDistinct>();
     auto result = executor().execute(query);
@@ -79,10 +77,10 @@ TEST_F(CompiledSelectTest, SelectWithWhere) {
 
 TEST_F(CompiledSelectTest, SelectWithJoin) {
     InsertTestUsers();
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO posts (id, user_id, title, published) VALUES (1, 1, 'Post by Alice', true)"));
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post by Bob', true)"));
+    ASSERT_TRUE(
+        executor().execute("INSERT INTO posts (id, user_id, title, published) VALUES (1, 1, 'Post by Alice', true)"));
+    ASSERT_TRUE(
+        executor().execute("INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post by Bob', true)"));
 
     auto query  = library().produce<sel::SelectWithJoin>();
     auto result = executor().execute(query);
@@ -106,11 +104,10 @@ TEST_F(CompiledSelectTest, SelectWithGroupBy) {
 TEST_F(CompiledSelectTest, SelectWithHaving) {
     // Insert more users to have groups with count > 5
     for (int i = 1; i <= 7; ++i) {
-        ASSERT_TRUE(executor().execute(
-            "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', 25, true)"));
+        ASSERT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) +
+                                       "', 25, true)"));
     }
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (name, age, active) VALUES ('Inactive', 30, false)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Inactive', 30, false)"));
 
     auto query  = library().produce<sel::SelectWithHaving>();
     auto result = executor().execute(query);
@@ -122,12 +119,9 @@ TEST_F(CompiledSelectTest, SelectWithHaving) {
 
 TEST_F(CompiledSelectTest, SelectWithOrderBy) {
     // Insert in random order
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (id, name, age, active) VALUES (1, 'Zebra', 30, true)"));
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (id, name, age, active) VALUES (2, 'Alpha', 25, true)"));
-    ASSERT_TRUE(executor().execute(
-        "INSERT INTO users (id, name, age, active) VALUES (3, 'Beta', 35, true)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (1, 'Zebra', 30, true)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (2, 'Alpha', 25, true)"));
+    ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (3, 'Beta', 35, true)"));
 
     auto query  = library().produce<sel::SelectWithOrderBy>();
     auto result = executor().execute(query);
@@ -141,9 +135,8 @@ TEST_F(CompiledSelectTest, SelectWithOrderBy) {
 TEST_F(CompiledSelectTest, SelectWithLimit) {
     // Insert 10 users
     for (int i = 1; i <= 10; ++i) {
-        ASSERT_TRUE(executor().execute(
-            "INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) + "', " +
-            std::to_string(20 + i) + ", true)"));
+        ASSERT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User" + std::to_string(i) +
+                                       "', " + std::to_string(20 + i) + ", true)"));
     }
 
     auto query  = library().produce<sel::SelectWithLimit>();

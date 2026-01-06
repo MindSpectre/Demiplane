@@ -12,7 +12,8 @@ class CompiledDeleteTest : public PgsqlTestFixture {
 protected:
     void SetUp() override {
         PgsqlTestFixture::SetUp();
-        if (connection() == nullptr) return;
+        if (connection() == nullptr)
+            return;
         CreateUsersTable();
         TruncateUsersTable();
     }
@@ -24,7 +25,9 @@ protected:
         PgsqlTestFixture::TearDown();
     }
 
-    [[nodiscard]] int CountRows() const { return CountUsersRows(); }
+    [[nodiscard]] int CountRows() const {
+        return CountUsersRows();
+    }
 };
 
 // ============== Basic DELETE Tests ==============
@@ -33,7 +36,7 @@ TEST_F(CompiledDeleteTest, DeleteSingleRow) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Alice', 30, true)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Bob', 25, false)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.name == std::string{"Alice"});
     auto compiled_query = library().compiler().compile(query);
 
@@ -53,7 +56,7 @@ TEST_F(CompiledDeleteTest, DeleteMultipleRows) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, false)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User3', 40, true)"));
 
-    auto query = library().produce<del::BasicDelete>();
+    auto query  = library().produce<del::BasicDelete>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
@@ -72,7 +75,7 @@ TEST_F(CompiledDeleteTest, DeleteWithSimpleWhere) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 40)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.age > 25);
     auto compiled_query = library().compiler().compile(query);
 
@@ -89,7 +92,7 @@ TEST_F(CompiledDeleteTest, DeleteWithComplexWhere) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User3', 35, false)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User4', 40, true)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where((s.age >= 30) && (s.active == true));
     auto compiled_query = library().compiler().compile(query);
 
@@ -105,7 +108,7 @@ TEST_F(CompiledDeleteTest, DeleteWithOrCondition) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 40)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where((s.age < 25) || (s.age > 35));
     auto compiled_query = library().compiler().compile(query);
 
@@ -122,7 +125,7 @@ TEST_F(CompiledDeleteTest, DeleteWithInCondition) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 20)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User4', 25)"));
 
-    auto query = library().produce<del::DeleteWithIn>();
+    auto query  = library().produce<del::DeleteWithIn>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
@@ -140,7 +143,7 @@ TEST_F(CompiledDeleteTest, DeleteWithBetweenCondition) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 25)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User4', 30)"));
 
-    auto query = library().produce<del::DeleteWithBetween>();
+    auto query  = library().produce<del::DeleteWithBetween>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
@@ -155,7 +158,7 @@ TEST_F(CompiledDeleteTest, DeleteAllRows) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 35)"));
 
-    auto query = library().produce<del::DeleteWithoutWhere>();
+    auto query  = library().produce<del::DeleteWithoutWhere>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
@@ -168,7 +171,7 @@ TEST_F(CompiledDeleteTest, DeleteAllRows) {
 TEST_F(CompiledDeleteTest, DeleteWithTableName) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from("users").where(s.name == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile(query);
 
@@ -184,7 +187,7 @@ TEST_F(CompiledDeleteTest, DeleteWithTableName) {
 TEST_F(CompiledDeleteTest, DeleteNoMatch) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.age > 100);
     auto compiled_query = library().compiler().compile(query);
 
@@ -196,7 +199,7 @@ TEST_F(CompiledDeleteTest, DeleteNoMatch) {
 }
 
 TEST_F(CompiledDeleteTest, DeleteEmptyTable) {
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.active == false);
     auto compiled_query = library().compiler().compile(query);
 
@@ -211,7 +214,7 @@ TEST_F(CompiledDeleteTest, DeleteWithNullComparison) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User1', NULL)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.age == 30);
     auto compiled_query = library().compiler().compile(query);
 
@@ -254,7 +257,7 @@ TEST_F(CompiledDeleteTest, DeleteWithStringComparison) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('Bob', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('Charlie', 35)"));
 
-    const auto& s = library().schemas().users();
+    const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.name == std::string{"Bob"});
     auto compiled_query = library().compiler().compile(query);
 
@@ -274,7 +277,7 @@ TEST_F(CompiledDeleteTest, DeleteWithBooleanCondition) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, active) VALUES ('User2', false)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, active) VALUES ('User3', true)"));
 
-    auto query = library().produce<del::DeleteWhere>();
+    auto query  = library().produce<del::DeleteWhere>();
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();

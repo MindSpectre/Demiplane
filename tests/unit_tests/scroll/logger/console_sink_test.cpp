@@ -94,7 +94,8 @@ TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
     EXPECT_TRUE(output1.find("Debug message") != std::string::npos);
 
     // Recreate logger with new threshold
-    const ConsoleSinkConfig cfg = ConsoleSinkConfig{}.threshold(WRN).enable_colors(false).flush_each_entry(true).finalize();
+    const ConsoleSinkConfig cfg =
+        ConsoleSinkConfig{}.threshold(WRN).enable_colors(false).flush_each_entry(true).finalize();
 
     reinit_logger(cfg);
     // Recapture for next test
@@ -108,7 +109,7 @@ TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
     logger->shutdown();
 
     // Verify nothing was logged
-    const std::string svg =  testing::internal::GetCapturedStdout();
+    const std::string svg = testing::internal::GetCapturedStdout();
     std::cout << svg << std::endl;
     EXPECT_TRUE(svg.empty());
 
@@ -165,7 +166,7 @@ TEST_F(ConsoleSinkTest, AllLogLevels) {
 
         // Recreate logger for next iteration
         if (level != FAT) {
-            auto cfg     = ConsoleSinkConfig{}.threshold(DBG).enable_colors(true).flush_each_entry(false).finalize();
+            auto cfg = ConsoleSinkConfig{}.threshold(DBG).enable_colors(true).flush_each_entry(false).finalize();
             reinit_logger(std::move(cfg));
         }
     }

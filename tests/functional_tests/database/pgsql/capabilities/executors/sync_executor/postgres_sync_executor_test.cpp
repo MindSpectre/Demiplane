@@ -23,8 +23,8 @@ protected:
 
         // Create connection string
         const std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
-                               " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                               " password=" + std::string(password);
+                                      " dbname=" + std::string(dbname) + " user=" + std::string(user) +
+                                      " password=" + std::string(password);
 
         // Connect to database
         conn_ = PQconnectdb(conn_info.c_str());

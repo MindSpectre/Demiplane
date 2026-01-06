@@ -32,8 +32,8 @@ protected:
 
         // Create connection string
         const std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
-                               " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                               " password=" + std::string(password);
+                                      " dbname=" + std::string(dbname) + " user=" + std::string(user) +
+                                      " password=" + std::string(password);
 
         // Connect to database
         conn_ = PQconnectdb(conn_info.c_str());
@@ -639,7 +639,7 @@ TEST_F(PostgresParamsTest, RoundTripByteArray) {
     ASSERT_EQ(PQresultStatus(result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
 
     // Verify bytea content
-    const int result_len          = PQgetlength(result, 0, 0);
+    const int result_len    = PQgetlength(result, 0, 0);
     const char* result_data = PQgetvalue(result, 0, 0);
 
     ASSERT_EQ(result_len, static_cast<int>(bytes.size()));
@@ -952,8 +952,7 @@ TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
         sink.push(FieldValue{static_cast<float>(i) * 1.5f});
         sink.push(FieldValue{static_cast<double>(i) * 2.5});
         sink.push(FieldValue{i % 2 == 0});
-        std::vector bytes = {
-            static_cast<uint8_t>(i), static_cast<uint8_t>(i + 1), static_cast<uint8_t>(i + 2)};
+        std::vector bytes = {static_cast<uint8_t>(i), static_cast<uint8_t>(i + 1), static_cast<uint8_t>(i + 2)};
         sink.push(FieldValue{bytes});
     }
 
@@ -962,7 +961,7 @@ TEST_F(PostgresParamsTest, InterleavedTypesPointerStability) {
 
     // Verify strings
     for (int i = 0; i < 50; ++i) {
-        const size_t idx           = static_cast<size_t>(i) * 7;
+        const size_t idx     = static_cast<size_t>(i) * 7;
         std::string expected = "String " + std::to_string(i);
         std::string actual(params->values[idx], static_cast<size_t>(params->lengths[idx]));
         EXPECT_EQ(actual, expected);

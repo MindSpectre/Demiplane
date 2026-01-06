@@ -3,11 +3,11 @@
 #include <demiplane/multithread>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "generators/time_generator.hpp"
 #include "random_utils.hpp"
 #include "stopwatch.hpp"
-
-#include <gtest/gtest.h>
 
 using namespace demiplane::multithread;
 using namespace std::chrono_literals;

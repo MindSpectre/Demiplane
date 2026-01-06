@@ -1,34 +1,22 @@
 #pragma once
+#include <chrono>
 #include <map>
 #include <optional>
 #include <string>
-#include <chrono>
 
 namespace demiplane::db::postgres {
 
     enum class NodeRole {
         PRIMARY,
-        STANDBY_SYNC,      // Synchronous standby
-        STANDBY_ASYNC,      // Asynchronous standby
-        ANALYTICS,          // Read-only for analytics
-        ARCHIVE            // Historical data
+        STANDBY_SYNC,   // Synchronous standby
+        STANDBY_ASYNC,  // Asynchronous standby
+        ANALYTICS,      // Read-only for analytics
+        ARCHIVE         // Historical data
     };
 
-    enum class SslMode {
-        DISABLE,
-        ALLOW,
-        PREFER,
-        REQUIRE,
-        VERIFY_CA,
-        VERIFY_FULL
-    };
+    enum class SslMode { DISABLE, ALLOW, PREFER, REQUIRE, VERIFY_CA, VERIFY_FULL };
 
-    enum class TransactionIsolation {
-        READ_UNCOMMITTED,
-        READ_COMMITTED,
-        REPEATABLE_READ,
-        SERIALIZABLE
-    };
+    enum class TransactionIsolation { READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE };
 
     struct ConnectionConfig {
         // Basic connection
@@ -75,4 +63,4 @@ namespace demiplane::db::postgres {
         // Validate config
         [[nodiscard]] bool validate() const;
     };
-}
+}  // namespace demiplane::db::postgres

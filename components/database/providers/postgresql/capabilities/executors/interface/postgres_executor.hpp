@@ -1,10 +1,7 @@
 #pragma once
-#include <array>
-#include <memory_resource>
-#include <compiled_query.hpp>
+
 #include <gears_outcome.hpp>
 #include <postgres_errors.hpp>
-#include <postgres_params.hpp>
 #include <postgres_result.hpp>
 
 namespace demiplane::db::postgres {

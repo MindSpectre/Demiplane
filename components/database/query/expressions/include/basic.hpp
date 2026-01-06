@@ -5,7 +5,9 @@
 
 #include <db_core_objects.hpp>
 #include <gears_concepts.hpp>
+
 #include "db_expressions_fwd.hpp"
+
 namespace demiplane::db {
     template <class Derived>
     class Expression {

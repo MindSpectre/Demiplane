@@ -15,4 +15,4 @@ namespace demiplane::db::postgres {
         constexpr static std::uint32_t oid_bytea       = 17;
         constexpr static std::uint32_t oid_timestamptz = 1184;
     };
-}  // namespace demiplane::db
+}  // namespace demiplane::db::postgres

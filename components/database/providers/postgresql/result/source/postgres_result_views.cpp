@@ -1,10 +1,10 @@
+#include "postgres_result_views.hpp"
+
 #include <variant>
 
 #include <db_field_value.hpp>
 #include <netinet/in.h>
 #include <pg_type_registry.hpp>
-
-#include "postgres_result_views.hpp"
 
 namespace demiplane::db::postgres {
     namespace {

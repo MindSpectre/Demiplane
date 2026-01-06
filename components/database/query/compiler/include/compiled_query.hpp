@@ -40,7 +40,6 @@ namespace demiplane::db {
         }
 
     private:
-
         std::pmr::string sql_;
         std::shared_ptr<void> backend_packet_;
         SupportedProviders provider_;

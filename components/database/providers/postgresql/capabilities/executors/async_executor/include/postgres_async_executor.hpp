@@ -3,7 +3,9 @@
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
+#include <compiled_query.hpp>
 #include <postgres_executor.hpp>
+#include <postgres_params.hpp>
 
 namespace demiplane::db::postgres {
 
@@ -70,8 +72,8 @@ namespace demiplane::db::postgres {
          */
         template <typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> execute(const std::string_view query,
-                                                                                                Args&&... args) {
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute(const std::string_view query, Args&&... args) {
             // NOT a coroutine - runs synchronously to completion
             // Temporaries are still alive here
 
@@ -111,9 +113,9 @@ namespace demiplane::db::postgres {
 
         // Core implementation
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-            execute_with_resources(std::string_view query,
-                                   std::shared_ptr<std::pmr::memory_resource> pool,
-                                   std::shared_ptr<Params> params) const;
+        execute_with_resources(std::string_view query,
+                               std::shared_ptr<std::pmr::memory_resource> pool,
+                               std::shared_ptr<Params> params) const;
 
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
         execute_impl(const char* query, const Params* params) const;

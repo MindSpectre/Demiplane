@@ -47,6 +47,7 @@ namespace demiplane::db::postgres {
         [[nodiscard]] PGresult* raw() const noexcept {
             return res_.get();
         }
+
     private:
         struct PgResultDeleter {
             void operator()(PGresult* r) const noexcept {
@@ -56,4 +57,4 @@ namespace demiplane::db::postgres {
         };
         std::unique_ptr<PGresult, PgResultDeleter> res_;
     };
-}  // namespace demiplane::db
+}  // namespace demiplane::db::postgres

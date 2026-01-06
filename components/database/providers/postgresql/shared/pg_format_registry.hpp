@@ -6,4 +6,4 @@ namespace demiplane::db::postgres {
         constexpr static std::uint32_t text   = 0;
         constexpr static std::uint32_t binary = 1;
     };
-}  // namespace demiplane::db
+}  // namespace demiplane::db::postgres

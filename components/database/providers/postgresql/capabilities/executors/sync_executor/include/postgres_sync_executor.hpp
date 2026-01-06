@@ -1,6 +1,8 @@
 #pragma once
 
+#include <compiled_query.hpp>
 #include <postgres_executor.hpp>
+#include <postgres_params.hpp>
 
 namespace demiplane::db::postgres {
     /**

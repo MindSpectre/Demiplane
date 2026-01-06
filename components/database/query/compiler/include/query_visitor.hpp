@@ -567,18 +567,19 @@ namespace demiplane::db {
 
     protected:
         // Virtual interface methods - now with move support for appropriate parameters
-        virtual void visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias)                            = 0;
-        virtual void visit_dynamic_column_impl(std::string_view name, std::string_view table) = 0;
-        virtual void visit_value_impl(const FieldValue& value)                                                   = 0;
-        virtual void visit_value_impl(FieldValue&& value)                                                        = 0;
-        virtual void visit_null_impl()                                                                           = 0;
+        virtual void
+        visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias) = 0;
+        virtual void visit_dynamic_column_impl(std::string_view name, std::string_view table)              = 0;
+        virtual void visit_value_impl(const FieldValue& value)                                             = 0;
+        virtual void visit_value_impl(FieldValue&& value)                                                  = 0;
+        virtual void visit_null_impl()                                                                     = 0;
 
         virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
 
-        virtual void visit_table_impl(const TablePtr& table)                     = 0;
-        virtual void visit_table_impl(std::string_view table_name)               = 0;
+        virtual void visit_table_impl(const TablePtr& table)       = 0;
+        virtual void visit_table_impl(std::string_view table_name) = 0;
 
-        virtual void visit_alias_impl(std::string_view alias)                  = 0;
+        virtual void visit_alias_impl(std::string_view alias) = 0;
 
         // Expression helpers
         virtual void visit_binary_expr_start() {
@@ -620,11 +621,11 @@ namespace demiplane::db {
         virtual void visit_in_list_separator() = 0;
 
         // Aggregate functions
-        virtual void visit_count_impl(bool distinct)                              = 0;
-        virtual void visit_sum_impl()                                             = 0;
-        virtual void visit_avg_impl()                                             = 0;
-        virtual void visit_max_impl()                                             = 0;
-        virtual void visit_min_impl()                                             = 0;
+        virtual void visit_count_impl(bool distinct)             = 0;
+        virtual void visit_sum_impl()                            = 0;
+        virtual void visit_avg_impl()                            = 0;
+        virtual void visit_max_impl()                            = 0;
+        virtual void visit_min_impl()                            = 0;
         virtual void visit_aggregate_end(std::string_view alias) = 0;
 
         // Query parts

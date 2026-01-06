@@ -1,9 +1,9 @@
 #pragma once
 
+#include <string_view>
+
 #include <gears_templates.hpp>
 #include <gears_types.hpp>
-#include <string_view>
-#include <type_traits>
 
 namespace demiplane::db {
     // Compile-time field definition - embeds type in template parameter
@@ -34,9 +34,7 @@ namespace demiplane::db {
     // field name checking with FixedString is complex. The Schema template parameter
     // provides the primary type safety.
     template <typename T, typename Schema>
-    concept IsFieldDefFromSchema = IsFieldDef<T> && requires {
-        typename Schema::fields;
-    };
+    concept IsFieldDefFromSchema = IsFieldDef<T> && requires { typename Schema::fields; };
 
     // Helper to check if a schema has a specific field by name (compile-time)
     template <typename Schema, gears::FixedString FieldName>

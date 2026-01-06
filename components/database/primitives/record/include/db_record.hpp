@@ -1,8 +1,8 @@
 #pragma once
 
 #include <boost/unordered/unordered_map.hpp>
-#include <gears_hash.hpp>
 #include <db_field.hpp>
+#include <gears_hash.hpp>
 
 namespace demiplane::db {
 

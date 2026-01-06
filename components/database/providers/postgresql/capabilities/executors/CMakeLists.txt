@@ -1,5 +1,5 @@
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface INTERFACE
-    interface/postgres_executor.hpp
+        interface/postgres_executor.hpp
 )
 
 

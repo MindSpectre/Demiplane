@@ -30,7 +30,7 @@ namespace demiplane::db {
 
     Table& Table::foreign_key(const std::string_view field_name,
                               const std::string_view ref_table,
-                                          const std::string_view ref_column) {
+                              const std::string_view ref_column) {
         if (auto* field = get_field_schema(field_name)) {
             field->is_foreign_key = true;
             field->foreign_table  = ref_table;

@@ -3,6 +3,7 @@
 #include <db_field.hpp>
 #include <db_field_schema.hpp>
 #include <db_table.hpp>
+
 namespace demiplane::db {
     Record::Record(TablePtr schema)
         : schema_(std::move(schema)) {

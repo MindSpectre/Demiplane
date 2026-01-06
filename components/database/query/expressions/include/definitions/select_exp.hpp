@@ -1,7 +1,5 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 
 namespace demiplane::db {
@@ -9,7 +7,7 @@ namespace demiplane::db {
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
     public:
         template <typename... ColumnsTp>
-            requires (std::constructible_from<Columns, ColumnsTp> && ...)
+            requires(std::constructible_from<Columns, ColumnsTp> && ...)
         constexpr explicit SelectExpr(ColumnsTp&&... cols) noexcept
             : columns_{std::forward<ColumnsTp>(cols)...} {
         }

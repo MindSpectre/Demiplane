@@ -10,9 +10,11 @@ namespace demiplane::db {
 
     constexpr const char* to_string(SupportedProviders provider) noexcept {
         switch (provider) {
-            case SupportedProviders::None: return "None";
-            case SupportedProviders::PostgreSQL: return "PostgreSQL";
+            case SupportedProviders::None:
+                return "None";
+            case SupportedProviders::PostgreSQL:
+                return "PostgreSQL";
         }
         std::unreachable();
     }
-}
+}  // namespace demiplane::db

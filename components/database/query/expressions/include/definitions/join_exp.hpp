@@ -15,13 +15,9 @@ namespace demiplane::db {
                                             AllowWhere,
                                             AllowGroupBy> {
     public:
-        template <typename QueryTp,
-                  typename TableTp,
-                  typename ConditionTp,
-                  typename AliasTp = std::string>
+        template <typename QueryTp, typename TableTp, typename ConditionTp, typename AliasTp = std::string>
             requires std::constructible_from<Query, QueryTp> && std::constructible_from<TablePtr, TableTp> &&
-                         std::constructible_from<Condition, ConditionTp> &&
-                         gears::IsStringLike<AliasTp>
+                         std::constructible_from<Condition, ConditionTp> && gears::IsStringLike<AliasTp>
         constexpr JoinExpr(QueryTp&& parent_query,
                            TableTp&& joined_table,
                            ConditionTp&& condition,
@@ -34,22 +30,17 @@ namespace demiplane::db {
               type_{join_type} {
         }
 
-        template <typename QueryTp,
-                  typename TableTp,
-                  typename ConditionTp,
-                  typename AliasTp = std::string>
+        template <typename QueryTp, typename TableTp, typename ConditionTp, typename AliasTp = std::string>
             requires std::constructible_from<Query, QueryTp> && std::constructible_from<TablePtr, TableTp> &&
-                         std::constructible_from<Condition, ConditionTp> &&
-                         gears::IsStringLike<AliasTp>
+                         std::constructible_from<Condition, ConditionTp> && gears::IsStringLike<AliasTp>
         constexpr JoinExpr(QueryTp&& parent_query,
-                                   TableTp&& joined_table,
-                                   ConditionTp&& condition,
-                                   const JoinType join_type) noexcept
-                    :
-                      query_{std::forward<QueryTp>(parent_query)},
-                      joined_table_{std::forward<TableTp>(joined_table)},
-                      on_condition_{std::forward<ConditionTp>(condition)},
-                      type_{join_type} {
+                           TableTp&& joined_table,
+                           ConditionTp&& condition,
+                           const JoinType join_type) noexcept
+            : query_{std::forward<QueryTp>(parent_query)},
+              joined_table_{std::forward<TableTp>(joined_table)},
+              on_condition_{std::forward<ConditionTp>(condition)},
+              type_{join_type} {
         }
         template <typename Self>
         [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {

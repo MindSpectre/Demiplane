@@ -9,7 +9,7 @@ add_library(${DMP_DATABASE_POSTGRESQL}.Result STATIC
 
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
-    include/
+        include/
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC

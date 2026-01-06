@@ -50,7 +50,6 @@ namespace demiplane::db::postgres {
 
         template <typename Container>
         static std::string format_binary_data(const Container& data);
-
     };
 }  // namespace demiplane::db::postgres
 

@@ -16,7 +16,7 @@ namespace demiplane::db::postgres {
         std::pmr::vector<int> lengths;
         std::pmr::vector<int> formats;  // 0 text, 1 binary
         std::pmr::vector<unsigned> oids;
-        std::pmr::deque<std::pmr::string> str_data;  // deque for pointer stability
+        std::pmr::deque<std::pmr::string> str_data;                  // deque for pointer stability
         std::pmr::deque<std::pmr::vector<std::byte>> binary_chunks;  // each binary param in its own vector
     };
 
@@ -47,7 +47,7 @@ namespace demiplane::db::postgres {
             return params_;
         }
 
-        //TODO: think about adding binary format flag(indicate dont use binary format at all)
+        // TODO: think about adding binary format flag(indicate dont use binary format at all)
     private:
         // Specializations for each type
         void bind_one(std::monostate) const;

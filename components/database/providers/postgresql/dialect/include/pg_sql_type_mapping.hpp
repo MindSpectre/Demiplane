@@ -1,19 +1,14 @@
 #pragma once
 
-
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <gears_templates.hpp>
 #include <sql_type_mapping.hpp>
 
 namespace demiplane::db {
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // POSTGRESQL TYPE MAPPINGS
-    // All FieldValue types must have a mapping here
-    // ═══════════════════════════════════════════════════════════════════════════
 
     template <>
     struct SqlTypeMapping<bool, SupportedProviders::PostgreSQL> {
@@ -89,13 +84,23 @@ namespace demiplane::db {
 
 namespace demiplane::db::postgres {
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CONVENIENCE API: postgres::sql_type_for<T>()
-    // ═══════════════════════════════════════════════════════════════════════════
-
     template <typename T>
     constexpr std::string_view sql_type_for() {
         return db::sql_type_for<T, SupportedProviders::PostgreSQL>();
     }
+
+    namespace detail {
+        template <typename T>
+        struct has_postgres_mapping {
+            // std::monostate represents NULL and doesn't need a SQL type mapping
+            static constexpr bool value =
+                std::is_same_v<T, std::monostate> || db::HasSqlTypeMapping<T, SupportedProviders::PostgreSQL>;
+        };
+    }  // namespace detail
+
+    // This will cause a compile error if any FieldValue type is missing a PostgreSQL mapping
+    static_assert(gears::all_variant_types_satisfy_v<FieldValue, detail::has_postgres_mapping>,
+                  "Missing PostgreSQL SQL type mapping for one or more FieldValue types. "
+                  "Add SqlTypeMapping<T, SupportedProviders::PostgreSQL> specialization for the missing type(s).");
 
 }  // namespace demiplane::db::postgres

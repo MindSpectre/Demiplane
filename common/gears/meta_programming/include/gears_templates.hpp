@@ -1,8 +1,8 @@
 #pragma once
 
 #include <type_traits>
+#include <variant>
 #include <vector>
-
 namespace demiplane::gears {
     template <typename>
     struct always_false : std::false_type {};
@@ -117,6 +117,25 @@ namespace demiplane::gears {
     struct overloaded : Ts... {
         using Ts::operator()...;
     };
-    template<class... Ts>
+
+    template <class... Ts>
     overloaded(Ts...) -> overloaded<Ts...>;
+
+
+    /**
+     * @brief Helper to verify a predicate holds for all types in a variant.
+     * Usage: all_types_satisfy<FieldValue, MyPredicate>() returns true if
+     *        MyPredicate<T>::value is true for every T in FieldValue.
+     */
+    template <typename Variant, template <typename> class Predicate>
+    struct all_variant_types_satisfy;
+
+    template <template <typename> class Predicate, typename... Ts>
+    struct all_variant_types_satisfy<std::variant<Ts...>, Predicate> {
+        static constexpr bool value = (Predicate<Ts>::value && ...);
+    };
+
+    template <typename Variant, template <typename> class Predicate>
+    inline constexpr bool all_variant_types_satisfy_v = all_variant_types_satisfy<Variant, Predicate>::value;
+
 }  // namespace demiplane::gears

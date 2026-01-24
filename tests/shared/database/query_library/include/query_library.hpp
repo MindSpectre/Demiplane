@@ -22,7 +22,7 @@ namespace demiplane::test {
     class QueryLibrary {
     public:
         explicit QueryLibrary(std::unique_ptr<db::SqlDialect> dialect)
-            : schemas_{TestSchemas::create()},
+            : schemas_{TestSchemas::create(dialect->type())},
               compiler_{std::move(dialect), false} {
         }
 

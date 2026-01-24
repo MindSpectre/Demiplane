@@ -1,8 +1,10 @@
 #include "test_schemas.hpp"
 
-#include "supported_providers.hpp"
-// todo: rewrite using sql mapping
-// todo: possible rewrite ddl(questionable)
+#include <postgres_sql_type_registry.hpp>
+#include <postgres_type_mapping.hpp>
+#include <supported_providers.hpp>
+
+// TODO: rewrite DDL generation using schema definitions (questionable - DDL might stay separate)
 namespace demiplane::test {
 
     // DDL Strings for PostgreSQL
@@ -72,7 +74,7 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::users_table;
             default:
-                return pgsql_ddl::users_table;
+                std::unreachable();
         }
     }
 
@@ -81,7 +83,7 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::users_extended_table;
             default:
-                return pgsql_ddl::users_extended_table;
+                std::unreachable();
         }
     }
 
@@ -90,7 +92,7 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::posts_table;
             default:
-                return pgsql_ddl::posts_table;
+                std::unreachable();
         }
     }
 
@@ -99,7 +101,7 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::orders_table;
             default:
-                return pgsql_ddl::orders_table;
+                std::unreachable();
         }
     }
 
@@ -108,7 +110,7 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::orders_extended_table;
             default:
-                return pgsql_ddl::orders_extended_table;
+                std::unreachable();
         }
     }
 
@@ -117,7 +119,7 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::comments_table;
             default:
-                return pgsql_ddl::comments_table;
+                std::unreachable();
         }
     }
 
@@ -126,24 +128,24 @@ DROP TABLE IF EXISTS users;
             case db::SupportedProviders::PostgreSQL:
                 return pgsql_ddl::drop_all;
             default:
-                return pgsql_ddl::drop_all;
+                std::unreachable();
         }
     }
 
-    TestSchemas TestSchemas::create() {
+    TestSchemas TestSchemas::create(db::SupportedProviders provider) {
         TestSchemas schemas;
-        schemas.initialize();
+        schemas.initialize(provider);
         return schemas;
     }
 
-    void TestSchemas::initialize() {
+    void TestSchemas::initialize(db::SupportedProviders provider) {
         // Users schema (basic)
         users_.table = std::make_shared<db::Table>("users");
-        users_.table->add_field<int>("id", "INTEGER")
+        users_.table->add_field<int>("id", provider)
             .primary_key("id")
-            .add_field<std::string>("name", "VARCHAR(255)")
-            .add_field<int>("age", "INTEGER")
-            .add_field<bool>("active", "BOOLEAN");
+            .add_field<std::string>("name", provider)
+            .add_field<int>("age", provider)
+            .add_field<bool>("active", provider);
         users_.id     = users_.table->column<int>("id");
         users_.name   = users_.table->column<std::string>("name");
         users_.age    = users_.table->column<int>("age");
@@ -151,13 +153,13 @@ DROP TABLE IF EXISTS users;
 
         // Users extended schema
         users_extended_.table = std::make_shared<db::Table>("users");
-        users_extended_.table->add_field<int>("id", "INTEGER")
+        users_extended_.table->add_field<int>("id", provider)
             .primary_key("id")
-            .add_field<std::string>("name", "VARCHAR(255)")
-            .add_field<int>("age", "INTEGER")
-            .add_field<bool>("active", "BOOLEAN")
-            .add_field<std::string>("department", "VARCHAR(100)")
-            .add_field<double>("salary", "DECIMAL(10,2)");
+            .add_field<std::string>("name", provider)
+            .add_field<int>("age", provider)
+            .add_field<bool>("active", provider)
+            .add_field<std::string>("department", provider)
+            .add_field<double>("salary", provider);
         users_extended_.id         = users_extended_.table->column<int>("id");
         users_extended_.name       = users_extended_.table->column<std::string>("name");
         users_extended_.age        = users_extended_.table->column<int>("age");
@@ -167,11 +169,11 @@ DROP TABLE IF EXISTS users;
 
         // Posts schema
         posts_.table = std::make_shared<db::Table>("posts");
-        posts_.table->add_field<int>("id", "INTEGER")
+        posts_.table->add_field<int>("id", provider)
             .primary_key("id")
-            .add_field<int>("user_id", "INTEGER")
-            .add_field<std::string>("title", "VARCHAR(255)")
-            .add_field<bool>("published", "BOOLEAN");
+            .add_field<int>("user_id", provider)
+            .add_field<std::string>("title", provider)
+            .add_field<bool>("published", provider);
         posts_.id        = posts_.table->column<int>("id");
         posts_.user_id   = posts_.table->column<int>("user_id");
         posts_.title     = posts_.table->column<std::string>("title");
@@ -179,25 +181,27 @@ DROP TABLE IF EXISTS users;
 
         // Orders schema (basic)
         orders_.table = std::make_shared<db::Table>("orders");
-        orders_.table->add_field<int>("id", "INTEGER")
+        orders_.table->add_field<int>("id", provider)
             .primary_key("id")
-            .add_field<int>("user_id", "INTEGER")
-            .add_field<double>("amount", "DECIMAL(10,2)")
-            .add_field<bool>("completed", "BOOLEAN");
+            .add_field<int>("user_id", provider)
+            .add_field<double>("amount", provider)
+            .add_field<bool>("completed", provider);
         orders_.id        = orders_.table->column<int>("id");
         orders_.user_id   = orders_.table->column<int>("user_id");
         orders_.amount    = orders_.table->column<double>("amount");
         orders_.completed = orders_.table->column<bool>("completed");
 
         // Orders extended schema
+        // TODO: DATE type requires FieldValue support (time_t, std::chrono::system_clock, etc.),
+        //       provider sink mapping, dialect casting, and ResultBlock integration
         orders_extended_.table = std::make_shared<db::Table>("orders");
-        orders_extended_.table->add_field<int>("id", "INTEGER")
+        orders_extended_.table->add_field<int>("id", provider)
             .primary_key("id")
-            .add_field<int>("user_id", "INTEGER")
-            .add_field<double>("amount", "DECIMAL(10,2)")
-            .add_field<bool>("completed", "BOOLEAN")
-            .add_field<std::string>("status", "VARCHAR(50)")
-            .add_field<std::string>("created_date", "DATE");
+            .add_field<int>("user_id", provider)
+            .add_field<double>("amount", provider)
+            .add_field<bool>("completed", provider)
+            .add_field<std::string>("status", provider)
+            .add_field<std::string>("created_date", std::string{db::postgres::SqlTypeRegistry::date});
         orders_extended_.id           = orders_extended_.table->column<int>("id");
         orders_extended_.user_id      = orders_extended_.table->column<int>("user_id");
         orders_extended_.amount       = orders_extended_.table->column<double>("amount");
@@ -207,11 +211,11 @@ DROP TABLE IF EXISTS users;
 
         // Comments schema
         comments_.table = std::make_shared<db::Table>("comments");
-        comments_.table->add_field<int>("id", "INTEGER")
+        comments_.table->add_field<int>("id", provider)
             .primary_key("id")
-            .add_field<int>("post_id", "INTEGER")
-            .add_field<int>("user_id", "INTEGER")
-            .add_field<std::string>("content", "TEXT");
+            .add_field<int>("post_id", provider)
+            .add_field<int>("user_id", provider)
+            .add_field<std::string>("content", provider);
         comments_.id      = comments_.table->column<int>("id");
         comments_.post_id = comments_.table->column<int>("post_id");
         comments_.user_id = comments_.table->column<int>("user_id");

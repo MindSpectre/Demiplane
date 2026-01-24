@@ -31,6 +31,7 @@ add_combined_library(${DMP_DATABASE_POSTGRESQL}
         ${DMP_DATABASE_POSTGRESQL}.Params
         ${DMP_DATABASE_POSTGRESQL}.Result
         ${DMP_DATABASE_POSTGRESQL}.Capabilities
+        ${DMP_DATABASE_POSTGRESQL}.TypeMapping
 )
 
 add_library(Demiplane::Component::Database::PostgreSQL ALIAS ${DMP_DATABASE_POSTGRESQL})

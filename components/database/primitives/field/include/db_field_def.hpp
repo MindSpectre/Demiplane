@@ -22,7 +22,8 @@ namespace demiplane::db {
         }
     };
 
-    // Helper concept to check if a type is a FieldDef
+    // Concept to check if a type is a field definition (FieldDef or SchemaMember)
+    // Uses structural typing since multiple types satisfy this interface
     template <typename T>
     concept IsFieldDef = requires {
         typename T::value_type;

@@ -479,9 +479,9 @@ namespace demiplane::db {
         if (!table)
             return;
 
-        sql_       += " (";
-        bool first  = true;
+        sql_ += " (";
 
+        bool first = true;
         for (const auto& field : table->fields()) {
             if (!first)
                 sql_ += ", ";
@@ -528,7 +528,7 @@ namespace demiplane::db {
     }
 
     void SqlGeneratorVisitor::visit_create_table_end() {
-        // PostgreSQL doesn't need anything here
+        // PostgreSQL doesn't need anything here //TODO? sql visitor must be unified(call dialect)
         // Other dialects might add ENGINE, CHARSET, etc.
     }
 

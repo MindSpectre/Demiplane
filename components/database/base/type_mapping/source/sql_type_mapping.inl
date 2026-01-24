@@ -1,6 +1,7 @@
 #pragma once
 
 #include <db_table.hpp>
+#include <gears_concepts.hpp>
 #include <sql_dialect.hpp>
 namespace demiplane::db {
 
@@ -18,18 +19,18 @@ namespace demiplane::db {
 
     // TYPE-INFERRED ADD_FIELD
 
-    template <typename T>
-    Table& Table::add_field(std::string name, const SqlDialect& dialect) {
-        return add_field<T>(std::move(name), std::string(sql_type<T>(dialect)));
+    template <typename T, gears::IsStringLike StringTp>
+    Table& Table::add_field(StringTp&& name, const SqlDialect& dialect) {
+        return add_field<T>(std::forward<StringTp>(name), std::string{sql_type<T>(dialect)});
     }
 
-    template <typename T>
-    Table& Table::add_field(std::string name, const SqlDialect* dialect) {
-        return add_field<T>(std::move(name), std::string(sql_type<T>(dialect)));
+    template <typename T, gears::IsStringLike StringTp>
+    Table& Table::add_field(StringTp&& name, const SqlDialect* dialect) {
+        return add_field<T>(std::forward<StringTp>(name), std::string{sql_type<T>(dialect)});
     }
 
-    template <typename T>
-    Table& Table::add_field(std::string name, const SupportedProviders provider) {
-        return add_field<T>(std::move(name), std::string{sql_type<T>(provider)});
+    template <typename T, gears::IsStringLike StringTp>
+    Table& Table::add_field(StringTp&& name, const SupportedProviders provider) {
+        return add_field<T>(std::forward<StringTp>(name), std::string{sql_type<T>(provider)});
     }
 }  // namespace demiplane::db

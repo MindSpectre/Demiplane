@@ -1,6 +1,7 @@
 #pragma once
 #include <concepts>
 
+#include <db_field_value.hpp>
 #include <gears_templates.hpp>
 
 namespace demiplane::db {
@@ -51,8 +52,11 @@ namespace demiplane::db {
     template <typename T>
     concept IsExistExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, ExistsExpr>;
 
+    template <typename T>
+    concept IsBetweenBound = HasAcceptVisitor<T> || IsFieldValueType<T>;
+
     // Between expression concept
-    template <typename Operand, typename Lower, typename Upper>
+    template <typename Operand, IsBetweenBound Lower, IsBetweenBound Upper>
     class BetweenExpr;
 
     template <typename T>

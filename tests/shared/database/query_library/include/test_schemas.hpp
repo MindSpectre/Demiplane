@@ -77,7 +77,7 @@ namespace demiplane::test {
             db::TableColumn<std::string> content{nullptr, ""};
         };
 
-        static TestSchemas create();
+        static TestSchemas create(db::SupportedProviders provider);
 
         [[nodiscard]] constexpr const UsersSchema& users() const {
             return users_;
@@ -106,7 +106,7 @@ namespace demiplane::test {
         OrdersExtendedSchema orders_extended_;
         CommentsSchema comments_;
 
-        void initialize();
+        void initialize(db::SupportedProviders provider);
     };
 
 }  // namespace demiplane::test

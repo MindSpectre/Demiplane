@@ -13,8 +13,6 @@
 #include <gears_hash.hpp>
 
 namespace demiplane::db {
-    // todo: perfect forwarding
-
     enum class SupportedProviders : std::uint8_t;
     // Forward declarations
     template <typename T>
@@ -32,32 +30,33 @@ namespace demiplane::db {
         constexpr explicit Table(StringTp&& table_name) noexcept
             : table_name_{std::forward<StringTp>(table_name)} {
         }
-        // ✨ Schema-aware constructor - auto-initializes fields from Schema::fields
-        template <HasSchemaFields Schema>
-        explicit Table(std::string table_name, Schema schema);
+        // Schema-aware constructor - auto-initializes fields from Schema::fields
+        template <HasSchemaFields Schema, gears::IsStringLike StringTp>
+        explicit Table(StringTp&& table_name, Schema schema);
 
         // Enhanced builder pattern with type information
-        template <typename T>
-        Table& add_field(std::string name, std::string db_type);
+        template <typename T, gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
+        Table& add_field(StringTp1&& name, StringTp2&& db_type);
 
         // Overload for runtime type specification
-        Table& add_field(std::string name, std::string db_type, std::type_index cpp_type);
+        template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
+        Table& add_field(StringTp1&& name, StringTp2&& db_type, std::type_index cpp_type);
 
 
         // TYPE-INFERRED ADD_FIELD - SQL type derived from C++ type
 
 
         // Infer SQL type from dialect reference
-        template <typename T>
-        Table& add_field(std::string name, const SqlDialect& dialect);
+        template <typename T, gears::IsStringLike StringTp>
+        Table& add_field(StringTp&& name, const SqlDialect& dialect);
 
         // Infer SQL type from dialect pointer
-        template <typename T>
-        Table& add_field(std::string name, const SqlDialect* dialect);
+        template <typename T, gears::IsStringLike StringTp>
+        Table& add_field(StringTp&& name, const SqlDialect* dialect);
 
         // Infer SQL type from provider enum (compile-time)
-        template <typename T>
-        Table& add_field(std::string name, SupportedProviders provider);
+        template <typename T, gears::IsStringLike StringTp>
+        Table& add_field(StringTp&& name, SupportedProviders provider);
 
         // Runtime type-safe column accessor (existing API)
         template <typename T>
@@ -90,12 +89,12 @@ namespace demiplane::db {
         Table& indexed(FieldDefT field_def);
 
         // Set database type for a field
-        template <IsFieldDef FieldDefT>
-        Table& set_db_type(FieldDefT field_def, std::string db_type);
+        template <IsFieldDef FieldDefT, gears::IsStringLike StringTp>
+        Table& set_db_type(FieldDefT field_def, StringTp&& db_type);
 
         // Add database-specific attribute
-        template <IsFieldDef FieldDefT>
-        Table& add_db_attribute(FieldDefT field_def, std::string key, std::string value);
+        template <IsFieldDef FieldDefT, gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
+        Table& add_db_attribute(FieldDefT field_def, StringTp1&& key, StringTp2&& value);
 
         [[nodiscard]] const FieldSchema* get_field_schema(std::string_view name) const;
         FieldSchema* get_field_schema(std::string_view name);

@@ -10,7 +10,7 @@ namespace demiplane::db {
     public:
         virtual ~ParamSink() noexcept                                       = default;
         virtual std::size_t push(const FieldValue& v)                       = 0;  // returns 1-based index
-        virtual std::size_t push(FieldValue&& v)                            = 0;
+        virtual std::size_t push(FieldValue&& v)                            = 0;  //? Possible benefit
         // optional: expose a backend-native “packet” handle
         [[nodiscard]] virtual std::shared_ptr<void> packet() const noexcept = 0;
     };

@@ -40,7 +40,7 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const override;
 
-        [[nodiscard]] constexpr SupportedProviders type() const override;
+        [[nodiscard]] constexpr Providers type() const override;
 
     private:
         template <typename String>

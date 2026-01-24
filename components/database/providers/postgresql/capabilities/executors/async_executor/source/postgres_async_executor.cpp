@@ -105,7 +105,7 @@ namespace demiplane::db::postgres {
 
     asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
     AsyncExecutor::execute(const CompiledQuery& query) const {
-        if (query.provider() != SupportedProviders::PostgreSQL) {
+        if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ctx{ErrorCode{ClientErrorCode::SyntaxError}};
             ctx.message = "Query compiled for different provider";
             ctx.detail  = "Expected PostgreSQL, got different backend";

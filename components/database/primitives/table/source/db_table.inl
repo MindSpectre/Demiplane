@@ -7,14 +7,15 @@ namespace demiplane::db {
 
     // CONSTRUCTORS
 
-
     // Schema-aware constructor - auto-initializes fields from Schema::fields
+    // Note: SQL types are NOT auto-resolved here; use Table::make<Schema>(provider) with type mapping
+    // to get automatic SQL type resolution, or call add_field<T>(name) after construction.
     template <HasSchemaFields Schema, gears::IsStringLike StringTp>
-    Table::Table(StringTp&& table_name, [[maybe_unused]] Schema schema)
-        : table_name_{std::forward<StringTp>(table_name)} {
-        // Use compile-time reflection to add all fields from Schema
+    constexpr Table::Table(StringTp&& table_name, [[maybe_unused]] Schema schema, const Providers provider)
+        : table_name_{std::forward<StringTp>(table_name)},
+          provider_{provider} {
+        // Use compile-time reflection to add all fields from Schema (with empty db_type)
         []<typename... FieldDefs>(gears::type_list<FieldDefs...>, Table* table) {
-            // Fold expression to add each field
             (table->add_field<typename FieldDefs::value_type>(std::string(FieldDefs::name()), ""), ...);
         }(typename Schema::fields{}, this);
     }
@@ -24,9 +25,19 @@ namespace demiplane::db {
     template <typename T, gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
     Table& Table::add_field(StringTp1&& name, StringTp2&& db_type) {
         auto field      = std::make_unique<FieldSchema>();
-        field->name     = std::string{std::forward<StringTp1>(name)};
-        field->db_type  = std::string{std::forward<StringTp2>(db_type)};
         field->cpp_type = std::type_index(typeid(T));
+
+        if constexpr (std::is_same_v<std::decay_t<StringTp1>, std::string>) {
+            field->name = std::forward<StringTp1>(name);
+        } else {
+            field->name = std::string{name};
+        }
+
+        if constexpr (std::is_same_v<std::decay_t<StringTp2>, std::string>) {
+            field->db_type = std::forward<StringTp2>(db_type);
+        } else {
+            field->db_type = std::string{db_type};
+        }
 
         field_index_[field->name] = fields_.size();
         fields_.push_back(std::move(field));
@@ -36,9 +47,19 @@ namespace demiplane::db {
     template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
     Table& Table::add_field(StringTp1&& name, StringTp2&& db_type, const std::type_index cpp_type) {
         auto field      = std::make_unique<FieldSchema>();
-        field->name     = std::string{std::forward<StringTp1>(name)};
-        field->db_type  = std::string{std::forward<StringTp2>(db_type)};
         field->cpp_type = cpp_type;
+
+        if constexpr (std::is_same_v<std::decay_t<StringTp1>, std::string>) {
+            field->name = std::forward<StringTp1>(name);
+        } else {
+            field->name = std::string{name};
+        }
+
+        if constexpr (std::is_same_v<std::decay_t<StringTp2>, std::string>) {
+            field->db_type = std::forward<StringTp2>(db_type);
+        } else {
+            field->db_type = std::string{db_type};
+        }
 
         field_index_[field->name] = fields_.size();
         fields_.push_back(std::move(field));
@@ -81,7 +102,7 @@ namespace demiplane::db {
     }
 
     template <IsFieldDef FieldDefT>
-    Table& Table::foreign_key(FieldDefT field_def, std::string_view ref_table, std::string_view ref_column) {
+    Table& Table::foreign_key(FieldDefT field_def, const std::string_view ref_table, const std::string_view ref_column) {
         return foreign_key(field_def.name(), ref_table, ref_column);
     }
 
@@ -102,7 +123,12 @@ namespace demiplane::db {
             throw std::runtime_error{std::string{"Field '"} + std::string{field_def.name()} + "' not found in table '" +
                                      table_name_ + "'"};
         }
-        schema->db_type = std::string{std::forward<StringTp>(db_type)};
+
+        if constexpr (std::is_same_v<std::decay_t<StringTp>, std::string>) {
+            schema->db_type = std::forward<StringTp>(db_type);
+        } else {
+            schema->db_type = std::string{db_type};
+        }
         return *this;
     }
 
@@ -113,7 +139,20 @@ namespace demiplane::db {
             throw std::runtime_error{std::string{"Field '"} + std::string{field_def.name()} + "' not found in table '" +
                                      table_name_ + "'"};
         }
-        schema->db_attributes[std::string{std::forward<StringTp1>(key)}] = std::string{std::forward<StringTp2>(value)};
+
+        if constexpr (std::is_same_v<std::decay_t<StringTp1>, std::string>) {
+            if constexpr (std::is_same_v<std::decay_t<StringTp2>, std::string>) {
+                schema->db_attributes[std::forward<StringTp1>(key)] = std::forward<StringTp2>(value);
+            } else {
+                schema->db_attributes[std::forward<StringTp1>(key)] = std::string{value};
+            }
+        } else {
+            if constexpr (std::is_same_v<std::decay_t<StringTp2>, std::string>) {
+                schema->db_attributes[std::string{key}] = std::forward<StringTp2>(value);
+            } else {
+                schema->db_attributes[std::string{key}] = std::string{value};
+            }
+        }
         return *this;
     }
 

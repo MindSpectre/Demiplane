@@ -2,14 +2,14 @@
 #include <memory>
 #include <memory_resource>
 
-#include <supported_providers.hpp>
+#include <providers.hpp>
 
 namespace demiplane::db {
     class CompiledQuery {
     public:
         constexpr CompiledQuery(std::pmr::string sql,
                                 std::shared_ptr<void> backend_packet,
-                                const SupportedProviders provider,
+                                const Providers provider,
                                 std::shared_ptr<std::pmr::monotonic_buffer_resource> arena)
             : sql_{std::move(sql)},
               backend_packet_{std::move(backend_packet)},
@@ -31,7 +31,7 @@ namespace demiplane::db {
             return std::static_pointer_cast<T>(backend_packet_);
         }
 
-        [[nodiscard]] constexpr SupportedProviders provider() const {
+        [[nodiscard]] constexpr Providers provider() const {
             return provider_;
         }
 
@@ -42,7 +42,7 @@ namespace demiplane::db {
     private:
         std::pmr::string sql_;
         std::shared_ptr<void> backend_packet_;
-        SupportedProviders provider_;
+        Providers provider_;
         std::shared_ptr<std::pmr::monotonic_buffer_resource> arena_;  // lifetime keeper
     };
 

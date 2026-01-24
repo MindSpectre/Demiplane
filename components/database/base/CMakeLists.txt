@@ -1,18 +1,4 @@
 ##############################################################################
-# Database support info
-##############################################################################
-add_library(${DMP_DATABASE}.Base.SupportInfo INTERFACE
-        support/supported_providers.hpp
-)
-target_include_directories(${DMP_DATABASE}.Base.SupportInfo INTERFACE
-        support/
-)
-target_link_libraries(${DMP_DATABASE}.Base.SupportInfo INTERFACE
-)
-##############################################################################
-
-
-##############################################################################
 # SQL Type Mapping (C++ type -> SQL type string)
 # Note: Depends on Dialect because .inl needs sql_dialect.hpp for type()
 ##############################################################################
@@ -24,7 +10,7 @@ target_include_directories(${DMP_DATABASE}.Base.TypeMapping INTERFACE
         type_mapping/include
 )
 target_link_libraries(${DMP_DATABASE}.Base.TypeMapping INTERFACE
-        ${DMP_DATABASE}.Base.SupportInfo
+        ${DMP_DATABASE}.Features
         ${DMP_DATABASE}.Base.Dialect
 )
 ##############################################################################
@@ -57,10 +43,9 @@ target_include_directories(${DMP_DATABASE}.Base.Dialect INTERFACE
 )
 target_link_libraries(${DMP_DATABASE}.Base.Dialect INTERFACE
         ${DMP_DATABASE}.Base.Params
-        ${DMP_DATABASE}.Base.SupportInfo
+        ${DMP_DATABASE}.Features
 )
 ##############################################################################
-
 
 ##############################################################################
 # Database exceptions base classes

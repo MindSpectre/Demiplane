@@ -4,7 +4,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include <supported_providers.hpp>
+#include <providers.hpp>
 
 #include "gears_utils.hpp"
 
@@ -18,14 +18,14 @@ namespace demiplane::db {
     // Unspecialized = compile error (no silent fallbacks)
 
 
-    template <typename T, SupportedProviders Provider>
+    template <typename T, Providers Provider>
     struct SqlTypeMapping;  // Primary template - intentionally undefined
 
 
     // CONCEPT: Check if type mapping exists for T and Provider
 
 
-    template <typename T, SupportedProviders P>
+    template <typename T, Providers P>
     concept HasSqlTypeMapping = requires {
         { SqlTypeMapping<std::remove_cvref_t<T>, P>::sql_type } -> std::convertible_to<std::string_view>;
     };
@@ -34,7 +34,7 @@ namespace demiplane::db {
     // COMPILE-TIME API: sql_type_for<T, Provider>()
 
 
-    template <typename T, SupportedProviders P>
+    template <typename T, Providers P>
     constexpr std::string_view sql_type_for() {
         static_assert(HasSqlTypeMapping<T, P>,
                       "No SQL type mapping exists for this type and provider. "
@@ -48,15 +48,14 @@ namespace demiplane::db {
 
 
     template <typename T>
-    constexpr std::string_view sql_type(const SupportedProviders provider) {
+    constexpr std::string_view sql_type(const Providers provider) {
         switch (provider) {
-            case SupportedProviders::PostgreSQL:
-                return sql_type_for<T, SupportedProviders::PostgreSQL>();
-            case SupportedProviders::None:
-            default:
-                break;
+            case Providers::None:
+                assert(false && "Cannot infer SQL type: Table has no provider set.");
+            case Providers::PostgreSQL:
+                return sql_type_for<T, Providers::PostgreSQL>();
         }
-        // SupportedProviders::None is invalid - no mappings exist
+        // Providers::None is invalid - no mappings exist
         std::unreachable();
     }
 

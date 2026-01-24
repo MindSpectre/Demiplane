@@ -9,13 +9,13 @@ namespace demiplane::test {
 
     // DDL strings for schema setup (workaround until DDL builder exists)
     struct SchemaDDL {
-        static std::string_view users_table(db::SupportedProviders dialect);
-        static std::string_view users_extended_table(db::SupportedProviders dialect);
-        static std::string_view posts_table(db::SupportedProviders dialect);
-        static std::string_view orders_table(db::SupportedProviders dialect);
-        static std::string_view orders_extended_table(db::SupportedProviders dialect);
-        static std::string_view comments_table(db::SupportedProviders dialect);
-        static std::string_view drop_all(db::SupportedProviders dialect);
+        static std::string_view users_table(db::Providers dialect);
+        static std::string_view users_extended_table(db::Providers dialect);
+        static std::string_view posts_table(db::Providers dialect);
+        static std::string_view orders_table(db::Providers dialect);
+        static std::string_view orders_extended_table(db::Providers dialect);
+        static std::string_view comments_table(db::Providers dialect);
+        static std::string_view drop_all(db::Providers dialect);
     };
 
     class TestSchemas {
@@ -77,7 +77,7 @@ namespace demiplane::test {
             db::TableColumn<std::string> content{nullptr, ""};
         };
 
-        static TestSchemas create(db::SupportedProviders provider);
+        static TestSchemas create(db::Providers provider);
 
         [[nodiscard]] constexpr const UsersSchema& users() const {
             return users_;
@@ -106,7 +106,7 @@ namespace demiplane::test {
         OrdersExtendedSchema orders_extended_;
         CommentsSchema comments_;
 
-        void initialize(db::SupportedProviders provider);
+        void initialize(db::Providers provider);
     };
 
 }  // namespace demiplane::test

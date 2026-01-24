@@ -18,86 +18,86 @@ using namespace demiplane::db;
 
 
 TEST(TypeMappingCompileTime, BoolMapsToBoolean) {
-    constexpr auto type = sql_type_for<bool, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<bool, Providers::PostgreSQL>();
     EXPECT_EQ(type, "BOOLEAN");
 }
 
 TEST(TypeMappingCompileTime, Int32MapsToInteger) {
-    constexpr auto type = sql_type_for<std::int32_t, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<std::int32_t, Providers::PostgreSQL>();
     EXPECT_EQ(type, "INTEGER");
 }
 
 TEST(TypeMappingCompileTime, Int64MapsToBigint) {
-    constexpr auto type = sql_type_for<std::int64_t, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<std::int64_t, Providers::PostgreSQL>();
     EXPECT_EQ(type, "BIGINT");
 }
 
 TEST(TypeMappingCompileTime, FloatMapsToReal) {
-    constexpr auto type = sql_type_for<float, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<float, Providers::PostgreSQL>();
     EXPECT_EQ(type, "REAL");
 }
 
 TEST(TypeMappingCompileTime, DoubleMapsToDoublePrecision) {
-    constexpr auto type = sql_type_for<double, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<double, Providers::PostgreSQL>();
     EXPECT_EQ(type, "DOUBLE PRECISION");
 }
 
 TEST(TypeMappingCompileTime, StringMapsToText) {
-    constexpr auto type = sql_type_for<std::string, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<std::string, Providers::PostgreSQL>();
     EXPECT_EQ(type, "TEXT");
 }
 
 TEST(TypeMappingCompileTime, StringViewMapsToText) {
-    constexpr auto type = sql_type_for<std::string_view, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<std::string_view, Providers::PostgreSQL>();
     EXPECT_EQ(type, "TEXT");
 }
 
 TEST(TypeMappingCompileTime, ByteVectorMapsToBytea) {
-    constexpr auto type = sql_type_for<std::vector<std::uint8_t>, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<std::vector<std::uint8_t>, Providers::PostgreSQL>();
     EXPECT_EQ(type, "BYTEA");
 }
 
 TEST(TypeMappingCompileTime, ByteSpanMapsToBytea) {
-    constexpr auto type = sql_type_for<std::span<const std::uint8_t>, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<std::span<const std::uint8_t>, Providers::PostgreSQL>();
     EXPECT_EQ(type, "BYTEA");
 }
 
 
-// RUNTIME API TESTS: sql_type<T>(SupportedProviders)
+// RUNTIME API TESTS: sql_type<T>(Providers)
 
 
 TEST(TypeMappingRuntime, BoolWithProviderEnum) {
-    auto type = sql_type<bool>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<bool>(Providers::PostgreSQL);
     EXPECT_EQ(type, "BOOLEAN");
 }
 
 TEST(TypeMappingRuntime, Int32WithProviderEnum) {
-    auto type = sql_type<std::int32_t>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<std::int32_t>(Providers::PostgreSQL);
     EXPECT_EQ(type, "INTEGER");
 }
 
 TEST(TypeMappingRuntime, Int64WithProviderEnum) {
-    auto type = sql_type<std::int64_t>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<std::int64_t>(Providers::PostgreSQL);
     EXPECT_EQ(type, "BIGINT");
 }
 
 TEST(TypeMappingRuntime, FloatWithProviderEnum) {
-    auto type = sql_type<float>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<float>(Providers::PostgreSQL);
     EXPECT_EQ(type, "REAL");
 }
 
 TEST(TypeMappingRuntime, DoubleWithProviderEnum) {
-    auto type = sql_type<double>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<double>(Providers::PostgreSQL);
     EXPECT_EQ(type, "DOUBLE PRECISION");
 }
 
 TEST(TypeMappingRuntime, StringWithProviderEnum) {
-    auto type = sql_type<std::string>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<std::string>(Providers::PostgreSQL);
     EXPECT_EQ(type, "TEXT");
 }
 
 TEST(TypeMappingRuntime, ByteVectorWithProviderEnum) {
-    auto type = sql_type<std::vector<std::uint8_t>>(SupportedProviders::PostgreSQL);
+    auto type = sql_type<std::vector<std::uint8_t>>(Providers::PostgreSQL);
     EXPECT_EQ(type, "BYTEA");
 }
 
@@ -194,12 +194,13 @@ protected:
 };
 
 TEST_F(TableAddFieldTest, AddFieldWithProviderEnum) {
-    Table table("test_table");
-    table.add_field<std::int32_t>("id", SupportedProviders::PostgreSQL);
-    table.add_field<std::string>("name", SupportedProviders::PostgreSQL);
-    table.add_field<double>("price", SupportedProviders::PostgreSQL);
+    Table table("test_table", Providers::PostgreSQL);
+    table.add_field<std::int32_t>("id");
+    table.add_field<std::string>("name");
+    table.add_field<double>("price");
 
     EXPECT_EQ(table.field_count(), 3);
+    EXPECT_EQ(table.provider(), Providers::PostgreSQL);
 
     const auto* id_field = table.get_field_schema("id");
     ASSERT_NE(id_field, nullptr);
@@ -215,12 +216,13 @@ TEST_F(TableAddFieldTest, AddFieldWithProviderEnum) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithDialectRef) {
-    Table table("test_table");
-    table.add_field<bool>("active", dialect);
-    table.add_field<std::int64_t>("count", dialect);
-    table.add_field<float>("rate", dialect);
+    Table table("test_table", dialect);
+    table.add_field<bool>("active");
+    table.add_field<std::int64_t>("count");
+    table.add_field<float>("rate");
 
     EXPECT_EQ(table.field_count(), 3);
+    EXPECT_EQ(table.provider(), Providers::PostgreSQL);
 
     const auto* active_field = table.get_field_schema("active");
     ASSERT_NE(active_field, nullptr);
@@ -236,11 +238,12 @@ TEST_F(TableAddFieldTest, AddFieldWithDialectRef) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithDialectPtr) {
-    Table table("test_table");
-    table.add_field<std::vector<std::uint8_t>>("data", &dialect);
-    table.add_field<std::string_view>("description", &dialect);
+    Table table("test_table", &dialect);
+    table.add_field<std::vector<std::uint8_t>>("data");
+    table.add_field<std::string_view>("description");
 
     EXPECT_EQ(table.field_count(), 2);
+    EXPECT_EQ(table.provider(), Providers::PostgreSQL);
 
     const auto* data_field = table.get_field_schema("data");
     ASSERT_NE(data_field, nullptr);
@@ -252,13 +255,13 @@ TEST_F(TableAddFieldTest, AddFieldWithDialectPtr) {
 }
 
 TEST_F(TableAddFieldTest, MixedAddFieldApis) {
-    Table table("test_table");
+    Table table("test_table", Providers::PostgreSQL);
 
-    // All three ways to add fields
-    table.add_field<std::int32_t>("id", "SERIAL PRIMARY KEY");        // explicit (backward compat)
-    table.add_field<std::string>("name", dialect);                    // dialect ref
-    table.add_field<double>("price", &dialect);                       // dialect ptr
-    table.add_field<bool>("active", SupportedProviders::PostgreSQL);  // enum
+    // Two ways to add fields: explicit db_type or inferred from provider
+    table.add_field<std::int32_t>("id", "SERIAL PRIMARY KEY");  // explicit (backward compat)
+    table.add_field<std::string>("name");                       // inferred from provider
+    table.add_field<double>("price");                           // inferred from provider
+    table.add_field<bool>("active");                            // inferred from provider
 
     EXPECT_EQ(table.field_count(), 4);
 
@@ -279,35 +282,53 @@ TEST_F(TableAddFieldTest, MixedAddFieldApis) {
     EXPECT_EQ(active_field->db_type, "BOOLEAN");  // inferred
 }
 
+TEST_F(TableAddFieldTest, AddFieldWithoutProviderThrows) {
+    Table table("test_table");  // No provider set
+    EXPECT_EQ(table.provider(), Providers::None);
+
+    // Should throw when trying to infer SQL type without provider
+    EXPECT_THROW(table.add_field<std::int32_t>("id"), std::logic_error);
+}
+
+TEST_F(TableAddFieldTest, AddFieldWithNullDialectPtr) {
+    const SqlDialect* null_dialect = nullptr;
+    Table table("test_table", null_dialect);
+
+    EXPECT_EQ(table.provider(), Providers::None);
+
+    // Should throw because provider is None
+    EXPECT_THROW(table.add_field<std::int32_t>("id"), std::logic_error);
+}
+
 
 // CONCEPT TESTS: HasSqlTypeMapping
 
 
 TEST(TypeMappingConcept, SupportedTypesHaveMapping) {
-    static_assert(HasSqlTypeMapping<bool, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<char, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::int16_t, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::int32_t, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::int64_t, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::uint16_t, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::uint32_t, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::uint64_t, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<float, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<double, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::string, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::string_view, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::vector<std::uint8_t>, SupportedProviders::PostgreSQL>);
-    static_assert(HasSqlTypeMapping<std::span<const std::uint8_t>, SupportedProviders::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<bool, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<char, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::int16_t, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::int32_t, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::int64_t, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::uint16_t, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::uint32_t, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::uint64_t, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<float, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<double, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::string, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::string_view, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::vector<std::uint8_t>, Providers::PostgreSQL>);
+    static_assert(HasSqlTypeMapping<std::span<const std::uint8_t>, Providers::PostgreSQL>);
 }
 
 TEST(TypeMappingConcept, UnsupportedTypesDoNotHaveMapping) {
     // These should not have mappings for PostgreSQL
-    static_assert(!HasSqlTypeMapping<std::vector<int>, SupportedProviders::PostgreSQL>);
+    static_assert(!HasSqlTypeMapping<std::vector<int>, Providers::PostgreSQL>);
 
     // Nothing should have mapping for None provider
-    static_assert(!HasSqlTypeMapping<bool, SupportedProviders::None>);
-    static_assert(!HasSqlTypeMapping<int, SupportedProviders::None>);
-    static_assert(!HasSqlTypeMapping<std::string, SupportedProviders::None>);
+    static_assert(!HasSqlTypeMapping<bool, Providers::None>);
+    static_assert(!HasSqlTypeMapping<int, Providers::None>);
+    static_assert(!HasSqlTypeMapping<std::string, Providers::None>);
 }
 
 
@@ -315,16 +336,16 @@ TEST(TypeMappingConcept, UnsupportedTypesDoNotHaveMapping) {
 
 
 TEST(TypeMappingCvQualifiers, ConstTypesWork) {
-    constexpr auto type = sql_type_for<const int, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<const int, Providers::PostgreSQL>();
     EXPECT_EQ(type, "INTEGER");
 }
 
 TEST(TypeMappingCvQualifiers, VolatileTypesWork) {
-    constexpr auto type = sql_type_for<volatile int, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<volatile int, Providers::PostgreSQL>();
     EXPECT_EQ(type, "INTEGER");
 }
 
 TEST(TypeMappingCvQualifiers, ConstRefTypesWork) {
-    constexpr auto type = sql_type_for<const std::string&, SupportedProviders::PostgreSQL>();
+    constexpr auto type = sql_type_for<const std::string&, Providers::PostgreSQL>();
     EXPECT_EQ(type, "TEXT");
 }

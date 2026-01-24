@@ -61,7 +61,7 @@ namespace demiplane::db {
     }
 
     std::shared_ptr<Table> Table::clone() {
-        auto cloned = std::make_shared<Table>(table_name_);
+        auto cloned = std::make_shared<Table>(table_name_, provider_);
 
         // Copy fields
         cloned->fields_.reserve(fields_.size());

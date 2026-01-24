@@ -3,6 +3,7 @@
 #include <db_table.hpp>
 #include <gears_concepts.hpp>
 #include <sql_dialect.hpp>
+
 namespace demiplane::db {
 
     template <typename T>
@@ -17,20 +18,35 @@ namespace demiplane::db {
         return sql_type<T>(dialect->type());
     }
 
-    // TYPE-INFERRED ADD_FIELD
+    // DIALECT-BASED TABLE CONSTRUCTORS
+    // (Implemented here because sql_dialect.hpp is available)
 
-    template <typename T, gears::IsStringLike StringTp>
-    Table& Table::add_field(StringTp&& name, const SqlDialect& dialect) {
-        return add_field<T>(std::forward<StringTp>(name), std::string{sql_type<T>(dialect)});
+    // Constructor with dialect reference (extracts provider)
+    template <gears::IsStringLike StringTp>
+    constexpr Table::Table(StringTp&& table_name, const SqlDialect& dialect)
+        : table_name_{std::forward<StringTp>(table_name)},
+          provider_{dialect.type()} {
     }
 
-    template <typename T, gears::IsStringLike StringTp>
-    Table& Table::add_field(StringTp&& name, const SqlDialect* dialect) {
-        return add_field<T>(std::forward<StringTp>(name), std::string{sql_type<T>(dialect)});
+    // Constructor with dialect pointer (extracts provider, nullptr -> None)
+    template <gears::IsStringLike StringTp>
+    constexpr Table::Table(StringTp&& table_name, const SqlDialect* dialect)
+        : table_name_{std::forward<StringTp>(table_name)},
+          provider_{dialect ? dialect->type() : Providers::None} {
     }
 
+    // Infer SQL type from stored provider - throws if provider not set
     template <typename T, gears::IsStringLike StringTp>
-    Table& Table::add_field(StringTp&& name, const SupportedProviders provider) {
-        return add_field<T>(std::forward<StringTp>(name), std::string{sql_type<T>(provider)});
+    Table& Table::add_field(StringTp&& name) {
+        if (provider_ == Providers::None) {
+            throw std::logic_error{
+                "Cannot infer SQL type: Table has no provider set. "
+                "Use Table(name, provider) constructor."};
+        }
+        return add_field<T>(std::forward<StringTp>(name), sql_type<T>(provider_));
+    }
+    template <HasSchemaInfo Schema>
+    std::shared_ptr<Table> Table::make(Providers provider) {
+        return std::make_shared<Table>(std::string(Schema::table_name), Schema{}, provider);
     }
 }  // namespace demiplane::db

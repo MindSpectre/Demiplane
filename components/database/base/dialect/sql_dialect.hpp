@@ -2,7 +2,7 @@
 #include <string>
 
 #include <sql_params.hpp>
-#include <supported_providers.hpp>
+#include <providers.hpp>
 
 namespace demiplane::db {
 
@@ -55,6 +55,6 @@ namespace demiplane::db {
 
         virtual DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource) const = 0;
 
-        [[nodiscard]] constexpr virtual SupportedProviders type() const = 0;
+        [[nodiscard]] constexpr virtual Providers type() const = 0;
     };
 }  // namespace demiplane::db

@@ -11,9 +11,9 @@
 #include <db_schema_member.hpp>
 #include <gears_concepts.hpp>
 #include <gears_hash.hpp>
+#include <providers.hpp>
 
 namespace demiplane::db {
-    enum class SupportedProviders : std::uint8_t;
     // Forward declarations
     template <typename T>
     class TableColumn;
@@ -30,9 +30,25 @@ namespace demiplane::db {
         constexpr explicit Table(StringTp&& table_name) noexcept
             : table_name_{std::forward<StringTp>(table_name)} {
         }
+
+        // Constructor with provider enum
+        template <gears::IsStringLike StringTp>
+        constexpr explicit Table(StringTp&& table_name, const Providers provider) noexcept
+            : table_name_{std::forward<StringTp>(table_name)},
+              provider_{provider} {
+        }
+
+        // Constructor with dialect reference (extracts provider)
+        template <gears::IsStringLike StringTp>
+        constexpr explicit Table(StringTp&& table_name, const SqlDialect& dialect);
+
+        // Constructor with dialect pointer (extracts provider, nullptr -> None)
+        template <gears::IsStringLike StringTp>
+        constexpr explicit Table(StringTp&& table_name, const SqlDialect* dialect);
+
         // Schema-aware constructor - auto-initializes fields from Schema::fields
         template <HasSchemaFields Schema, gears::IsStringLike StringTp>
-        explicit Table(StringTp&& table_name, Schema schema);
+        constexpr explicit Table(StringTp&& table_name, Schema schema, Providers provider = Providers::None);
 
         // Enhanced builder pattern with type information
         template <typename T, gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
@@ -42,21 +58,9 @@ namespace demiplane::db {
         template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
         Table& add_field(StringTp1&& name, StringTp2&& db_type, std::type_index cpp_type);
 
-
-        // TYPE-INFERRED ADD_FIELD - SQL type derived from C++ type
-
-
-        // Infer SQL type from dialect reference
+        // Infer SQL type from stored provider - throws if provider not set
         template <typename T, gears::IsStringLike StringTp>
-        Table& add_field(StringTp&& name, const SqlDialect& dialect);
-
-        // Infer SQL type from dialect pointer
-        template <typename T, gears::IsStringLike StringTp>
-        Table& add_field(StringTp&& name, const SqlDialect* dialect);
-
-        // Infer SQL type from provider enum (compile-time)
-        template <typename T, gears::IsStringLike StringTp>
-        Table& add_field(StringTp&& name, SupportedProviders provider);
+        Table& add_field(StringTp&& name);
 
         // Runtime type-safe column accessor (existing API)
         template <typename T>
@@ -111,6 +115,10 @@ namespace demiplane::db {
             return fields_;
         }
 
+        [[nodiscard]] constexpr Providers provider() const noexcept {
+            return provider_;
+        }
+
         // Get all column names
         [[nodiscard]] std::vector<std::string> field_names() const;
 
@@ -120,16 +128,15 @@ namespace demiplane::db {
             return std::make_shared<Table>(std::move(name));
         }
 
-        // ✨ Create Table from Schema (extracts table_name automatically)
+        // Create Table from Schema (extracts table_name automatically)
         template <HasSchemaInfo Schema>
-        [[nodiscard]] static std::shared_ptr<Table> make() {
-            return std::make_shared<Table>(std::string(Schema::table_name), Schema{});
-        }
+        [[nodiscard]] static std::shared_ptr<Table> make(Providers provider = Providers::None);
 
     private:
         std::string table_name_;
         std::vector<std::unique_ptr<FieldSchema>> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
+        Providers provider_ = Providers::None;
     };
 
     using TablePtr = std::shared_ptr<const Table>;

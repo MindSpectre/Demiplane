@@ -76,7 +76,7 @@ namespace demiplane::db::postgres {
         return DialectBindPacket{.sink = std::move(sink), .packet = packet};
     }
 
-    constexpr SupportedProviders Dialect::type() const {
-        return SupportedProviders::PostgreSQL;
+    constexpr Providers Dialect::type() const {
+        return Providers::PostgreSQL;
     }
 }  // namespace demiplane::db::postgres

@@ -27,6 +27,7 @@ add_combined_library(${DMP_DATABASE_POSTGRESQL}
         SOURCES
         export/demiplane/postgresql
         LIBRARIES
+        ${DMP_DATABASE_POSTGRESQL}.Config
         ${DMP_DATABASE_POSTGRESQL}.Dialect
         ${DMP_DATABASE_POSTGRESQL}.Params
         ${DMP_DATABASE_POSTGRESQL}.Result

@@ -6,6 +6,10 @@ project("Demiplane" LANGUAGES CXX VERSION 0.2)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_CLANG_TIDY
+    clang-tidy
+    --header-filter=${CMAKE_SOURCE_DIR}/.*
+)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
 
 message("\tGENERAL SETTINGS")

@@ -1,4 +1,4 @@
-// todo: compilator tests maybe should be removed
+// todo: compiler tests maybe should be removed
 
 #include <cstdint>
 #include <span>

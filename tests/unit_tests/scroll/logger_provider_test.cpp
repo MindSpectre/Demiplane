@@ -33,7 +33,7 @@ public:
         for (const auto& msg : expected_messages) {
             EXPECT_TRUE(output.find(msg) != std::string::npos) << "Message not found: " << msg;
         }
-        demiplane::gears::enforce_non_const(this);
+        demiplane::gears::force_non_const(this);
     }
     static constexpr std::string_view name = "ServiceX";
 };

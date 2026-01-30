@@ -29,18 +29,25 @@ namespace demiplane::gears {
     }
 
     template <typename T>
-    constexpr void enforce_non_static(const T* this_ptr) {
+    constexpr void force_non_static(const T* this_ptr) {
         static_assert(!std::is_same_v<T, std::nullptr_t>, "This function cannot be called from a static context");
         static_cast<void>(this_ptr);
     }
 
 
     template <typename T>
-    constexpr void enforce_non_const(T) {
+    constexpr void force_non_const(T) {
         static_assert(!std::is_const_v<std::remove_pointer_t<T>>, "Function must not be const-qualified!");
     }
 
-    std::uint64_t ntoh64(std::uint64_t net);
+    // Elvis operator equivalent: value_or(x, y) == (x ?: y) in GCC
+    // Returns value if truthy, otherwise fallback. Value is evaluated only once.
+    template <typename T, typename U>
+    constexpr auto value_or(T&& value, U&& fallback)
+        noexcept(noexcept(value ? std::forward<T>(value) : std::forward<U>(fallback)))
+    {
+        return value ? std::forward<T>(value) : std::forward<U>(fallback);
+    }
 
     std::uint64_t hton64(std::uint64_t host);
 }  // namespace demiplane::gears

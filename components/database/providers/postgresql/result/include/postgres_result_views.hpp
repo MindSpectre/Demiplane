@@ -166,7 +166,7 @@ namespace demiplane::db::postgres {
         }
 
         [[nodiscard]] std::size_t col_index(const std::string_view name) const {
-            const int idx = PQfnumber(res_, std::string(name).c_str());
+            const int idx = PQfnumber(res_, std::string{name}.c_str());
             if (idx == -1)
                 throw std::out_of_range{"Column is not found"};
             return static_cast<std::size_t>(idx);

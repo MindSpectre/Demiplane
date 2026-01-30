@@ -12,7 +12,7 @@ namespace demiplane::db::postgres {
     class ResultBlock : gears::NonCopyable {
     public:
         explicit ResultBlock(PGresult* r)
-            : res_(r) {
+            : res_{r} {
         }
 
         [[nodiscard]] bool empty() const noexcept {
@@ -25,25 +25,26 @@ namespace demiplane::db::postgres {
             return static_cast<std::size_t>(PQnfields(res_.get()));
         }
 
-        [[nodiscard]] RowView row(const std::size_t i) const {
+        [[nodiscard]] RowView get_row(const std::size_t i) const {
             return RowView{res_.get(), i};
         }
 
         // convenience
         template <class T>
         std::optional<T> get_opt(const std::size_t r, const std::size_t c) const {
-            const auto f = row(r)[c];
+            const auto f = get_row(r)[c];
             if (f.is_null())
                 return std::nullopt;
             return f.as<T>();
         }
         template <class T>
-        T get(const std::size_t r, const std::size_t c) const {
-            const auto f = row(r)[c];
+        T get(const std::size_t row, const std::size_t column) const {
+            const auto f = get_row(row)[column];
             if (f.is_null())
                 throw std::runtime_error("get() failed");
             return f.as<T>();
         }
+
         [[nodiscard]] PGresult* raw() const noexcept {
             return res_.get();
         }

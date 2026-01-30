@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 #include <libpq-fe.h>
 
+#include "postgres_connection_credentials.hpp"
 #include "postgres_dialect.hpp"
 #include "postgres_sync_executor.hpp"
 #include "query_library.hpp"
@@ -65,18 +66,14 @@ namespace demiplane::test {
 
         // Connect to PostgreSQL using environment variables
         void ConnectToDatabase() {
-            const char* host   = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
-            const char* port   = std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433";
-            const char* dbname = std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db";
-            const char* user   = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
-            const char* password =
-                std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
+            const auto credentials = db::postgres::ConnectionCredentials{}
+                                         .host(gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                                         .port(gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                                         .dbname(gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                                         .user(gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                                         .password(gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
 
-            const std::string conninfo = "host=" + std::string(host) + " port=" + std::string(port) +
-                                         " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                                         " password=" + std::string(password);
-
-            conn_ = PQconnectdb(conninfo.c_str());
+            conn_ = PQconnectdb(credentials.to_connection_string().c_str());
 
             if (PQstatus(conn_) != CONNECTION_OK) {
                 const std::string error = PQerrorMessage(conn_);
@@ -88,8 +85,7 @@ namespace demiplane::test {
 
         // Table creation helpers using SchemaDDL
         void CreateUsersTable() const {
-            const auto result =
-                executor_->execute(std::string(SchemaDDL::users_table(db::Providers::PostgreSQL)));
+            const auto result = executor_->execute(std::string(SchemaDDL::users_table(db::Providers::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create users table";
         }
 
@@ -100,14 +96,12 @@ namespace demiplane::test {
         }
 
         void CreatePostsTable() const {
-            const auto result =
-                executor_->execute(std::string(SchemaDDL::posts_table(db::Providers::PostgreSQL)));
+            const auto result = executor_->execute(std::string(SchemaDDL::posts_table(db::Providers::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create posts table";
         }
 
         void CreateOrdersTable() const {
-            const auto result =
-                executor_->execute(std::string(SchemaDDL::orders_table(db::Providers::PostgreSQL)));
+            const auto result = executor_->execute(std::string(SchemaDDL::orders_table(db::Providers::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create orders table";
         }
 
@@ -118,8 +112,7 @@ namespace demiplane::test {
         }
 
         void CreateCommentsTable() const {
-            const auto result =
-                executor_->execute(std::string(SchemaDDL::comments_table(db::Providers::PostgreSQL)));
+            const auto result = executor_->execute(std::string(SchemaDDL::comments_table(db::Providers::PostgreSQL)));
             ASSERT_TRUE(result.is_success()) << "Failed to create comments table";
         }
 

@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include <gtest/gtest.h>
 
+#include "postgres_connection_credentials.hpp"
 #include "postgres_params.hpp"
 
 using namespace demiplane::db::postgres;
@@ -16,19 +17,16 @@ class AsyncExecutorTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Get connection parameters from environment or use defaults (matching docker-compose.test.yml)
-        const char* host     = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
-        const char* port     = std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433";
-        const char* dbname   = std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db";
-        const char* user     = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
-        const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
-
-        // Create connection string
-        const std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
-                                      " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                                      " password=" + std::string(password);
+        const auto credentials =
+            ConnectionCredentials{}
+                .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
 
         // Connect to database
-        conn_ = PQconnectdb(conn_info.c_str());
+        conn_ = PQconnectdb(credentials.to_connection_string().c_str());
 
         // Check connection status
         if (PQstatus(conn_) != CONNECTION_OK) {

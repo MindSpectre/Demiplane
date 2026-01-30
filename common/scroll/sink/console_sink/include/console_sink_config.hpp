@@ -19,19 +19,10 @@ namespace demiplane::scroll {
         }
         constexpr ConsoleSinkConfig() = default;
 
-        constexpr void validate() override {
+        constexpr void validate() const override {
             // always valid
         }
-        [[nodiscard]] Json::Value serialize() const override {
-            Json::Value result;
-            // TODO: Add serialization
-            return result;
-        }
-        static ConsoleSinkConfig deserialize(const Json::Value& config) {
-            gears::unused_value(config);
-            // TODO: Add deserialization
-            std::unreachable();
-        }
+
 
         template <typename Self>
         constexpr auto&& threshold(this Self&& self, const LogLevel threshold) noexcept {
@@ -68,6 +59,17 @@ namespace demiplane::scroll {
         }
         [[nodiscard]] constexpr std::ostream* get_output() const {
             return output_;
+        }
+    protected:
+        [[nodiscard]] Json::Value wrapped_serialize() const override {
+            Json::Value result;
+            // TODO: Add serialization
+            return result;
+        }
+        void wrapped_deserialize(const Json::Value& config) override {
+            gears::unused_value(config);
+            // TODO: Add deserialization
+            std::unreachable();
         }
 
     private:

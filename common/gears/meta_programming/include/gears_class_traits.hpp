@@ -45,8 +45,8 @@ namespace demiplane::gears {
     template <typename Derived, typename SerializeStruct>
     class ConfigInterface {
     public:
-        virtual ~ConfigInterface() = default;
-        virtual void validate()    = 0;
+        virtual ~ConfigInterface()    = default;
+        constexpr virtual void validate() const = 0;
 
         // Finalize with validation - returns Derived by value
         Derived finalize() && {
@@ -58,14 +58,19 @@ namespace demiplane::gears {
             return static_cast<Derived&>(*this);
         }
         // Serialization - use the SerializeStruct template param
-        virtual SerializeStruct serialize() const = 0;
+        [[nodiscard]] SerializeStruct serialize() const {
+            validate();
+            return wrapped_serialize();
+        }
 
+        void deserialize(const SerializeStruct& config) {
+            validate();
+            wrapped_deserialize(config);
+        }
         // Static deserialization enforcement via static_assert in constructor
     protected:
-        ConfigInterface() {
-            // Compile-time check that Derived has static deserialize method
-            static_assert(IsDeserializable<Derived, SerializeStruct>,
-                          "Derived config must implement: static Derived deserialize(const SerializeStruct&)");
-        }
+        [[nodiscard]] virtual SerializeStruct wrapped_serialize() const = 0;
+
+        virtual void wrapped_deserialize(const SerializeStruct& config) = 0;
     };
 }  // namespace demiplane::gears

@@ -31,7 +31,7 @@ namespace demiplane::scroll {
         }
         constexpr FileSinkConfig() = default;
 
-        constexpr void validate() override {
+        constexpr void validate() const override {
             if (rotate_file_ && max_file_size_ == 0) {
                 throw std::invalid_argument("max_file_size must be greater than 0");
             }
@@ -44,16 +44,6 @@ namespace demiplane::scroll {
             if (rotate_file_ && !add_time_to_filename_) {
                 throw std::invalid_argument("rotation is enabled, but the dynamic filename is disabled");
             }
-        }
-        [[nodiscard]] Json::Value serialize() const override {
-            Json::Value result;
-            // TODO: Add serialization
-            return result;
-        }
-        static FileSinkConfig deserialize(const Json::Value& config) {
-            gears::unused_value(config);
-            // TODO: Add deserialization
-            std::unreachable();
         }
 
         template <typename Self>
@@ -116,6 +106,18 @@ namespace demiplane::scroll {
         }
         [[nodiscard]] constexpr bool do_rotate() const noexcept {
             return rotate_file_;
+        }
+
+    protected:
+        [[nodiscard]] Json::Value wrapped_serialize() const override {
+            Json::Value result;
+            // TODO: Add serialization
+            return result;
+        }
+        void wrapped_deserialize(const Json::Value& config) override {
+            gears::unused_value(config);
+            // TODO: Add deserialization
+            std::unreachable();
         }
 
     private:

@@ -9,18 +9,12 @@ namespace demiplane::scroll {
      */
     class LoggerConfig final : public gears::ConfigInterface<LoggerConfig, Json::Value> {
     public:
-        constexpr void validate() override {
+        constexpr void validate() const override {
             if (std::popcount(ring_buffer_size_) != 1) {
                 throw std::invalid_argument("Ring buffer size must be a power of 2");
             }
         }
-        [[nodiscard]] Json::Value serialize() const override {
-            throw std::logic_error("Not implemented");
-        }
-        static LoggerConfig deserialize(const Json::Value& config) {
-            gears::unused_value(config);
-            std::unreachable();
-        }
+
         /// @brief Ring buffer size (must be power of 2)
 
         /// @brief Wait strategy for consumer thread
@@ -62,7 +56,14 @@ namespace demiplane::scroll {
         [[nodiscard]] constexpr WaitStrategy get_wait_strategy() const noexcept {
             return wait_strategy_;
         }
-
+    protected:
+        [[nodiscard]] Json::Value wrapped_serialize() const override {
+            throw std::logic_error("Not implemented");
+        }
+        void wrapped_deserialize(const Json::Value& config) override {
+            gears::unused_value(config);
+            std::unreachable();
+        }
     private:
         std::size_t ring_buffer_size_ = BufferCapacity::Medium;
 

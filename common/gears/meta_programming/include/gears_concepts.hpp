@@ -31,7 +31,7 @@ namespace demiplane::gears {
 
 
     template <typename T, typename SerializeStruct>
-    concept IsDeserializable = requires(const SerializeStruct& data) {
+    concept IsStaticDeserializable = requires(const SerializeStruct& data) {
         { T::deserialize(data) } -> std::same_as<T>;
     };
 
@@ -41,7 +41,7 @@ namespace demiplane::gears {
     };
 
     template <typename T, typename SerializeStruct>
-    concept IsConfigSerializable = IsSerializable<T, SerializeStruct> && IsDeserializable<T, SerializeStruct>;
+    concept IsConfigSerializable = IsSerializable<T, SerializeStruct> && IsStaticDeserializable<T, SerializeStruct>;
 
     template <typename T>
     concept IsStringLike = std::constructible_from<std::string, std::remove_cvref_t<T>>;

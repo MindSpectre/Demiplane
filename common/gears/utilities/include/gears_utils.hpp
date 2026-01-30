@@ -49,5 +49,4 @@ namespace demiplane::gears {
         return value ? std::forward<T>(value) : std::forward<U>(fallback);
     }
 
-    std::uint64_t hton64(std::uint64_t host);
 }  // namespace demiplane::gears

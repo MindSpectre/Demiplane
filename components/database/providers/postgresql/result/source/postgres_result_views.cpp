@@ -3,8 +3,9 @@
 #include <variant>
 
 #include <db_field_value.hpp>
-#include <netinet/in.h>
 #include <postgres_oid_type_registry.hpp>
+
+#include <gears_convert.hpp>
 
 namespace demiplane::db::postgres {
     namespace {
@@ -47,7 +48,7 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int2) {
             uint16_t be;
             std::memcpy(&be, ptr_, 2);
-            return static_cast<int16_t>(ntohs(be));
+            return static_cast<int16_t>(gears::ntoh(be));
         }
         return decode_integer_text<int16_t>();
     }
@@ -56,7 +57,7 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int4) {
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            return static_cast<int32_t>(ntohl(be));
+            return static_cast<int32_t>(gears::ntoh(be));
         }
         return decode_integer_text<int32_t>();
     }
@@ -65,7 +66,7 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            return static_cast<int64_t>(gears::ntoh64(be));
+            return static_cast<int64_t>(gears::ntoh(be));
         }
         return decode_integer_text<int64_t>();
     }
@@ -75,12 +76,12 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int4) {
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            return static_cast<uint16_t>(ntohl(be));
+            return static_cast<uint16_t>(gears::ntoh(be));
         }
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int2) {
             uint16_t be;
             std::memcpy(&be, ptr_, 2);
-            return ntohs(be);
+            return gears::ntoh(be);
         }
         return decode_integer_text<uint16_t>();
     }
@@ -90,12 +91,12 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            return static_cast<uint32_t>(gears::ntoh64(be));
+            return static_cast<uint32_t>(gears::ntoh(be));
         }
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int4) {
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            return ntohl(be);
+            return gears::ntoh(be);
         }
         return decode_integer_text<uint32_t>();
     }
@@ -105,7 +106,7 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            return gears::ntoh64(be);
+            return gears::ntoh(be);
         }
         return decode_integer_text<uint64_t>();
     }
@@ -114,7 +115,7 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_float4) {  // ← FIXED: was oid_float8
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            const uint32_t host = ntohl(be);
+            const uint32_t host = gears::ntoh(be);
             float f;
             std::memcpy(&f, &host, 4);
             return f;
@@ -140,7 +141,7 @@ namespace demiplane::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_float8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            const uint64_t host = gears::ntoh64(be);
+            const uint64_t host = gears::ntoh(be);
             double d;
             std::memcpy(&d, &host, 8);
             return d;

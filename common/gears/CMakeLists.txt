@@ -37,13 +37,14 @@ add_library(${DMP_GEARS}.Utilities STATIC
         utilities/include/gears_utils.hpp
         utilities/include/gears_types.hpp
         utilities/include/gears_hash.hpp
+        utilities/include/gears_convert.hpp
         utilities/source/gears_utils.cpp
 )
 target_include_directories(${DMP_GEARS}.Utilities PUBLIC
         utilities/include
 )
 target_link_libraries(${DMP_GEARS}.Utilities PUBLIC
-    ${DMP_GEARS}.MetaProgramming
+        ${DMP_GEARS}.MetaProgramming
 )
 ##############################################################################
 

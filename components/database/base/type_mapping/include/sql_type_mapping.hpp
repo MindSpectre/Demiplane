@@ -72,3 +72,4 @@ namespace demiplane::db {
 }  // namespace demiplane::db
 
 #include "../source/sql_type_mapping.inl"
+#include "../source/db_table_mapping.inl"

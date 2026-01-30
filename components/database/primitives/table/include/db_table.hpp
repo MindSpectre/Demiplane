@@ -46,9 +46,14 @@ namespace demiplane::db {
         template <gears::IsStringLike StringTp>
         constexpr explicit Table(StringTp&& table_name, const SqlDialect* dialect);
 
+
         // Schema-aware constructor - auto-initializes fields from Schema::fields
         template <HasSchemaFields Schema, gears::IsStringLike StringTp>
-        constexpr explicit Table(StringTp&& table_name, Schema schema, Providers provider = Providers::None);
+        constexpr explicit Table(StringTp&& table_name, Schema schema);
+
+        // Schema-aware constructor - auto-initializes fields from Schema::fields
+        template <HasSchemaFields Schema, gears::IsStringLike StringTp>
+        constexpr explicit Table(StringTp&& table_name, Schema schema, Providers provider);
 
         // Enhanced builder pattern with type information
         template <typename T, gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
@@ -130,8 +135,10 @@ namespace demiplane::db {
 
         // Create Table from Schema (extracts table_name automatically)
         template <HasSchemaInfo Schema>
-        [[nodiscard]] static std::shared_ptr<Table> make(Providers provider = Providers::None);
+        [[nodiscard]] static std::shared_ptr<Table> make(Providers provider);
 
+        template <HasSchemaInfo Schema>
+        [[nodiscard]] static std::shared_ptr<Table> make();
     private:
         std::string table_name_;
         std::vector<std::unique_ptr<FieldSchema>> fields_;

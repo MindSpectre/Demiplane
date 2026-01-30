@@ -414,7 +414,7 @@ struct TestSchemaFields {
 
 TEST_F(TableTest, SchemaAwareConstructor) {
     // ✨ NEW: Schema-aware constructor - auto-initializes fields!
-    Table users("users", TestSchemaFields{}, Providers::None);
+    Table users("users", TestSchemaFields{});
 
     // Fields should already exist
     EXPECT_EQ(users.field_count(), 3);
@@ -461,7 +461,7 @@ TEST_F(TableTest, SchemaAwareConstructorWithConfiguration) {
 }
 
 TEST_F(TableTest, SchemaAwareConstructorColumnAccess) {
-    Table users("users", TestSchemaFields{}, Providers::None);
+    Table users("users", TestSchemaFields{});
 
     // Compile-time type-safe column access
     TableColumn<int> id_col           = users.column(TestSchemaFields::id);

@@ -11,9 +11,8 @@ namespace demiplane::db {
     // Note: SQL types are NOT auto-resolved here; use Table::make<Schema>(provider) with type mapping
     // to get automatic SQL type resolution, or call add_field<T>(name) after construction.
     template <HasSchemaFields Schema, gears::IsStringLike StringTp>
-    constexpr Table::Table(StringTp&& table_name, [[maybe_unused]] Schema schema, const Providers provider)
-        : table_name_{std::forward<StringTp>(table_name)},
-          provider_{provider} {
+    constexpr Table::Table(StringTp&& table_name, [[maybe_unused]] Schema schema)
+        : table_name_{std::forward<StringTp>(table_name)} {
         // Use compile-time reflection to add all fields from Schema (with empty db_type)
         []<typename... FieldDefs>(gears::type_list<FieldDefs...>, Table* table) {
             (table->add_field<typename FieldDefs::value_type>(std::string(FieldDefs::name()), ""), ...);
@@ -102,7 +101,8 @@ namespace demiplane::db {
     }
 
     template <IsFieldDef FieldDefT>
-    Table& Table::foreign_key(FieldDefT field_def, const std::string_view ref_table, const std::string_view ref_column) {
+    Table&
+    Table::foreign_key(FieldDefT field_def, const std::string_view ref_table, const std::string_view ref_column) {
         return foreign_key(field_def.name(), ref_table, ref_column);
     }
 
@@ -154,6 +154,11 @@ namespace demiplane::db {
             }
         }
         return *this;
+    }
+
+    template <HasSchemaInfo Schema>
+    std::shared_ptr<Table> Table::make() {
+        return std::make_shared<Table>(std::string(Schema::table_name), Schema{});
     }
 
 }  // namespace demiplane::db

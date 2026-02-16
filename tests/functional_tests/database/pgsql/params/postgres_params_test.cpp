@@ -4,6 +4,7 @@
 #include "postgres_params.hpp"
 
 #include <cmath>
+#include <demiplane/gears>
 #include <memory_resource>
 
 #include <gtest/gtest.h>
@@ -22,16 +23,15 @@ class PostgresParamsTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Get connection parameters from environment or use defaults
-        const char* host     = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
-        const char* port     = std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433";
-        const char* dbname   = std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db";
-        const char* user     = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
-        const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
+        const std::string host     = demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost");
+        const std::string port     = demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433");
+        const std::string dbname   = demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db");
+        const std::string user     = demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user");
+        const std::string password = demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password");
 
         // Create connection string
-        const std::string conn_info = "host=" + std::string(host) + " port=" + std::string(port) +
-                                      " dbname=" + std::string(dbname) + " user=" + std::string(user) +
-                                      " password=" + std::string(password);
+        const std::string conn_info =
+            "host=" + host + " port=" + port + " dbname=" + dbname + " user=" + user + " password=" + password;
 
         // Connect to database
         conn_ = PQconnectdb(conn_info.c_str());

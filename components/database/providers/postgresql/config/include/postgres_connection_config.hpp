@@ -12,18 +12,14 @@
 #include <json/value.h>
 
 #include "postgres_connection_credentials.hpp"
-
+#include "postgres_nodes_role.hpp"
+#include "postgres_ssl_mode.hpp"
+#include "postgres_connection_tools.hpp"
 namespace demiplane::db::postgres {
 
-    enum class NodeRole {
-        PRIMARY,
-        STANDBY_SYNC,   // Synchronous standby
-        STANDBY_ASYNC,  // Asynchronous standby
-        ANALYTICS,      // Read-only for analytics
-        ARCHIVE         // Historical data
-    };
 
-    enum class SslMode { DISABLE, ALLOW, PREFER, REQUIRE, VERIFY_CA, VERIFY_FULL };
+
+
 
     enum class TransactionIsolation { READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE };
 
@@ -362,16 +358,16 @@ namespace demiplane::db::postgres {
             validate();
             std::string result = credentials_.to_connection_string();
 
-            result += " sslmode=" + std::string{ssl_mode_to_string(ssl_mode_)};
+            result += " sslmode=" + ssl_mode_to_string_t<std::string>(ssl_mode_);
 
             if (ssl_cert_) {
-                result += " sslcert=" + escape_connection_value(*ssl_cert_);
+                result += " sslcert=" + detail::escape_connection_value(*ssl_cert_);
             }
             if (ssl_key_) {
-                result += " sslkey=" + escape_connection_value(*ssl_key_);
+                result += " sslkey=" + detail::escape_connection_value(*ssl_key_);
             }
             if (ssl_root_cert_) {
-                result += " sslrootcert=" + escape_connection_value(*ssl_root_cert_);
+                result += " sslrootcert=" + detail::escape_connection_value(*ssl_root_cert_);
             }
 
             if (connect_timeout_.count() > 0) {
@@ -379,11 +375,11 @@ namespace demiplane::db::postgres {
             }
 
             if (!application_name_.empty()) {
-                result += " application_name=" + escape_connection_value(application_name_);
+                result += " application_name=" + detail::escape_connection_value(application_name_);
             }
 
             for (const auto& [key, value] : extra_options_) {
-                result += " " + key + "=" + escape_connection_value(value);
+                result += " " + key + "=" + detail::escape_connection_value(value);
             }
 
             return result;
@@ -424,84 +420,6 @@ namespace demiplane::db::postgres {
         void wrapped_deserialize(const Json::Value& config) override;
 
     private:
-        [[nodiscard]] constexpr static std::string escape_connection_value(const std::string_view value) {
-            if (value.empty()) {
-                return "''";
-            }
-
-            bool needs_quoting = false;
-            std::string escaped;
-            escaped.reserve(value.size() + 2);
-
-            for (const char c : value) {
-                if (c == '\\' || c == '\'') {
-                    escaped       += '\\';
-                    needs_quoting  = true;
-                } else if (c == ' ' || c == '=') {
-                    needs_quoting = true;
-                }
-                escaped += c;
-            }
-
-            if (needs_quoting) {
-                return std::format("'{}'", escaped);
-            }
-            return escaped;
-        }
-
-        [[nodiscard]] constexpr static std::string_view ssl_mode_to_string(const SslMode mode) noexcept {
-            switch (mode) {
-                case SslMode::DISABLE:
-                    return "disable";
-                case SslMode::ALLOW:
-                    return "allow";
-                case SslMode::PREFER:
-                    return "prefer";
-                case SslMode::REQUIRE:
-                    return "require";
-                case SslMode::VERIFY_CA:
-                    return "verify-ca";
-                case SslMode::VERIFY_FULL:
-                    return "verify-full";
-            }
-            std::unreachable();
-        }
-
-        [[nodiscard]] constexpr static SslMode ssl_mode_from_int(const int value) noexcept {
-            switch (value) {
-                case 0:
-                    return SslMode::DISABLE;
-                case 1:
-                    return SslMode::ALLOW;
-                case 2:
-                    return SslMode::PREFER;
-                case 3:
-                    return SslMode::REQUIRE;
-                case 4:
-                    return SslMode::VERIFY_CA;
-                case 5:
-                    return SslMode::VERIFY_FULL;
-                default:
-                    return SslMode::PREFER;
-            }
-        }
-
-        [[nodiscard]] constexpr static NodeRole node_role_from_int(const int value) noexcept {
-            switch (value) {
-                case 0:
-                    return NodeRole::PRIMARY;
-                case 1:
-                    return NodeRole::STANDBY_SYNC;
-                case 2:
-                    return NodeRole::STANDBY_ASYNC;
-                case 3:
-                    return NodeRole::ANALYTICS;
-                case 4:
-                    return NodeRole::ARCHIVE;
-                default:
-                    return NodeRole::PRIMARY;
-            }
-        }
 
         ConnectionCredentials credentials_;
 

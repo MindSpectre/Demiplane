@@ -3,11 +3,6 @@
 #include <format>
 
 namespace demiplane::db::postgres {
-
-
-
-
-
     [[nodiscard]] Json::Value ConnectionCredentials::wrapped_serialize() const {
         Json::Value result;
         result["host"]   = host_;
@@ -25,7 +20,4 @@ namespace demiplane::db::postgres {
         user(config.get("user", "").asString());
         password(config.get("password", "").asString());
     }
-
-
-
 }  // namespace demiplane::db::postgres

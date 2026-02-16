@@ -3,10 +3,12 @@
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Config STATIC
         include/postgres_connection_credentials.hpp
-        source/postgres_connection_credentials.cpp
         include/postgres_connection_config.hpp
+        include/postgres_ssl_mode.hpp
+        include/postgres_nodes_role.hpp
+        include/postgres_connection_tools.hpp
         source/postgres_connection_config.cpp
-        include/postgres_database_config.hpp
+        source/postgres_connection_credentials.cpp
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Config PUBLIC
         include

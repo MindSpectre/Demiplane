@@ -8,6 +8,8 @@
 #include <gears_concepts.hpp>
 #include <json/value.h>
 
+#include "postgres_connection_tools.hpp"
+
 namespace demiplane::db::postgres {
 
     /**
@@ -31,8 +33,11 @@ namespace demiplane::db::postgres {
     public:
         constexpr ConnectionCredentials() = default;
 
-        template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2, gears::IsStringLike StringTp3,
-                  gears::IsStringLike StringTp4, gears::IsStringLike StringTp5>
+        template <gears::IsStringLike StringTp1,
+                  gears::IsStringLike StringTp2,
+                  gears::IsStringLike StringTp3,
+                  gears::IsStringLike StringTp4,
+                  gears::IsStringLike StringTp5>
         constexpr ConnectionCredentials(
             StringTp1&& host, StringTp2&& port, StringTp3&& dbname, StringTp4&& user, StringTp5&& password)
             : host_{std::forward<StringTp1>(host)},
@@ -133,19 +138,19 @@ namespace demiplane::db::postgres {
             result.reserve(256);
 
             if (!host_.empty()) {
-                result += "host=" + escape_connection_value(host_) + " ";
+                result += "host=" + detail::escape_connection_value(host_) + " ";
             }
             if (!port_.empty()) {
-                result += "port=" + escape_connection_value(port_) + " ";
+                result += "port=" + detail::escape_connection_value(port_) + " ";
             }
             if (!dbname_.empty()) {
-                result += "dbname=" + escape_connection_value(dbname_) + " ";
+                result += "dbname=" + detail::escape_connection_value(dbname_) + " ";
             }
             if (!user_.empty()) {
-                result += "user=" + escape_connection_value(user_) + " ";
+                result += "user=" + detail::escape_connection_value(user_) + " ";
             }
             if (!password_.empty()) {
-                result += "password=" + escape_connection_value(password_) + " ";
+                result += "password=" + detail::escape_connection_value(password_) + " ";
             }
 
             // Remove trailing space
@@ -168,45 +173,11 @@ namespace demiplane::db::postgres {
         void wrapped_deserialize(const Json::Value& config) override;
 
     private:
-            /**
-             * @brief Escape a value for libpq connection string
-             *
-             * Rules per libpq documentation:
-             * - Backslash and single quote must be escaped with backslash
-             * - If value contains spaces or special chars, wrap in single quotes
-             */
-            [[nodiscard]] static std::string escape_connection_value(const std::string_view value) {
-                if (value.empty()) {
-                    return "''";
-                }
-
-                bool needs_quoting = false;
-                std::string escaped;
-                escaped.reserve(value.size() + 2);
-
-                for (const char c : value) {
-                    if (c == '\\' || c == '\'') {
-                        escaped       += '\\';
-                        needs_quoting  = true;
-                    } else if (c == ' ' || c == '=') {
-                        needs_quoting = true;
-                    }
-                    escaped += c;
-                }
-
-                if (needs_quoting) {
-                    return std::format("'{}'", escaped);
-                }
-                return escaped;
-            }
-
-
         std::string host_ = "localhost";
         std::string port_ = "5432";
         std::string dbname_;
         std::string user_;
         std::string password_;
-
     };
 
 }  // namespace demiplane::db::postgres

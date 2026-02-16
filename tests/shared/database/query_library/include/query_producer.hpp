@@ -9,7 +9,7 @@
 namespace demiplane::test {
 
     // Primary template declaration - specializations in producer files
-    template <IsQueryTag Tag>
+    template <IsQueryTag>
     struct QueryProducer {
         static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) = delete;
     };

@@ -32,13 +32,14 @@ namespace demiplane::gears {
     FixedString(const char (&)[N]) -> FixedString<N>;
 
 
-    // Byte
+
     namespace literals {
         template <FixedString Str>
         constexpr auto operator""_fs() {
             return Str;
         }
-
+        
+        // Byte
         constexpr unsigned long long operator""_b(const unsigned long long value) {
             return value;
         }

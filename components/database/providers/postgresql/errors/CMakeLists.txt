@@ -5,12 +5,12 @@
 # Changed from INTERFACE to STATIC to compile large SQLSTATE mapping functions.
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Errors STATIC
-        include/postgres_errors.hpp
-        source/postgres_errors.cpp
+        postgres_errors.hpp
+        postgres_errors.cpp
 )
 
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Errors PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Errors PUBLIC

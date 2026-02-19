@@ -2,12 +2,12 @@
 #
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Copier STATIC
-        source/postgres_copier.cpp
-        include/postgres_copier.hpp
+        postgres_copier.cpp
+        postgres_copier.hpp
 )
 
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Copier PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Copier PUBLIC

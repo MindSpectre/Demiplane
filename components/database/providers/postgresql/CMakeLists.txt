@@ -1,6 +1,6 @@
 set(DMP_DATABASE_POSTGRESQL ${DMP_DATABASE_PROVIDERS}.PostgreSQL)
 
-add_subdirectory(shared)
+add_subdirectory(registries)
 
 add_subdirectory(dialect)
 
@@ -14,10 +14,11 @@ add_subdirectory(result)
 
 add_subdirectory(config)
 
+add_subdirectory(connection_slot)
+
 add_subdirectory(capabilities)
 
-#add_subdirectory(session)
-
+add_subdirectory(session)
 
 #add_subdirectory(transaction)
 
@@ -33,6 +34,7 @@ add_combined_library(${DMP_DATABASE_POSTGRESQL}
         ${DMP_DATABASE_POSTGRESQL}.Result
         ${DMP_DATABASE_POSTGRESQL}.Capabilities
         ${DMP_DATABASE_POSTGRESQL}.TypeMapping
+        ${DMP_DATABASE_POSTGRESQL}.Session
 )
 
 add_library(Demiplane::Component::Database::PostgreSQL ALIAS ${DMP_DATABASE_POSTGRESQL})

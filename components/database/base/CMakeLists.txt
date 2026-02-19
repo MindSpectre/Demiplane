@@ -3,11 +3,12 @@
 # Note: Depends on Dialect because .inl needs sql_dialect.hpp for type()
 ##############################################################################
 add_library(${DMP_DATABASE}.Base.TypeMapping INTERFACE
-        type_mapping/include/sql_type_mapping.hpp
-        type_mapping/source/sql_type_mapping.inl
+        type_mapping/sql_type_mapping.hpp
+        type_mapping/detail/sql_type_mapping.inl
+        type_mapping/detail/db_table_mapping.inl
 )
 target_include_directories(${DMP_DATABASE}.Base.TypeMapping INTERFACE
-        type_mapping/include
+        type_mapping/
 )
 target_link_libraries(${DMP_DATABASE}.Base.TypeMapping INTERFACE
         ${DMP_DATABASE}.Features
@@ -51,11 +52,11 @@ target_link_libraries(${DMP_DATABASE}.Base.Dialect INTERFACE
 # Database exceptions base classes
 ##############################################################################
 add_library(${DMP_DATABASE}.Base.Errors STATIC
-        errors/include/db_exceptions.hpp
-        errors/include/db_error_codes.hpp
+        errors/db_exceptions.hpp
+        errors/db_error_codes.hpp
 )
 target_include_directories(${DMP_DATABASE}.Base.Errors PUBLIC
-        errors/include
+        errors/
 )
 target_link_libraries(${DMP_DATABASE}.Base.Errors PUBLIC
         Boost::exception

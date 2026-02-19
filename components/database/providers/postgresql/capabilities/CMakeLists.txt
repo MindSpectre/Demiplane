@@ -12,7 +12,7 @@
 #        ${DMP_DATABASE_POSTGRESQL}.Config
 #        ${DMP_DATABASE_POSTGRESQL}.Result
 #        ${DMP_DATABASE_POSTGRESQL}.Params
-#        ${DMP_DATABASE_POSTGRESQL}.Shared
+#        ${DMP_DATABASE_POSTGRESQL}.Registries
 #        ${DMP_DATABASE}.Query.Compiler
 #        Boost::asio
 #)

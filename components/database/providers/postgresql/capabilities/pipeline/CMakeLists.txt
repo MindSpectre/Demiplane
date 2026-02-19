@@ -2,12 +2,12 @@
 #
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Pipeline STATIC
-        source/postgres_pipeline.cpp
-        include/postgres_pipeline.hpp
+        postgres_pipeline.cpp
+        postgres_pipeline.hpp
 )
 
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Pipeline PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Pipeline PUBLIC

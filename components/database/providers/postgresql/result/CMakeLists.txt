@@ -2,18 +2,18 @@
 # Postgres result class + views
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Result STATIC
-        include/postgres_result_views.hpp
-        include/postgres_result.hpp
-        source/postgres_result.cpp
-        source/postgres_result_views.cpp
-
+        postgres_result.hpp
+        views/postgres_result_views.hpp
+        views/postgres_result_views.cpp
+        block/postgres_block.hpp
+        block/postgres_block.cpp
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
-        ${DMP_DATABASE_POSTGRESQL}.Shared
+        ${DMP_DATABASE_POSTGRESQL}.Registries
         ${DMP_DATABASE}.Base.Errors
         Demiplane::Common::Gears
         PostgreSQL::PostgreSQL

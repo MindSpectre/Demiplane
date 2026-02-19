@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 #include <gtest/gtest.h>
 
-#include "postgres_connection_credentials.hpp"
+#include "postgres_connection_config.hpp"
 #include "postgres_params.hpp"
 
 using namespace demiplane::db::postgres;

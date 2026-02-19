@@ -1,13 +1,13 @@
-add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface INTERFACE
-        interface/postgres_executor.hpp
+add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared INTERFACE
+        shared/process_pg_result.hpp
 )
 
 
-target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface INTERFACE
-        interface
+target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared INTERFACE
+        shared
 )
 
-target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface INTERFACE
+target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared INTERFACE
         ${DMP_DATABASE}.Query.Compiler
         ${DMP_DATABASE}.Base.Errors
         ${DMP_DATABASE_POSTGRESQL}.Errors
@@ -20,16 +20,17 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface
 # Async Executor
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async STATIC
-        async_executor/source/postgres_async_executor.cpp
-        async_executor/include/postgres_async_executor.hpp
+        async_executor/postgres_async_executor.cpp
+        async_executor/postgres_async_executor.hpp
 )
 
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async PUBLIC
-        async_executor/include/
+        async_executor/
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async PUBLIC
-        ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface
+        ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared
+        ${DMP_DATABASE_POSTGRESQL}.ConnectionSlot
         Boost::asio
 )
 ##############################################################################
@@ -38,15 +39,16 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async PUB
 # Sync Executor
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync STATIC
-        sync_executor/source/postgres_sync_executor.cpp
-        sync_executor/include/postgres_sync_executor.hpp
+        sync_executor/postgres_sync_executor.cpp
+        sync_executor/postgres_sync_executor.hpp
 )
 
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync PUBLIC
-        sync_executor/include/
+        sync_executor/
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync PUBLIC
-        ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Interface
+        ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared
+        ${DMP_DATABASE_POSTGRESQL}.ConnectionSlot
 )
 ##############################################################################

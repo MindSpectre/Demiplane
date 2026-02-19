@@ -1,14 +1,7 @@
-#include <demiplane/chrono>
-#include <query_library.hpp>
-#include <query_expressions.hpp>
-#include <postgres_dialect.hpp>
-#include <postgres_sync_executor.hpp>
-
-#include <libpq-fe.h>
-
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <demiplane/chrono>
 #include <format>
 #include <functional>
 #include <iomanip>
@@ -17,9 +10,15 @@
 #include <string>
 #include <vector>
 
+#include <libpq-fe.h>
+#include <postgres_dialect.hpp>
+#include <postgres_sync_executor.hpp>
+#include <query_expressions.hpp>
+#include <query_library.hpp>
+
 namespace {
 
-    constexpr std::size_t WARMUP_ITERATIONS = 100;
+    constexpr std::size_t WARMUP_ITERATIONS    = 100;
     constexpr std::size_t BENCHMARK_ITERATIONS = 1000;
 
     enum class BenchmarkMode { Raw, Compiled, Both };
@@ -33,11 +32,11 @@ namespace {
         double ops_per_sec{0.0};
 
         void calculate(const std::vector<std::chrono::nanoseconds>& timings) {
-            total = std::accumulate(timings.begin(), timings.end(), std::chrono::nanoseconds{0});
-            min = *std::min_element(timings.begin(), timings.end());
-            max = *std::max_element(timings.begin(), timings.end());
-            avg_ns = static_cast<double>(total.count()) / static_cast<double>(timings.size());
-            avg_us = avg_ns / 1000.0;
+            total       = std::accumulate(timings.begin(), timings.end(), std::chrono::nanoseconds{0});
+            min         = *std::min_element(timings.begin(), timings.end());
+            max         = *std::max_element(timings.begin(), timings.end());
+            avg_ns      = static_cast<double>(total.count()) / static_cast<double>(timings.size());
+            avg_us      = avg_ns / 1000.0;
             ops_per_sec = 1e9 / avg_ns;
         }
     };
@@ -50,15 +49,15 @@ namespace {
         const char* user     = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
         const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
 
-        const std::string conninfo = std::format(
-            "host={} port={} dbname={} user={} password={}",
-            host, port, dbname, user, password);
+        const std::string conninfo =
+            std::format("host={} port={} dbname={} user={} password={}", host, port, dbname, user, password);
 
         PGconn* conn = PQconnectdb(conninfo.c_str());
 
         if (PQstatus(conn) != CONNECTION_OK) {
             std::cerr << "Failed to connect to PostgreSQL: " << PQerrorMessage(conn) << "\n";
-            std::cerr << "Set environment variables: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD\n";
+            std::cerr << "Set environment variables: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, "
+                         "POSTGRES_PASSWORD\n";
             PQfinish(conn);
             return nullptr;
         }
@@ -86,9 +85,12 @@ namespace {
 
         // Insert some test data
         for (int i = 1; i <= 100; ++i) {
-            auto insert_result = executor.execute(std::format(
-                "INSERT INTO bench_users (id, name, age, active) VALUES ({}, 'User{}', {}, {})",
-                i, i, 20 + (i % 50), (i % 2 == 0) ? "true" : "false"));
+            auto insert_result = executor.execute(
+                std::format("INSERT INTO bench_users (id, name, age, active) VALUES ({}, 'User{}', {}, {})",
+                            i,
+                            i,
+                            20 + (i % 50),
+                            (i % 2 == 0) ? "true" : "false"));
             if (!insert_result.is_success()) {
                 std::cerr << "Failed to insert test data\n";
             }
@@ -113,9 +115,15 @@ namespace {
         std::cout << "====================================\n\n";
         std::cout << "Mode: ";
         switch (mode) {
-            case BenchmarkMode::Raw: std::cout << "RAW STRING ONLY\n"; break;
-            case BenchmarkMode::Compiled: std::cout << "COMPILED ONLY\n"; break;
-            case BenchmarkMode::Both: std::cout << "BOTH (interleaved)\n"; break;
+            case BenchmarkMode::Raw:
+                std::cout << "RAW STRING ONLY\n";
+                break;
+            case BenchmarkMode::Compiled:
+                std::cout << "COMPILED ONLY\n";
+                break;
+            case BenchmarkMode::Both:
+                std::cout << "BOTH (interleaved)\n";
+                break;
         }
         std::cout << "\nConfiguration:\n";
         std::cout << "  Warmup iterations:    " << WARMUP_ITERATIONS << "\n";
@@ -142,12 +150,12 @@ struct BenchmarkDef {
 
 std::vector<BenchmarkDef> get_benchmarks() {
     return {
-        {"SELECT by ID", "SELECT id, name, age FROM bench_users WHERE id = 1"},
-        {"SELECT with range", "SELECT id, name FROM bench_users WHERE age > 30"},
-        {"COUNT(*) aggregate", "SELECT COUNT(*) FROM bench_users WHERE active = true"},
-        {"UPDATE single row", "UPDATE bench_users SET age = 25 WHERE id = 1"},
+        {"SELECT by ID",          "SELECT id, name, age FROM bench_users WHERE id = 1"              },
+        {"SELECT with range",     "SELECT id, name FROM bench_users WHERE age > 30"                 },
+        {"COUNT(*) aggregate",    "SELECT COUNT(*) FROM bench_users WHERE active = true"            },
+        {"UPDATE single row",     "UPDATE bench_users SET age = 25 WHERE id = 1"                    },
         {"SELECT ORDER BY LIMIT", "SELECT id, name, age FROM bench_users ORDER BY age DESC LIMIT 10"},
-        {"GROUP BY with COUNT", "SELECT active, COUNT(*) FROM bench_users GROUP BY active"},
+        {"GROUP BY with COUNT",   "SELECT active, COUNT(*) FROM bench_users GROUP BY active"        },
     };
 }
 
@@ -169,9 +177,8 @@ void run_raw_benchmarks(demiplane::db::postgres::SyncExecutor& executor) {
 
         // Benchmark
         for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
-            auto elapsed = demiplane::chrono::Stopwatch<std::chrono::nanoseconds>::measure([&] {
-                (void)executor.execute(std::string(bench.raw_sql));
-            });
+            auto elapsed = demiplane::chrono::Stopwatch<std::chrono::nanoseconds>::measure(
+                [&] { (void)executor.execute(std::string(bench.raw_sql)); });
             timings.push_back(elapsed);
         }
 
@@ -187,10 +194,7 @@ void run_raw_benchmarks(demiplane::db::postgres::SyncExecutor& executor) {
     std::cout << std::string(50, '=') << "\n";
 }
 
-void run_compiled_benchmarks(
-    demiplane::db::postgres::SyncExecutor& executor,
-    demiplane::test::QueryLibrary& library) {
-
+void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor, demiplane::test::QueryLibrary& library) {
     using namespace demiplane::db;
 
     const auto& s = library.schemas();
@@ -198,43 +202,40 @@ void run_compiled_benchmarks(
     std::cout << "Running COMPILED benchmarks...\n\n";
 
     std::vector<std::pair<std::string_view, std::function<CompiledQuery()>>> compiled_queries = {
-        {"SELECT by ID", [&] {
-            auto query = select(s.users().id, s.users().name, s.users().age)
-                             .from("bench_users")
-                             .where(s.users().id == 1);
-            return library.compiler().compile(query);
-        }},
-        {"SELECT with range", [&] {
-            auto query = select(s.users().id, s.users().name)
-                             .from("bench_users")
-                             .where(s.users().age > 30);
-            return library.compiler().compile(query);
-        }},
-        {"COUNT(*) aggregate", [&] {
-            auto query = select(count(s.users().id))
-                             .from("bench_users")
-                             .where(s.users().active == true);
-            return library.compiler().compile(query);
-        }},
-        {"UPDATE single row", [&] {
-            auto query = update("bench_users")
-                             .set("age", 25)
-                             .where(s.users().id == 1);
-            return library.compiler().compile(query);
-        }},
-        {"SELECT ORDER BY LIMIT", [&] {
-            auto query = select(s.users().id, s.users().name, s.users().age)
-                             .from("bench_users")
-                             .order_by(desc(s.users().age))
-                             .limit(10);
-            return library.compiler().compile(query);
-        }},
-        {"GROUP BY with COUNT", [&] {
-            auto query = select(s.users().active, count(s.users().id))
-                             .from("bench_users")
-                             .group_by(s.users().active);
-            return library.compiler().compile(query);
-        }},
+        {"SELECT by ID",
+         [&] {
+             auto query =
+                 select(s.users().id, s.users().name, s.users().age).from("bench_users").where(s.users().id == 1);
+             return library.compiler().compile(query);
+         }},
+        {"SELECT with range",
+         [&] {
+             auto query = select(s.users().id, s.users().name).from("bench_users").where(s.users().age > 30);
+             return library.compiler().compile(query);
+         }},
+        {"COUNT(*) aggregate",
+         [&] {
+             auto query = select(count(s.users().id)).from("bench_users").where(s.users().active == true);
+             return library.compiler().compile(query);
+         }},
+        {"UPDATE single row",
+         [&] {
+             auto query = update("bench_users").set("age", 25).where(s.users().id == 1);
+             return library.compiler().compile(query);
+         }},
+        {"SELECT ORDER BY LIMIT",
+         [&] {
+             auto query = select(s.users().id, s.users().name, s.users().age)
+                              .from("bench_users")
+                              .order_by(desc(s.users().age))
+                              .limit(10);
+             return library.compiler().compile(query);
+         }},
+        {"GROUP BY with COUNT",
+         [&] {
+             auto query = select(s.users().active, count(s.users().id)).from("bench_users").group_by(s.users().active);
+             return library.compiler().compile(query);
+         }},
     };
 
     double total_avg = 0.0;

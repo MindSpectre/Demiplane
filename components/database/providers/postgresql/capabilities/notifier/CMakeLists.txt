@@ -2,12 +2,12 @@
 #
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Notifier STATIC
-        source/postgres_notifier.cpp
-        include/postgres_notifier.hpp
+        postgres_notifier.cpp
+        postgres_notifier.hpp
 )
 
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Notifier PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Notifier PUBLIC

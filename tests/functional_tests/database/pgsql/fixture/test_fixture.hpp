@@ -12,9 +12,9 @@
 #include <gtest/gtest.h>
 #include <libpq-fe.h>
 
-#include "postgres_connection_credentials.hpp"
-#include "postgres_dialect.hpp"
-#include "postgres_sync_executor.hpp"
+#include <postgres_sync_executor.hpp>
+#include <postgres_connection_config.hpp>
+#include <postgres_dialect.hpp>
 #include "query_library.hpp"
 #include "test_schemas.hpp"
 

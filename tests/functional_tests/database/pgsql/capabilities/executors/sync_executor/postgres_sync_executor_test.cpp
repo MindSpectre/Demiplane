@@ -1,12 +1,10 @@
 // PostgreSQL SyncExecutor Functional Tests
 // Tests the synchronous query executor with real PostgreSQL connection
 
-#include "postgres_sync_executor.hpp"
-
 #include <gtest/gtest.h>
-
-#include "postgres_connection_credentials.hpp"
-#include "postgres_params.hpp"
+#include <postgres_connection_config.hpp>
+#include <postgres_params.hpp>
+#include <postgres_sync_executor.hpp>
 
 using namespace demiplane::db::postgres;
 using namespace demiplane::db;
@@ -18,11 +16,11 @@ protected:
         // Get connection parameters from environment or use defaults (matching docker-compose.test.yml)
         const auto credentials =
             ConnectionCredentials{}
-                .host(std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost")
-                .port(std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433")
-                .dbname(std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db")
-                .user(std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user")
-                .password(std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password");
+                .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
 
         // Connect to database
         conn_ = PQconnectdb(credentials.to_connection_string().c_str());

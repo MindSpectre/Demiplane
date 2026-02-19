@@ -139,6 +139,7 @@ namespace demiplane::db {
 
         template <HasSchemaInfo Schema>
         [[nodiscard]] static std::shared_ptr<Table> make();
+
     private:
         std::string table_name_;
         std::vector<std::unique_ptr<FieldSchema>> fields_;
@@ -158,4 +159,4 @@ namespace demiplane::db {
 
 }  // namespace demiplane::db
 
-#include "../source/db_table.inl"
+#include "detail/db_table.inl"

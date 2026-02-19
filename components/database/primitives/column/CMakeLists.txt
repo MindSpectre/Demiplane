@@ -2,11 +2,11 @@
 # Column
 ##############################################################################
 add_library(${DMP_DATABASE}.Primitives.Column STATIC
-        include/db_column.hpp
+        db_column.hpp
 )
 
 target_include_directories(${DMP_DATABASE}.Primitives.Column PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_DATABASE}.Primitives.Column PUBLIC

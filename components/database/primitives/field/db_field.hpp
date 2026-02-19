@@ -94,4 +94,4 @@ namespace demiplane::db {
     };
 }  // namespace demiplane::db
 
-#include "../source/db_field.inl"
+#include "detail/db_field.inl"

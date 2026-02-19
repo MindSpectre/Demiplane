@@ -17,10 +17,6 @@
 #include "tools/postgres_connection_tools.hpp"
 namespace demiplane::db::postgres {
 
-
-
-
-
     enum class TransactionIsolation { READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE };
 
     /**

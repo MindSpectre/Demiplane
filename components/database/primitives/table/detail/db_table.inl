@@ -96,7 +96,7 @@ namespace demiplane::db {
     }
 
     template <IsFieldDef FieldDefT>
-    Table& Table::nullable(FieldDefT field_def, bool is_null) {
+    Table& Table::nullable(FieldDefT field_def, const bool is_null) {
         return nullable(field_def.name(), is_null);
     }
 

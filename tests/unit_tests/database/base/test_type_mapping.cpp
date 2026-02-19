@@ -6,9 +6,9 @@
 #include <string_view>
 #include <vector>
 
-#include <postgres_dialect.hpp>
 #include <db_table.hpp>
 #include <gtest/gtest.h>
+#include <postgres_dialect.hpp>
 #include <postgres_type_mapping.hpp>
 
 using namespace demiplane::db;

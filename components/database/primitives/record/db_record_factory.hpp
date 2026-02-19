@@ -9,7 +9,7 @@ namespace demiplane::db {
      * Provides efficient Record creation by sharing a single Table schema instance
      * across multiple Record objects, avoiding schema duplication.
      */
-    class RecordFactory {
+    class [[deprecated]] RecordFactory {
     public:
         /**
          * @brief Constructs a RecordFactory with the specified schema.

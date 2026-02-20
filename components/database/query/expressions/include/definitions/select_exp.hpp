@@ -13,7 +13,7 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        constexpr decltype(auto) set_distinct(this Self&& self, const bool d = true) noexcept {
+        constexpr auto&& set_distinct(this Self&& self, const bool d = true) noexcept {
             self.distinct_ = d;
             return std::forward<Self>(self);
         }

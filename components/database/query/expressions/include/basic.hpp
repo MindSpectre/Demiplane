@@ -16,10 +16,10 @@ namespace demiplane::db {
         void accept(this auto&& self, QueryVisitor& visitor);
 
     protected:
-        constexpr auto&& self(this auto&& self) {
-            return static_cast<
-                std::conditional_t<std::is_const_v<std::remove_reference_t<decltype(self)>>, const Derived, Derived>&&>(
-                self);
+        constexpr decltype(auto) self(this auto&& self) {
+            using Self = decltype(self);
+            using D    = std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, const Derived, Derived>;
+            return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, D&, D&&>>(self);
         }
     };
 
@@ -81,8 +81,8 @@ namespace demiplane::db {
 
         template <typename Self, typename Tp>
             requires gears::IsStringLike<Tp>
-        constexpr decltype(auto) as(this Self&& self, Tp&& alias) {
-            std::forward<Self>(self).alias_ = std::forward<Tp>(alias);
+        constexpr auto&& as(this Self&& self, Tp&& alias) {
+            self.alias_ = std::forward<Tp>(alias);
             return std::forward<Self>(self);
         }
 
@@ -133,8 +133,8 @@ namespace demiplane::db {
 
         template <typename Self, typename T>
             requires std::constructible_from<std::string, T>
-        constexpr decltype(auto) as(this Self&& self, T&& name) {
-            std::forward<Self>(self).alias_ = std::forward<T>(name);
+        constexpr auto&& as(this Self&& self, T&& name) {
+            self.alias_ = std::forward<T>(name);
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
                 std::forward<Self>(self));
         }
@@ -182,8 +182,8 @@ namespace demiplane::db {
 
         template <typename Self, typename Tp>
             requires gears::IsStringLike<Tp>
-        constexpr decltype(auto) as(this Self&& self, Tp&& name) {
-            std::forward<Self>(self).right_alias_ = std::forward<Tp>(name);
+        constexpr auto&& as(this Self&& self, Tp&& name) {
+            self.right_alias_ = std::forward<Tp>(name);
             return std::forward<Self>(self);
         }
 

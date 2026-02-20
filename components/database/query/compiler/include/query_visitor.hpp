@@ -225,6 +225,7 @@ namespace demiplane::db {
             visit(std::move(expr).cte_query());
             std::move(expr).select().accept(*this);
             visit_from_start();
+            // Safe: CTE visitor only moves query_, cte_name_ remains valid
             visit_table_impl(std::move(expr).cte_query().name());
             visit_from_end();
         }
@@ -234,7 +235,7 @@ namespace demiplane::db {
             visit(expr.cte_query());
             expr.select().accept(*this);
             visit_from_start();
-            visit_table_impl(std::move(expr).cte_query().name());
+            visit_table_impl(expr.cte_query().name());
             visit_from_end();
         }
 

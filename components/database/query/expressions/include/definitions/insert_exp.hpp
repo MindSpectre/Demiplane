@@ -15,20 +15,20 @@ namespace demiplane::db {
         }
 
         template <typename Self>
-        constexpr decltype(auto) into(this Self&& self, const std::initializer_list<std::string> cols) noexcept {
+        constexpr auto&& into(this Self&& self, const std::initializer_list<std::string> cols) noexcept {
             self.columns_ = cols;
             return std::forward<Self>(self);
         }
 
         template <typename Self>
-        constexpr decltype(auto) values(this Self&& self, std::initializer_list<FieldValue> vals) noexcept {
+        constexpr auto&& values(this Self&& self, std::initializer_list<FieldValue> vals) noexcept {
             self.rows_.emplace_back(vals);
             return std::forward<Self>(self);
         }
 
         template <typename Self, typename RecordTp>
             requires std::same_as<std::remove_cvref_t<RecordTp>, Record>
-        decltype(auto) values(this Self&& self, RecordTp&& record) noexcept {
+        auto&& values(this Self&& self, RecordTp&& record) noexcept {
             std::vector<FieldValue> row;
             row.reserve(self.columns_.size());
             for (const auto& col : self.columns_) {
@@ -44,7 +44,7 @@ namespace demiplane::db {
 
         template <typename Self, typename RecordsTp>
             requires std::same_as<std::remove_cvref_t<RecordsTp>, std::vector<Record>>
-        decltype(auto) batch(this Self&& self, RecordsTp&& records) noexcept {
+        auto&& batch(this Self&& self, RecordsTp&& records) noexcept {
             if constexpr (std::is_rvalue_reference_v<RecordsTp&&>) {
                 for (auto&& record : records) {
                     self.values(std::move(record));

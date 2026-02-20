@@ -14,14 +14,14 @@ namespace demiplane::db {
 
         template <typename Self, typename StringTp, typename FieldValueTp>
             requires std::constructible_from<std::string, StringTp> && std::constructible_from<FieldValue, FieldValueTp>
-        constexpr decltype(auto) set(this Self&& self, StringTp&& column, FieldValueTp&& value) {
+        constexpr auto&& set(this Self&& self, StringTp&& column, FieldValueTp&& value) {
             self.assignments_.emplace_back(std::forward<StringTp>(column), std::forward<FieldValueTp>(value));
             return std::forward<Self>(self);
         }
 
         template <typename Self>
-        constexpr decltype(auto) set(this Self&& self,
-                                     const std::initializer_list<std::pair<std::string, FieldValue>> assigns) {
+        constexpr auto&& set(this Self&& self,
+                             const std::initializer_list<std::pair<std::string, FieldValue>> assigns) {
             for (auto& a : assigns) {
                 self.assignments_.push_back(a);
             }

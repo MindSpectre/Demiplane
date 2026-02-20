@@ -3,7 +3,7 @@
 ##############################################################################
 
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Capabilities.Executors.Executor.Async
+        ${INTEGRATION_POSTGRESQL_TESTS}.Capabilities.Executors.Executor.Async
         postgres_async_executor_test.cpp
         LINK_LIBS
         Demiplane::Component::Database::PostgreSQL

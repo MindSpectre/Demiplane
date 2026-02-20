@@ -35,7 +35,7 @@ if (BUILD_DATABASE)
     message("Database tests will be built")
     add_subdirectory(shared/database)
     add_subdirectory(unit_tests/database)
-    add_subdirectory(functional_tests/database)
+    add_subdirectory(integration_tests/database)
 endif ()
 ##############################################################################
 

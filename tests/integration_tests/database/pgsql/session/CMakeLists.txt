@@ -3,7 +3,7 @@
 ##############################################################################
 
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Session
+        ${INTEGRATION_POSTGRESQL_TESTS}.Session
         session_test.cpp
         LINK_LIBS
         Demiplane::Component::Database::PostgreSQL

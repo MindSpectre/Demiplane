@@ -7,13 +7,13 @@
 set(PGSQL_QUERY_TEST_LIBS
         Demiplane::Component::Database::PostgreSQL
         ${TESTS_SHARED}.Database.QueryLibrary
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.TestFixture
+        ${INTEGRATION_POSTGRESQL_TESTS}.TestFixture
         ${TEST_LIBS}
 )
 
 # SELECT query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledSelect
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSelect
         compiled_select_test.cpp
         LINK_LIBS
         ${PGSQL_QUERY_TEST_LIBS}
@@ -23,7 +23,7 @@ add_functional_test(
 
 # INSERT query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledInsert
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledInsert
         compiled_insert_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -32,7 +32,7 @@ add_functional_test(
 
 # UPDATE query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledUpdate
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledUpdate
         compiled_update_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -41,7 +41,7 @@ add_functional_test(
 
 # DELETE query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledDelete
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledDelete
         compiled_delete_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -50,7 +50,7 @@ add_functional_test(
 
 # JOIN query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledJoin
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledJoin
         compiled_join_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -59,7 +59,7 @@ add_functional_test(
 
 # AGGREGATE query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledAggregate
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledAggregate
         compiled_aggregate_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -68,7 +68,7 @@ add_functional_test(
 
 # SUBQUERY query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledSubquery
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSubquery
         compiled_subquery_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -77,7 +77,7 @@ add_functional_test(
 
 # CONDITION query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledCondition
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCondition
         compiled_condition_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -86,7 +86,7 @@ add_functional_test(
 
 # CLAUSE query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledClause
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledClause
         compiled_clause_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -95,7 +95,7 @@ add_functional_test(
 
 # CTE (Common Table Expression) query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledCte
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCte
         compiled_cte_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -104,7 +104,7 @@ add_functional_test(
 
 # CASE expression query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledCase
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCase
         compiled_case_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -113,7 +113,7 @@ add_functional_test(
 
 # SET operations query tests (using QueryLibrary)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledSetOperations
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSetOperations
         compiled_set_operations_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"
@@ -122,7 +122,7 @@ add_functional_test(
 
 # DDL query tests (CREATE TABLE, DROP TABLE)
 add_functional_test(
-        ${FUNCTIONAL_POSTGRESQL_TESTS}.Query.CompiledDdl
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledDdl
         compiled_ddl_test.cpp
         LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
         LABELS "pgsql"

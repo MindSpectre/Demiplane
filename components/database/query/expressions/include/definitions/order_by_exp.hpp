@@ -8,7 +8,7 @@ namespace demiplane::db {
     class OrderBy : public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+            requires IsDynamicColumn<DynamicColumnTp>
         constexpr explicit OrderBy(DynamicColumnTp&& col, const OrderDirection dir = OrderDirection::ASC) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(col)},
               direction_{dir} {
@@ -33,13 +33,13 @@ namespace demiplane::db {
     }
 
     template <typename DynamicColumnTp>
-        requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
     constexpr OrderBy asc(DynamicColumnTp&& col) noexcept {
         return OrderBy{std::forward<DynamicColumnTp>(col), OrderDirection::ASC};
     }
 
     template <typename DynamicColumnTp>
-        requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
     constexpr OrderBy desc(DynamicColumnTp&& col) noexcept {
         return OrderBy{std::forward<DynamicColumnTp>(col), OrderDirection::DESC};
     }

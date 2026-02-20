@@ -12,7 +12,8 @@ namespace demiplane::db {
 
         // Column and literals - now with perfect forwarding
 
-        void visit(const DynamicColumn& col) {
+        template <typename S>
+        void visit(const DynamicColumn<S>& col) {
             visit_dynamic_column_impl(col.name(), col.context());
         }
 
@@ -22,13 +23,23 @@ namespace demiplane::db {
         }
 
 
-        void visit(Literal&& lit) {
-            visit_value_impl(std::move(lit).value());
-            visit_alias_impl(std::move(lit).alias());
+        template <typename T>
+        void visit(Literal<T>&& lit) {
+            if constexpr (std::is_same_v<T, FieldValue>) {
+                visit_value_impl(std::move(lit).value());
+            } else {
+                visit_value_impl(FieldValue{lit.value()});
+            }
+            visit_alias_impl(lit.alias());
         }
 
-        void visit(const Literal& lit) {
-            visit_value_impl(lit.value());
+        template <typename T>
+        void visit(const Literal<T>& lit) {
+            if constexpr (std::is_same_v<T, FieldValue>) {
+                visit_value_impl(lit.value());
+            } else {
+                visit_value_impl(FieldValue{lit.value()});
+            }
             visit_alias_impl(lit.alias());
         }
 

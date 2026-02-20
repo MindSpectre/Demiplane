@@ -28,10 +28,11 @@ namespace demiplane::db {
         requires std::derived_from<std::remove_cvref_t<T>, Expression<std::remove_cvref_t<T>>>;
     };
 
+    template <typename T = FieldValue>
     class Literal;
 
     template <typename T>
-    concept IsLiteral = std::is_same_v<std::remove_cvref_t<T>, Literal>;
+    concept IsLiteral = gears::is_specialization_of_v<std::remove_cvref_t<T>, Literal>;
 
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr;

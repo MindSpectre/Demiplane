@@ -484,8 +484,9 @@ TEST_F(AsyncExecutorTest, TableNotFound) {
 }
 
 TEST_F(AsyncExecutorTest, InvalidConnectionError) {
-    // Create executor with null connection (should throw in constructor)
-    EXPECT_THROW({ AsyncExecutor invalid_executor(nullptr, io_context_.get_executor()); }, std::runtime_error);
+    // Create executor with null connection (should not throw in constructor)
+    AsyncExecutor invalid_executor(nullptr, io_context_.get_executor());
+    EXPECT_FALSE(invalid_executor.valid());
 }
 
 // ============== Result Processing Tests ==============

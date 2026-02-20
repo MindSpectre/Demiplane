@@ -9,7 +9,7 @@ namespace demiplane::db {
     class CountExpr : public AliasableExpression<CountExpr>, public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp> &&
+            requires IsDynamicColumn<DynamicColumnTp> &&
                          (!std::same_as<std::remove_cvref_t<DynamicColumnTp>, AllColumns>)
         constexpr CountExpr(DynamicColumnTp&& col, const bool dist) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(col)},
@@ -35,7 +35,7 @@ namespace demiplane::db {
     class SumExpr : public AliasableExpression<SumExpr>, public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+            requires IsDynamicColumn<DynamicColumnTp>
         constexpr explicit SumExpr(DynamicColumnTp&& column) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(column)} {
         }
@@ -44,7 +44,7 @@ namespace demiplane::db {
     class AvgExpr : public AliasableExpression<AvgExpr>, public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+            requires IsDynamicColumn<DynamicColumnTp>
         constexpr explicit AvgExpr(DynamicColumnTp&& column) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(column)} {
         }
@@ -53,7 +53,7 @@ namespace demiplane::db {
     class MaxExpr : public AliasableExpression<MaxExpr>, public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+            requires IsDynamicColumn<DynamicColumnTp>
         constexpr explicit MaxExpr(DynamicColumnTp&& column) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(column)} {
         }
@@ -62,7 +62,7 @@ namespace demiplane::db {
     class MinExpr : public AliasableExpression<MinExpr>, public ColumnHolder {
     public:
         template <typename DynamicColumnTp>
-            requires std::constructible_from<DynamicColumn, DynamicColumnTp>
+            requires IsDynamicColumn<DynamicColumnTp>
         constexpr explicit MinExpr(DynamicColumnTp&& column) noexcept
             : ColumnHolder{std::forward<DynamicColumnTp>(column)} {
         }

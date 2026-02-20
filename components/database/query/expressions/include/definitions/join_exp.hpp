@@ -15,9 +15,9 @@ namespace demiplane::db {
                                             AllowWhere,
                                             AllowGroupBy> {
     public:
-        template <typename QueryTp, typename TableTp, typename ConditionTp, typename AliasTp = std::string>
+        template <typename QueryTp, typename TableTp, typename ConditionTp, typename AliasTp = std::string_view>
             requires std::constructible_from<Query, QueryTp> && std::constructible_from<TablePtr, TableTp> &&
-                         std::constructible_from<Condition, ConditionTp> && gears::IsStringLike<AliasTp>
+                         std::constructible_from<Condition, ConditionTp> && std::convertible_to<AliasTp, std::string_view>
         constexpr JoinExpr(QueryTp&& parent_query,
                            TableTp&& joined_table,
                            ConditionTp&& condition,
@@ -30,9 +30,9 @@ namespace demiplane::db {
               type_{join_type} {
         }
 
-        template <typename QueryTp, typename TableTp, typename ConditionTp, typename AliasTp = std::string>
+        template <typename QueryTp, typename TableTp, typename ConditionTp>
             requires std::constructible_from<Query, QueryTp> && std::constructible_from<TablePtr, TableTp> &&
-                         std::constructible_from<Condition, ConditionTp> && gears::IsStringLike<AliasTp>
+                         std::constructible_from<Condition, ConditionTp>
         constexpr JoinExpr(QueryTp&& parent_query,
                            TableTp&& joined_table,
                            ConditionTp&& condition,

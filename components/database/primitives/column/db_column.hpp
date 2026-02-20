@@ -10,31 +10,32 @@ namespace demiplane::db {
 
     class QueryVisitor;
 
+    template <typename StringType = std::string_view>
     class DynamicColumn {
     public:
-        constexpr explicit DynamicColumn(std::string name, std::string table)
+        constexpr explicit DynamicColumn(StringType name, StringType table)
             : name_{std::move(name)},
               context_{std::move(table)} {
         }
 
-        constexpr explicit DynamicColumn(std::string name)
+        constexpr explicit DynamicColumn(StringType name)
             : name_{std::move(name)} {
         }
 
-        [[nodiscard]] constexpr const std::string& name() const {
+        [[nodiscard]] constexpr std::string_view name() const noexcept {
             return name_;
         }
 
-        [[nodiscard]] constexpr const std::string& context() const {
+        [[nodiscard]] constexpr std::string_view context() const noexcept {
             return context_;
         }
 
-        constexpr DynamicColumn& set_context(std::string table) {
+        constexpr DynamicColumn& set_context(StringType table) {
             context_ = std::move(table);
             return *this;
         }
 
-        constexpr DynamicColumn& set_name(std::string name) {
+        constexpr DynamicColumn& set_name(StringType name) {
             name_ = std::move(name);
             return *this;
         }
@@ -42,10 +43,9 @@ namespace demiplane::db {
         void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
-        std::string name_;
-        std::string context_;
+        StringType name_;
+        StringType context_{};
     };
-
 
     template <typename T>
     class TableColumn {
@@ -98,8 +98,8 @@ namespace demiplane::db {
             return TableColumn{schema_, table_, std::move(alias)};
         }
 
-        [[nodiscard]] constexpr DynamicColumn as_dynamic() const& {
-            return DynamicColumn{schema_->name, *table_};
+        [[nodiscard]] constexpr DynamicColumn<std::string> as_dynamic() const& {
+            return DynamicColumn<std::string>{schema_->name, *table_};
         }
 
         void accept(this auto&& self, QueryVisitor& visitor);
@@ -130,9 +130,9 @@ namespace demiplane::db {
             return table_;
         }
 
-        [[nodiscard]] constexpr DynamicColumn as_dynamic() const {
+        [[nodiscard]] constexpr DynamicColumn<std::string> as_dynamic() const {
             //? Does it work for all dialects?
-            return DynamicColumn{"*", table_name()};
+            return DynamicColumn<std::string>{"*", table_name()};
         }
 
         void accept(this auto&& self, QueryVisitor& visitor);
@@ -148,6 +148,14 @@ namespace demiplane::db {
         return TableColumn<T>{schema, std::move(table)};
     }
 
+    constexpr DynamicColumn<> col(const char* name) {
+        return DynamicColumn<>{std::string_view{name}};
+    }
+
+    constexpr DynamicColumn<> col(const char* name, const char* table) {
+        return DynamicColumn<>{std::string_view{name}, std::string_view{table}};
+    }
+
     constexpr AllColumns all(std::string table) {
         return AllColumns{std::move(table)};
     }
@@ -160,7 +168,7 @@ namespace demiplane::db {
     concept IsTableColumn = gears::is_specialization_of_v<std::remove_cvref_t<T>, TableColumn>;
 
     template <typename T>
-    concept IsDynamicColumn = std::is_same_v<std::remove_cvref_t<T>, DynamicColumn>;
+    concept IsDynamicColumn = gears::is_specialization_of_v<std::remove_cvref_t<T>, DynamicColumn>;
 
     template <typename T>
     concept IsAllColumns = std::is_same_v<std::remove_cvref_t<T>, AllColumns>;

@@ -67,7 +67,7 @@ namespace demiplane::test {
                 select(s.users().name, s.users().age).from(s.users().table).where(s.users().active == true);
             auto senior_users =
                 select(s.users().name, s.users().age).from(s.users().table).where(s.users().age > lit(50));
-            auto query = union_query(active_users, senior_users).order_by(desc(DynamicColumn("age")));
+            auto query = union_query(active_users, senior_users).order_by(desc(col("age")));
             return c.compile(query);
         }
     };

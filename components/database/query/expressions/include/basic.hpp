@@ -63,44 +63,48 @@ namespace demiplane::db {
     // Set operations
     enum class SetOperation { UNION, UNION_ALL, INTERSECT, EXCEPT };
 
+    template <typename T>
     class Literal {
     public:
         constexpr auto&& value(this auto&& self) {
             return std::forward<decltype(self)>(self).value_;
         }
 
-        [[nodiscard]] const std::string& alias() const {
+        [[nodiscard]] constexpr std::string_view alias() const noexcept {
             return alias_;
         }
 
-        template <typename T>
-            requires std::constructible_from<FieldValue, T>
-        constexpr explicit Literal(T&& v)
-            : value_{std::forward<T>(v)} {
+        template <typename ValueTp>
+            requires std::constructible_from<T, ValueTp>
+        constexpr explicit Literal(ValueTp&& v)
+            : value_{std::forward<ValueTp>(v)} {
         }
 
         template <typename Self, typename Tp>
-            requires gears::IsStringLike<Tp>
+            requires std::convertible_to<Tp, std::string_view>
         constexpr auto&& as(this Self&& self, Tp&& alias) {
-            self.alias_ = std::forward<Tp>(alias);
+            self.alias_ = std::string_view{std::forward<Tp>(alias)};
             return std::forward<Self>(self);
         }
 
         void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
-        FieldValue value_;
-        std::string alias_;
+        T value_;
+        std::string_view alias_;
     };
 
+    // Deduction guide: Literal(x) deduces T from argument
     template <typename T>
-    constexpr Literal lit(T value) {
-        return Literal{std::move(value)};
+    Literal(T) -> Literal<T>;
+
+    template <typename T>
+    constexpr Literal<std::remove_cvref_t<T>> lit(T&& value) {
+        return Literal<std::remove_cvref_t<T>>{std::forward<T>(value)};
     }
 
-    template <>
-    constexpr Literal lit(const char* value) {
-        return Literal{std::string_view{value}};
+    constexpr Literal<std::string_view> lit(const char* value) {
+        return Literal<std::string_view>{std::string_view{value}};
     }
 
     namespace detail {
@@ -108,9 +112,10 @@ namespace demiplane::db {
         constexpr auto make_literal_if_needed(T&& value) {
             if constexpr (HasAcceptVisitor<T>) {
                 return std::forward<T>(value);
+            } else if constexpr (std::is_convertible_v<T, const char*>) {
+                return Literal<std::string_view>{std::string_view{value}};
             } else {
-                // Raw value, wrap in Literal
-                return lit(std::forward<T>(value));
+                return Literal<std::remove_cvref_t<T>>{std::forward<T>(value)};
             }
         }
 
@@ -126,26 +131,26 @@ namespace demiplane::db {
     class AliasableExpression : public Expression<Derived> {
     public:
         template <typename Tp>
-            requires gears::IsStringLike<Tp>
+            requires std::convertible_to<Tp, std::string_view>
         constexpr explicit AliasableExpression(Tp&& alias)
-            : alias_(std::forward<Tp>(alias)) {
+            : alias_{std::string_view{std::forward<Tp>(alias)}} {
         }
 
         template <typename Self, typename T>
-            requires std::constructible_from<std::string, T>
+            requires std::convertible_to<T, std::string_view>
         constexpr auto&& as(this Self&& self, T&& name) {
-            self.alias_ = std::forward<T>(name);
+            self.alias_ = std::string_view{std::forward<T>(name)};
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
                 std::forward<Self>(self));
         }
 
         template <typename Self>
-        [[nodiscard]] constexpr auto&& alias(this Self&& self) {
+        [[nodiscard]] constexpr auto&& alias(this Self&& self) noexcept {
             return std::forward<Self>(self).alias_;
         }
 
     protected:
-        std::string alias_;
+        std::string_view alias_;
         constexpr AliasableExpression() = default;
     };
 
@@ -181,9 +186,9 @@ namespace demiplane::db {
         }
 
         template <typename Self, typename Tp>
-            requires gears::IsStringLike<Tp>
+            requires std::convertible_to<Tp, std::string_view>
         constexpr auto&& as(this Self&& self, Tp&& name) {
-            self.right_alias_ = std::forward<Tp>(name);
+            self.right_alias_ = std::string_view{std::forward<Tp>(name)};
             return std::forward<Self>(self);
         }
 
@@ -200,15 +205,17 @@ namespace demiplane::db {
         Parent parent_;
         TablePtr right_table_name_;
         JoinType type_;
-        std::string right_alias_;
+        std::string_view right_alias_;
     };
 
     class ColumnHolder {
     public:
+        // Accept any DynamicColumn<S> — converts to owning DynamicColumn<std::string>
         template <typename DynamicColumnTp>
-            requires std::is_same_v<std::remove_cvref_t<DynamicColumnTp>, DynamicColumn>
-        constexpr explicit ColumnHolder(DynamicColumnTp&& column) noexcept
-            : column_{std::forward<DynamicColumnTp>(column)} {
+            requires IsDynamicColumn<DynamicColumnTp>
+        constexpr explicit ColumnHolder(DynamicColumnTp&& column)
+            : column_{DynamicColumn<std::string>{std::string{column.name()},
+                                                  std::string{column.context()}}} {
         }
 
         template <typename AllColumnsTp>
@@ -218,19 +225,13 @@ namespace demiplane::db {
         }
 
         template <typename T>
-            requires std::constructible_from<DynamicColumn, T> && (!std::same_as<std::remove_cvref_t<T>, DynamicColumn>)
-        constexpr explicit ColumnHolder(T&& column)
-            : column_{std::forward<T>(column)} {
-        }
-
-        template <typename T>
             requires std::constructible_from<AllColumns, T> && (!std::same_as<std::remove_cvref_t<T>, AllColumns>)
         constexpr explicit ColumnHolder(T&& column)
-            : column_{std::forward<T>(column)} {
+            : column_{AllColumns{std::forward<T>(column)}} {
         }
 
-        [[nodiscard]] constexpr const DynamicColumn& column() const& {
-            return std::get<DynamicColumn>(column_);
+        [[nodiscard]] constexpr const DynamicColumn<std::string>& column() const& {
+            return std::get<DynamicColumn<std::string>>(column_);
         }
 
         [[nodiscard]] constexpr const AllColumns& all_columns() const& {
@@ -242,7 +243,7 @@ namespace demiplane::db {
         }
 
     private:
-        std::variant<DynamicColumn, AllColumns> column_;
+        std::variant<DynamicColumn<std::string>, AllColumns> column_;
     };
 
     template <IsTable TableT>

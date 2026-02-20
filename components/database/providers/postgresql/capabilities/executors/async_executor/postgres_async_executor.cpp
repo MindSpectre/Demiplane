@@ -2,7 +2,7 @@
 
 #include <boost/asio/redirect_error.hpp>
 
-#include "log_macros.hpp"
+#include <demiplane/scroll>
 
 namespace asio = boost::asio;
 
@@ -159,7 +159,7 @@ namespace demiplane::db::postgres {
     asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> AsyncExecutor::execute_impl(const char* query,
                                                                                            const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
-
+        COMPONENT_LOG_TRC() << SCROLL_PARAMS(query, params);
         // 1. Validate executor state
         if (auto err = validate_state()) {
             COMPONENT_LOG_ERR() << "Validation failed: " << *err;

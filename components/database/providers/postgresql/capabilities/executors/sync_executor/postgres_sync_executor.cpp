@@ -1,14 +1,17 @@
 #include "postgres_sync_executor.hpp"
 
-#include "log_macros.hpp"
+#include <demiplane/scroll>
 
 namespace demiplane::db::postgres {
 
     gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const std::string_view query) const {
         // Check connection health
         COMPONENT_LOG_ENTER_FUNCTION();
+        COMPONENT_LOG_TRC() << SCROLL_PARAMS(query);
         if (const auto ec = check_connection(conn_); ec) {
-            return gears::Err(ErrorContext(ec));
+            ErrorContext ctx(ec);
+            COMPONENT_LOG_ERR() << "Connection failed: " << ctx;
+            return gears::Err(std::move(ctx));
         }
 
         // Execute simple query
@@ -25,6 +28,7 @@ namespace demiplane::db::postgres {
     gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const std::string_view query,
                                                                     const Params& params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
+        COMPONENT_LOG_TRC() << SCROLL_PARAMS(query, params);
         if (const auto ec = check_connection(conn_); ec) {
             ErrorContext ctx(ec);
             COMPONENT_LOG_ERR() << "Connection failed: " << ctx;

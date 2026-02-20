@@ -1,7 +1,9 @@
 #pragma once
 #include <cstring>
 #include <deque>
+#include <format>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <variant>
 #include <vector>
@@ -18,6 +20,26 @@ namespace demiplane::db::postgres {
         std::pmr::vector<unsigned> oids;
         std::pmr::deque<std::pmr::string> str_data;                  // deque for pointer stability
         std::pmr::deque<std::pmr::vector<std::byte>> binary_chunks;  // each binary param in its own vector
+
+        friend std::ostream& operator<<(std::ostream& os, const Params& p) {
+            os << "Params[" << p.values.size() << "]";
+            if (p.values.empty()) return os;
+            os << ":\n";
+            for (std::size_t i = 0; i < p.values.size(); ++i) {
+                os << "  $" << (i + 1) << ": ";
+                if (p.values[i] == nullptr) {
+                    os << "NULL";
+                } else if (p.formats[i] == 0) {
+                    os << "text  oid=" << p.oids[i] << " val=\"" << p.values[i] << '"';
+                } else {
+                    os << "binary oid=" << p.oids[i] << " len=" << p.lengths[i] << " val=0x";
+                    for (int j = 0; j < p.lengths[i]; ++j)
+                        os << std::format("{:02x}", static_cast<unsigned char>(p.values[i][j]));
+                }
+                os << '\n';
+            }
+            return os;
+        }
     };
 
     class ParamSink final : public db::ParamSink {

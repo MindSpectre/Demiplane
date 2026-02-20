@@ -5,8 +5,6 @@ add_library(${DMP_DATABASE_POSTGRESQL}.Result STATIC
         postgres_result.hpp
         views/postgres_result_views.hpp
         views/postgres_result_views.cpp
-        block/postgres_block.hpp
-        block/postgres_block.cpp
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Result PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}

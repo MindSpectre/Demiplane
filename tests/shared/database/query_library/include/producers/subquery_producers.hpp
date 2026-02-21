@@ -110,7 +110,7 @@ namespace demiplane::test {
                 select(avg(s.orders().amount)).from(s.orders().table).where(s.orders().completed == true);
             auto query = select(s.users().name, s.orders().amount)
                              .from(s.users().table)
-                             .join(s.orders().table->table_name())
+                             .join(s.orders().table)
                              .on(s.orders().user_id == s.users().id)
                              .where(s.orders().amount > subquery(avg_order_amount));
             return c.compile(query);

@@ -69,24 +69,23 @@ namespace demiplane::db {
     };
 
 
-    // Aggregate function factories
+    // Aggregate function factories — TableColumn overloads
     template <typename T>
     constexpr CountExpr count(const TableColumn<T>& col) noexcept {
         return CountExpr{col.as_dynamic(), false};
     }
-
 
     template <typename T>
     constexpr CountExpr count_distinct(const TableColumn<T>& col) noexcept {
         return CountExpr{col.as_dynamic(), true};
     }
 
-    inline CountExpr count_all() noexcept {
-        return CountExpr{AllColumns{""}, false};
+    constexpr CountExpr count_all() noexcept {
+        return CountExpr{AllColumns{}, false};
     }
 
-    inline CountExpr count_all_distinct() noexcept {
-        return CountExpr{AllColumns{""}, true};
+    constexpr CountExpr count_all_distinct() noexcept {
+        return CountExpr{AllColumns{}, true};
     }
 
     template <typename T>
@@ -107,5 +106,67 @@ namespace demiplane::db {
     template <typename T>
     constexpr MinExpr min(const TableColumn<T>& col) noexcept {
         return MinExpr{col.as_dynamic()};
+    }
+
+    // Aggregate function factories — DynamicColumn overloads
+    template <typename DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
+    constexpr CountExpr count(DynamicColumnTp&& col) noexcept {
+        return CountExpr{std::forward<DynamicColumnTp>(col), false};
+    }
+
+    template <typename DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
+    constexpr CountExpr count_distinct(DynamicColumnTp&& col) noexcept {
+        return CountExpr{std::forward<DynamicColumnTp>(col), true};
+    }
+
+    template <typename DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
+    constexpr SumExpr sum(DynamicColumnTp&& col) noexcept {
+        return SumExpr{std::forward<DynamicColumnTp>(col)};
+    }
+
+    template <typename DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
+    constexpr AvgExpr avg(DynamicColumnTp&& col) noexcept {
+        return AvgExpr{std::forward<DynamicColumnTp>(col)};
+    }
+
+    template <typename DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
+    constexpr MaxExpr max(DynamicColumnTp&& col) noexcept {
+        return MaxExpr{std::forward<DynamicColumnTp>(col)};
+    }
+
+    template <typename DynamicColumnTp>
+        requires IsDynamicColumn<DynamicColumnTp>
+    constexpr MinExpr min(DynamicColumnTp&& col) noexcept {
+        return MinExpr{std::forward<DynamicColumnTp>(col)};
+    }
+
+    // Aggregate function factories — const char* overloads
+    constexpr CountExpr count(const char* col) noexcept {
+        return CountExpr{DynamicColumn{col}, false};
+    }
+
+    constexpr CountExpr count_distinct(const char* col) noexcept {
+        return CountExpr{DynamicColumn{col}, true};
+    }
+
+    constexpr SumExpr sum(const char* col) noexcept {
+        return SumExpr{DynamicColumn{col}};
+    }
+
+    constexpr AvgExpr avg(const char* col) noexcept {
+        return AvgExpr{DynamicColumn{col}};
+    }
+
+    constexpr MaxExpr max(const char* col) noexcept {
+        return MaxExpr{DynamicColumn{col}};
+    }
+
+    constexpr MinExpr min(const char* col) noexcept {
+        return MinExpr{DynamicColumn{col}};
     }
 }  // namespace demiplane::db

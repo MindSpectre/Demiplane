@@ -92,7 +92,7 @@ namespace demiplane::test {
             // post_title).from(users_schema).join(posts_schema->table_name()).on(post_user_id == user_id)
             auto query = select(s.users().name, s.posts().title)
                              .from(s.users().table)
-                             .join(s.posts().table->table_name())
+                             .join(s.posts().table)
                              .on(s.posts().user_id == s.users().id);
             return c.compile(query);
         }

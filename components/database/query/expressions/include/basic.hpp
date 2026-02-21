@@ -78,10 +78,9 @@ namespace demiplane::db {
             : value_{std::forward<ValueTp>(v)} {
         }
 
-        template <typename Self, typename Tp>
-            requires std::convertible_to<Tp, std::string_view>
-        constexpr auto&& as(this Self&& self, Tp&& alias) {
-            self.alias_ = std::string{std::forward<Tp>(alias)};
+        template <typename Self, gears::IsStringLike StringTp>
+        constexpr auto&& as(this Self&& self, StringTp&& alias) {
+            self.alias_ = std::forward<StringTp>(alias);
             return std::forward<Self>(self);
         }
 
@@ -102,7 +101,7 @@ namespace demiplane::db {
     }
 
     constexpr Literal<std::string_view> lit(const char* value) {
-        return Literal<std::string_view>{std::string_view{value}};
+        return Literal<std::string_view>{value};
     }
 
     namespace detail {
@@ -111,7 +110,7 @@ namespace demiplane::db {
             if constexpr (HasAcceptVisitor<T>) {
                 return std::forward<T>(value);
             } else if constexpr (std::is_convertible_v<T, const char*>) {
-                return Literal<std::string_view>{std::string_view{value}};
+                return Literal<std::string_view>{value};
             } else {
                 return Literal<std::remove_cvref_t<T>>{std::forward<T>(value)};
             }
@@ -128,16 +127,14 @@ namespace demiplane::db {
     template <typename Derived>
     class AliasableExpression : public Expression<Derived> {
     public:
-        template <typename Tp>
-            requires std::convertible_to<Tp, std::string_view>
-        constexpr explicit AliasableExpression(Tp&& alias)
-            : alias_{std::string{std::forward<Tp>(alias)}} {
+        template <gears::IsStringLike StringTp>
+        constexpr explicit AliasableExpression(StringTp&& alias)
+            : alias_{std::forward<StringTp>(alias)} {
         }
 
-        template <typename Self, typename T>
-            requires std::convertible_to<T, std::string_view>
-        constexpr auto&& as(this Self&& self, T&& name) {
-            self.alias_ = std::string{std::forward<T>(name)};
+        template <typename Self, gears::IsStringLike StringTp>
+        constexpr auto&& as(this Self&& self, StringTp&& name) {
+            self.alias_ = std::forward<StringTp>(name);
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
                 std::forward<Self>(self));
         }
@@ -171,36 +168,35 @@ namespace demiplane::db {
     template <typename Feature, typename... Features>
     constexpr bool has_feature = (std::is_same_v<Feature, Features> || ...);
 
-    template <typename Parent>
+    template <typename Parent, IsTable TableT>
     class JoinBuilder {
     public:
         template <typename P, typename T>
-            requires std::same_as<std::remove_cvref_t<P>, Parent> && std::constructible_from<TablePtr, T>
+            requires std::same_as<std::remove_cvref_t<P>, Parent> && std::constructible_from<TableT, T>
         constexpr JoinBuilder(P&& parent, T&& right_table, const JoinType type)
             : parent_{std::forward<P>(parent)},
               right_table_name_{std::forward<T>(right_table)},
               type_{type} {
         }
 
-        template <typename Self, typename Tp>
-            requires std::convertible_to<Tp, std::string_view>
-        constexpr auto&& as(this Self&& self, Tp&& name) {
-            self.right_alias_ = std::string{std::forward<Tp>(name)};
+        template <typename Self, gears::IsStringLike StringTp>
+        constexpr auto&& as(this Self&& self, StringTp&& name) {
+            self.right_alias_ = std::forward<StringTp>(name);
             return std::forward<Self>(self);
         }
 
         template <typename Self, IsCondition Condition>
         constexpr auto on(this Self&& self, Condition&& cond) {
-            return JoinExpr<Parent, std::remove_cvref_t<Condition>>{std::forward<Self>(self).parent_,
-                                                                    std::forward<Self>(self).right_table_name_,
-                                                                    std::forward<Condition>(cond),
-                                                                    std::forward<Self>(self).type_,
-                                                                    std::forward<Self>(self).right_alias_};
+            return JoinExpr<Parent, std::remove_cvref_t<Condition>, TableT>{std::forward<Self>(self).parent_,
+                                                                            std::forward<Self>(self).right_table_name_,
+                                                                            std::forward<Condition>(cond),
+                                                                            std::forward<Self>(self).type_,
+                                                                            std::forward<Self>(self).right_alias_};
         }
 
     private:
         Parent parent_;
-        TablePtr right_table_name_;
+        TableT right_table_name_;
         JoinType type_;
         std::string right_alias_;
     };
@@ -294,16 +290,29 @@ namespace demiplane::db {
                                                                        std::forward<Condition>(cond)};
         }
 
-        // JOIN
-        template <typename Self, typename TableType>
+        // JOIN — TablePtr (shared_ptr-based, runtime)
+        template <typename Self, typename TableTp>
+            requires(has_feature<AllowJoin, AllowedFeatures...>) &&
+                    std::constructible_from<TablePtr, std::remove_cvref_t<TableTp>>
+        [[nodiscard]] constexpr auto join(this Self&& self, TableTp&& table, JoinType type = JoinType::INNER) {
+            return JoinBuilder<Derived, TablePtr>{
+                std::forward<Self>(self).derived(), std::forward<TableTp>(table), type};
+        }
+
+        // JOIN — IsStringLike && !IsStringViewLike → std::string
+        template <typename Self, typename TableTp>
+            requires(has_feature<AllowJoin, AllowedFeatures...>) && gears::IsStringLike<TableTp> &&
+                    (!gears::IsStringViewLike<TableTp>)
+        [[nodiscard]] constexpr auto join(this Self&& self, TableTp&& table, JoinType type = JoinType::INNER) {
+            return JoinBuilder<Derived, std::string>{
+                std::forward<Self>(self).derived(), std::forward<TableTp>(table), type};
+        }
+
+        // JOIN — const char* → std::string_view (constexpr-friendly)
+        template <typename Self>
             requires(has_feature<AllowJoin, AllowedFeatures...>)
-        [[nodiscard]] constexpr auto join(this Self&& self, TableType&& table, JoinType type = JoinType::INNER) {
-            if constexpr (std::is_same_v<std::decay_t<TableType>, std::string>) {
-                return JoinBuilder<Derived>{
-                    std::forward<Self>(self).derived(), Table::make_ptr(std::forward<TableType>(table)), type};
-            } else {
-                return JoinBuilder<Derived>{std::forward<Self>(self).derived(), std::forward<TableType>(table), type};
-            }
+        [[nodiscard]] constexpr auto join(this Self&& self, const char* table, JoinType type = JoinType::INNER) {
+            return JoinBuilder<Derived, std::string_view>{std::forward<Self>(self).derived(), table, type};
         }
 
         // ORDER BY

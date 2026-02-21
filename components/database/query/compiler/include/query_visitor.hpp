@@ -48,7 +48,7 @@ namespace demiplane::db {
         }
 
         void visit(const AllColumns& all) {
-            visit_all_columns_impl(all.table());
+            visit_all_columns_impl(all.table_name());
         }
 
         // Expressions - perfect forwarding versions
@@ -155,7 +155,7 @@ namespace demiplane::db {
         void visit(const CountExpr& expr) {
             visit_count_impl(expr.distinct());
             if (expr.is_all_columns()) {
-                visit_all_columns_impl(nullptr);
+                visit_all_columns_impl("");
             } else {
                 expr.column().accept(*this);
             }
@@ -341,22 +341,22 @@ namespace demiplane::db {
             visit_limit_impl(expr.count(), expr.offset());
         }
 
-        template <typename Query, typename Condition>
-        void visit(JoinExpr<Query, Condition>&& expr) {
+        template <typename Query, typename Condition, typename TableT>
+        void visit(JoinExpr<Query, Condition, TableT>&& expr) {
             std::move(expr).query().accept(*this);
             visit_join_start(expr.type());
-            visit_table_impl(std::move(expr).joined_table());
+            visit_table_impl(std::move(expr).table());
             visit_alias_impl(expr.alias());
             visit_join_on();
             std::move(expr).on_condition().accept(*this);
             visit_join_end();
         }
 
-        template <typename Query, typename Condition>
-        void visit(const JoinExpr<Query, Condition>& expr) {
+        template <typename Query, typename Condition, typename TableT>
+        void visit(const JoinExpr<Query, Condition, TableT>& expr) {
             expr.query().accept(*this);
             visit_join_start(expr.type());
-            visit_table_impl(expr.joined_table());
+            visit_table_impl(expr.table());
             visit_alias_impl(expr.alias());
             visit_join_on();
             expr.on_condition().accept(*this);
@@ -585,7 +585,7 @@ namespace demiplane::db {
         virtual void visit_value_impl(FieldValue&& value)                                                  = 0;
         virtual void visit_null_impl()                                                                     = 0;
 
-        virtual void visit_all_columns_impl(const std::shared_ptr<std::string>& table) = 0;
+        virtual void visit_all_columns_impl(std::string_view table) = 0;
 
         virtual void visit_table_impl(const TablePtr& table)       = 0;
         virtual void visit_table_impl(std::string_view table_name) = 0;

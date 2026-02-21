@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 
+#include <gears_concepts.hpp>
 #include <gears_templates.hpp>
 
 #include "db_field_schema.hpp"
@@ -12,13 +13,15 @@ namespace demiplane::db {
 
     class DynamicColumn {
     public:
-        constexpr explicit DynamicColumn(std::string name, std::string table)
-            : name_{std::move(name)},
-              context_{std::move(table)} {
+        template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
+        constexpr explicit DynamicColumn(StringTp1&& name, StringTp2&& table)
+            : name_{std::forward<StringTp1>(name)},
+              context_{std::forward<StringTp2>(table)} {
         }
 
-        constexpr explicit DynamicColumn(std::string name)
-            : name_{std::move(name)} {
+        template <gears::IsStringLike StringTp>
+        constexpr explicit DynamicColumn(StringTp&& name)
+            : name_{std::forward<StringTp>(name)} {
         }
 
         [[nodiscard]] constexpr const std::string& name() const noexcept {
@@ -29,13 +32,15 @@ namespace demiplane::db {
             return context_;
         }
 
-        constexpr DynamicColumn& set_context(std::string table) {
-            context_ = std::move(table);
+        template <gears::IsStringLike StringTp>
+        constexpr DynamicColumn& set_context(StringTp&& table) {
+            context_ = std::forward<StringTp>(table);
             return *this;
         }
 
-        constexpr DynamicColumn& set_name(std::string name) {
-            name_ = std::move(name);
+        template <gears::IsStringLike StringTp>
+        constexpr DynamicColumn& set_name(StringTp&& name) {
+            name_ = std::forward<StringTp>(name);
             return *this;
         }
 
@@ -50,10 +55,12 @@ namespace demiplane::db {
     class TableColumn {
     public:
         using value_type = T;
-        constexpr TableColumn(const FieldSchema* schema, std::shared_ptr<std::string> table, std::string alias)
+
+        template <gears::IsStringLike StringTp>
+        constexpr TableColumn(const FieldSchema* schema, std::shared_ptr<std::string> table, StringTp&& alias)
             : schema_{schema},
               table_{std::move(table)},
-              alias_{std::move(alias)} {
+              alias_{std::forward<StringTp>(alias)} {
         }
 
 
@@ -63,38 +70,42 @@ namespace demiplane::db {
         }
 
 
-        constexpr TableColumn(const FieldSchema* schema, std::string table, std::string alias)
+        template <gears::IsStringLike StringTp>
+        constexpr TableColumn(const FieldSchema* schema, std::string table, StringTp&& alias)
             : schema_{schema},
               table_{std::make_shared<std::string>(std::move(table))},
-              alias_{std::move(alias)} {
+              alias_{std::forward<StringTp>(alias)} {
         }
 
-        constexpr TableColumn(const FieldSchema* schema, std::string table)
+        template <gears::IsStringLike StringTp>
+        constexpr TableColumn(const FieldSchema* schema, StringTp&& table)
             : schema_{schema},
-              table_{std::make_shared<std::string>(std::move(table))} {
+              table_{std::make_shared<std::string>(std::forward<StringTp>(table))} {
         }
-        [[nodiscard]] constexpr const FieldSchema* schema() const {
+
+        [[nodiscard]] constexpr const FieldSchema* schema() const noexcept {
             return schema_;
         }
 
-        [[nodiscard]] constexpr const std::shared_ptr<std::string>& table() const {
+        [[nodiscard]] constexpr const std::shared_ptr<std::string>& table() const noexcept {
             return table_;
         }
 
-        [[nodiscard]] constexpr const std::string& table_name() const {
+        [[nodiscard]] constexpr const std::string& table_name() const noexcept {
             return *table_;
         }
 
-        [[nodiscard]] constexpr const std::string& alias() const {
+        [[nodiscard]] constexpr const std::string& alias() const noexcept {
             return alias_;
         }
 
-        [[nodiscard]] constexpr const std::string& name() const {
+        [[nodiscard]] constexpr const std::string& name() const noexcept {
             return schema_->name;
         }
 
-        constexpr TableColumn as(std::string alias) const {
-            return TableColumn{schema_, table_, std::move(alias)};
+        template <gears::IsStringLike StringTp>
+        constexpr TableColumn as(StringTp&& alias) const {
+            return TableColumn{schema_, table_, std::forward<StringTp>(alias)};
         }
 
         [[nodiscard]] constexpr DynamicColumn as_dynamic() const& {
@@ -113,19 +124,14 @@ namespace demiplane::db {
     // All columns selector
     class AllColumns {
     public:
-        constexpr explicit AllColumns(std::shared_ptr<std::string> table)
-            : table_{std::move(table)} {
+        template <gears::IsStringLike StringTp>
+        constexpr explicit AllColumns(StringTp&& table)
+            : table_{std::forward<StringTp>(table)} {
         }
 
-        explicit AllColumns(std::string table)
-            : table_{std::make_shared<std::string>(std::move(table))} {
-        }
+        constexpr AllColumns() noexcept = default;
 
-        [[nodiscard]] constexpr const std::string& table_name() const {
-            return *table_;
-        }
-
-        [[nodiscard]] constexpr const std::shared_ptr<std::string>& table() const {
+        [[nodiscard]] constexpr const std::string& table_name() const noexcept {
             return table_;
         }
 
@@ -137,7 +143,7 @@ namespace demiplane::db {
         void accept(this auto&& self, QueryVisitor& visitor);
 
     private:
-        std::shared_ptr<std::string> table_;
+        std::string table_;
     };
 
 
@@ -159,8 +165,8 @@ namespace demiplane::db {
         return AllColumns{std::move(table)};
     }
 
-    constexpr AllColumns all(std::shared_ptr<std::string> table = nullptr) {
-        return AllColumns{std::move(table)};
+    constexpr AllColumns all() {
+        return AllColumns{};
     }
 
     template <typename T>

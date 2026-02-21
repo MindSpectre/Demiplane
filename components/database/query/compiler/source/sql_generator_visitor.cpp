@@ -48,9 +48,9 @@ namespace demiplane::db {
         sql_ += "NULL";
     }
 
-    void SqlGeneratorVisitor::visit_all_columns_impl(const std::shared_ptr<std::string>& table) {
-        if (table) {
-            visit_table_impl(*table);
+    void SqlGeneratorVisitor::visit_all_columns_impl(const std::string_view table) {
+        if (!table.empty()) {
+            visit_table_impl(table);
             sql_ += ".";
         }
         sql_ += "*";

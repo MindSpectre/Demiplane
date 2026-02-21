@@ -45,7 +45,7 @@ namespace demiplane::db {
         void visit_value_impl(FieldValue&& value) override;
         void visit_null_impl() override;
 
-        void visit_all_columns_impl(const std::shared_ptr<std::string>& table) override;
+        void visit_all_columns_impl(std::string_view table) override;
 
         void visit_table_impl(const TablePtr& table) override;
         void visit_table_impl(std::string_view table_name) override;

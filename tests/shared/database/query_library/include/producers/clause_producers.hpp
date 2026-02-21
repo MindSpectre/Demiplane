@@ -258,7 +258,7 @@ namespace demiplane::test {
                                 s.users_extended().department,
                                 sum(s.orders_extended().amount).as("total_orders"))
                              .from(s.users_extended().table)
-                             .join(s.orders_extended().table->table_name())
+                             .join(s.orders_extended().table)
                              .on(s.orders_extended().user_id == s.users_extended().id)
                              .where(s.users_extended().active == true && s.orders_extended().status == "completed")
                              .group_by(s.users_extended().id, s.users_extended().name, s.users_extended().department)

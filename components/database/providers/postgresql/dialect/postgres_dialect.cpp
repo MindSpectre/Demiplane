@@ -33,11 +33,11 @@ namespace demiplane::db::postgres {
     }
 
     void Dialect::placeholder(std::string& query, const std::size_t index) const {
-        query += "$" + std::to_string(index + 1);
+        query += "$" + std::to_string(index);
     }
 
     void Dialect::placeholder(std::pmr::string& query, const std::size_t index) const {
-        query += "$" + std::to_string(index + 1);
+        query += "$" + std::to_string(index);
     }
 
     std::string Dialect::limit_clause(const std::size_t limit, const std::size_t offset) const {

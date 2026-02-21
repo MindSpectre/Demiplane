@@ -5,15 +5,15 @@
 
 using namespace demiplane::db;
 
-// Constexpr query creation test
-constexpr auto id   = col("id");
-constexpr auto name = col("name");
-constexpr static auto q = select(id, name).from("students").where(id == 1);
-// constexpr static auto q2 = select("id").from("st");
-// Verify the expression tree data at compile time
-static_assert(q.condition().left().name() == "id");
-static_assert(q.condition().right().value() == 1);
-
 int main() {
+    // Constexpr query creation test with static constexpr (std::string has full constexpr support)
+    static constexpr auto id   = col("id");
+    static constexpr auto name = col("name");
+    static constexpr auto q    = select(id, name).from("students").as("s").where(id == 1);
+
+    static_assert(q.condition().left().name() == "id");
+    static_assert(q.condition().right().value() == 1);
+    static_assert(q.query().alias() == "s");
+
     return 0;
 }

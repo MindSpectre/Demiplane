@@ -1,10 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include <utility>
 
 #include <db_core_objects.hpp>
-#include <gears_concepts.hpp>
 
 #include "db_expressions_fwd.hpp"
 
@@ -70,7 +68,7 @@ namespace demiplane::db {
             return std::forward<decltype(self)>(self).value_;
         }
 
-        [[nodiscard]] constexpr std::string_view alias() const noexcept {
+        [[nodiscard]] constexpr const std::string& alias() const noexcept {
             return alias_;
         }
 
@@ -83,7 +81,7 @@ namespace demiplane::db {
         template <typename Self, typename Tp>
             requires std::convertible_to<Tp, std::string_view>
         constexpr auto&& as(this Self&& self, Tp&& alias) {
-            self.alias_ = std::string_view{std::forward<Tp>(alias)};
+            self.alias_ = std::string{std::forward<Tp>(alias)};
             return std::forward<Self>(self);
         }
 
@@ -91,7 +89,7 @@ namespace demiplane::db {
 
     private:
         T value_;
-        std::string_view alias_;
+        std::string alias_;
     };
 
     // Deduction guide: Literal(x) deduces T from argument
@@ -133,24 +131,23 @@ namespace demiplane::db {
         template <typename Tp>
             requires std::convertible_to<Tp, std::string_view>
         constexpr explicit AliasableExpression(Tp&& alias)
-            : alias_{std::string_view{std::forward<Tp>(alias)}} {
+            : alias_{std::string{std::forward<Tp>(alias)}} {
         }
 
         template <typename Self, typename T>
             requires std::convertible_to<T, std::string_view>
         constexpr auto&& as(this Self&& self, T&& name) {
-            self.alias_ = std::string_view{std::forward<T>(name)};
+            self.alias_ = std::string{std::forward<T>(name)};
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
                 std::forward<Self>(self));
         }
 
-        template <typename Self>
-        [[nodiscard]] constexpr auto&& alias(this Self&& self) noexcept {
-            return std::forward<Self>(self).alias_;
+        [[nodiscard]] constexpr const std::string& alias() const noexcept {
+            return alias_;
         }
 
     protected:
-        std::string_view alias_;
+        std::string alias_;
         constexpr AliasableExpression() = default;
     };
 
@@ -188,7 +185,7 @@ namespace demiplane::db {
         template <typename Self, typename Tp>
             requires std::convertible_to<Tp, std::string_view>
         constexpr auto&& as(this Self&& self, Tp&& name) {
-            self.right_alias_ = std::string_view{std::forward<Tp>(name)};
+            self.right_alias_ = std::string{std::forward<Tp>(name)};
             return std::forward<Self>(self);
         }
 
@@ -205,17 +202,15 @@ namespace demiplane::db {
         Parent parent_;
         TablePtr right_table_name_;
         JoinType type_;
-        std::string_view right_alias_;
+        std::string right_alias_;
     };
 
     class ColumnHolder {
     public:
-        // Accept any DynamicColumn<S> — converts to owning DynamicColumn<std::string>
         template <typename DynamicColumnTp>
             requires IsDynamicColumn<DynamicColumnTp>
         constexpr explicit ColumnHolder(DynamicColumnTp&& column)
-            : column_{DynamicColumn<std::string>{std::string{column.name()},
-                                                  std::string{column.context()}}} {
+            : column_{std::forward<DynamicColumnTp>(column)} {
         }
 
         template <typename AllColumnsTp>
@@ -230,8 +225,8 @@ namespace demiplane::db {
             : column_{AllColumns{std::forward<T>(column)}} {
         }
 
-        [[nodiscard]] constexpr const DynamicColumn<std::string>& column() const& {
-            return std::get<DynamicColumn<std::string>>(column_);
+        [[nodiscard]] constexpr const DynamicColumn& column() const& {
+            return std::get<DynamicColumn>(column_);
         }
 
         [[nodiscard]] constexpr const AllColumns& all_columns() const& {
@@ -243,7 +238,7 @@ namespace demiplane::db {
         }
 
     private:
-        std::variant<DynamicColumn<std::string>, AllColumns> column_;
+        std::variant<DynamicColumn, AllColumns> column_;
     };
 
     template <IsTable TableT>

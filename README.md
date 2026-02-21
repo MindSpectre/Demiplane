@@ -14,6 +14,7 @@
 - Benchmarks
 - Coverage/profiling with cmake presets
 - Optional VCPKG support
+- Multithread build
 ## Http component
 ### 1. Http1.1
 #### **TODO list**

@@ -12,8 +12,7 @@ namespace demiplane::db {
 
         // Column and literals - now with perfect forwarding
 
-        template <typename S>
-        void visit(const DynamicColumn<S>& col) {
+        void visit(const DynamicColumn& col) {
             visit_dynamic_column_impl(col.name(), col.context());
         }
 

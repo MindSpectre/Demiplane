@@ -1,8 +1,7 @@
 #pragma once
 
 namespace demiplane::db {
-    template <typename StringType>
-    void DynamicColumn<StringType>::accept(this auto&& self, QueryVisitor& visitor) {
+    void DynamicColumn::accept(this auto&& self, QueryVisitor& visitor) {
         visitor.visit(std::forward<decltype(self)>(self));
     }
 

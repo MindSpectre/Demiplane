@@ -2,7 +2,7 @@
 # PostgreSQL SyncExecutor Functional Tests
 ##############################################################################
 
-add_functional_test(
+add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Capabilities.Executors.Executor.Sync
         postgres_sync_executor_test.cpp
         LINK_LIBS

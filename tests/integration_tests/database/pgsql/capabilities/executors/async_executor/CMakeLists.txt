@@ -2,7 +2,7 @@
 # PostgreSQL AsyncExecutor Functional Tests
 ##############################################################################
 
-add_functional_test(
+add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Capabilities.Executors.Executor.Async
         postgres_async_executor_test.cpp
         LINK_LIBS

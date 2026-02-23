@@ -2,7 +2,7 @@
 # PostgreSQL Params Functional Tests
 ##############################################################################
 
-add_functional_test(
+add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Params
         postgres_params_test.cpp
         LINK_LIBS

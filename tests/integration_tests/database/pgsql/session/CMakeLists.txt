@@ -2,7 +2,7 @@
 # PostgreSQL Session Functional Tests
 ##############################################################################
 
-add_functional_test(
+add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Session
         session_test.cpp
         LINK_LIBS

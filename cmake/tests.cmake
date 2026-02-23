@@ -28,20 +28,18 @@ function(add_custom_test TARGET_NAME)
         set(TEST_LABELS "custom")
     endif()
 
-    # Build properties list
-    set(TEST_PROPERTIES LABELS "${TEST_LABELS}")
+    # Set properties directly with proper quoting to preserve list values
+    set_tests_properties(${TARGET_NAME} PROPERTIES LABELS "${TEST_LABELS}")
 
     # Add fixtures if provided
     if(TEST_FIXTURES)
-        list(APPEND TEST_PROPERTIES FIXTURES_REQUIRED ${TEST_FIXTURES})
+        set_tests_properties(${TARGET_NAME} PROPERTIES FIXTURES_REQUIRED "${TEST_FIXTURES}")
     endif()
 
     # Add environment variables if provided
     if(TEST_ENVIRONMENT)
-        list(APPEND TEST_PROPERTIES ENVIRONMENT ${TEST_ENVIRONMENT})
+        set_tests_properties(${TARGET_NAME} PROPERTIES ENVIRONMENT "${TEST_ENVIRONMENT}")
     endif()
-
-    set_tests_properties(${TARGET_NAME} PROPERTIES ${TEST_PROPERTIES})
 endfunction()
 
 function(add_manual_test TARGET_NAME)

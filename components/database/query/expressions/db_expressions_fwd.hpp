@@ -199,8 +199,6 @@ namespace demiplane::db {
     concept IsFromExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, FromTableExpr> ||
                          gears::is_specialization_of_v<std::remove_cvref_t<T>, FromCteExpr>;
 
-    // CTE expression concept
-
 
     // Insert expression concepts
     template <IsTable TableT>

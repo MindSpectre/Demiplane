@@ -12,9 +12,10 @@
 #include <json/value.h>
 
 #include "credentials/postgres_connection_credentials.hpp"
+#include "tools/postgres_connection_tools.hpp"
 #include "tools/postgres_nodes_role.hpp"
 #include "tools/postgres_ssl_mode.hpp"
-#include "tools/postgres_connection_tools.hpp"
+
 namespace demiplane::db::postgres {
 
     enum class TransactionIsolation { READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE };
@@ -416,7 +417,6 @@ namespace demiplane::db::postgres {
         void wrapped_deserialize(const Json::Value& config) override;
 
     private:
-
         ConnectionCredentials credentials_;
 
         // Node configuration

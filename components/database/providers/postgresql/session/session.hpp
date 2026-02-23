@@ -52,8 +52,11 @@ namespace demiplane::db::postgres {
         // ============== Cylinder Stats ==============
 
         [[nodiscard]] std::size_t cylinder_capacity() const noexcept;
+
         [[nodiscard]] std::size_t cylinder_active_count() const noexcept;
+
         [[nodiscard]] std::size_t cylinder_free_count() const noexcept;
+
         [[nodiscard]] bool is_shutdown() const noexcept;
 
     private:

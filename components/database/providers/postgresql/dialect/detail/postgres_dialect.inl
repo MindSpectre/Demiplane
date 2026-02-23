@@ -53,6 +53,7 @@ namespace demiplane::db::postgres {
             },
             value);
     }
+
     template <typename Container>
     std::string Dialect::format_binary_data(const Container& data) {
         {

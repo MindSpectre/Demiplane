@@ -2,12 +2,12 @@
 
 #include <utility>
 
-#include <postgres_params.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
 #include <compiled_query.hpp>
 #include <connection_slot.hpp>
+#include <postgres_params.hpp>
 #include <process_pg_result.hpp>
 
 namespace demiplane::db::postgres {
@@ -122,7 +122,7 @@ namespace demiplane::db::postgres {
         executor_type executor_;
         std::unique_ptr<boost::asio::posix::stream_descriptor> socket_;
         std::int32_t cached_socket_fd_ = -1;
-        ConnectionSlot* slot_ = nullptr;
+        ConnectionSlot* slot_          = nullptr;
 
         // Core implementation
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>

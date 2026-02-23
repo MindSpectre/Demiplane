@@ -18,9 +18,11 @@ namespace demiplane::db::postgres {
         [[nodiscard]] bool empty() const noexcept {
             return rows() == 0;
         }
+
         [[nodiscard]] std::size_t rows() const noexcept {
             return static_cast<std::size_t>(PQntuples(res_.get()));
         }
+
         [[nodiscard]] std::size_t cols() const noexcept {
             return static_cast<std::size_t>(PQnfields(res_.get()));
         }
@@ -37,6 +39,7 @@ namespace demiplane::db::postgres {
                 return std::nullopt;
             return f.as<T>();
         }
+
         template <class T>
         T get(const std::size_t row, const std::size_t column) const {
             const auto f = get_row(row)[column];

@@ -123,7 +123,4 @@ namespace demiplane::db::postgres {
             }
         }
     }
-
-
-
 }  // namespace demiplane::db::postgres

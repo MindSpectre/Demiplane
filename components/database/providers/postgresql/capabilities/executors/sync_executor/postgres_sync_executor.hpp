@@ -2,9 +2,9 @@
 
 #include <utility>
 
-#include <postgres_params.hpp>
 #include <compiled_query.hpp>
 #include <connection_slot.hpp>
+#include <postgres_params.hpp>
 #include <process_pg_result.hpp>
 
 namespace demiplane::db::postgres {
@@ -34,7 +34,8 @@ namespace demiplane::db::postgres {
          * @param slot Connection slot acquired from the cylinder
          */
         explicit SyncExecutor(ConnectionSlot& slot) noexcept
-            : conn_{slot.conn}, slot_{&slot} {
+            : conn_{slot.conn},
+              slot_{&slot} {
         }
 
         ~SyncExecutor() {

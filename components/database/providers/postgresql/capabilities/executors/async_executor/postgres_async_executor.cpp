@@ -1,8 +1,8 @@
 #include "postgres_async_executor.hpp"
 
-#include <boost/asio/redirect_error.hpp>
-
 #include <demiplane/scroll>
+
+#include <boost/asio/redirect_error.hpp>
 
 namespace asio = boost::asio;
 

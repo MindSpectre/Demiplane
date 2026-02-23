@@ -1,7 +1,5 @@
 #include "postgres_connection_credentials.hpp"
 
-#include <format>
-
 namespace demiplane::db::postgres {
     [[nodiscard]] Json::Value ConnectionCredentials::wrapped_serialize() const {
         Json::Value result;

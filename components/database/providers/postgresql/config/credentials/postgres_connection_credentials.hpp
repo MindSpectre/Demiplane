@@ -8,7 +8,7 @@
 #include <gears_concepts.hpp>
 #include <json/value.h>
 
-#include "../tools/postgres_connection_tools.hpp"
+#include "tools/postgres_connection_tools.hpp"
 
 namespace demiplane::db::postgres {
 

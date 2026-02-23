@@ -2,14 +2,15 @@
 # Query compiler translates Expression class to std::string + param following chosen SqlDialect
 ##############################################################################
 add_library(${DMP_DATABASE}.Query.Compiler STATIC
-        include/query_compiler.hpp
-        include/query_visitor.hpp
-        include/sql_generator_visitor.hpp
-        source/sql_generator_visitor.cpp
-        include/compiled_query.hpp
+        query_compiler.hpp
+        compiled_query.hpp
+        query_visitor/query_visitor.hpp
+        query_visitor/sql_generator_visitor.hpp
+        query_visitor/sql_generator_visitor.cpp
+        query_visitor/detail/query_visitor.inl
 )
 target_include_directories(${DMP_DATABASE}.Query.Compiler PUBLIC
-        include
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(${DMP_DATABASE}.Query.Compiler
         PUBLIC

@@ -3,7 +3,7 @@
 #include <demiplane/scroll>
 
 #include "compiled_query.hpp"
-#include "sql_generator_visitor.hpp"
+#include "query_visitor/sql_generator_visitor.hpp"
 
 namespace demiplane::db {
     class QueryCompiler {

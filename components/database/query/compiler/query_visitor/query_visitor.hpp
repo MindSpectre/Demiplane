@@ -1,8 +1,8 @@
 #pragma once
 
 #include <db_core_objects.hpp>
+#include <gears_utils.hpp>
 
-#include "gears_utils.hpp"
 #include "query_expressions.hpp"
 // NOLINTBEGIN(bugprone-use-after-move)
 namespace demiplane::db {
@@ -726,5 +726,5 @@ namespace demiplane::db {
     };
 }  // namespace demiplane::db
 
-#include "../source/query_visitor.inl"
+#include "detail/query_visitor.inl"
 // NOLINTEND(bugprone-use-after-move)

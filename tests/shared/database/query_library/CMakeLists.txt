@@ -1,22 +1,26 @@
 add_library(${TESTS_SHARED}.Database.QueryLibrary STATIC
-        include/test_schemas.hpp
-        include/query_library.hpp
-        include/query_tags.hpp
-        include/query_producer.hpp
-        include/producers/aggregate_producers.hpp
-        include/producers/clause_producers.hpp
-        include/producers/condition_producers.hpp
-        include/producers/delete_producers.hpp
-        include/producers/insert_producers.hpp
-        include/producers/join_producers.hpp
-        include/producers/select_producers.hpp
-        include/producers/subquery_producers.hpp
-        include/producers/update_producers.hpp
-        src/test_schemas.cpp
+        test_schemas.hpp
+        query_library.hpp
+        query_tags.hpp
+        query_producer.hpp
+        producers/aggregate_producers.hpp
+        producers/case_producers.hpp
+        producers/clause_producers.hpp
+        producers/condition_producers.hpp
+        producers/cte_producers.hpp
+        producers/ddl_producers.hpp
+        producers/delete_producers.hpp
+        producers/insert_producers.hpp
+        producers/join_producers.hpp
+        producers/select_producers.hpp
+        producers/set_op_producers.hpp
+        producers/subquery_producers.hpp
+        producers/update_producers.hpp
+        test_schemas.cpp
 )
 
 target_include_directories(${TESTS_SHARED}.Database.QueryLibrary PUBLIC
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${TESTS_SHARED}.Database.QueryLibrary

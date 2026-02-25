@@ -20,7 +20,9 @@ add_subdirectory(capabilities)
 
 add_subdirectory(session)
 
-#add_subdirectory(transaction)
+add_subdirectory(capability_provider)
+
+add_subdirectory(transaction)
 
 add_combined_library(${DMP_DATABASE_POSTGRESQL}
         DIRECTORIES
@@ -35,6 +37,7 @@ add_combined_library(${DMP_DATABASE_POSTGRESQL}
         ${DMP_DATABASE_POSTGRESQL}.Capabilities
         ${DMP_DATABASE_POSTGRESQL}.TypeMapping
         ${DMP_DATABASE_POSTGRESQL}.Session
+        ${DMP_DATABASE_POSTGRESQL}.Transaction
 )
 
 add_library(Demiplane::Component::Database::PostgreSQL ALIAS ${DMP_DATABASE_POSTGRESQL})

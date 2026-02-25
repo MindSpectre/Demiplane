@@ -1,21 +1,15 @@
-add_subdirectory(cylinder)
-
 ##############################################################################
-# PostgreSql Session
+# PostgreSql CapabilityProvider Concept (header-only)
 ##############################################################################
-add_library(${DMP_DATABASE_POSTGRESQL}.Session STATIC
-        postgres_session.hpp
-        postgres_session.cpp
+add_library(${DMP_DATABASE_POSTGRESQL}.CapabilityProvider INTERFACE
+        capability_provider.hpp
 )
-target_include_directories(${DMP_DATABASE_POSTGRESQL}.Session PUBLIC
+target_include_directories(${DMP_DATABASE_POSTGRESQL}.CapabilityProvider INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
-target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Session
-        PUBLIC
-        ${DMP_DATABASE_POSTGRESQL}.Session.Cylinder
+target_link_libraries(${DMP_DATABASE_POSTGRESQL}.CapabilityProvider INTERFACE
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async
-        ${DMP_DATABASE_POSTGRESQL}.Transaction
         Boost::asio
 )
 ##############################################################################

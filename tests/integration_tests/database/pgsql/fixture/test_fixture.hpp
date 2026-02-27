@@ -11,10 +11,10 @@
 
 #include <gtest/gtest.h>
 #include <libpq-fe.h>
-
-#include <postgres_sync_executor.hpp>
 #include <postgres_connection_config.hpp>
 #include <postgres_dialect.hpp>
+#include <postgres_sync_executor.hpp>
+
 #include "query_library.hpp"
 #include "test_schemas.hpp"
 
@@ -33,7 +33,7 @@ namespace demiplane::test {
             }
 
             executor_ = std::make_unique<db::postgres::SyncExecutor>(conn_);
-            library_  = std::make_unique<QueryLibrary>(std::make_unique<db::postgres::Dialect>());
+            library_  = std::make_unique<QueryLibrary<db::postgres::PostgresDialect>>(db::Providers::PostgreSQL);
         }
 
         void TearDown() override {
@@ -397,7 +397,7 @@ namespace demiplane::test {
         [[nodiscard]] db::postgres::SyncExecutor& executor() const {
             return *executor_;
         }
-        [[nodiscard]] QueryLibrary& library() const {
+        [[nodiscard]] QueryLibrary<db::postgres::PostgresDialect>& library() const {
             return *library_;
         }
         [[nodiscard]] const TestSchemas& schemas() const {
@@ -406,7 +406,7 @@ namespace demiplane::test {
 
         PGconn* conn_ = nullptr;
         std::unique_ptr<db::postgres::SyncExecutor> executor_;
-        std::unique_ptr<QueryLibrary> library_;
+        std::unique_ptr<QueryLibrary<db::postgres::PostgresDialect>> library_;
     };
 
 }  // namespace demiplane::test

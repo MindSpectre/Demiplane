@@ -2,23 +2,8 @@
 
 #include <db_table.hpp>
 #include <gears_concepts.hpp>
-#include <sql_dialect.hpp>
 
 namespace demiplane::db {
-
-    // Constructor with dialect reference (extracts provider)
-    template <gears::IsStringLike StringTp>
-    constexpr Table::Table(StringTp&& table_name, const SqlDialect& dialect)
-        : table_name_{std::forward<StringTp>(table_name)},
-          provider_{dialect.type()} {
-    }
-
-    // Constructor with dialect pointer (extracts provider, nullptr -> None)
-    template <gears::IsStringLike StringTp>
-    constexpr Table::Table(StringTp&& table_name, const SqlDialect* dialect)
-        : table_name_{std::forward<StringTp>(table_name)},
-          provider_{dialect ? dialect->type() : Providers::None} {
-    }
 
     template <HasSchemaFields Schema, gears::IsStringLike StringTp>
     constexpr Table::Table(StringTp&& table_name, [[maybe_unused]] Schema schema, Providers provider)

@@ -194,7 +194,8 @@ void run_raw_benchmarks(demiplane::db::postgres::SyncExecutor& executor) {
     std::cout << std::string(50, '=') << "\n";
 }
 
-void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor, demiplane::test::QueryLibrary& library) {
+void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
+                             demiplane::test::QueryLibrary<demiplane::db::postgres::PostgresDialect>& library) {
     using namespace demiplane::db;
 
     const auto& s = library.schemas();
@@ -308,7 +309,7 @@ int main(int argc, char* argv[]) {
 
     // Create executor and query library
     SyncExecutor executor(conn);
-    QueryLibrary library{std::make_unique<Dialect>()};
+    QueryLibrary<PostgresDialect> library{Providers::PostgreSQL};
 
     // Setup test tables
     std::cout << "Setting up test tables...\n";

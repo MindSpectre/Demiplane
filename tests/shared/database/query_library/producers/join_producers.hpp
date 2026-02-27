@@ -10,7 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::InnerJoin> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: select(user_name, post_title).from(users_schema).join(posts_schema).on(...)
             auto query = select(s.users().name, s.posts().title)
@@ -23,7 +24,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::LeftJoin> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...join(posts_schema, JoinType::LEFT)...
             auto query = select(s.users().name, s.posts().title)
@@ -36,7 +38,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::RightJoin> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...join(posts_schema, JoinType::RIGHT)...
             auto query = select(s.users().name, s.posts().title)
@@ -49,7 +52,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::FullJoin> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...join(posts_schema, JoinType::FULL)...
             auto query = select(s.users().name, s.posts().title)
@@ -62,7 +66,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::CrossJoin> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...join(posts_schema, JoinType::CROSS).on(user_id > 0)
             auto query = select(s.users().name, s.posts().title)
@@ -75,7 +80,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::MultipleJoins> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: simple join (placeholder for multiple joins)
             auto query = select(s.users().name, s.posts().title)
@@ -88,7 +94,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::JoinComplexCondition> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...on(post_user_id == user_id && post_published == true)
             auto query = select(s.users().name, s.posts().title)
@@ -101,7 +108,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::JoinWithWhere> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...join(...).on(...).where(user_active == true)
             auto query = select(s.users().name, s.posts().title)
@@ -115,7 +123,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::JoinWithAggregates> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: select(user_name, count(post_id).as("post_count"))...group_by(user_name)
             auto query = select(s.users().name, count(s.posts().id).as("post_count"))
@@ -129,7 +138,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<join::JoinWithOrderBy> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ...order_by(asc(user_name), desc(post_title))
             auto query = select(s.users().name, s.posts().title)

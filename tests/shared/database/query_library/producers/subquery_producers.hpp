@@ -10,7 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::SubqueryInWhere> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: subquery in WHERE clause
             auto active_users = select(s.users().id).from(s.users().table).where(s.users().active == true);
@@ -22,7 +23,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::Exists> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: EXISTS expression
             auto published_posts =
@@ -34,7 +36,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::NotExists> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: NOT EXISTS expression
             auto pending_orders = select(1)
@@ -47,7 +50,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::BasicSubquery> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: basic subquery compilation
             auto post_count_subquery =
@@ -59,7 +63,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::SubqueryStructure> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: SubqueryStructureExpression
             auto user_post_count =
@@ -71,7 +76,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::InSubqueryMultiple> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: IN with multiple values subquery (high value users)
             auto high_value_users = select(s.users().id)
@@ -87,7 +93,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::NestedSubqueries> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: nested subqueries
             auto users_with_completed_orders =
@@ -103,7 +110,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::SubqueryWithAggregates> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: subquery with aggregates
             auto avg_order_amount =
@@ -119,7 +127,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<subq::SubqueryWithDistinct> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: subquery with DISTINCT
             auto unique_publishers =

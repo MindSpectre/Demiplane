@@ -5,9 +5,10 @@
 #include <string_view>
 #include <vector>
 
-#include <sql_type_mapping.hpp>
+#include <db_field_value.hpp>
 #include <gears_templates.hpp>
 #include <postgres_sql_type_registry.hpp>
+#include <sql_type_mapping.hpp>
 
 namespace demiplane::db {
 

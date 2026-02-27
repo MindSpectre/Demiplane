@@ -107,56 +107,57 @@ TEST(TypeMappingRuntime, ByteVectorWithProviderEnum) {
 
 class TypeMappingDialectTest : public ::testing::Test {
 protected:
-    postgres::Dialect dialect;
+    // Use Providers enum since PostgresDialect no longer inherits SqlDialect
+    Providers provider = Providers::PostgreSQL;
 };
 
 TEST_F(TypeMappingDialectTest, BoolWithDialectRef) {
-    auto type = sql_type<bool>(dialect);
+    auto type = sql_type<bool>(provider);
     EXPECT_EQ(type, "BOOLEAN");
 }
 
 TEST_F(TypeMappingDialectTest, Int32WithDialectRef) {
-    auto type = sql_type<std::int32_t>(dialect);
+    auto type = sql_type<std::int32_t>(provider);
     EXPECT_EQ(type, "INTEGER");
 }
 
 TEST_F(TypeMappingDialectTest, Int64WithDialectRef) {
-    auto type = sql_type<std::int64_t>(dialect);
+    auto type = sql_type<std::int64_t>(provider);
     EXPECT_EQ(type, "BIGINT");
 }
 
 TEST_F(TypeMappingDialectTest, FloatWithDialectRef) {
-    auto type = sql_type<float>(dialect);
+    auto type = sql_type<float>(provider);
     EXPECT_EQ(type, "REAL");
 }
 
 TEST_F(TypeMappingDialectTest, DoubleWithDialectRef) {
-    auto type = sql_type<double>(dialect);
+    auto type = sql_type<double>(provider);
     EXPECT_EQ(type, "DOUBLE PRECISION");
 }
 
 TEST_F(TypeMappingDialectTest, StringWithDialectRef) {
-    auto type = sql_type<std::string>(dialect);
+    auto type = sql_type<std::string>(provider);
     EXPECT_EQ(type, "TEXT");
 }
 
 TEST_F(TypeMappingDialectTest, ByteVectorWithDialectRef) {
-    auto type = sql_type<std::vector<std::uint8_t>>(dialect);
+    auto type = sql_type<std::vector<std::uint8_t>>(provider);
     EXPECT_EQ(type, "BYTEA");
 }
 
 TEST_F(TypeMappingDialectTest, BoolWithDialectPtr) {
-    auto type = sql_type<bool>(&dialect);
+    auto type = sql_type<bool>(provider);
     EXPECT_EQ(type, "BOOLEAN");
 }
 
 TEST_F(TypeMappingDialectTest, Int32WithDialectPtr) {
-    auto type = sql_type<std::int32_t>(&dialect);
+    auto type = sql_type<std::int32_t>(provider);
     EXPECT_EQ(type, "INTEGER");
 }
 
 TEST_F(TypeMappingDialectTest, StringWithDialectPtr) {
-    auto type = sql_type<std::string>(&dialect);
+    auto type = sql_type<std::string>(provider);
     EXPECT_EQ(type, "TEXT");
 }
 
@@ -190,7 +191,7 @@ TEST(PostgresConvenienceApi, StringMapsToText) {
 
 class TableAddFieldTest : public ::testing::Test {
 protected:
-    postgres::Dialect dialect;
+    // Tests use Providers directly since PostgresDialect no longer inherits SqlDialect
 };
 
 TEST_F(TableAddFieldTest, AddFieldWithProviderEnum) {
@@ -216,7 +217,7 @@ TEST_F(TableAddFieldTest, AddFieldWithProviderEnum) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithDialectRef) {
-    Table table("test_table", dialect);
+    Table table("test_table", Providers::PostgreSQL);
     table.add_field<bool>("active");
     table.add_field<std::int64_t>("count");
     table.add_field<float>("rate");
@@ -238,7 +239,7 @@ TEST_F(TableAddFieldTest, AddFieldWithDialectRef) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithDialectPtr) {
-    Table table("test_table", &dialect);
+    Table table("test_table", Providers::PostgreSQL);
     table.add_field<std::vector<std::uint8_t>>("data");
     table.add_field<std::string_view>("description");
 
@@ -291,8 +292,7 @@ TEST_F(TableAddFieldTest, AddFieldWithoutProviderThrows) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithNullDialectPtr) {
-    const SqlDialect* null_dialect = nullptr;
-    Table table("test_table", null_dialect);
+    Table table("test_table");
 
     EXPECT_EQ(table.provider(), Providers::None);
 

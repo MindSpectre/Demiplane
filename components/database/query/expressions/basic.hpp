@@ -11,7 +11,7 @@ namespace demiplane::db {
     class Expression {
     public:
         using self_type = Derived;
-        void accept(this auto&& self, QueryVisitor& visitor);
+        constexpr void accept(this auto&& self, auto& visitor);
 
     protected:
         constexpr decltype(auto) self(this auto&& self) {
@@ -84,7 +84,7 @@ namespace demiplane::db {
             return std::forward<Self>(self);
         }
 
-        void accept(this auto&& self, QueryVisitor& visitor);
+        constexpr void accept(this auto&& self, auto& visitor);
 
     private:
         T value_;

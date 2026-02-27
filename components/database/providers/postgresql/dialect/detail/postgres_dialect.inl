@@ -1,9 +1,10 @@
 #pragma once
 #include <gears_utils.hpp>
+
 namespace demiplane::db::postgres {
 
-    template <typename String>
-    void Dialect::escape_char(String& out, const char c) {
+    template <Appendable StringTp>
+    constexpr void PostgresDialect::escape_char(StringTp& out, const char c) {
         if (c == '\'') {
             out += "''";  // SQL standard: escape single quote with double single quote
         } else if (c == '\\') {
@@ -13,15 +14,15 @@ namespace demiplane::db::postgres {
         }
     }
 
-    template <typename String>
-    void Dialect::escape_string(String& out, const std::string_view str) {
+    template <Appendable StringTp>
+    constexpr void PostgresDialect::escape_string(StringTp& out, const std::string_view str) {
         for (const char c : str) {
             escape_char(out, c);
         }
     }
 
-    template <typename String>
-    void Dialect::format_value_impl(String& query, const FieldValue& value) {
+    template <Appendable StringTp>
+    constexpr void PostgresDialect::format_value_impl(StringTp& query, const FieldValue& value) {
         std::visit(
             [&query]<typename TX>(const TX& val) -> void {
                 using T = std::decay_t<TX>;
@@ -34,11 +35,21 @@ namespace demiplane::db::postgres {
                     query += "'";
                     escape_char(query, val);
                     query += "'";
-                } else if constexpr (std::is_same_v<T, std::int16_t> || std::is_same_v<T, std::int32_t> ||
-                                     std::is_same_v<T, std::int64_t> || std::is_same_v<T, std::uint16_t> ||
-                                     std::is_same_v<T, std::uint32_t> || std::is_same_v<T, std::uint64_t> ||
-                                     std::is_same_v<T, double> || std::is_same_v<T, float>) {
+                } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
+                    // float/double: not needed at compile time, use std::to_string //TODO? need to think about it
                     query += std::to_string(val);
+                } else if constexpr (std::is_integral_v<T>) {
+                    if constexpr (std::is_signed_v<T>) {
+                        if (val < 0) {
+                            query += '-';
+                            query +=
+                                gears::constexpr_to_string(static_cast<std::size_t>(-static_cast<std::int64_t>(val)));
+                        } else {
+                            query += gears::constexpr_to_string(static_cast<std::size_t>(val));
+                        }
+                    } else {
+                        query += gears::constexpr_to_string(static_cast<std::size_t>(val));
+                    }
                 } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> ||
                                      std::is_same_v<T, std::pmr::string>) {
                     query += "'";
@@ -55,21 +66,19 @@ namespace demiplane::db::postgres {
     }
 
     template <typename Container>
-    std::string Dialect::format_binary_data(const Container& data) {
-        {
-            std::string result;
-            result.reserve(5 + data.size() * 2);  // Reserve: "'" + "\x" + 2chars_per_byte + "'"
+    std::string PostgresDialect::format_binary_data(const Container& data) {
+        std::string result;
+        result.reserve(5 + data.size() * 2);  // Reserve: "'" + "\x" + 2chars_per_byte + "'"
 
-            result = "'\\x";
+        result = "'\\x";
 
-            for (const std::uint8_t byte : data) {
-                constexpr char hex_chars[]  = "0123456789abcdef";
-                result                     += hex_chars[byte >> 4];    // High nibble
-                result                     += hex_chars[byte & 0x0F];  // Low nibble
-            }
-
-            result += "'";
-            return result;
+        for (const std::uint8_t byte : data) {
+            constexpr char hex_chars[]  = "0123456789abcdef";
+            result                     += hex_chars[byte >> 4];    // High nibble
+            result                     += hex_chars[byte & 0x0F];  // Low nibble
         }
+
+        result += "'";
+        return result;
     }
 }  // namespace demiplane::db::postgres

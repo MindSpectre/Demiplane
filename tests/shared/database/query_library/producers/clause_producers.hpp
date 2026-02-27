@@ -11,7 +11,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::FromTable> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: FROM with Table
             auto query = select(s.users().name).from(s.users().table);
@@ -21,7 +22,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::FromTableName> {
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: FROM with table name string
             auto query = select(1).from("test_table");
@@ -31,7 +33,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::WhereSimple> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Simple WHERE
             auto query = select(s.users().name).from(s.users().table).where(s.users().active == true);
@@ -41,7 +44,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::WhereComplex> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: WHERE with AND/OR
             auto query = select(s.users().name)
@@ -54,7 +58,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::WhereIn> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: WHERE with IN
             auto query = select(s.users().name).from(s.users().table).where(in(s.users().age, 25, 30, 35));
@@ -64,7 +69,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::WhereBetween> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: WHERE with BETWEEN (salary)
             auto query = select(s.users_extended().name)
@@ -76,7 +82,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::GroupBySingle> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Single column GROUP BY
             auto query = select(s.users_extended().department, count(s.users_extended().id).as("count"))
@@ -88,7 +95,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::GroupByMultiple> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Multiple column GROUP BY
             auto query = select(s.users_extended().department,
@@ -102,7 +110,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::GroupByWithWhere> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: GROUP BY with WHERE
             auto query = select(s.users_extended().department, avg(s.users_extended().salary).as("avg_salary"))
@@ -115,7 +124,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::HavingSimple> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: HAVING with aggregate condition
             auto query = select(s.users_extended().department, count(s.users_extended().id).as("count"))
@@ -128,7 +138,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::HavingMultiple> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: HAVING with multiple conditions
             auto query = select(s.users_extended().department,
@@ -143,7 +154,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::HavingWithWhere> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: HAVING with WHERE and GROUP BY
             auto query = select(s.users_extended().department, max(s.users_extended().salary).as("max_salary"))
@@ -157,7 +169,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::OrderByAsc> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ORDER BY ASC
             auto query = select(s.users().name, s.users().age).from(s.users().table).order_by(asc(s.users().name));
@@ -167,7 +180,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::OrderByDesc> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: ORDER BY DESC
             auto query = select(s.users_extended().name, s.users_extended().salary)
@@ -179,7 +193,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::OrderByMultiple> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Multiple column ORDER BY
             auto query = select(s.users_extended().name, s.users_extended().department, s.users_extended().salary)
@@ -193,7 +208,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::LimitBasic> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Basic LIMIT
             auto query = select(s.users().name).from(s.users().table).limit(10);
@@ -203,7 +219,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::LimitWithOrderBy> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: LIMIT with ORDER BY
             auto query = select(s.users_extended().name, s.users_extended().salary)
@@ -216,7 +233,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::LimitWithWhereOrderBy> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: LIMIT with WHERE and ORDER BY
             auto query = select(s.users().name, s.users().age)
@@ -230,7 +248,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::ComplexAllClauses> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Complex query with all clauses
             // ORDER BY uses columns from GROUP BY
@@ -250,7 +269,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<clause::ClausesWithJoins> {
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler& c) {
+        template <db::IsSqlDialect DialectTp>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
             using namespace db;
             // Mirrors: Clauses with JOINs
             // ORDER BY uses columns from GROUP BY

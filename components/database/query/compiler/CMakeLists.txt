@@ -8,6 +8,7 @@ add_library(${DMP_DATABASE}.Query.Compiler STATIC
         query_visitor/sql_generator_visitor.hpp
         query_visitor/sql_generator_visitor.cpp
         query_visitor/detail/query_visitor.inl
+        query_visitor/detail/sql_generator_visitor.inl
 )
 target_include_directories(${DMP_DATABASE}.Query.Compiler PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}

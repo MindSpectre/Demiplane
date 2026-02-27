@@ -2,227 +2,176 @@
 
 #include <memory>
 
+#include <dialect_concepts.hpp>
+#include <sql_params.hpp>
+
 #include "query_visitor.hpp"
-#include "sql_dialect.hpp"
+
 namespace demiplane::db {
 
-    class SqlGeneratorVisitor final : public QueryVisitor {
+    template <IsSqlDialect DialectTp, Appendable StringTp = std::string>
+    class SqlGeneratorVisitor final : public QueryVisitor<SqlGeneratorVisitor<DialectTp, StringTp>> {
     public:
-        constexpr SqlGeneratorVisitor(std::shared_ptr<SqlDialect> d,
-                                      std::pmr::memory_resource* mr,
-                                      const bool use_params)
+        // Constexpr path - no sink, no PMR
+        constexpr explicit SqlGeneratorVisitor(const bool use_params)
+            : use_params_{use_params} {
+        }
+
+        // Runtime path - with sink and PMR
+        SqlGeneratorVisitor(const bool use_params, ParamSink* sink, std::pmr::memory_resource* mr)
             : use_params_{use_params},
-              dialect_{std::move(d)},
-              sql_{mr} {
-            if (use_params_) {
-                packet_ = dialect_->make_param_sink(mr);
-                sink_   = packet_.sink.get();
-            }
+              sql_{mr},
+              sink_{sink} {
         }
 
         template <typename Self>
-        auto decompose(this Self&& self) {
-            return std::make_tuple(std::forward<Self>(self).sql_, std::forward<Self>(self).packet_.packet);
+        constexpr auto decompose(this Self&& self) {
+            return std::make_tuple(std::forward<Self>(self).sql_, std::forward<Self>(self).param_count_);
         }
 
         // Get results
         template <typename Self>
-        [[nodiscard]] auto sql(this Self&& self) {
+        [[nodiscard]] constexpr auto sql(this Self&& self) {
             return std::forward<Self>(self).sql_;
         }
 
-        template <typename Self>
-        [[nodiscard]] auto&& parameters(this Self&& self) {
-            return std::forward<Self>(self).packet_.packet;
+        [[nodiscard]] constexpr std::size_t param_count() const noexcept {
+            return param_count_;
         }
 
-    protected:
-        // Column and value implementations
-        void
-        visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias) override;
-        void visit_dynamic_column_impl(std::string_view name, std::string_view table) override;
-        void visit_value_impl(const FieldValue& value) override;
-        void visit_value_impl(FieldValue&& value) override;
-        void visit_null_impl() override;
+        // ALL visit_*_impl methods are PUBLIC - the CRTP base calls them via derived()
+        constexpr void
+        visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias);
+        constexpr void visit_dynamic_column_impl(std::string_view name, std::string_view table);
+        constexpr void visit_value_impl(const FieldValue& value);
+        constexpr void visit_value_impl(FieldValue&& value);
+        constexpr void visit_null_impl();
 
-        void visit_all_columns_impl(std::string_view table) override;
+        constexpr void visit_all_columns_impl(std::string_view table);
 
-        void visit_table_impl(const TablePtr& table) override;
-        void visit_table_impl(std::string_view table_name) override;
+        constexpr void visit_table_impl(const TablePtr& table);
+        constexpr void visit_table_impl(std::string_view table_name);
 
-        void visit_alias_impl(std::string_view alias) override;
+        constexpr void visit_alias_impl(std::string_view alias);
+
         // Expression helpers
-        void visit_binary_expr_start() override;
-
-        void visit_binary_expr_end() override;
-
-        void visit_subquery_start() override;
-
-        void visit_subquery_end() override;
-
-        void visit_exists_start() override;
-
-        void visit_exists_end() override;
+        constexpr void visit_binary_expr_start();
+        constexpr void visit_binary_expr_end();
+        constexpr void visit_unary_expr_start() {
+        }
+        constexpr void visit_unary_expr_end() {
+        }
+        constexpr void visit_subquery_start();
+        constexpr void visit_subquery_end();
+        constexpr void visit_exists_start();
+        constexpr void visit_exists_end();
 
         // Binary operators
-        void visit_binary_op_impl(OpEqual) override;
+        constexpr void visit_binary_op_impl(OpEqual);
+        constexpr void visit_binary_op_impl(OpNotEqual);
+        constexpr void visit_binary_op_impl(OpLess);
+        constexpr void visit_binary_op_impl(OpLessEqual);
+        constexpr void visit_binary_op_impl(OpGreater);
+        constexpr void visit_binary_op_impl(OpGreaterEqual);
+        constexpr void visit_binary_op_impl(OpAnd);
+        constexpr void visit_binary_op_impl(OpOr);
+        constexpr void visit_binary_op_impl(OpLike);
+        constexpr void visit_binary_op_impl(OpNotLike);
+        constexpr void visit_binary_op_impl(OpIn);
 
-        void visit_binary_op_impl(OpNotEqual) override;
-
-        void visit_binary_op_impl(OpLess) override;
-
-        void visit_binary_op_impl(OpLessEqual) override;
-
-        void visit_binary_op_impl(OpGreater) override;
-
-        void visit_binary_op_impl(OpGreaterEqual) override;
-
-        void visit_binary_op_impl(OpAnd) override;
-
-        void visit_binary_op_impl(OpOr) override;
-
-        void visit_binary_op_impl(OpLike) override;
-
-        void visit_binary_op_impl(OpNotLike) override;
-
-        void visit_binary_op_impl(OpIn) override;
         // Unary operators
-        void visit_unary_op_impl(OpNot) override;
-
-        void visit_unary_op_impl(OpIsNull) override;
-
-        void visit_unary_op_impl(OpIsNotNull) override;
+        constexpr void visit_unary_op_impl(OpNot);
+        constexpr void visit_unary_op_impl(OpIsNull);
+        constexpr void visit_unary_op_impl(OpIsNotNull);
 
         // Special operators
-        void visit_between_impl() override;
-
-        void visit_and_impl() override;
-
-        void visit_in_list_start() override;
-
-        void visit_in_list_end() override;
-
-        void visit_in_list_separator() override;
+        constexpr void visit_between_impl();
+        constexpr void visit_and_impl();
+        constexpr void visit_in_list_start();
+        constexpr void visit_in_list_end();
+        constexpr void visit_in_list_separator();
 
         // Aggregate functions
-        void visit_count_impl(bool distinct) override;
+        constexpr void visit_count_impl(bool distinct);
+        constexpr void visit_sum_impl();
+        constexpr void visit_avg_impl();
+        constexpr void visit_max_impl();
+        constexpr void visit_min_impl();
+        constexpr void visit_aggregate_end(std::string_view alias);
 
-        void visit_sum_impl() override;
-
-        void visit_avg_impl() override;
-
-        void visit_max_impl() override;
-
-        void visit_min_impl() override;
-
-        void visit_aggregate_end(std::string_view alias) override;
         // Query parts
-        void visit_select_start(bool distinct) override;
-
-        void visit_select_end() override;
-
-        void visit_from_start() override;
-
-        void visit_from_end() override;
-
-        void visit_where_start() override;
-
-        void visit_where_end() override;
-
-        void visit_group_by_start() override;
-
-        void visit_group_by_end() override;
-
-        void visit_having_start() override;
-
-        void visit_having_end() override;
-
-        void visit_order_by_start() override;
-
-        void visit_order_by_end() override;
-
-        void visit_order_direction_impl(OrderDirection dir) override;
-
-        void visit_limit_impl(std::size_t limit, std::size_t offset) override;
+        constexpr void visit_select_start(bool distinct);
+        constexpr void visit_select_end();
+        constexpr void visit_from_start();
+        constexpr void visit_from_end();
+        constexpr void visit_where_start();
+        constexpr void visit_where_end();
+        constexpr void visit_group_by_start();
+        constexpr void visit_group_by_end();
+        constexpr void visit_having_start();
+        constexpr void visit_having_end();
+        constexpr void visit_order_by_start();
+        constexpr void visit_order_by_end();
+        constexpr void visit_order_direction_impl(OrderDirection dir);
+        constexpr void visit_limit_impl(std::size_t limit, std::size_t offset);
 
         // Joins
-        void visit_join_start(JoinType type) override;
-
-        void visit_join_on() override;
-
-        void visit_join_end() override;
+        constexpr void visit_join_start(JoinType type);
+        constexpr void visit_join_on();
+        constexpr void visit_join_end();
 
         // DML
-        void visit_insert_start() override;
+        constexpr void visit_insert_start();
+        constexpr void visit_insert_columns(const std::vector<std::string>& columns);
+        constexpr void visit_insert_columns(std::vector<std::string>&& columns);
+        constexpr void visit_insert_values(const std::vector<std::vector<FieldValue>>& rows);
+        constexpr void visit_insert_values(std::vector<std::vector<FieldValue>>&& rows);
+        constexpr void visit_insert_end();
 
-        void visit_insert_columns(const std::vector<std::string>& columns) override;
-        void visit_insert_columns(std::vector<std::string>&& columns) override;
+        constexpr void visit_update_start();
+        constexpr void visit_update_set(const std::vector<std::pair<std::string, FieldValue>>& assignments);
+        constexpr void visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments);
+        constexpr void visit_update_end();
 
-        void visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) override;
-        void visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) override;
+        constexpr void visit_delete_start();
+        constexpr void visit_delete_end();
 
-        void visit_insert_end() override;
-
-        void visit_update_start() override;
-
-        void visit_update_set(const std::vector<std::pair<std::string, FieldValue>>& assignments) override;
-        void visit_update_set(std::vector<std::pair<std::string, FieldValue>>&& assignments) override;
-
-        void visit_update_end() override;
-
-        void visit_delete_start() override;
-
-        void visit_delete_end() override;
-
-        void visit_case_start() override;
-
-        void visit_case_end() override;
-
-        void visit_when_start() override;
-
-        void visit_when_then() override;
-
-        void visit_when_end() override;
-
-        void visit_else_start() override;
-
-        void visit_else_end() override;
+        constexpr void visit_case_start();
+        constexpr void visit_case_end();
+        constexpr void visit_when_start();
+        constexpr void visit_when_then();
+        constexpr void visit_when_end();
+        constexpr void visit_else_start();
+        constexpr void visit_else_end();
 
         // CTE (Common Table Expression)
-        void visit_cte_start(bool recursive) override;
-
-        void visit_cte_name_impl(std::string_view name) override;
-
-        void visit_cte_as_start() override;
-
-        void visit_cte_as_end() override;
-
-        void visit_cte_end() override;
+        constexpr void visit_cte_start(bool recursive);
+        constexpr void visit_cte_name_impl(std::string_view name);
+        constexpr void visit_cte_as_start();
+        constexpr void visit_cte_as_end();
+        constexpr void visit_cte_end();
 
         // DDL - CREATE TABLE
-        void visit_create_table_start(bool if_not_exists) override;
-
-        void visit_create_table_columns(const TablePtr& table) override;
-
-        void visit_create_table_end() override;
+        constexpr void visit_create_table_start(bool if_not_exists);
+        constexpr void visit_create_table_columns(const TablePtr& table);
+        constexpr void visit_create_table_end();
 
         // DDL - DROP TABLE
-        void visit_drop_table_start(bool if_exists) override;
-
-        void visit_drop_table_end(bool cascade) override;
+        constexpr void visit_drop_table_start(bool if_exists);
+        constexpr void visit_drop_table_end(bool cascade);
 
         // Set operations
-        void visit_set_op_impl(SetOperation op) override;
+        constexpr void visit_set_op_impl(SetOperation op);
 
         // Column separator
-        void visit_column_separator() override;
+        constexpr void visit_column_separator();
 
     private:
         bool use_params_;
-
-        std::shared_ptr<SqlDialect> dialect_;
-        std::pmr::string sql_;
-        DialectBindPacket packet_;
-        ParamSink* sink_;
+        StringTp sql_{};
+        ParamSink* sink_         = nullptr;
+        std::size_t param_count_ = 0;
     };
 }  // namespace demiplane::db
+
+#include "detail/sql_generator_visitor.inl"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <concepts>
 #include <string_view>
 #include <type_traits>
@@ -7,9 +8,6 @@
 #include <providers.hpp>
 
 namespace demiplane::db {
-
-    // Forward declaration - no hard dependency on SqlDialect
-    class SqlDialect;
 
 
     // PRIMARY TYPE TRAIT: Maps C++ types to SQL type strings
@@ -57,17 +55,6 @@ namespace demiplane::db {
         std::unreachable();
     }
 
-
-    // RUNTIME API: sql_type<T>(dialect) - dispatches via dialect.type()
-
-
-    template <typename T>
-    std::string_view sql_type(const SqlDialect& dialect);
-
-    template <typename T>
-    std::string_view sql_type(const SqlDialect* dialect);
-
 }  // namespace demiplane::db
 
-#include "detail/sql_type_mapping.inl"
 #include "detail/db_table_mapping.inl"

@@ -1,10 +1,8 @@
 ##############################################################################
 # SQL Type Mapping (C++ type -> SQL type string)
-# Note: Depends on Dialect because .inl needs sql_dialect.hpp for type()
 ##############################################################################
 add_library(${DMP_DATABASE}.Base.TypeMapping INTERFACE
         type_mapping/sql_type_mapping.hpp
-        type_mapping/detail/sql_type_mapping.inl
         type_mapping/detail/db_table_mapping.inl
 )
 target_include_directories(${DMP_DATABASE}.Base.TypeMapping INTERFACE
@@ -34,10 +32,10 @@ target_link_libraries(${DMP_DATABASE}.Base.Params INTERFACE
 
 
 ##############################################################################
-# Dialect base class
+# Dialect concepts and CRTP base
 ##############################################################################
 add_library(${DMP_DATABASE}.Base.Dialect INTERFACE
-        dialect/sql_dialect.hpp
+        dialect/dialect_concepts.hpp
 )
 target_include_directories(${DMP_DATABASE}.Base.Dialect INTERFACE
         dialect/

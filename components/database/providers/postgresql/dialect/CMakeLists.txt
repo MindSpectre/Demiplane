@@ -14,8 +14,8 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Dialect
         ${DMP_DATABASE}.Base.Dialect
         ${DMP_DATABASE}.Base.TypeMapping
         ${DMP_DATABASE_POSTGRESQL}.Registries
-        PRIVATE
         Demiplane::Common::Gears
+        PRIVATE
         ${DMP_DATABASE_POSTGRESQL}.Params
 )
 ##############################################################################

@@ -9,8 +9,6 @@
 #include "db_field_schema.hpp"
 namespace demiplane::db {
 
-    class QueryVisitor;
-
     class DynamicColumn {
     public:
         template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
@@ -44,7 +42,7 @@ namespace demiplane::db {
             return *this;
         }
 
-        void accept(this auto&& self, QueryVisitor& visitor);
+        constexpr void accept(this auto&& self, auto& visitor);
 
     private:
         std::string name_;
@@ -112,7 +110,7 @@ namespace demiplane::db {
             return DynamicColumn{schema_->name, *table_};
         }
 
-        void accept(this auto&& self, QueryVisitor& visitor);
+        constexpr void accept(this auto&& self, auto& visitor);
 
     private:
         const FieldSchema* schema_;
@@ -140,7 +138,7 @@ namespace demiplane::db {
             return DynamicColumn{"*", table_name()};
         }
 
-        void accept(this auto&& self, QueryVisitor& visitor);
+        constexpr void accept(this auto&& self, auto& visitor);
 
     private:
         std::string table_;

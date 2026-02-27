@@ -3,14 +3,25 @@
 
 #include <db_field_value.hpp>
 #include <gears_templates.hpp>
-
+#include <gears_utils.hpp>
 namespace demiplane::db {
-    class QueryVisitor;
+
+    // Minimal detector struct for duck-typed accept() checking.
+    // Since QueryVisitor is now a CRTP template, we cannot forward-declare a
+    // concrete type.  Instead we verify that accept() is callable with *any*
+    // visitor-like argument.
+    struct AcceptDetector {
+        template <typename T>
+        void visit(T&&) {
+            gears::force_non_static(this);
+            gears::force_non_const(this);
+        }
+    };
 
     template <typename T>
-    concept HasAcceptVisitor = requires(std::remove_reference_t<T>& t, QueryVisitor& v) {
+    concept HasAcceptVisitor = requires(std::remove_reference_t<T>& t, AcceptDetector& v) {
         { t.accept(v) };
-    } || requires(const std::remove_reference_t<T>& t, QueryVisitor& v) {
+    } || requires(const std::remove_reference_t<T>& t, AcceptDetector& v) {
         { t.accept(v) };
     };
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sql_dialect.hpp>
+#include <dialect_concepts.hpp>
 
 #include "producers/aggregate_producers.hpp"
 #include "producers/case_producers.hpp"
@@ -19,33 +19,34 @@
 
 namespace demiplane::test {
 
+    template <db::IsSqlDialect DialectTp>
     class QueryLibrary {
     public:
-        explicit QueryLibrary(std::unique_ptr<db::SqlDialect> dialect)
-            : schemas_{TestSchemas::create(dialect->type())},
-              compiler_{std::move(dialect), false} {
+        explicit QueryLibrary(db::Providers provider)
+            : schemas_{TestSchemas::create(provider)},
+              compiler_{false} {
         }
 
         template <IsQueryTag Tag>
         [[nodiscard]] db::CompiledQuery produce() {
-            return QueryProducer<Tag>::produce(schemas_, compiler_);
+            return QueryProducer<Tag>::template produce<DialectTp>(schemas_, compiler_);
         }
 
         [[nodiscard]] const TestSchemas& schemas() const noexcept {
             return schemas_;
         }
 
-        [[nodiscard]] db::QueryCompiler& compiler() noexcept {
+        [[nodiscard]] db::QueryCompiler<DialectTp>& compiler() noexcept {
             return compiler_;
         }
 
-        [[nodiscard]] const db::QueryCompiler& compiler() const noexcept {
+        [[nodiscard]] const db::QueryCompiler<DialectTp>& compiler() const noexcept {
             return compiler_;
         }
 
     private:
         TestSchemas schemas_;
-        db::QueryCompiler compiler_;
+        db::QueryCompiler<DialectTp> compiler_;
     };
 
 }  // namespace demiplane::test

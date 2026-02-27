@@ -18,8 +18,6 @@ namespace demiplane::db {
     template <typename T>
     class TableColumn;
 
-    class SqlDialect;
-
     // Concept for schema types that have a fields type_list
     template <typename T>
     concept HasSchemaFields = requires { typename T::fields; };
@@ -37,14 +35,6 @@ namespace demiplane::db {
             : table_name_{std::forward<StringTp>(table_name)},
               provider_{provider} {
         }
-
-        // Constructor with dialect reference (extracts provider)
-        template <gears::IsStringLike StringTp>
-        constexpr explicit Table(StringTp&& table_name, const SqlDialect& dialect);
-
-        // Constructor with dialect pointer (extracts provider, nullptr -> None)
-        template <gears::IsStringLike StringTp>
-        constexpr explicit Table(StringTp&& table_name, const SqlDialect* dialect);
 
 
         // Schema-aware constructor - auto-initializes fields from Schema::fields

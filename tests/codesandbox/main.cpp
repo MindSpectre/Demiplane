@@ -713,14 +713,13 @@ static_assert(
     compiler.compile_sql(select(col("id"), col("name")).from(q_cte_basic)) ==
     R"(WITH "active_users" AS (SELECT "id", "name" FROM "users" WHERE ("active" = TRUE)) SELECT "id", "name" FROM "active_users")");
 
-// 10.8 CASE WHEN
-// TODO: .as("age_group") alias is not emitted by the CASE visitor — pre-existing bug
+// 10.8 CASE WHEN with alias
 static_assert(
     compiler.compile_sql(
         select(c_id,
                case_when(c_age < 18, lit("Minor")).when(c_age < 65, lit("Adult")).else_(lit("Senior")).as("age_group"))
             .from("users")) ==
-    R"(SELECT "id", CASE WHEN ("age" < 18) THEN 'Minor' WHEN ("age" < 65) THEN 'Adult' ELSE 'Senior' END FROM "users")");
+    R"(SELECT "id", CASE WHEN ("age" < 18) THEN 'Minor' WHEN ("age" < 65) THEN 'Adult' ELSE 'Senior' END AS "age_group" FROM "users")");
 
 // 10.9 Set operations (UNION)
 static_assert(compiler.compile_sql(union_query(select(c_name).from("users").where(c_age < 30),
@@ -735,8 +734,8 @@ static_assert(compiler.compile_sql(select(c_name).from("users").where((c_age > 1
 static_assert(compiler.compile_sql(select(c_name).from("users").where(between(c_age, 18, 65))) ==
               R"(SELECT "name" FROM "users" WHERE "age" BETWEEN 18 AND 65)");
 
-// TODO: is_null visitor emits operator before operand — pre-existing bug
-static_assert(!compiler.compile_sql(select(c_name).from("users").where(is_null(c_email))).empty());
+static_assert(compiler.compile_sql(select(c_name).from("users").where(is_null(c_email))) ==
+              R"(SELECT "name" FROM "users" WHERE "email" IS NULL)");
 
 // 10.11 String equality
 static_assert(compiler.compile_sql(select(c_id).from("users").where(c_name == "john")) ==

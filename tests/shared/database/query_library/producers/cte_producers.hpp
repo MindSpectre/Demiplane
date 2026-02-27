@@ -10,8 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<cte::BasicCte> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Basic CTE: WITH active_users AS (SELECT ...) SELECT * FROM active_users
             auto cte         = with("active_users",
@@ -24,8 +24,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<cte::CteWithSelect> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CTE with aggregation
             auto cte         = with("user_orders",
@@ -40,8 +40,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<cte::CteWithJoin> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CTE with filtered data
             auto cte         = with("published_posts",
@@ -55,8 +55,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<cte::MultipleCtes> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Single CTE with aggregation (multiple CTEs not yet supported)
             auto cte         = with("post_stats",
@@ -70,8 +70,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<cte::CteWithAggregates> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CTE with multiple aggregate functions
             auto cte = with("order_stats",

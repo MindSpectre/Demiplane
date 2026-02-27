@@ -7,21 +7,21 @@
 namespace demiplane::db::postgres {
 
     struct PostgresDialect : DialectBase<PostgresDialect> {
-        template <Appendable StringTp>
-        static constexpr void quote_identifier(StringTp& query, std::string_view name) {
+        template <Appendable StringT>
+        static constexpr void quote_identifier(StringT& query, std::string_view name) {
             query += '"';
             query += name;
             query += '"';
         }
 
-        template <Appendable StringTp>
-        static constexpr void placeholder(StringTp& query, const std::size_t index) {
+        template <Appendable StringT>
+        static constexpr void placeholder(StringT& query, const std::size_t index) {
             query += '$';
             query += gears::constexpr_to_string(index);
         }
 
-        template <Appendable StringTp>
-        static constexpr void limit_clause(StringTp& query, const std::size_t limit, const std::size_t offset) {
+        template <Appendable StringT>
+        static constexpr void limit_clause(StringT& query, const std::size_t limit, const std::size_t offset) {
             query += " LIMIT ";
             query += gears::constexpr_to_string(limit);
             if (offset > 0) {
@@ -30,8 +30,8 @@ namespace demiplane::db::postgres {
             }
         }
 
-        template <Appendable StringTp>
-        static constexpr void format_value(StringTp& query, const FieldValue& value) {
+        template <Appendable StringT>
+        static constexpr void format_value(StringT& query, const FieldValue& value) {
             format_value_impl(query, value);
         }
 
@@ -49,14 +49,14 @@ namespace demiplane::db::postgres {
         static DialectBindPacket make_param_sink(std::pmr::memory_resource* memory_resource);
 
     private:
-        template <Appendable StringTp>
-        static constexpr void format_value_impl(StringTp& query, const FieldValue& value);
+        template <Appendable StringT>
+        static constexpr void format_value_impl(StringT& query, const FieldValue& value);
 
-        template <Appendable StringTp>
-        static constexpr void escape_char(StringTp& out, char c);
+        template <Appendable StringT>
+        static constexpr void escape_char(StringT& out, char c);
 
-        template <Appendable StringTp>
-        static constexpr void escape_string(StringTp& out, std::string_view str);
+        template <Appendable StringT>
+        static constexpr void escape_string(StringT& out, std::string_view str);
 
         template <typename Container>
         static std::string format_binary_data(const Container& data);

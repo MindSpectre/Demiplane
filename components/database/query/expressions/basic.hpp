@@ -48,12 +48,17 @@ namespace demiplane::db {
 
     struct OpNotIn : OpBase {};
 
-    // Unary operators
+    // Unary operators — prefix (operator before operand)
     struct OpNot : OpBase {};
 
-    struct OpIsNull : OpBase {};
+    // Unary operators — postfix (operand before operator)
+    struct OpIsNull : OpBase {
+        static constexpr bool is_postfix = true;
+    };
 
-    struct OpIsNotNull : OpBase {};
+    struct OpIsNotNull : OpBase {
+        static constexpr bool is_postfix = true;
+    };
 
     // Join types
     enum class JoinType { INNER, LEFT, RIGHT, FULL, CROSS };

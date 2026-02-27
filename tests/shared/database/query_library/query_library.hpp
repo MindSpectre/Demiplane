@@ -19,7 +19,7 @@
 
 namespace demiplane::test {
 
-    template <db::IsSqlDialect DialectTp>
+    template <db::IsSqlDialect DialectT>
     class QueryLibrary {
     public:
         explicit QueryLibrary(db::Providers provider)
@@ -29,24 +29,24 @@ namespace demiplane::test {
 
         template <IsQueryTag Tag>
         [[nodiscard]] db::CompiledQuery produce() {
-            return QueryProducer<Tag>::template produce<DialectTp>(schemas_, compiler_);
+            return QueryProducer<Tag>::template produce<DialectT>(schemas_, compiler_);
         }
 
         [[nodiscard]] const TestSchemas& schemas() const noexcept {
             return schemas_;
         }
 
-        [[nodiscard]] db::QueryCompiler<DialectTp>& compiler() noexcept {
+        [[nodiscard]] db::QueryCompiler<DialectT>& compiler() noexcept {
             return compiler_;
         }
 
-        [[nodiscard]] const db::QueryCompiler<DialectTp>& compiler() const noexcept {
+        [[nodiscard]] const db::QueryCompiler<DialectT>& compiler() const noexcept {
             return compiler_;
         }
 
     private:
         TestSchemas schemas_;
-        db::QueryCompiler<DialectTp> compiler_;
+        db::QueryCompiler<DialectT> compiler_;
     };
 
 }  // namespace demiplane::test

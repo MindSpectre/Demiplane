@@ -10,8 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<case_expr::SimpleCaseWhen> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Simple CASE WHEN: CASE WHEN active = true THEN 'Active' END
             auto case_active = case_when(s.users().active == true, lit("Active"));
@@ -22,8 +22,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<case_expr::CaseWithElse> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CASE with ELSE: CASE WHEN active = true THEN 'Active' ELSE 'Inactive' END
             auto case_status = case_when(s.users().active == true, lit("Active")).else_(lit("Inactive"));
@@ -34,8 +34,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<case_expr::CaseMultipleWhen> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CASE with multiple WHEN clauses
             auto age_category = case_when(s.users().age < lit(25), lit("Young"))
@@ -49,8 +49,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<case_expr::CaseInSelect> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CASE used in SELECT to categorize data
             auto order_size = case_when(s.orders().amount < lit(100.0), lit("Small"))
@@ -65,8 +65,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<case_expr::CaseWithComparison> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // CASE with various comparison operators
             auto priority = case_when(s.orders().amount > lit(1000.0), lit(1))
@@ -80,8 +80,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<case_expr::CaseNested> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Nested CASE expression in WHERE clause condition
             auto high_value = case_when(s.users().active == true,

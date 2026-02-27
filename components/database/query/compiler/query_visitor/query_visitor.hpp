@@ -79,16 +79,26 @@ namespace demiplane::db {
         template <typename O, IsOperator Op>
         constexpr void visit(UnaryExpr<O, Op>&& expr) {
             derived().visit_unary_expr_start();
-            derived().visit_unary_op_impl(Op{});
-            derived().visit(std::move(expr).operand());
+            if constexpr (requires { Op::is_postfix; }) {
+                derived().visit(std::move(expr).operand());
+                derived().visit_unary_op_impl(Op{});
+            } else {
+                derived().visit_unary_op_impl(Op{});
+                derived().visit(std::move(expr).operand());
+            }
             derived().visit_unary_expr_end();
         }
 
         template <typename O, IsOperator Op>
         constexpr void visit(const UnaryExpr<O, Op>& expr) {
             derived().visit_unary_expr_start();
-            derived().visit_unary_op_impl(Op{});
-            derived().visit(expr.operand());
+            if constexpr (requires { Op::is_postfix; }) {
+                derived().visit(expr.operand());
+                derived().visit_unary_op_impl(Op{});
+            } else {
+                derived().visit_unary_op_impl(Op{});
+                derived().visit(expr.operand());
+            }
             derived().visit_unary_expr_end();
         }
 
@@ -473,6 +483,7 @@ namespace demiplane::db {
                 },
                 std::move(expr).when_clauses());
             derived().visit_case_end();
+            derived().visit_alias_impl(expr.alias());
         }
 
         template <typename... WhenClauses>
@@ -489,6 +500,7 @@ namespace demiplane::db {
                 },
                 expr.when_clauses());
             derived().visit_case_end();
+            derived().visit_alias_impl(expr.alias());
         }
 
         template <typename ElseExpr, typename... WhenClauses>
@@ -508,6 +520,7 @@ namespace demiplane::db {
             std::move(expr).else_clause().accept(derived());
             derived().visit_else_end();
             derived().visit_case_end();
+            derived().visit_alias_impl(expr.alias());
         }
 
         template <typename ElseExpr, typename... WhenClauses>
@@ -527,6 +540,7 @@ namespace demiplane::db {
             expr.else_clause().accept(derived());
             derived().visit_else_end();
             derived().visit_case_end();
+            derived().visit_alias_impl(expr.alias());
         }
 
         // CTE expressions - perfect forwarding

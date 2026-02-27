@@ -10,8 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::UnionBasic> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Basic UNION: removes duplicates
             auto active_users = select(s.users().name).from(s.users().table).where(s.users().active == true);
@@ -23,8 +23,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::UnionAll> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // UNION ALL: keeps duplicates
             auto completed_orders =
@@ -38,8 +38,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::Intersect> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // INTERSECT: only rows in both result sets
             auto active_users      = select(s.users().id).from(s.users().table).where(s.users().active == true);
@@ -51,8 +51,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::Except> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // EXCEPT: rows in first but not in second
             auto all_users        = select(s.users().id).from(s.users().table);
@@ -64,8 +64,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::UnionWithOrderBy> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // UNION with ORDER BY using unqualified column name (no context)
             auto active_users =
@@ -79,8 +79,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::UnionWithLimit> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // UNION with LIMIT
             auto small_orders =
@@ -94,8 +94,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::MultipleUnions> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Chained UNIONs
             auto young = select(s.users().name).from(s.users().table).where(s.users().age < lit(25));
@@ -109,8 +109,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<set_op::MixedSetOps> {
-        template <db::IsSqlDialect DialectTp>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectTp>& c) {
+        template <db::IsSqlDialect DialectT>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
             using namespace db;
             // Mixed set operations: (A UNION B) EXCEPT C
             auto active      = select(s.users().id).from(s.users().table).where(s.users().active == true);

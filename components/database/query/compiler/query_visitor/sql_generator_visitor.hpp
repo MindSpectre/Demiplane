@@ -9,8 +9,8 @@
 
 namespace demiplane::db {
 
-    template <IsSqlDialect DialectTp, Appendable StringTp = std::string>
-    class SqlGeneratorVisitor final : public QueryVisitor<SqlGeneratorVisitor<DialectTp, StringTp>> {
+    template <IsSqlDialect DialectT, Appendable StringT = std::string>
+    class SqlGeneratorVisitor final : public QueryVisitor<SqlGeneratorVisitor<DialectT, StringT>> {
     public:
         // Constexpr path - no sink, no PMR
         constexpr explicit SqlGeneratorVisitor(const bool use_params)
@@ -168,7 +168,7 @@ namespace demiplane::db {
 
     private:
         bool use_params_;
-        StringTp sql_{};
+        StringT sql_{};
         ParamSink* sink_         = nullptr;
         std::size_t param_count_ = 0;
     };

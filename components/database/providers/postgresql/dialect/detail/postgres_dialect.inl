@@ -3,8 +3,8 @@
 
 namespace demiplane::db::postgres {
 
-    template <Appendable StringTp>
-    constexpr void PostgresDialect::escape_char(StringTp& out, const char c) {
+    template <Appendable StringT>
+    constexpr void PostgresDialect::escape_char(StringT& out, const char c) {
         if (c == '\'') {
             out += "''";  // SQL standard: escape single quote with double single quote
         } else if (c == '\\') {
@@ -14,15 +14,15 @@ namespace demiplane::db::postgres {
         }
     }
 
-    template <Appendable StringTp>
-    constexpr void PostgresDialect::escape_string(StringTp& out, const std::string_view str) {
+    template <Appendable StringT>
+    constexpr void PostgresDialect::escape_string(StringT& out, const std::string_view str) {
         for (const char c : str) {
             escape_char(out, c);
         }
     }
 
-    template <Appendable StringTp>
-    constexpr void PostgresDialect::format_value_impl(StringTp& query, const FieldValue& value) {
+    template <Appendable StringT>
+    constexpr void PostgresDialect::format_value_impl(StringT& query, const FieldValue& value) {
         std::visit(
             [&query]<typename TX>(const TX& val) -> void {
                 using T = std::decay_t<TX>;

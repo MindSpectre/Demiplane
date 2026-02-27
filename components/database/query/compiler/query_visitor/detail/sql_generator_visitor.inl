@@ -2,10 +2,10 @@
 #include <expected>
 namespace demiplane::db {
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_table_column_impl(const FieldSchema* schema,
-                                                                                   const std::string_view table,
-                                                                                   const std::string_view alias) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_column_impl(const FieldSchema* schema,
+                                                                                         const std::string_view table,
+                                                                                         const std::string_view alias) {
         if (!table.empty()) {
             visit_table_impl(table);
             sql_ += ".";
@@ -14,9 +14,10 @@ namespace demiplane::db {
         visit_alias_impl(alias);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_dynamic_column_impl(const std::string_view name,
-                                                                                     const std::string_view table) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void
+    SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_dynamic_column_impl(const std::string_view name,
+                                                                            const std::string_view table) {
         if (!table.empty()) {
             visit_table_impl(table);
             sql_ += ".";
@@ -24,41 +25,37 @@ namespace demiplane::db {
         DialectT::quote_identifier(sql_, name);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_value_impl(const FieldValue& value) {
-        if consteval {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_value_impl(const FieldValue& value) {
+        if constexpr (Mode == ParamMode::Inline) {
             DialectT::format_value(sql_, value);
+        } else if constexpr (Mode == ParamMode::Tuple) {
+            DialectT::placeholder(sql_, ++param_count_);
         } else {
-            if (use_params_ && sink_) {
-                const std::size_t idx = sink_->push(value);
-                DialectT::placeholder(sql_, idx);
-            } else {
-                DialectT::format_value(sql_, value);
-            }
+            const std::size_t idx = sink_->push(value);
+            DialectT::placeholder(sql_, idx);
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_value_impl(FieldValue&& value) {
-        if consteval {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_value_impl(FieldValue&& value) {
+        if constexpr (Mode == ParamMode::Inline) {
             DialectT::format_value(sql_, value);
+        } else if constexpr (Mode == ParamMode::Tuple) {
+            DialectT::placeholder(sql_, ++param_count_);
         } else {
-            if (use_params_ && sink_) {
-                const std::size_t idx = sink_->push(std::move(value));
-                DialectT::placeholder(sql_, idx);
-            } else {
-                DialectT::format_value(sql_, value);
-            }
+            const std::size_t idx = sink_->push(std::move(value));
+            DialectT::placeholder(sql_, idx);
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_null_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_null_impl() {
         sql_ += "NULL";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_all_columns_impl(const std::string_view table) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_all_columns_impl(const std::string_view table) {
         if (!table.empty()) {
             visit_table_impl(table);
             sql_ += ".";
@@ -66,244 +63,250 @@ namespace demiplane::db {
         sql_ += "*";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_table_impl(const TablePtr& table) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_impl(const TablePtr& table) {
         if (!table)
             return;
         DialectT::quote_identifier(sql_, table->table_name());
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_table_impl(const std::string_view table_name) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_impl(const std::string_view table_name) {
         if (table_name.empty())
             return;
         DialectT::quote_identifier(sql_, table_name);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_alias_impl(const std::string_view alias) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_alias_impl(const std::string_view alias) {
         if (alias.empty())
             return;
         sql_ += " AS ";
         DialectT::quote_identifier(sql_, alias);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_expr_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_expr_start() {
         sql_ += "(";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_expr_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_expr_end() {
         sql_ += ")";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_subquery_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_subquery_start() {
         sql_ += "(";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_subquery_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_subquery_end() {
         sql_ += ")";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_exists_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_exists_start() {
         sql_ += "EXISTS (";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_exists_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_exists_end() {
         sql_ += ")";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpEqual) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpEqual) {
         sql_ += " = ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpNotEqual) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpNotEqual) {
         sql_ += " != ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpLess) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpLess) {
         sql_ += " < ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpLessEqual) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpLessEqual) {
         sql_ += " <= ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpGreater) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpGreater) {
         sql_ += " > ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpGreaterEqual) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpGreaterEqual) {
         sql_ += " >= ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpAnd) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpAnd) {
         sql_ += " AND ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpOr) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpOr) {
         sql_ += " OR ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpLike) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpLike) {
         sql_ += " LIKE ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpNotLike) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpNotLike) {
         sql_ += " NOT LIKE ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_binary_op_impl(OpIn) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_binary_op_impl(OpIn) {
         sql_ += " IN ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_unary_op_impl(OpNot) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_unary_op_impl(OpNot) {
         sql_ += "NOT ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_unary_op_impl(OpIsNull) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_unary_op_impl(OpIsNull) {
         sql_ += " IS NULL";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_unary_op_impl(OpIsNotNull) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_unary_op_impl(OpIsNotNull) {
         sql_ += " IS NOT NULL";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_between_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_between_impl() {
         sql_ += " BETWEEN ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_and_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_and_impl() {
         sql_ += " AND ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_in_list_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_in_list_start() {
         sql_ += " IN (";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_in_list_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_in_list_end() {
         sql_ += ")";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_in_list_separator() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_in_list_separator() {
         sql_ += ", ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_count_impl(const bool distinct) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_count_impl(const bool distinct) {
         sql_ += "COUNT(";
         if (distinct)
             sql_ += "DISTINCT ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_sum_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_sum_impl() {
         sql_ += "SUM(";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_avg_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_avg_impl() {
         sql_ += "AVG(";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_max_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_max_impl() {
         sql_ += "MAX(";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_min_impl() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_min_impl() {
         sql_ += "MIN(";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_aggregate_end(const std::string_view alias) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_aggregate_end(const std::string_view alias) {
         sql_ += ")";
         visit_alias_impl(alias);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_select_start(const bool distinct) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_select_start(const bool distinct) {
         sql_ += "SELECT ";
         if (distinct)
             sql_ += "DISTINCT ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_select_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_select_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_from_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_from_start() {
         sql_ += " FROM ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_from_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_from_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_where_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_where_start() {
         sql_ += " WHERE ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_where_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_where_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_group_by_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_group_by_start() {
         sql_ += " GROUP BY ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_group_by_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_group_by_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_having_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_having_start() {
         sql_ += " HAVING ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_having_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_having_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_order_by_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_order_by_start() {
         sql_ += " ORDER BY ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_order_by_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_order_by_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_order_direction_impl(const OrderDirection dir) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_order_direction_impl(const OrderDirection dir) {
         switch (dir) {
             case OrderDirection::ASC:
                 sql_ += " ASC";
@@ -314,14 +317,14 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_limit_impl(const std::size_t limit,
-                                                                            const std::size_t offset) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_limit_impl(const std::size_t limit,
+                                                                                  const std::size_t offset) {
         DialectT::limit_clause(sql_, limit, offset);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_join_start(const JoinType type) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_join_start(const JoinType type) {
         switch (type) {
             case JoinType::INNER:
                 sql_ += " INNER JOIN ";
@@ -341,23 +344,24 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_join_on() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_join_on() {
         sql_ += " ON ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_join_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_join_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_insert_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_start() {
         sql_ += "INSERT INTO ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void
-    SqlGeneratorVisitor<DialectT, StringT>::visit_insert_columns(const std::vector<std::string>& columns) {
+    SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_columns(const std::vector<std::string>& columns) {
         sql_       += " (";
         bool first  = true;
         for (const auto& col : columns) {
@@ -369,8 +373,9 @@ namespace demiplane::db {
         sql_ += ") VALUES ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_insert_columns(std::vector<std::string>&& columns) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void
+    SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_columns(std::vector<std::string>&& columns) {
         sql_       += " (";
         bool first  = true;
         for (const auto& col : columns) {
@@ -382,9 +387,9 @@ namespace demiplane::db {
         sql_ += ") VALUES ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void
-    SqlGeneratorVisitor<DialectT, StringT>::visit_insert_values(const std::vector<std::vector<FieldValue>>& rows) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_values(
+        const std::vector<std::vector<FieldValue>>& rows) {
         bool first_row = true;
         for (const auto& row : rows) {
             if (!first_row)
@@ -402,9 +407,9 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void
-    SqlGeneratorVisitor<DialectT, StringT>::visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) {
+    SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_values(std::vector<std::vector<FieldValue>>&& rows) {
         bool first_row = true;
         for (auto&& row : std::move(rows)) {
             if (!first_row)
@@ -422,17 +427,18 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_insert_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_update_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_update_start() {
         sql_ += "UPDATE ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_update_set(
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_update_set(
         const std::vector<std::pair<std::string, FieldValue>>& assignments) {
         sql_       += " SET ";
         bool first  = true;
@@ -446,8 +452,8 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_update_set(
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_update_set(
         std::vector<std::pair<std::string, FieldValue>>&& assignments) {
         sql_       += " SET ";
         bool first  = true;
@@ -461,56 +467,60 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_update_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_update_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_delete_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_delete_start() {
         sql_ += "DELETE FROM ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_delete_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_delete_end() {
+        gears::force_non_static(this);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_case_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_case_start() {
         sql_ += "CASE";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_case_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_case_end() {
         sql_ += " END";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_when_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_when_start() {
         sql_ += " WHEN ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_when_then() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_when_then() {
         sql_ += " THEN ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_when_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_when_end() {
+        gears::force_non_static(this);
         // Nothing needed after each WHEN clause
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_else_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_else_start() {
         sql_ += " ELSE ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_else_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_else_end() {
+        gears::force_non_static(this);
         // Nothing needed after ELSE clause
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_set_op_impl(const SetOperation op) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_set_op_impl(const SetOperation op) {
         switch (op) {
             case SetOperation::UNION:
                 sql_ += " UNION ";
@@ -527,44 +537,44 @@ namespace demiplane::db {
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_cte_start(const bool recursive) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_cte_start(const bool recursive) {
         sql_ += "WITH ";
         if (recursive) {
             sql_ += "RECURSIVE ";
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_cte_name_impl(const std::string_view name) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_cte_name_impl(const std::string_view name) {
         DialectT::quote_identifier(sql_, name);
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_cte_as_start() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_cte_as_start() {
         sql_ += " AS (";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_cte_as_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_cte_as_end() {
         sql_ += ")";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_cte_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_cte_end() {
         sql_ += " ";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_create_table_start(const bool if_not_exists) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_start(const bool if_not_exists) {
         sql_ += "CREATE TABLE ";
         if (if_not_exists) {
             sql_ += "IF NOT EXISTS ";
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_create_table_columns(const TablePtr& table) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_columns(const TablePtr& table) {
         if (!table)
             return;
 
@@ -616,29 +626,30 @@ namespace demiplane::db {
         sql_ += ")";
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_create_table_end() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_end() {
+        gears::force_non_static(this);
         // PostgreSQL doesn't need anything here //TODO? sql visitor must be unified(call dialect)
         // Other dialects might add ENGINE, CHARSET, etc.
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_drop_table_start(const bool if_exists) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_drop_table_start(const bool if_exists) {
         sql_ += "DROP TABLE ";
         if (if_exists) {
             sql_ += "IF EXISTS ";
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_drop_table_end(const bool cascade) {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_drop_table_end(const bool cascade) {
         if (cascade) {
             sql_ += " CASCADE";
         }
     }
 
-    template <IsSqlDialect DialectT, Appendable StringT>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT>::visit_column_separator() {
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_column_separator() {
         sql_ += ", ";
     }
 

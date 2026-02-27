@@ -17,7 +17,7 @@
 //   7. SET OPERATIONS (12 constexpr)
 //   8. CTEs           (6 constexpr)
 //   9. JOINs          (10 constexpr)
-//  10. SQL GENERATION  (15 compile-time static_assert via QueryCompiler<PostgresDialect>)
+//  10. SQL GENERATION  (compile-time static_assert via QueryCompiler<PostgresDialect>)
 //
 // Skipped entirely: INSERT, UPDATE, DELETE (FieldValue/vector), DDL (shared_ptr<Table>)
 // =============================================================================
@@ -27,8 +27,6 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
 #pragma clang diagnostic ignored "-Wunused-variable"
-
-#include <cassert>
 
 #include <postgres_dialect.hpp>
 #include <query_compiler.hpp>
@@ -670,12 +668,15 @@ static constexpr auto q_join_order = select(col("name"), col("title"))
 // =============================================================================
 // Section 10: Compile-Time SQL Generation
 //
-// Verifies that QueryCompiler<PostgresDialect>::compile_sql() produces correct
-// SQL strings entirely at compile time.  Values are always inlined (not
-// parameterized) on the constexpr path.
+// Verifies that QueryCompiler<PostgresDialect> produces correct SQL strings
+// entirely at compile time using the ParamMode enum.
+//
+// A single compiler is used with default ParamMode::Tuple:
+//   - compile_static()                         → Tuple ($N + typed tuple)
+//   - compile_static<ParamMode::Inline>()      → Inline (values in SQL + empty tuple)
 //
 // NOTE: std::string cannot persist across constant expressions (heap alloc must
-// be freed in the same evaluation), so we call compile_sql() directly inside
+// be freed in the same evaluation), so we call compile_static() directly inside
 // static_assert rather than storing results in static constexpr variables.
 //
 // NOTE: Avoid double/float literals — std::to_string is not constexpr.
@@ -683,75 +684,204 @@ static constexpr auto q_join_order = select(col("name"), col("title"))
 
 static constexpr QueryCompiler<PostgresDialect> compiler{};
 
-// 10.1 Basic SELECT
-static_assert(compiler.compile_sql(select(c_id, c_name).from("users")) == R"(SELECT "id", "name" FROM "users")");
+// ---------------------------------------------------------------------------
+// 10A: Inlined-value tests (ParamMode::Inline)
+// ---------------------------------------------------------------------------
 
-// 10.2 SELECT with WHERE
-static_assert(compiler.compile_sql(select(c_name).from("users").where(c_age > 18)) ==
+// 10A.1 Basic SELECT (no values — identical output)
+static_assert(compiler.compile_static<ParamMode::Inline>(select(c_id, c_name).from("users")).sql() ==
+              R"(SELECT "id", "name" FROM "users")");
+
+// 10A.2 SELECT with WHERE
+static_assert(compiler.compile_static<ParamMode::Inline>(select(c_name).from("users").where(c_age > 18)).sql() ==
               R"(SELECT "name" FROM "users" WHERE ("age" > 18))");
 
-// 10.3 SELECT DISTINCT
-static_assert(compiler.compile_sql(select_distinct(c_name).from("users")) == R"(SELECT DISTINCT "name" FROM "users")");
+// 10A.3 SELECT DISTINCT
+static_assert(compiler.compile_static<ParamMode::Inline>(select_distinct(c_name).from("users")).sql() ==
+              R"(SELECT DISTINCT "name" FROM "users")");
 
-// 10.4 SELECT with ORDER BY + LIMIT
-static_assert(compiler.compile_sql(select(c_name).from("users").order_by(asc(col("name"))).limit(10)) ==
-              R"(SELECT "name" FROM "users" ORDER BY "name" ASC LIMIT 10)");
+// 10A.4 SELECT with ORDER BY + LIMIT
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(select(c_name).from("users").order_by(asc(col("name"))).limit(10))
+                  .sql() == R"(SELECT "name" FROM "users" ORDER BY "name" ASC LIMIT 10)");
 
-// 10.5 JOIN
+// 10A.5 JOIN
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(
+                      select(c_name, c_title).from("users").join("posts").on(col("user_id") == col("id")))
+                  .sql() == R"(SELECT "name", "title" FROM "users" INNER JOIN "posts" ON ("user_id" = "id"))");
+
+// 10A.6 Aggregates with GROUP BY + HAVING
 static_assert(
-    compiler.compile_sql(select(c_name, c_title).from("users").join("posts").on(col("user_id") == col("id"))) ==
-    R"(SELECT "name", "title" FROM "users" INNER JOIN "posts" ON ("user_id" = "id"))");
-
-// 10.6 Aggregates with GROUP BY + HAVING
-static_assert(
-    compiler.compile_sql(
-        select(c_dept, count("id").as("cnt")).from("users").group_by(c_dept).having(count("id") > 5)) ==
+    compiler
+        .compile_static<ParamMode::Inline>(
+            select(c_dept, count("id").as("cnt")).from("users").group_by(c_dept).having(count("id") > 5))
+        .sql() ==
     R"(SELECT "department", COUNT("id") AS "cnt" FROM "users" GROUP BY "department" HAVING (COUNT("id") > 5))");
 
-// 10.7 CTE
+// 10A.7 CTE
 static_assert(
-    compiler.compile_sql(select(col("id"), col("name")).from(q_cte_basic)) ==
+    compiler.compile_static<ParamMode::Inline>(select(col("id"), col("name")).from(q_cte_basic)).sql() ==
     R"(WITH "active_users" AS (SELECT "id", "name" FROM "users" WHERE ("active" = TRUE)) SELECT "id", "name" FROM "active_users")");
 
-// 10.8 CASE WHEN with alias
+// 10A.8 CASE WHEN with alias
 static_assert(
-    compiler.compile_sql(
-        select(c_id,
-               case_when(c_age < 18, lit("Minor")).when(c_age < 65, lit("Adult")).else_(lit("Senior")).as("age_group"))
-            .from("users")) ==
+    compiler
+        .compile_static<ParamMode::Inline>(
+            select(
+                c_id,
+                case_when(c_age < 18, lit("Minor")).when(c_age < 65, lit("Adult")).else_(lit("Senior")).as("age_group"))
+                .from("users"))
+        .sql() ==
     R"(SELECT "id", CASE WHEN ("age" < 18) THEN 'Minor' WHEN ("age" < 65) THEN 'Adult' ELSE 'Senior' END AS "age_group" FROM "users")");
 
-// 10.9 Set operations (UNION)
-static_assert(compiler.compile_sql(union_query(select(c_name).from("users").where(c_age < 30),
-                                               select(c_name).from("users").where(c_age >= 60))) ==
+// 10A.9 Set operations (UNION)
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(union_query(select(c_name).from("users").where(c_age < 30),
+                                                                 select(c_name).from("users").where(c_age >= 60)))
+                  .sql() ==
               R"(SELECT "name" FROM "users" WHERE ("age" < 30) UNION SELECT "name" FROM "users" WHERE ("age" >= 60))");
 
-// 10.10 Complex conditions: AND / OR / IN / BETWEEN / IS NULL
-static_assert(compiler.compile_sql(select(c_name).from("users").where((c_age > 18 && c_active == true) ||
-                                                                      in(c_age, 25, 30, 35))) ==
+// 10A.10 Complex conditions: AND / OR / IN / BETWEEN / IS NULL
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(
+                      select(c_name).from("users").where((c_age > 18 && c_active == true) || in(c_age, 25, 30, 35)))
+                  .sql() ==
               R"(SELECT "name" FROM "users" WHERE ((("age" > 18) AND ("active" = TRUE)) OR "age" IN (25, 30, 35)))");
 
-static_assert(compiler.compile_sql(select(c_name).from("users").where(between(c_age, 18, 65))) ==
-              R"(SELECT "name" FROM "users" WHERE "age" BETWEEN 18 AND 65)");
+static_assert(compiler.compile_static<ParamMode::Inline>(select(c_name).from("users").where(between(c_age, 18, 65)))
+                  .sql() == R"(SELECT "name" FROM "users" WHERE "age" BETWEEN 18 AND 65)");
 
-static_assert(compiler.compile_sql(select(c_name).from("users").where(is_null(c_email))) ==
+static_assert(compiler.compile_static<ParamMode::Inline>(select(c_name).from("users").where(is_null(c_email))).sql() ==
               R"(SELECT "name" FROM "users" WHERE "email" IS NULL)");
 
-// 10.11 String equality
-static_assert(compiler.compile_sql(select(c_id).from("users").where(c_name == "john")) ==
+// 10A.11 String equality
+static_assert(compiler.compile_static<ParamMode::Inline>(select(c_id).from("users").where(c_name == "john")).sql() ==
               R"(SELECT "id" FROM "users" WHERE ("name" = 'john'))");
 
-// 10.12 Boolean equality
-static_assert(compiler.compile_sql(select(c_id).from("users").where(c_active == true)) ==
+// 10A.12 Boolean equality
+static_assert(compiler.compile_static<ParamMode::Inline>(select(c_id).from("users").where(c_active == true)).sql() ==
               R"(SELECT "id" FROM "users" WHERE ("active" = TRUE))");
 
-// 10.13 EXISTS subquery
-static_assert(compiler.compile_sql(select(c_name).from("users").where(
-                  exists(select(col("id")).from("posts").where(col("published") == true)))) ==
+// 10A.13 EXISTS subquery
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(select(c_name).from("users").where(
+                      exists(select(col("id")).from("posts").where(col("published") == true))))
+                  .sql() ==
               R"(SELECT "name" FROM "users" WHERE EXISTS (SELECT "id" FROM "posts" WHERE ("published" = TRUE)))");
+
+// ---------------------------------------------------------------------------
+// 10B: Parameterized tests (ParamMode::Tuple — default for compile_static)
+// ---------------------------------------------------------------------------
+
+// 10B.1 No values → identical to inlined
+static_assert(compiler.compile_static(select(c_id, c_name).from("users")).sql() ==
+              R"(SELECT "id", "name" FROM "users")");
+
+// 10B.2 Single placeholder
+static_assert(compiler.compile_static(select(c_name).from("users").where(c_age > 18)).sql() ==
+              R"(SELECT "name" FROM "users" WHERE ("age" > $1))");
+
+// 10B.3 Multiple placeholders in CASE WHEN
+static_assert(
+    compiler
+        .compile_static(
+            select(
+                c_id,
+                case_when(c_age < 18, lit("Minor")).when(c_age < 65, lit("Adult")).else_(lit("Senior")).as("age_group"))
+                .from("users"))
+        .sql() ==
+    R"(SELECT "id", CASE WHEN ("age" < $1) THEN $2 WHEN ("age" < $3) THEN $4 ELSE $5 END AS "age_group" FROM "users")");
+
+// 10B.4 Placeholders in UNION (counter resets per compile_static call)
+static_assert(compiler
+                  .compile_static(union_query(select(c_name).from("users").where(c_age < 30),
+                                              select(c_name).from("users").where(c_age >= 60)))
+                  .sql() ==
+              R"(SELECT "name" FROM "users" WHERE ("age" < $1) UNION SELECT "name" FROM "users" WHERE ("age" >= $2))");
+
+// 10B.5 Complex conditions with multiple placeholders
+static_assert(
+    compiler
+        .compile_static(select(c_name).from("users").where((c_age > 18 && c_active == true) || in(c_age, 25, 30, 35)))
+        .sql() == R"(SELECT "name" FROM "users" WHERE ((("age" > $1) AND ("active" = $2)) OR "age" IN ($3, $4, $5)))");
+
+// 10B.6 BETWEEN with placeholders
+static_assert(compiler.compile_static(select(c_name).from("users").where(between(c_age, 18, 65))).sql() ==
+              R"(SELECT "name" FROM "users" WHERE "age" BETWEEN $1 AND $2)");
+
+// 10B.7 IS NULL — no values, identical output
+static_assert(compiler.compile_static(select(c_name).from("users").where(is_null(c_email))).sql() ==
+              R"(SELECT "name" FROM "users" WHERE "email" IS NULL)");
+
+// 10B.8 String equality with placeholder
+static_assert(compiler.compile_static(select(c_id).from("users").where(c_name == "john")).sql() ==
+              R"(SELECT "id" FROM "users" WHERE ("name" = $1))");
+
+// 10B.9 EXISTS subquery with placeholder
+static_assert(compiler
+                  .compile_static(select(c_name).from("users").where(
+                      exists(select(col("id")).from("posts").where(col("published") == true))))
+                  .sql() ==
+              R"(SELECT "name" FROM "users" WHERE EXISTS (SELECT "id" FROM "posts" WHERE ("published" = $1)))");
+
+
+// ---------------------------------------------------------------------------
+// 10C: Static parameter extraction tests (compile_static with Tuple mode)
+// ---------------------------------------------------------------------------
+
+// 10C.1 Single integer param
+static_assert(compiler.compile_static(select(c_name).from("users").where(c_age > 18)).sql() ==
+              R"(SELECT "name" FROM "users" WHERE ("age" > $1))");
+static_assert(compiler.compile_static(select(c_name).from("users").where(c_age > 18)).params() == std::tuple{18});
+static_assert(compiler.compile_static(select(c_name).from("users").where(c_age > 18)).size() == 1);
+
+// 10C.2 Two params: int + bool
+static_assert(compiler.compile_static(select(c_name).from("users").where(c_age > 18 && c_active == true)).params() ==
+              std::tuple{18, true});
+
+// 10C.3 IN list — multiple params
+static_assert(compiler.compile_static(select(c_name).from("users").where(in(c_age, 25, 30, 35))).params() ==
+              std::tuple{25, 30, 35});
+
+// 10C.4 BETWEEN — two params
+static_assert(compiler.compile_static(select(c_name).from("users").where(between(c_age, 18, 65))).params() ==
+              std::tuple{18, 65});
+
+// 10C.5 Boolean param
+static_assert(compiler.compile_static(select(c_id).from("users").where(c_active == true)).params() == std::tuple{true});
+
+// 10C.6 CASE WHEN — multiple params from conditions and values
+static_assert(
+    compiler
+        .compile_static(
+            select(c_id,
+                   case_when(c_age < 18, lit("Minor")).when(c_age < 65, lit("Adult")).else_(lit("Senior")).as("group"))
+                .from("users"))
+        .size() == 5);
+
+// 10C.7 UNION — params from both sides
+static_assert(compiler
+                  .compile_static(union_query(select(c_name).from("users").where(c_age < 30),
+                                              select(c_name).from("users").where(c_age >= 60)))
+                  .params() == std::tuple{30, 60});
+
+// 10C.8 EXISTS subquery — params from inner query
+static_assert(compiler
+                  .compile_static(select(c_name).from("users").where(
+                      exists(select(col("id")).from("posts").where(col("published") == true))))
+                  .params() == std::tuple{true});
+
+// 10C.9 No params — result is empty tuple
+
+static_assert(compiler.compile_static(select(c_id, c_name).from("users")).size() == 0);
 
 
 int main() {
+    std::tuple<int> a{1};
+    std::tuple<int> b{2};
+    std::cout << (a == b) << std::endl;
+    std::cout << (compiler.compile_static(select(c_id, c_name).from("users")).params() == std::tuple<>{});
     return 0;
 }
 

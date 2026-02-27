@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include <compiled_query.hpp>
+#include <../../../../../query/compiler/query/compiled_query.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>

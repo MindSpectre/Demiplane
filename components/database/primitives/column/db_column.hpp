@@ -42,7 +42,7 @@ namespace demiplane::db {
             return *this;
         }
 
-        constexpr void accept(this auto&& self, auto& visitor);
+        constexpr decltype(auto) accept(this auto&& self, auto& visitor);
 
     private:
         std::string name_;
@@ -110,7 +110,7 @@ namespace demiplane::db {
             return DynamicColumn{schema_->name, *table_};
         }
 
-        constexpr void accept(this auto&& self, auto& visitor);
+        constexpr decltype(auto) accept(this auto&& self, auto& visitor);
 
     private:
         const FieldSchema* schema_;
@@ -138,7 +138,7 @@ namespace demiplane::db {
             return DynamicColumn{"*", table_name()};
         }
 
-        constexpr void accept(this auto&& self, auto& visitor);
+        constexpr decltype(auto) accept(this auto&& self, auto& visitor);
 
     private:
         std::string table_;

@@ -10,8 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::BasicDelete> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(user_active == false)
             auto query = delete_from(s.users().table).where(s.users().active == false);
@@ -21,8 +21,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteWithTableName> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from("users").where(user_id > 0)
             auto query = delete_from("users").where(s.users().id > 0);
@@ -32,8 +32,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteWithoutWhere> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema)
             auto query = delete_from(s.users().table);
@@ -43,8 +43,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteWhere> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(user_active == false)
             auto query = delete_from(s.users().table).where(s.users().active == false);
@@ -54,8 +54,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteComplexWhere> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(user_active == false && user_age < 18)
             auto query = delete_from(s.users().table).where(s.users().active == false && s.users().age < 18);
@@ -65,8 +65,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteWithIn> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(in(user_age, 18, 19, 20))
             auto query = delete_from(s.users().table).where(in(s.users().age, 18, 19, 20));
@@ -76,8 +76,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteWithBetween> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(between(user_age, 18, 25))
             auto query = delete_from(s.users().table).where(between(s.users().age, 18, 25));
@@ -87,8 +87,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<del::DeleteWithSubquery> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete with subquery
             auto inactive_users = select(s.users().id).from(s.users().table).where(s.users().active == false);

@@ -23,8 +23,7 @@ namespace demiplane::test {
     class QueryLibrary {
     public:
         explicit QueryLibrary(db::Providers provider)
-            : schemas_{TestSchemas::create(provider)},
-              compiler_{false} {
+            : schemas_{TestSchemas::create(provider)} {
         }
 
         template <IsQueryTag Tag>
@@ -36,17 +35,17 @@ namespace demiplane::test {
             return schemas_;
         }
 
-        [[nodiscard]] db::QueryCompiler<DialectT>& compiler() noexcept {
+        [[nodiscard]] auto& compiler() noexcept {
             return compiler_;
         }
 
-        [[nodiscard]] const db::QueryCompiler<DialectT>& compiler() const noexcept {
+        [[nodiscard]] const auto& compiler() const noexcept {
             return compiler_;
         }
 
     private:
         TestSchemas schemas_;
-        db::QueryCompiler<DialectT> compiler_;
+        db::QueryCompiler<DialectT, db::ParamMode::Inline> compiler_;
     };
 
 }  // namespace demiplane::test

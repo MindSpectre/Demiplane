@@ -2,61 +2,82 @@
 
 #include <demiplane/scroll>
 
-#include "compiled_query.hpp"
+#include "param_mode.hpp"
+#include "query/compiled_query.hpp"
+#include "query/compiled_static_query.hpp"
 #include "query_visitor/sql_generator_visitor.hpp"
 
 namespace demiplane::db {
 
-    template <IsSqlDialect DialectT>
+    template <IsSqlDialect DialectT, ParamMode DefaultMode = ParamMode::Tuple>
     class QueryCompiler {
+        // Auto-resolve: Sink->Tuple for CT, Tuple->Sink for RT
+        static constexpr ParamMode StaticDefault  = (DefaultMode == ParamMode::Sink) ? ParamMode::Tuple : DefaultMode;
+        static constexpr ParamMode RuntimeDefault = (DefaultMode == ParamMode::Tuple) ? ParamMode::Sink : DefaultMode;
+
     public:
-        constexpr explicit QueryCompiler(const bool use_params = true)
-            : use_parameters_{use_params} {
+        constexpr QueryCompiler() = default;
+
+        // Constexpr path -- SQL text + typed parameter tuple
+        template <ParamMode Mode = StaticDefault, IsQuery Expr>
+            requires(Mode != ParamMode::Sink)
+        constexpr auto compile_static(const Expression<Expr>& expr) const {
+            SqlGeneratorVisitor<DialectT, std::string, Mode> v{};
+            auto params = expr.accept(v);
+            auto sql    = std::move(v).sql();
+            return CompiledStaticQuery{std::move(sql), std::move(params)};
         }
 
-        // Constexpr path -- SQL text only, values inlined
-        template <IsQuery Expr>
-        constexpr std::string compile_sql(const Expression<Expr>& expr) const {
-            // TODO: params is false by default
-            SqlGeneratorVisitor<DialectT> v{use_parameters_ && false};
-            expr.accept(v);
-            return std::move(v).sql();
-        }
-
-        template <IsQuery Expr>
-        constexpr std::string compile_sql(Expression<Expr>&& expr) const {
-            // TODO: params is false by default
-            SqlGeneratorVisitor<DialectT> v{use_parameters_ && false};
-            std::move(expr).accept(v);
-            return std::move(v).sql();
+        template <ParamMode Mode = StaticDefault, IsQuery Expr>
+            requires(Mode != ParamMode::Sink)
+        constexpr auto compile_static(Expression<Expr>&& expr) const {
+            SqlGeneratorVisitor<DialectT, std::string, Mode> v{};
+            auto params = std::move(expr).accept(v);
+            auto sql    = std::move(v).sql();
+            return CompiledStaticQuery{std::move(sql), std::move(params)};
         }
 
         // Runtime path -- full compilation with PMR and params
-        template <IsQuery Expr>
+        template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
+            requires(Mode != ParamMode::Tuple)
         CompiledQuery compile(const Expression<Expr>& expr) {
-            auto arena       = std::make_shared<std::pmr::monotonic_buffer_resource>();
-            auto bind_packet = DialectT::make_param_sink(arena.get());
+            auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
-            SqlGeneratorVisitor<DialectT, std::pmr::string> v{use_parameters_, bind_packet.sink.get(), arena.get()};
-            expr.accept(v);
-            auto [sql, count] = std::move(v).decompose();
-            COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
-            return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
+            if constexpr (Mode == ParamMode::Inline) {
+                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Inline> v{arena.get()};
+                expr.accept(v);
+                auto [sql, count] = std::move(v).decompose();
+                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
+            } else {
+                auto bind_packet = DialectT::make_param_sink(arena.get());
+                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> v{bind_packet.sink.get(), arena.get()};
+                expr.accept(v);
+                auto [sql, count] = std::move(v).decompose();
+                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
+            }
         }
 
-        template <IsQuery Expr>
+        template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
+            requires(Mode != ParamMode::Tuple)
         CompiledQuery compile(Expression<Expr>&& expr) {
-            auto arena       = std::make_shared<std::pmr::monotonic_buffer_resource>();
-            auto bind_packet = DialectT::make_param_sink(arena.get());
+            auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
-            SqlGeneratorVisitor<DialectT, std::pmr::string> v{use_parameters_, bind_packet.sink.get(), arena.get()};
-            std::move(expr).accept(v);
-            auto [sql, count] = std::move(v).decompose();
-            COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
-            return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
+            if constexpr (Mode == ParamMode::Inline) {
+                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Inline> v{arena.get()};
+                std::move(expr).accept(v);
+                auto [sql, count] = std::move(v).decompose();
+                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
+            } else {
+                auto bind_packet = DialectT::make_param_sink(arena.get());
+                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> v{bind_packet.sink.get(), arena.get()};
+                std::move(expr).accept(v);
+                auto [sql, count] = std::move(v).decompose();
+                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
+            }
         }
-
-    private:
-        bool use_parameters_ = true;
     };
 }  // namespace demiplane::db

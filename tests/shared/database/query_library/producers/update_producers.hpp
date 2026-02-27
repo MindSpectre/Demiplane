@@ -10,8 +10,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<upd::BasicUpdate> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("active", false).where(user_age < 18)
             auto query = update(s.users().table).set("active", false).where(s.users().age < 18);
@@ -21,8 +21,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<upd::UpdateWithTableName> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update("users").set("active", true).where(user_id > 0)
             auto query = update("users").set("active", true).where(s.users().id > 0);
@@ -32,8 +32,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<upd::UpdateMultipleSet> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("active", false).set("age", 21).where(user_age < 18)
             auto query = update(s.users().table).set("active", false).set("age", 21).where(s.users().age < 18);
@@ -43,8 +43,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<upd::UpdateInitializerList> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set({{"active", false}, {"age", 21}}).where(user_age < 18)
             auto query = update(s.users().table)
@@ -59,8 +59,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<upd::UpdateWithoutWhere> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("active", true)
             auto query = update(s.users().table).set("active", true);
@@ -70,8 +70,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<upd::UpdateVariousTypes> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("name", ...).set("age", ...).set("active", ...).where(...)
             auto query = update(s.users().table)

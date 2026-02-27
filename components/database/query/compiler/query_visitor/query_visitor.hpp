@@ -18,157 +18,179 @@ namespace demiplane::db {
     public:
         // Column and literals - now with perfect forwarding
 
-        constexpr void visit(const DynamicColumn& col) {
+        constexpr auto visit(const DynamicColumn& col) {
             derived().visit_dynamic_column_impl(col.name(), col.context());
+            return derived().no_params();
         }
 
         template <typename T>
-        constexpr void visit(const TableColumn<T>& col) {
+        constexpr auto visit(const TableColumn<T>& col) {
             derived().visit_table_column_impl(col.schema(), col.table_name(), col.alias());
+            return derived().no_params();
         }
 
 
         template <typename T>
-        constexpr void visit(Literal<T>&& lit) {
+        constexpr auto visit(Literal<T>&& lit) {
             if constexpr (std::is_same_v<T, FieldValue>) {
                 derived().visit_value_impl(std::move(lit).value());
             } else {
                 derived().visit_value_impl(FieldValue{lit.value()});
             }
             derived().visit_alias_impl(lit.alias());
+            return derived().capture_param(lit.value());
         }
 
         template <typename T>
-        constexpr void visit(const Literal<T>& lit) {
+        constexpr auto visit(const Literal<T>& lit) {
             if constexpr (std::is_same_v<T, FieldValue>) {
                 derived().visit_value_impl(lit.value());
             } else {
                 derived().visit_value_impl(FieldValue{lit.value()});
             }
             derived().visit_alias_impl(lit.alias());
+            return derived().capture_param(lit.value());
         }
 
-        constexpr void visit(const NullLiteral& null) {
+        constexpr auto visit(const NullLiteral& null) {
             gears::unused_value(null);
             derived().visit_null_impl();
+            return derived().no_params();
         }
 
-        constexpr void visit(const AllColumns& all) {
+        constexpr auto visit(const AllColumns& all) {
             derived().visit_all_columns_impl(all.table_name());
+            return derived().no_params();
         }
 
         // Expressions - perfect forwarding versions
         template <typename L, typename R, IsOperator Op>
-        constexpr void visit(BinaryExpr<L, R, Op>&& expr) {
+        constexpr auto visit(BinaryExpr<L, R, Op>&& expr) {
             derived().visit_binary_expr_start();
-            std::move(expr).left().accept(derived());
+            auto lp = std::move(expr).left().accept(derived());
             derived().visit_binary_op_impl(Op{});
-            std::move(expr).right().accept(derived());
+            auto rp = std::move(expr).right().accept(derived());
             derived().visit_binary_expr_end();
+            return derived().cat_params(std::move(lp), std::move(rp));
         }
 
         template <typename L, typename R, IsOperator Op>
-        constexpr void visit(const BinaryExpr<L, R, Op>& expr) {
+        constexpr auto visit(const BinaryExpr<L, R, Op>& expr) {
             derived().visit_binary_expr_start();
-            expr.left().accept(derived());
+            auto lp = expr.left().accept(derived());
             derived().visit_binary_op_impl(Op{});
-            expr.right().accept(derived());
+            auto rp = expr.right().accept(derived());
             derived().visit_binary_expr_end();
+            return derived().cat_params(std::move(lp), std::move(rp));
         }
 
         template <typename O, IsOperator Op>
-        constexpr void visit(UnaryExpr<O, Op>&& expr) {
+        constexpr auto visit(UnaryExpr<O, Op>&& expr) {
             derived().visit_unary_expr_start();
             if constexpr (requires { Op::is_postfix; }) {
-                derived().visit(std::move(expr).operand());
+                auto op = derived().visit(std::move(expr).operand());
                 derived().visit_unary_op_impl(Op{});
+                derived().visit_unary_expr_end();
+                return op;
             } else {
                 derived().visit_unary_op_impl(Op{});
-                derived().visit(std::move(expr).operand());
+                auto op = derived().visit(std::move(expr).operand());
+                derived().visit_unary_expr_end();
+                return op;
             }
-            derived().visit_unary_expr_end();
         }
 
         template <typename O, IsOperator Op>
-        constexpr void visit(const UnaryExpr<O, Op>& expr) {
+        constexpr auto visit(const UnaryExpr<O, Op>& expr) {
             derived().visit_unary_expr_start();
             if constexpr (requires { Op::is_postfix; }) {
-                derived().visit(expr.operand());
+                auto op = derived().visit(expr.operand());
                 derived().visit_unary_op_impl(Op{});
+                derived().visit_unary_expr_end();
+                return op;
             } else {
                 derived().visit_unary_op_impl(Op{});
-                derived().visit(expr.operand());
+                auto op = derived().visit(expr.operand());
+                derived().visit_unary_expr_end();
+                return op;
             }
-            derived().visit_unary_expr_end();
         }
 
         template <typename O, typename L, typename U>
-        constexpr void visit(BetweenExpr<O, L, U>&& expr) {
-            std::move(expr).operand().accept(derived());
+        constexpr auto visit(BetweenExpr<O, L, U>&& expr) {
+            auto op = std::move(expr).operand().accept(derived());
             derived().visit_between_impl();
-            std::move(expr).lower().accept(derived());
+            auto lp = std::move(expr).lower().accept(derived());
             derived().visit_and_impl();
-            std::move(expr).upper().accept(derived());
+            auto up = std::move(expr).upper().accept(derived());
+            return derived().cat_params(std::move(op), std::move(lp), std::move(up));
         }
 
         template <typename O, typename L, typename U>
-        constexpr void visit(const BetweenExpr<O, L, U>& expr) {
-            expr.operand().accept(derived());
+        constexpr auto visit(const BetweenExpr<O, L, U>& expr) {
+            auto op = expr.operand().accept(derived());
             derived().visit_between_impl();
-            expr.lower().accept(derived());
+            auto lp = expr.lower().accept(derived());
             derived().visit_and_impl();
-            expr.upper().accept(derived());
+            auto up = expr.upper().accept(derived());
+            return derived().cat_params(std::move(op), std::move(lp), std::move(up));
         }
 
         template <typename O, typename... Values>
-        constexpr void visit(InListExpr<O, Values...>&& expr) {
-            std::move(expr).operand().accept(derived());
+        constexpr auto visit(InListExpr<O, Values...>&& expr) {
+            auto op = std::move(expr).operand().accept(derived());
             derived().visit_in_list_start();
-            visit_tuple_elements(std::move(expr).values(), std::index_sequence_for<Values...>{});
+            auto vp = visit_tuple_elements(std::move(expr).values(), std::index_sequence_for<Values...>{});
             derived().visit_in_list_end();
+            return derived().cat_params(std::move(op), std::move(vp));
         }
 
         template <typename O, typename... Values>
-        constexpr void visit(const InListExpr<O, Values...>& expr) {
-            expr.operand().accept(derived());
+        constexpr auto visit(const InListExpr<O, Values...>& expr) {
+            auto op = expr.operand().accept(derived());
             derived().visit_in_list_start();
-            visit_tuple_elements(expr.values(), std::index_sequence_for<Values...>{});
+            auto vp = visit_tuple_elements(expr.values(), std::index_sequence_for<Values...>{});
             derived().visit_in_list_end();
+            return derived().cat_params(std::move(op), std::move(vp));
         }
 
         template <typename Q>
-        constexpr void visit(Subquery<Q>&& sq) {
+        constexpr auto visit(Subquery<Q>&& sq) {
             derived().visit_subquery_start();
-            std::move(sq).query().accept(derived());
+            auto qp = std::move(sq).query().accept(derived());
             derived().visit_subquery_end();
             derived().visit_alias_impl(sq.alias());
+            return qp;
         }
 
         template <typename Q>
-        constexpr void visit(const Subquery<Q>& sq) {
+        constexpr auto visit(const Subquery<Q>& sq) {
             derived().visit_subquery_start();
-            sq.query().accept(derived());
+            auto qp = sq.query().accept(derived());
             derived().visit_subquery_end();
             derived().visit_alias_impl(sq.alias());
+            return qp;
         }
 
         template <typename Q>
-        constexpr void visit(ExistsExpr<Q>&& expr) {
+        constexpr auto visit(ExistsExpr<Q>&& expr) {
             derived().visit_exists_start();
-            std::move(expr).query().accept(derived());
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_exists_end();
+            return qp;
         }
 
         template <typename Q>
-        constexpr void visit(const ExistsExpr<Q>& expr) {
+        constexpr auto visit(const ExistsExpr<Q>& expr) {
             derived().visit_exists_start();
-            expr.query().accept(derived());
+            auto qp = expr.query().accept(derived());
             derived().visit_exists_end();
+            return qp;
         }
 
         // Aggregate functions - perfect forwarding
 
-        constexpr void visit(const CountExpr& expr) {
+        constexpr auto visit(const CountExpr& expr) {
             derived().visit_count_impl(expr.distinct());
             if (expr.is_all_columns()) {
                 derived().visit_all_columns_impl("");
@@ -176,441 +198,488 @@ namespace demiplane::db {
                 expr.column().accept(derived());
             }
             derived().visit_aggregate_end(expr.alias());
+            return derived().no_params();
         }
 
 
-        constexpr void visit(const SumExpr& expr) {
+        constexpr auto visit(const SumExpr& expr) {
             derived().visit_sum_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
+            return derived().no_params();
         }
 
 
-        constexpr void visit(const AvgExpr& expr) {
+        constexpr auto visit(const AvgExpr& expr) {
             derived().visit_avg_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
+            return derived().no_params();
         }
 
 
-        constexpr void visit(const MaxExpr& expr) {
+        constexpr auto visit(const MaxExpr& expr) {
             derived().visit_max_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
+            return derived().no_params();
         }
 
 
-        constexpr void visit(const MinExpr& expr) {
+        constexpr auto visit(const MinExpr& expr) {
             derived().visit_min_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
+            return derived().no_params();
         }
 
         // Order by - perfect forwarding
 
-        constexpr void visit(const OrderBy& order) {
+        constexpr auto visit(const OrderBy& order) {
             order.column().accept(derived());
             derived().visit_order_direction_impl(order.direction());
+            return derived().no_params();
         }
 
         // Query builders - perfect forwarding
         template <typename... Columns>
-        constexpr void visit(SelectExpr<Columns...>&& expr) {
+        constexpr auto visit(SelectExpr<Columns...>&& expr) {
             derived().visit_select_start(expr.distinct());
-            visit_tuple_elements(std::move(expr).columns(), std::index_sequence_for<Columns...>{});
+            auto cp = visit_tuple_elements(std::move(expr).columns(), std::index_sequence_for<Columns...>{});
             derived().visit_select_end();
+            return cp;
         }
 
         template <typename... Columns>
-        constexpr void visit(const SelectExpr<Columns...>& expr) {
+        constexpr auto visit(const SelectExpr<Columns...>& expr) {
             derived().visit_select_start(expr.distinct());
-            visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
+            auto cp = visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
             derived().visit_select_end();
+            return cp;
         }
 
         template <typename SelectQuery, typename IsTable>
-        constexpr void visit(FromTableExpr<SelectQuery, IsTable>&& expr) {
-            std::move(expr).select().accept(derived());
+        constexpr auto visit(FromTableExpr<SelectQuery, IsTable>&& expr) {
+            auto sp = std::move(expr).select().accept(derived());
             derived().visit_from_start();
             derived().visit_table_impl(expr.table());
             derived().visit_alias_impl(expr.alias());
             derived().visit_from_end();
+            return sp;
         }
 
         template <typename SelectQuery, typename IsTable>
-        constexpr void visit(const FromTableExpr<SelectQuery, IsTable>& expr) {
-            expr.select().accept(derived());
+        constexpr auto visit(const FromTableExpr<SelectQuery, IsTable>& expr) {
+            auto sp = expr.select().accept(derived());
             derived().visit_from_start();
             derived().visit_table_impl(expr.table());
             derived().visit_alias_impl(expr.alias());
             derived().visit_from_end();
+            return sp;
         }
 
         template <IsSelectExpr SelectQuery, IsCteExpr CteQuery>
-        constexpr void visit(FromCteExpr<SelectQuery, CteQuery>&& expr) {
-            derived().visit(std::move(expr).cte_query());
-            std::move(expr).select().accept(derived());
+        constexpr auto visit(FromCteExpr<SelectQuery, CteQuery>&& expr) {
+            auto cp = derived().visit(std::move(expr).cte_query());
+            auto sp = std::move(expr).select().accept(derived());
             derived().visit_from_start();
             // Safe: CTE visitor only moves query_, cte_name_ remains valid
             derived().visit_table_impl(std::move(expr).cte_query().name());
             derived().visit_from_end();
+            return derived().cat_params(std::move(cp), std::move(sp));
         }
 
         template <IsSelectExpr SelectQuery, IsCteExpr CteQuery>
-        constexpr void visit(const FromCteExpr<SelectQuery, CteQuery>& expr) {
-            derived().visit(expr.cte_query());
-            expr.select().accept(derived());
+        constexpr auto visit(const FromCteExpr<SelectQuery, CteQuery>& expr) {
+            auto cp = derived().visit(expr.cte_query());
+            auto sp = expr.select().accept(derived());
             derived().visit_from_start();
             derived().visit_table_impl(expr.cte_query().name());
             derived().visit_from_end();
+            return derived().cat_params(std::move(cp), std::move(sp));
         }
 
         template <typename Q, typename C>
-        constexpr void visit(WhereExpr<Q, C>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(WhereExpr<Q, C>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_where_start();
-            std::move(expr).condition().accept(derived());
+            auto cp = std::move(expr).condition().accept(derived());
             derived().visit_where_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename Q, typename C>
-        constexpr void visit(const WhereExpr<Q, C>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const WhereExpr<Q, C>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_where_start();
-            expr.condition().accept(derived());
+            auto cp = expr.condition().accept(derived());
             derived().visit_where_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename PreGroupQuery, typename... Columns>
-        constexpr void visit(GroupByColumnExpr<PreGroupQuery, Columns...>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(GroupByColumnExpr<PreGroupQuery, Columns...>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_group_by_start();
-            visit_tuple_elements(std::move(expr).columns(), std::index_sequence_for<Columns...>{});
+            auto cp = visit_tuple_elements(std::move(expr).columns(), std::index_sequence_for<Columns...>{});
             derived().visit_group_by_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename PreGroupQuery, typename... Columns>
-        constexpr void visit(const GroupByColumnExpr<PreGroupQuery, Columns...>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const GroupByColumnExpr<PreGroupQuery, Columns...>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_group_by_start();
-            visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
+            auto cp = visit_tuple_elements(expr.columns(), std::index_sequence_for<Columns...>{});
             derived().visit_group_by_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename PreGroupQuery, typename Criteria>
-        constexpr void visit(GroupByQueryExpr<PreGroupQuery, Criteria>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(GroupByQueryExpr<PreGroupQuery, Criteria>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_group_by_start();
-            derived().visit(std::move(expr).criteria());
+            auto cp = derived().visit(std::move(expr).criteria());
             derived().visit_group_by_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename PreGroupQuery, typename Criteria>
-        constexpr void visit(const GroupByQueryExpr<PreGroupQuery, Criteria>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const GroupByQueryExpr<PreGroupQuery, Criteria>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_group_by_start();
-            derived().visit(expr.criteria());
+            auto cp = derived().visit(expr.criteria());
             derived().visit_group_by_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename Q, typename C>
-        constexpr void visit(HavingExpr<Q, C>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(HavingExpr<Q, C>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_having_start();
-            std::move(expr).condition().accept(derived());
+            auto cp = std::move(expr).condition().accept(derived());
             derived().visit_having_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename Q, typename C>
-        constexpr void visit(const HavingExpr<Q, C>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const HavingExpr<Q, C>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_having_start();
-            expr.condition().accept(derived());
+            auto cp = expr.condition().accept(derived());
             derived().visit_having_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename Q, typename... O>
-        constexpr void visit(OrderByExpr<Q, O...>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(OrderByExpr<Q, O...>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_order_by_start();
-            visit_tuple_elements(std::move(expr).orders(), std::index_sequence_for<O...>{});
+            auto op = visit_tuple_elements(std::move(expr).orders(), std::index_sequence_for<O...>{});
             derived().visit_order_by_end();
+            return derived().cat_params(std::move(qp), std::move(op));
         }
 
         template <typename Q, typename... O>
-        constexpr void visit(const OrderByExpr<Q, O...>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const OrderByExpr<Q, O...>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_order_by_start();
-            visit_tuple_elements(expr.orders(), std::index_sequence_for<O...>{});
+            auto op = visit_tuple_elements(expr.orders(), std::index_sequence_for<O...>{});
             derived().visit_order_by_end();
+            return derived().cat_params(std::move(qp), std::move(op));
         }
 
         template <typename Q>
-        constexpr void visit(LimitExpr<Q>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(LimitExpr<Q>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_limit_impl(expr.count(), expr.offset());
+            return qp;
         }
 
         template <typename Q>
-        constexpr void visit(const LimitExpr<Q>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const LimitExpr<Q>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_limit_impl(expr.count(), expr.offset());
+            return qp;
         }
 
         template <typename Query, typename Condition, typename TableT>
-        constexpr void visit(JoinExpr<Query, Condition, TableT>&& expr) {
-            std::move(expr).query().accept(derived());
+        constexpr auto visit(JoinExpr<Query, Condition, TableT>&& expr) {
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_join_start(expr.type());
             derived().visit_table_impl(std::move(expr).table());
             derived().visit_alias_impl(expr.alias());
             derived().visit_join_on();
-            std::move(expr).on_condition().accept(derived());
+            auto cp = std::move(expr).on_condition().accept(derived());
             derived().visit_join_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         template <typename Query, typename Condition, typename TableT>
-        constexpr void visit(const JoinExpr<Query, Condition, TableT>& expr) {
-            expr.query().accept(derived());
+        constexpr auto visit(const JoinExpr<Query, Condition, TableT>& expr) {
+            auto qp = expr.query().accept(derived());
             derived().visit_join_start(expr.type());
             derived().visit_table_impl(expr.table());
             derived().visit_alias_impl(expr.alias());
             derived().visit_join_on();
-            expr.on_condition().accept(derived());
+            auto cp = expr.on_condition().accept(derived());
             derived().visit_join_end();
+            return derived().cat_params(std::move(qp), std::move(cp));
         }
 
         // DML operations - perfect forwarding
         template <IsTable TableT>
-        constexpr void visit(InsertExpr<TableT>&& expr) {
+        constexpr auto visit(InsertExpr<TableT>&& expr) {
             derived().visit_insert_start();
             derived().visit_table_impl(std::move(expr).table());
             derived().visit_insert_columns(std::move(expr).columns());
             derived().visit_insert_values(std::move(expr).rows());
             derived().visit_insert_end();
+            return derived().no_params();
         }
 
         template <IsTable TableT>
-        constexpr void visit(const InsertExpr<TableT>& expr) {
+        constexpr auto visit(const InsertExpr<TableT>& expr) {
             derived().visit_insert_start();
             derived().visit_table_impl(expr.table());
             derived().visit_insert_columns(expr.columns());
             derived().visit_insert_values(expr.rows());
             derived().visit_insert_end();
+            return derived().no_params();
         }
 
         template <IsTable TableT>
-        constexpr void visit(UpdateExpr<TableT>&& expr) {
+        constexpr auto visit(UpdateExpr<TableT>&& expr) {
             derived().visit_update_start();
             derived().visit_table_impl(std::move(expr).table());
             derived().visit_update_set(std::move(expr).assignments());
             derived().visit_update_end();
+            return derived().no_params();
         }
 
         template <IsTable TableT>
-        constexpr void visit(const UpdateExpr<TableT>& expr) {
+        constexpr auto visit(const UpdateExpr<TableT>& expr) {
             derived().visit_update_start();
             derived().visit_table_impl(expr.table());
             derived().visit_update_set(expr.assignments());
             derived().visit_update_end();
+            return derived().no_params();
         }
 
         template <IsTable TableT, IsCondition ConditionT>
-        constexpr void visit(UpdateWhereExpr<TableT, ConditionT>&& expr) {
-            std::move(expr).update().accept(derived());
+        constexpr auto visit(UpdateWhereExpr<TableT, ConditionT>&& expr) {
+            auto up = std::move(expr).update().accept(derived());
             derived().visit_where_start();
-            std::move(expr).condition().accept(derived());
+            auto cp = std::move(expr).condition().accept(derived());
             derived().visit_where_end();
+            return derived().cat_params(std::move(up), std::move(cp));
         }
 
         template <IsTable TableT, IsCondition ConditionT>
-        constexpr void visit(const UpdateWhereExpr<TableT, ConditionT>& expr) {
-            expr.update().accept(derived());
+        constexpr auto visit(const UpdateWhereExpr<TableT, ConditionT>& expr) {
+            auto up = expr.update().accept(derived());
             derived().visit_where_start();
-            expr.condition().accept(derived());
+            auto cp = expr.condition().accept(derived());
             derived().visit_where_end();
+            return derived().cat_params(std::move(up), std::move(cp));
         }
 
         template <typename T>
-        constexpr void visit(const DeleteExpr<T>& expr) {
+        constexpr auto visit(const DeleteExpr<T>& expr) {
             derived().visit_delete_start();
             derived().visit_table_impl(expr.table());
             derived().visit_delete_end();
+            return derived().no_params();
         }
 
         template <typename T, typename C>
-        constexpr void visit(DeleteWhereExpr<T, C>&& expr) {
-            std::move(expr).del().accept(derived());
+        constexpr auto visit(DeleteWhereExpr<T, C>&& expr) {
+            auto dp = std::move(expr).del().accept(derived());
             derived().visit_where_start();
-            std::move(expr).condition().accept(derived());
+            auto cp = std::move(expr).condition().accept(derived());
             derived().visit_where_end();
+            return derived().cat_params(std::move(dp), std::move(cp));
         }
 
         template <typename T, typename C>
-        constexpr void visit(const DeleteWhereExpr<T, C>& expr) {
-            expr.del().accept(derived());
+        constexpr auto visit(const DeleteWhereExpr<T, C>& expr) {
+            auto dp = expr.del().accept(derived());
             derived().visit_where_start();
-            expr.condition().accept(derived());
+            auto cp = expr.condition().accept(derived());
             derived().visit_where_end();
+            return derived().cat_params(std::move(dp), std::move(cp));
         }
 
         // Set operations - perfect forwarding
         template <typename L, typename R>
-        constexpr void visit(SetOpExpr<L, R>&& expr) {
-            std::move(expr).left().accept(derived());
+        constexpr auto visit(SetOpExpr<L, R>&& expr) {
+            auto lp = std::move(expr).left().accept(derived());
             derived().visit_set_op_impl(expr.op());
-            std::move(expr).right().accept(derived());
+            auto rp = std::move(expr).right().accept(derived());
+            return derived().cat_params(std::move(lp), std::move(rp));
         }
 
         template <typename L, typename R>
-        constexpr void visit(const SetOpExpr<L, R>& expr) {
-            expr.left().accept(derived());
+        constexpr auto visit(const SetOpExpr<L, R>& expr) {
+            auto lp = expr.left().accept(derived());
             derived().visit_set_op_impl(expr.op());
-            expr.right().accept(derived());
+            auto rp = expr.right().accept(derived());
+            return derived().cat_params(std::move(lp), std::move(rp));
         }
 
         // Case expressions - perfect forwarding
         template <typename... WhenClauses>
-        constexpr void visit(CaseExpr<WhenClauses...>&& expr) {
+        constexpr auto visit(CaseExpr<WhenClauses...>&& expr) {
             derived().visit_case_start();
-            std::apply(
-                [this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
-                    (...,
-                     (derived().visit_when_start(),
-                      std::forward<WhenClauseT>(when_clauses).condition.accept(derived()),
-                      derived().visit_when_then(),
-                      std::forward<WhenClauseT>(when_clauses).value.accept(derived()),
-                      derived().visit_when_end()));
-                },
-                std::move(expr).when_clauses());
+            auto wp = visit_when_clauses(std::move(expr).when_clauses(), std::index_sequence_for<WhenClauses...>{});
             derived().visit_case_end();
             derived().visit_alias_impl(expr.alias());
+            return wp;
         }
 
         template <typename... WhenClauses>
-        constexpr void visit(const CaseExpr<WhenClauses...>& expr) {
+        constexpr auto visit(const CaseExpr<WhenClauses...>& expr) {
             derived().visit_case_start();
-            std::apply(
-                [this](const auto&... when_clauses) {
-                    (...,
-                     (derived().visit_when_start(),
-                      when_clauses.condition.accept(derived()),
-                      derived().visit_when_then(),
-                      when_clauses.value.accept(derived()),
-                      derived().visit_when_end()));
-                },
-                expr.when_clauses());
+            auto wp = visit_when_clauses(expr.when_clauses(), std::index_sequence_for<WhenClauses...>{});
             derived().visit_case_end();
             derived().visit_alias_impl(expr.alias());
+            return wp;
         }
 
         template <typename ElseExpr, typename... WhenClauses>
-        constexpr void visit(CaseExprWithElse<ElseExpr, WhenClauses...>&& expr) {
+        constexpr auto visit(CaseExprWithElse<ElseExpr, WhenClauses...>&& expr) {
             derived().visit_case_start();
-            std::apply(
-                [this]<typename... WhenClauseT>(WhenClauseT&&... when_clauses) {
-                    (...,
-                     (derived().visit_when_start(),
-                      std::forward<WhenClauseT>(when_clauses).condition.accept(derived()),
-                      derived().visit_when_then(),
-                      std::forward<WhenClauseT>(when_clauses).value.accept(derived()),
-                      derived().visit_when_end()));
-                },
-                std::move(expr).when_clauses());
+            auto wp = visit_when_clauses(
+                std::move(expr).when_clauses(), std::index_sequence_for<WhenClauses...>{});
             derived().visit_else_start();
-            std::move(expr).else_clause().accept(derived());
+            auto ep = std::move(expr).else_clause().accept(derived());
             derived().visit_else_end();
             derived().visit_case_end();
             derived().visit_alias_impl(expr.alias());
+            return derived().cat_params(std::move(wp), std::move(ep));
         }
 
         template <typename ElseExpr, typename... WhenClauses>
-        constexpr void visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
+        constexpr auto visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
             derived().visit_case_start();
-            std::apply(
-                [this](const auto&... when_clauses) {
-                    (...,
-                     (derived().visit_when_start(),
-                      when_clauses.condition.accept(derived()),
-                      derived().visit_when_then(),
-                      when_clauses.value.accept(derived()),
-                      derived().visit_when_end()));
-                },
-                expr.when_clauses());
+            auto wp = visit_when_clauses(expr.when_clauses(),
+                std::index_sequence_for<WhenClauses...>{});
             derived().visit_else_start();
-            expr.else_clause().accept(derived());
+            auto ep = expr.else_clause().accept(derived());
             derived().visit_else_end();
             derived().visit_case_end();
             derived().visit_alias_impl(expr.alias());
+            return derived().cat_params(std::move(wp), std::move(ep));
         }
 
         // CTE expressions - perfect forwarding
         template <typename Query>
-        constexpr void visit(CteExpr<Query>&& expr) {
+        constexpr auto visit(CteExpr<Query>&& expr) {
             derived().visit_cte_start(expr.recursive());
             derived().visit_cte_name_impl(expr.name());
             derived().visit_cte_as_start();
-            std::move(expr).query().accept(derived());
+            auto qp = std::move(expr).query().accept(derived());
             derived().visit_cte_as_end();
             derived().visit_cte_end();
+            return qp;
         }
 
         template <typename Query>
-        constexpr void visit(const CteExpr<Query>& expr) {
+        constexpr auto visit(const CteExpr<Query>& expr) {
             derived().visit_cte_start(expr.recursive());
             derived().visit_cte_name_impl(expr.name());
             derived().visit_cte_as_start();
-            expr.query().accept(derived());
+            auto qp = expr.query().accept(derived());
             derived().visit_cte_as_end();
             derived().visit_cte_end();
+            return qp;
         }
 
         // DDL operations - CREATE TABLE
         template <IsTable TableT>
-        constexpr void visit(CreateTableExpr<TableT>&& expr) {
+        constexpr auto visit(CreateTableExpr<TableT>&& expr) {
             derived().visit_create_table_start(expr.if_not_exists());
             derived().visit_table_impl(std::move(expr).table());
             derived().visit_create_table_columns(std::move(expr).table());
             derived().visit_create_table_end();
+            return derived().no_params();
         }
 
         template <IsTable TableT>
-        constexpr void visit(const CreateTableExpr<TableT>& expr) {
+        constexpr auto visit(const CreateTableExpr<TableT>& expr) {
             derived().visit_create_table_start(expr.if_not_exists());
             derived().visit_table_impl(expr.table());
             derived().visit_create_table_columns(expr.table());
             derived().visit_create_table_end();
+            return derived().no_params();
         }
 
         // DDL operations - DROP TABLE
         template <IsTable TableT>
-        constexpr void visit(DropTableExpr<TableT>&& expr) {
+        constexpr auto visit(DropTableExpr<TableT>&& expr) {
             derived().visit_drop_table_start(expr.if_exists());
             derived().visit_table_impl(std::move(expr).table());
             derived().visit_drop_table_end(expr.cascade());
+            return derived().no_params();
         }
 
         template <IsTable TableT>
-        constexpr void visit(const DropTableExpr<TableT>& expr) {
+        constexpr auto visit(const DropTableExpr<TableT>& expr) {
             derived().visit_drop_table_start(expr.if_exists());
             derived().visit_table_impl(expr.table());
             derived().visit_drop_table_end(expr.cascade());
+            return derived().no_params();
         }
 
     private:
-        // Helper to visit tuple elements with perfect forwarding
-        template <typename Tuple, std::size_t... Is>
-        constexpr void visit_tuple_elements(Tuple&& t, std::index_sequence<Is...>) {
-            bool first = true;
-            ((visit_tuple_element(std::get<Is>(std::forward<Tuple>(t)), first)), ...);
+        // Helper to visit tuple elements with recursive approach
+
+        // Base case: empty index sequence
+        template <typename Tuple>
+        constexpr auto visit_tuple_elements(Tuple&&, std::index_sequence<>) {
+            return derived().no_params();
+        }
+
+        // Recursive case: visit first, recurse rest
+        template <typename Tuple, std::size_t First, std::size_t... Rest>
+        constexpr auto visit_tuple_elements(Tuple&& t, std::index_sequence<First, Rest...>) {
+            auto head = visit_tuple_element(std::get<First>(std::forward<Tuple>(t)), First == 0);
+            auto tail = visit_tuple_elements(std::forward<Tuple>(t), std::index_sequence<Rest...>{});
+            return derived().cat_params(std::move(head), std::move(tail));
         }
 
         template <typename T>
-        constexpr void visit_tuple_element(T&& elem, bool& first) {
-            if (!first) {
+        constexpr auto visit_tuple_element(T&& elem, bool is_first) {
+            if (!is_first) {
                 derived().visit_column_separator();
             }
-            first = false;
-            derived().visit(std::forward<T>(elem));
+            return derived().visit(std::forward<T>(elem));
+        }
+
+        // Recursive when-clause visitor for CASE expressions
+
+        // Base case: empty index sequence
+        template <typename Tuple>
+        constexpr auto visit_when_clauses(Tuple&&, std::index_sequence<>) {
+            return derived().no_params();
+        }
+
+        // Recursive case: visit first when-clause, recurse rest
+        template <typename Tuple, std::size_t First, std::size_t... Rest>
+        constexpr auto visit_when_clauses(Tuple&& t, std::index_sequence<First, Rest...>) {
+            auto head = visit_single_when(std::get<First>(std::forward<Tuple>(t)));
+            auto tail = visit_when_clauses(std::forward<Tuple>(t), std::index_sequence<Rest...>{});
+            return derived().cat_params(std::move(head), std::move(tail));
+        }
+
+        template <typename WhenClause>
+        constexpr auto visit_single_when(WhenClause&& when) {
+            derived().visit_when_start();
+            auto cp = std::forward<WhenClause>(when).condition.accept(derived());
+            derived().visit_when_then();
+            auto vp = std::forward<WhenClause>(when).value.accept(derived());
+            derived().visit_when_end();
+            return derived().cat_params(std::move(cp), std::move(vp));
         }
     };
 }  // namespace demiplane::db

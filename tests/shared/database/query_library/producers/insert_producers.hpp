@@ -11,8 +11,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<ins::BasicInsert> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(users_schema).into({"name", "age", "active"}).values({...})
             auto query = insert_into(s.users().table)
@@ -24,8 +24,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<ins::InsertWithTableName> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into("users").into({"name", "age"}).values({...})
             auto query = insert_into("users").into({"name", "age"}).values({std::string{"Jane Doe"}, 30});
@@ -35,8 +35,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<ins::InsertWithRecord> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(users_schema).into({...}).values(test_record)
             Record test_record(s.users().table);
@@ -50,8 +50,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<ins::InsertBatch> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(users_schema).into({...}).batch(records)
             Record record1(s.users().table);
@@ -72,8 +72,8 @@ namespace demiplane::test {
 
     template <>
     struct QueryProducer<ins::InsertMultipleValues> {
-        template <db::IsSqlDialect DialectT>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT>& c) {
+        template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
+        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(...).into({...}).values({...}).values({...})
             auto query = insert_into(s.users().table)

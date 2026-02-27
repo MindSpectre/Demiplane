@@ -1,26 +1,30 @@
 #pragma once
 
 #include <memory>
+#include <tuple>
 
 #include <dialect_concepts.hpp>
+#include <param_mode.hpp>
 #include <sql_params.hpp>
 
 #include "query_visitor.hpp"
 
 namespace demiplane::db {
 
-    template <IsSqlDialect DialectT, Appendable StringT = std::string>
-    class SqlGeneratorVisitor final : public QueryVisitor<SqlGeneratorVisitor<DialectT, StringT>> {
+    template <IsSqlDialect DialectT, Appendable StringT = std::string, ParamMode Mode = ParamMode::Inline>
+    class SqlGeneratorVisitor final : public QueryVisitor<SqlGeneratorVisitor<DialectT, StringT, Mode>> {
     public:
         // Constexpr path - no sink, no PMR
-        constexpr explicit SqlGeneratorVisitor(const bool use_params)
-            : use_params_{use_params} {
+        constexpr SqlGeneratorVisitor() = default;
+
+        // Runtime path - PMR string, no sink (Inline mode)
+        explicit SqlGeneratorVisitor(std::pmr::memory_resource* mr)
+            : sql_{mr} {
         }
 
-        // Runtime path - with sink and PMR
-        SqlGeneratorVisitor(const bool use_params, ParamSink* sink, std::pmr::memory_resource* mr)
-            : use_params_{use_params},
-              sql_{mr},
+        // Runtime path - with sink and PMR (Sink mode)
+        SqlGeneratorVisitor(ParamSink* sink, std::pmr::memory_resource* mr)
+            : sql_{mr},
               sink_{sink} {
         }
 
@@ -37,6 +41,29 @@ namespace demiplane::db {
 
         [[nodiscard]] constexpr std::size_t param_count() const noexcept {
             return param_count_;
+        }
+
+        // ── Compile-time parameter collection helpers ──────────────
+        template <typename T>
+        constexpr auto capture_param([[maybe_unused]] const T& val) const noexcept {
+            if constexpr (Mode == ParamMode::Tuple) {
+                return std::make_tuple(val);
+            } else {
+                return std::tuple<>{};
+            }
+        }
+
+        static constexpr auto no_params() noexcept {
+            return std::tuple<>{};
+        }
+
+        template <typename... Tuples>
+        constexpr auto cat_params(Tuples&&... tuples) const noexcept {
+            if constexpr (Mode == ParamMode::Tuple) {
+                return std::tuple_cat(std::forward<Tuples>(tuples)...);
+            } else {
+                return std::tuple<>{};
+            }
         }
 
         // ALL visit_*_impl methods are PUBLIC - the CRTP base calls them via derived()
@@ -167,7 +194,6 @@ namespace demiplane::db {
         constexpr void visit_column_separator();
 
     private:
-        bool use_params_;
         StringT sql_{};
         ParamSink* sink_         = nullptr;
         std::size_t param_count_ = 0;

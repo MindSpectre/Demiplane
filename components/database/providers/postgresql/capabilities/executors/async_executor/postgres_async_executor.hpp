@@ -2,10 +2,10 @@
 
 #include <utility>
 
+#include <../../../../../query/compiler/query/compiled_query.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
-#include <compiled_query.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>

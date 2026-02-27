@@ -3,7 +3,9 @@
 ##############################################################################
 add_library(${DMP_DATABASE}.Query.Compiler STATIC
         query_compiler.hpp
-        compiled_query.hpp
+        param_mode.hpp
+        query/compiled_query.hpp
+        query/compiled_static_query.hpp
         query_visitor/query_visitor.hpp
         query_visitor/sql_generator_visitor.hpp
         query_visitor/sql_generator_visitor.cpp

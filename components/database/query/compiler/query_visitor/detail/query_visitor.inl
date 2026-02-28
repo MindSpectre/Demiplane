@@ -23,4 +23,9 @@ namespace demiplane::db {
     constexpr decltype(auto) Literal<T>::accept(this auto&& self, auto& visitor) {
         return visitor.visit(std::forward<decltype(self)>(self));
     }
+
+    template <typename T>
+    constexpr decltype(auto) ParamPlaceholder<T>::accept(this auto&& self, auto& visitor) {
+        return visitor.visit(std::forward<decltype(self)>(self));
+    }
 }  // namespace demiplane::db

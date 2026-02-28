@@ -2,10 +2,11 @@
 
 #include <utility>
 
-#include <../../../../../query/compiler/query/compiled_query.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>
+#include <query/compiled_query.hpp>
+#include <query/compiled_static_query.hpp>
 
 namespace demiplane::db::postgres {
 
@@ -112,6 +113,40 @@ namespace demiplane::db::postgres {
             // Get params and execute (pool stays alive during synchronous execute call)
             const auto params = sink.native_packet();
             return execute(query, *params);
+        }
+
+        /**
+         * @brief Execute a query with tuple parameters (convenience overload)
+         * @tparam Args Types convertible to FieldValue
+         * @param query SQL query string with placeholders ($1, $2, etc.)
+         * @param args Parameter values packed in a tuple
+         * @return ResultBlock on success, ErrorContext on failure
+         *
+         * Example: execute("SELECT * FROM users WHERE id = $1 AND active = $2", std::tuple{42, true})
+         */
+        template <typename... Args>
+            requires(db::IsFieldValueType<Args> && ...)
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const std::string_view query,
+                                                                        const std::tuple<Args...>& args) const {
+            return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
+        }
+
+        /**
+         * @brief Execute a compiled static query
+         * @tparam Params Parameter types stored in the compiled query
+         * @param query CompiledStaticQuery object (from compile_static())
+         * @return ResultBlock on success, ErrorContext on failure
+         *
+         * Example:
+         *   constexpr auto compiler = QueryCompiler<PostgresDialect>{};
+         *   auto q = compiler.compile_static(select(name).from("users").where(age > 18));
+         *   auto result = executor.execute(q);
+         */
+        template <typename... Params>
+            requires(db::IsFieldValueType<Params> && ...)
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext>
+        execute(const CompiledStaticQuery<Params...>& query) const {
+            return execute(query.sql(), query.params());
         }
 
         /**

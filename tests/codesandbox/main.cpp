@@ -876,6 +876,34 @@ static_assert(compiler
 
 static_assert(compiler.compile_static(select(c_id, c_name).from("users")).size() == 0);
 
+// ---------------------------------------------------------------------------
+// 10D: ParamPlaceholder tests (typed placeholders for prepared statements)
+// ---------------------------------------------------------------------------
+
+// 10D.1 Single param placeholder
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(select(c_id).from("users").where(col("published") ==
+                                                                                      ParamPlaceholder<bool>()))
+                  .sql() == R"(SELECT "id" FROM "users" WHERE ("published" = $1))");
+
+// 10D.2 ParamPlaceholder with inlined literal — mixed
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(
+                      select(c_id).from("users").where(c_age > 18 && col("published") == ParamPlaceholder<bool>()))
+                  .sql() == R"(SELECT "id" FROM "users" WHERE (("age" > 18) AND ("published" = $1)))");
+
+// 10D.3 Multiple param placeholders
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(select(c_id).from("users").where(
+                      col("age") > ParamPlaceholder<int>() && col("active") == ParamPlaceholder<bool>()))
+                  .sql() == R"(SELECT "id" FROM "users" WHERE (("age" > $1) AND ("active" = $2)))");
+
+// 10D.4 ParamPlaceholder returns empty tuple (no values collected)
+static_assert(compiler
+                  .compile_static<ParamMode::Inline>(select(c_id).from("users").where(col("published") ==
+                                                                                      ParamPlaceholder<bool>()))
+                  .size() == 0);
+
 
 int main() {
     std::tuple<int> a{1};

@@ -58,6 +58,12 @@ namespace demiplane::db {
             return derived().no_params();
         }
 
+        template <typename T>
+        constexpr auto visit(const ParamPlaceholder<T>&) {
+            derived().visit_param_placeholder_impl();
+            return derived().no_params();
+        }
+
         constexpr auto visit(const AllColumns& all) {
             derived().visit_all_columns_impl(all.table_name());
             return derived().no_params();
@@ -549,8 +555,7 @@ namespace demiplane::db {
         template <typename ElseExpr, typename... WhenClauses>
         constexpr auto visit(CaseExprWithElse<ElseExpr, WhenClauses...>&& expr) {
             derived().visit_case_start();
-            auto wp = visit_when_clauses(
-                std::move(expr).when_clauses(), std::index_sequence_for<WhenClauses...>{});
+            auto wp = visit_when_clauses(std::move(expr).when_clauses(), std::index_sequence_for<WhenClauses...>{});
             derived().visit_else_start();
             auto ep = std::move(expr).else_clause().accept(derived());
             derived().visit_else_end();
@@ -562,8 +567,7 @@ namespace demiplane::db {
         template <typename ElseExpr, typename... WhenClauses>
         constexpr auto visit(const CaseExprWithElse<ElseExpr, WhenClauses...>& expr) {
             derived().visit_case_start();
-            auto wp = visit_when_clauses(expr.when_clauses(),
-                std::index_sequence_for<WhenClauses...>{});
+            auto wp = visit_when_clauses(expr.when_clauses(), std::index_sequence_for<WhenClauses...>{});
             derived().visit_else_start();
             auto ep = expr.else_clause().accept(derived());
             derived().visit_else_end();

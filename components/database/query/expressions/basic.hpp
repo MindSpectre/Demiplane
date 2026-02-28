@@ -123,6 +123,11 @@ namespace demiplane::db {
 
     }  // namespace detail
 
+    template <typename T>
+    struct ParamPlaceholder {
+        constexpr decltype(auto) accept(this auto&& self, auto& visitor);
+    };
+
     // Null literal
     struct NullLiteral {};
 

@@ -2,13 +2,14 @@
 
 #include <utility>
 
-#include <../../../../../query/compiler/query/compiled_query.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>
+#include <query/compiled_query.hpp>
+#include <query/compiled_static_query.hpp>
 
 namespace demiplane::db::postgres {
 
@@ -96,6 +97,33 @@ namespace demiplane::db::postgres {
 
             // Pass ownership to coroutine (shared_ptrs copied to coroutine frame before initial_suspend)
             return execute_with_resources(query, std::move(pool), sink.native_packet());
+        }
+
+        /**
+         * @brief Execute with tuple parameters (convenience)
+         * @param query SQL with placeholders
+         * @param args Values packed in a tuple
+         * @return Awaitable result
+         *
+         * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", std::tuple{42});
+         */
+        template <typename... Args>
+            requires(db::IsFieldValueType<Args> && ...)
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute(const std::string_view query, const std::tuple<Args...>& args) {
+            return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
+        }
+
+        /**
+         * @brief Execute a compiled static query
+         * @param query CompiledStaticQuery object (from compile_static())
+         * @return Awaitable result
+         */
+        template <typename... Params>
+            requires(db::IsFieldValueType<Params> && ...)
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+        execute(const CompiledStaticQuery<Params...>& query) {
+            return execute(query.sql(), query.params());
         }
 
         /**

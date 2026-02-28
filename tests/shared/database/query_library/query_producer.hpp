@@ -1,7 +1,6 @@
 #pragma once
 
-#include <../../../../components/database/query/compiler/query/compiled_query.hpp>
-#include <../../../../components/database/query/compiler/query_compiler.hpp>
+#include <query_compiler.hpp>
 
 #include "query_tags.hpp"
 #include "test_schemas.hpp"

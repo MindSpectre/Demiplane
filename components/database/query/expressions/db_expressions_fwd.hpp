@@ -45,6 +45,12 @@ namespace demiplane::db {
     template <typename T>
     concept IsLiteral = gears::is_specialization_of_v<std::remove_cvref_t<T>, Literal>;
 
+    template <typename T>
+    struct ParamPlaceholder;
+
+    template <typename T>
+    concept IsParamPlaceholder = gears::is_specialization_of_v<std::remove_cvref_t<T>, ParamPlaceholder>;
+
     template <typename Left, typename Right, IsOperator Op>
     class BinaryExpr;
 
@@ -120,7 +126,7 @@ namespace demiplane::db {
      * At least one operand must satisfy this concept for the operator overloads to be selected.
      */
     template <typename T>
-    concept IsDbOperand = IsColumn<T> || IsLiteral<T> || IsCondition<T> || IsAggregate<T>;
+    concept IsDbOperand = IsColumn<T> || IsLiteral<T> || IsParamPlaceholder<T> || IsCondition<T> || IsAggregate<T>;
 
     // OrderBy expression concept
     class OrderBy;

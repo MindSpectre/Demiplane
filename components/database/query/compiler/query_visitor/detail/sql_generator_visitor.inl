@@ -55,6 +55,11 @@ namespace demiplane::db {
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_param_placeholder_impl() {
+        DialectT::placeholder(sql_, ++param_count_);
+    }
+
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_all_columns_impl(const std::string_view table) {
         if (!table.empty()) {
             visit_table_impl(table);

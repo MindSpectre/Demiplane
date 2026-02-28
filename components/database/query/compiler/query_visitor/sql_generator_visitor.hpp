@@ -73,6 +73,7 @@ namespace demiplane::db {
         constexpr void visit_value_impl(const FieldValue& value);
         constexpr void visit_value_impl(FieldValue&& value);
         constexpr void visit_null_impl();
+        constexpr void visit_param_placeholder_impl();
 
         constexpr void visit_all_columns_impl(std::string_view table);
 

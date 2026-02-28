@@ -5,6 +5,7 @@
 #include <postgres_connection_config.hpp>
 #include <postgres_params.hpp>
 #include <postgres_sync_executor.hpp>
+#include <query/compiled_static_query.hpp>
 
 using namespace demiplane::db::postgres;
 using namespace demiplane::db;
@@ -308,6 +309,142 @@ TEST_F(SyncExecutorTest, ExecuteVariadicComplexQuery) {
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // ActiveUser1 and ActiveUser2
+}
+
+// ============== Tuple Execute Tests ==============
+
+TEST_F(SyncExecutorTest, ExecuteTupleSingleParameter) {
+    // Insert test data
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('TupleUser', 40)"));
+
+    // Query with single-element tuple
+    auto result =
+        executor_->execute("SELECT name, age FROM test_users WHERE name = $1", std::tuple{std::string{"TupleUser"}});
+
+    ASSERT_TRUE(result.is_success()) << "Tuple single parameter failed: " << result.error<ErrorContext>().format();
+
+    const auto& block = result.value();
+    EXPECT_EQ(block.rows(), 1);
+}
+
+TEST_F(SyncExecutorTest, ExecuteTupleMultipleParameters) {
+    // Insert with tuple of mixed types
+    auto result = executor_->execute("INSERT INTO test_users (name, age, email) VALUES ($1, $2, $3)",
+                                     std::tuple{std::string{"TupleMulti"}, 38, std::string{"tuple@test.com"}});
+
+    ASSERT_TRUE(result.is_success()) << "Tuple insert failed: " << result.error<ErrorContext>().format();
+
+    // Verify
+    auto select_result = executor_->execute("SELECT name, age FROM test_users WHERE email = $1",
+                                            std::tuple{std::string{"tuple@test.com"}});
+    ASSERT_TRUE(select_result.is_success());
+    EXPECT_EQ(select_result.value().rows(), 1);
+}
+
+TEST_F(SyncExecutorTest, ExecuteTupleRangeQuery) {
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('User1', 20)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('User2', 30)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('User3', 45)"));
+
+    auto result = executor_->execute("SELECT * FROM test_users WHERE age BETWEEN $1 AND $2", std::tuple{25, 40});
+
+    ASSERT_TRUE(result.is_success()) << "Tuple range query failed: " << result.error<ErrorContext>().format();
+
+    const auto& block = result.value();
+    EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
+}
+
+TEST_F(SyncExecutorTest, ExecuteTupleWithNull) {
+    auto result = executor_->execute("INSERT INTO test_users (name, email) VALUES ($1, $2)",
+                                     std::tuple{std::string{"TupleNullUser"}, std::monostate{}});
+
+    ASSERT_TRUE(result.is_success()) << "Tuple NULL parameter failed: " << result.error<ErrorContext>().format();
+
+    // Verify NULL was inserted
+    auto select_result =
+        executor_->execute("SELECT email FROM test_users WHERE name = $1", std::tuple{std::string{"TupleNullUser"}});
+    ASSERT_TRUE(select_result.is_success());
+    auto& block = select_result.value();
+    EXPECT_EQ(block.rows(), 1);
+    auto email_opt = block.get_opt<std::string>(0, 0);
+    EXPECT_FALSE(email_opt.has_value()) << "Email should be NULL";
+}
+
+TEST_F(SyncExecutorTest, ExecuteTupleEmptyTuple) {
+    // Empty tuple should behave like a simple query
+    auto result = executor_->execute("SELECT 1 AS number", std::tuple<>{});
+
+    ASSERT_TRUE(result.is_success()) << "Empty tuple query failed: " << result.error<ErrorContext>().format();
+
+    const auto& block = result.value();
+    EXPECT_EQ(block.rows(), 1);
+}
+
+// ============== CompiledStaticQuery Execute Tests ==============
+
+TEST_F(SyncExecutorTest, ExecuteCompiledStaticQuerySelect) {
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('CompiledUser', 50)"));
+
+    // Simulate a CompiledStaticQuery (as produced by compile_static())
+    const CompiledStaticQuery query{std::string{R"(SELECT "name", "age" FROM "test_users" WHERE "name" = $1)"},
+                                    std::tuple{std::string{"CompiledUser"}}};
+
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery select failed: " << result.error<ErrorContext>().format();
+
+    const auto& block = result.value();
+    EXPECT_EQ(block.rows(), 1);
+}
+
+TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryInsert) {
+    const CompiledStaticQuery query{
+        std::string{"INSERT INTO test_users (name, age, email) VALUES ($1, $2, $3)"},
+        std::tuple{std::string{"StaticInsert"}, 33, std::string{"static@test.com"}}
+    };
+
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery insert failed: " << result.error<ErrorContext>().format();
+
+    // Verify
+    auto select_result =
+        executor_->execute("SELECT name FROM test_users WHERE email = $1", std::string{"static@test.com"});
+    ASSERT_TRUE(select_result.is_success());
+    EXPECT_EQ(select_result.value().rows(), 1);
+}
+
+TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryMultipleParams) {
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('CSQ1', 25, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('CSQ2', 30, true)"));
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age, active) VALUES ('CSQ3', 35, false)"));
+
+    const CompiledStaticQuery query{
+        std::string{"SELECT name FROM test_users WHERE age >= $1 AND age <= $2 AND active = $3 ORDER BY age"},
+        std::tuple{20, 35, true}
+    };
+
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery multi-param failed: "
+                                     << result.error<ErrorContext>().format();
+
+    const auto& block = result.value();
+    EXPECT_EQ(block.rows(), 2);  // CSQ1 and CSQ2
+}
+
+TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryNoParams) {
+    EXPECT_TRUE(executor_->execute("INSERT INTO test_users (name, age) VALUES ('NoParam', 22)"));
+
+    const CompiledStaticQuery query{std::string{"SELECT COUNT(*) FROM test_users"}, std::tuple<>{}};
+
+    auto result = executor_->execute(query);
+
+    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery no-param failed: "
+                                     << result.error<ErrorContext>().format();
+
+    const auto& block = result.value();
+    EXPECT_EQ(block.rows(), 1);
 }
 
 // ============== Error Handling Tests ==============

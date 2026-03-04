@@ -27,7 +27,7 @@ namespace demiplane::test {
         }
 
         template <IsQueryTag Tag>
-        [[nodiscard]] db::CompiledQuery produce() {
+        [[nodiscard]] db::CompiledDynamicQuery produce() {
             return QueryProducer<Tag>::template produce<DialectT>(schemas_, compiler_);
         }
 

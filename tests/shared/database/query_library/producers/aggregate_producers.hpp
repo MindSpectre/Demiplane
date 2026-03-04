@@ -11,62 +11,62 @@ namespace demiplane::test {
     template <>
     struct QueryProducer<aggregate::Count> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(count(user_id)).from(users_schema)
             auto query = db::select(count(s.users().id)).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::Sum> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(sum(user_age)).from(users_schema)
             auto query = select(sum(s.users().age)).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::Avg> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(avg(user_age)).from(users_schema)
             auto query = select(avg(s.users().age)).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::Min> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(min(user_age)).from(users_schema)
             auto query = select(min(s.users().age)).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::Max> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(max(user_age)).from(users_schema)
             auto query = select(max(s.users().age)).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::AggregateWithAlias> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(count(...).as("total_users"), sum(...).as("total_age"), ...)
             auto query = select(count(s.users().id).as("total_users"),
@@ -75,63 +75,63 @@ namespace demiplane::test {
                                 min(s.users().age).as("min_age"),
                                 max(s.users().age).as("max_age"))
                              .from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::CountDistinct> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(count_distinct(user_age)).from(users_schema)
             auto query = select(count_distinct(s.users().age)).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::CountAll> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(count_all()).from(users_schema)
             auto query = select(count_all()).from(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::AggregateGroupBy> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_active, count(user_id).as("user_count")).from(...).group_by(user_active)
             auto query = select(s.users().active, count(s.users().id).as("user_count"))
                              .from(s.users().table)
                              .group_by(s.users().active);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::AggregateHaving> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: ...group_by(user_active).having(count(user_id) > 5)
             auto query = select(s.users().active, count(s.users().id).as("user_count"))
                              .from(s.users().table)
                              .group_by(s.users().active)
                              .having(count(s.users().id) > 5);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<aggregate::MultipleAggregates> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(count(...), sum(...), avg(...), min(...), max(...), count_distinct(...))
             auto query = select(count(s.users().id),
@@ -141,14 +141,14 @@ namespace demiplane::test {
                                 max(s.users().age),
                                 count_distinct(s.users().name))
                              .from(s.users().table);
-            return c.compile(std::move(query));
+            return c.compile_dynamic(std::move(query));
         }
     };
 
     template <>
     struct QueryProducer<aggregate::AggregateMixedTypes> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_name, count(...).as("count"), "literal_value", avg(...).as("avg_age"))
             auto query =
@@ -156,7 +156,7 @@ namespace demiplane::test {
                     s.users().name, count(s.users().id).as("count"), "literal_value", avg(s.users().age).as("avg_age"))
                     .from(s.users().table)
                     .group_by(s.users().name);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 

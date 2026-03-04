@@ -1,10 +1,9 @@
 #pragma once
 
+#include <capability_provider.hpp>
 #include <gears_class_traits.hpp>
 #include <gears_outcome.hpp>
-#include <postgres_async_executor.hpp>
 #include <postgres_errors.hpp>
-#include <postgres_sync_executor.hpp>
 #include <postgres_transaction.hpp>
 
 #include "cylinder/cylinder.hpp"
@@ -74,4 +73,5 @@ namespace demiplane::db::postgres {
         CylinderJanitor janitor_;
     };
 
+    static_assert(CapabilityProvider<Session>);
 }  // namespace demiplane::db::postgres

@@ -26,8 +26,15 @@ add_subdirectory(notifier)
 
 add_subdirectory(pipeline)
 
-add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE)
-
+##############################################################################
+# PostgreSql Capabilities + Provider Concept
+##############################################################################
+add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE
+        provider/capability_provider.hpp
+)
+target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE
+        provider/
+)
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Copier
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Notifier
@@ -35,3 +42,4 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities INTERFACE
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Pipeline
 )
+##############################################################################

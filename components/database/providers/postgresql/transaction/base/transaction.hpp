@@ -1,8 +1,7 @@
 #pragma once
 
+#include <capability_provider.hpp>
 #include <gears_class_traits.hpp>
-#include <postgres_async_executor.hpp>
-#include <postgres_sync_executor.hpp>
 
 #include "options/transaction_options.hpp"
 #include "status/transaction_status.hpp"
@@ -55,4 +54,5 @@ namespace demiplane::db::postgres {
         TransactionStatus status_ = TransactionStatus::IDLE;
     };
 
+    static_assert(CapabilityProvider<Transaction>);
 }  // namespace demiplane::db::postgres

@@ -5,10 +5,10 @@
 #include <providers.hpp>
 
 namespace demiplane::db {
-    class CompiledQuery {
+    class CompiledDynamicQuery {
     public:
-        constexpr CompiledQuery(std::pmr::string sql,
-                                std::shared_ptr<void> backend_packet,
+        constexpr CompiledDynamicQuery(std::pmr::string sql,
+                                       std::shared_ptr<void> backend_packet,
                                 const Providers provider,
                                 std::shared_ptr<std::pmr::monotonic_buffer_resource> arena)
             : sql_{std::move(sql)},
@@ -45,6 +45,4 @@ namespace demiplane::db {
         Providers provider_;
         std::shared_ptr<std::pmr::monotonic_buffer_resource> arena_;  // lifetime keeper
     };
-
-    // TODO: add constexpr support aka PreCompiledQuery
 }  // namespace demiplane::db

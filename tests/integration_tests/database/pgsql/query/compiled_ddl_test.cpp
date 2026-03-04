@@ -318,7 +318,7 @@ TEST_F(CompiledDdlTest, CreateInsertSelectDropLifecycle) {
     table->add_field<int>("value", "INTEGER");
 
     auto create_expr   = create_table(table, true);
-    auto create_query  = library().compiler().compile(create_expr);
+    auto create_query  = library().compiler().compile_dynamic(create_expr);
     auto create_result = executor().execute(create_query);
     ASSERT_TRUE(create_result.is_success()) << "CREATE failed: " << create_result.error<ErrorContext>();
     EXPECT_TRUE(TableExists("ddl_test_table"));
@@ -336,7 +336,7 @@ TEST_F(CompiledDdlTest, CreateInsertSelectDropLifecycle) {
 
     // Drop table using DDL expression
     auto drop_expr   = drop_table(table, true, true);
-    auto drop_query  = library().compiler().compile(drop_expr);
+    auto drop_query  = library().compiler().compile_dynamic(drop_expr);
     auto drop_result = executor().execute(drop_query);
     ASSERT_TRUE(drop_result.is_success()) << "DROP failed: " << drop_result.error<ErrorContext>();
     EXPECT_FALSE(TableExists("ddl_test_table"));
@@ -361,7 +361,7 @@ TEST_F(CompiledDdlTest, CreateTableWithAllConstraintTypes) {
     }
 
     auto create_expr   = create_table(table, true);
-    auto create_query  = library().compiler().compile(create_expr);
+    auto create_query  = library().compiler().compile_dynamic(create_expr);
     auto create_result = executor().execute(create_query);
     ASSERT_TRUE(create_result.is_success()) << "CREATE failed: " << create_result.error<ErrorContext>();
 

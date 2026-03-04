@@ -202,27 +202,27 @@ void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
 
     std::cout << "Running COMPILED benchmarks...\n\n";
 
-    std::vector<std::pair<std::string_view, std::function<CompiledQuery()>>> compiled_queries = {
+    std::vector<std::pair<std::string_view, std::function<CompiledDynamicQuery()>>> compiled_queries = {
         {"SELECT by ID",
          [&] {
              auto query =
                  select(s.users().id, s.users().name, s.users().age).from("bench_users").where(s.users().id == 1);
-             return library.compiler().compile(query);
+             return library.compiler().compile_dynamic(query);
          }},
         {"SELECT with range",
          [&] {
              auto query = select(s.users().id, s.users().name).from("bench_users").where(s.users().age > 30);
-             return library.compiler().compile(query);
+             return library.compiler().compile_dynamic(query);
          }},
         {"COUNT(*) aggregate",
          [&] {
              auto query = select(count(s.users().id)).from("bench_users").where(s.users().active == true);
-             return library.compiler().compile(query);
+             return library.compiler().compile_dynamic(query);
          }},
         {"UPDATE single row",
          [&] {
              auto query = update("bench_users").set("age", 25).where(s.users().id == 1);
-             return library.compiler().compile(query);
+             return library.compiler().compile_dynamic(query);
          }},
         {"SELECT ORDER BY LIMIT",
          [&] {
@@ -230,12 +230,12 @@ void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
                               .from("bench_users")
                               .order_by(desc(s.users().age))
                               .limit(10);
-             return library.compiler().compile(query);
+             return library.compiler().compile_dynamic(query);
          }},
         {"GROUP BY with COUNT",
          [&] {
              auto query = select(s.users().active, count(s.users().id)).from("bench_users").group_by(s.users().active);
-             return library.compiler().compile(query);
+             return library.compiler().compile_dynamic(query);
          }},
     };
 

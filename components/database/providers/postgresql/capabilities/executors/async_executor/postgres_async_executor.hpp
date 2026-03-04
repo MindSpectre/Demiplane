@@ -8,7 +8,7 @@
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>
-#include <query/compiled_query.hpp>
+#include <query/compiled_dynamic_query.hpp>
 #include <query/compiled_static_query.hpp>
 
 namespace demiplane::db::postgres {
@@ -132,7 +132,7 @@ namespace demiplane::db::postgres {
          * @return Awaitable result
          */
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const CompiledQuery& query) const;
+        execute(const CompiledDynamicQuery& query) const;
 
         // Accessors
         [[nodiscard]] executor_type get_executor() const noexcept {

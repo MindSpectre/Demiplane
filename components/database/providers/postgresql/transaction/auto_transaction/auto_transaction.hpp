@@ -1,6 +1,7 @@
 #pragma once
 
-#include "manual_transaction/manual_transaction.hpp"
+#include "base/transaction.hpp"
+#include "capability_provider.hpp"
 
 namespace demiplane::db::postgres {
 
@@ -26,4 +27,5 @@ namespace demiplane::db::postgres {
         Transaction tx_;
     };
 
+    static_assert(CapabilityProvider<AutoTransaction>);
 }  // namespace demiplane::db::postgres

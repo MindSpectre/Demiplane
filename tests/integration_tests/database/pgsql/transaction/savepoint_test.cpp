@@ -1,9 +1,9 @@
 // PostgreSQL Savepoint Integration Tests
 // Tests savepoint creation, rollback, release, nesting, and error handling
 
+#include <base/transaction.hpp>
 #include <boost/asio.hpp>
 #include <gtest/gtest.h>
-#include <manual_transaction/manual_transaction.hpp>
 #include <postgres_session.hpp>
 #include <savepoint/savepoint.hpp>
 

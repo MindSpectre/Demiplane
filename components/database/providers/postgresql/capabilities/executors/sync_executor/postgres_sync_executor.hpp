@@ -5,7 +5,7 @@
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>
-#include <query/compiled_query.hpp>
+#include <query/compiled_dynamic_query.hpp>
 #include <query/compiled_static_query.hpp>
 
 namespace demiplane::db::postgres {
@@ -154,7 +154,7 @@ namespace demiplane::db::postgres {
          * @param query Compiled query object
          * @return ResultBlock on success, ErrorContext on failure
          */
-        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const CompiledQuery& query) const;
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const CompiledDynamicQuery& query) const;
 
         [[nodiscard]] PGconn* native_handle() const noexcept {
             return conn_;

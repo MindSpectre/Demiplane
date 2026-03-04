@@ -553,8 +553,8 @@ add_library(${DMP_DATABASE_POSTGRESQL}.Transaction STATIC
         status/transaction_status.hpp
         options/transaction_options.hpp
         options/transaction_options.cpp
-        manual_transaction/manual_transaction.hpp
-        manual_transaction/manual_transaction.cpp
+        base/transaction.hpp
+        base/transaction.cpp
 )
 target_include_directories(${DMP_DATABASE_POSTGRESQL}.Transaction PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}

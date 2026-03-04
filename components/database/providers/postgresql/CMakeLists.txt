@@ -20,8 +20,6 @@ add_subdirectory(capabilities)
 
 add_subdirectory(session)
 
-add_subdirectory(capability_provider)
-
 add_subdirectory(transaction)
 
 add_combined_library(${DMP_DATABASE_POSTGRESQL}

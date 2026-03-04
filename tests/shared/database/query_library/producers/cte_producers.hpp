@@ -11,21 +11,21 @@ namespace demiplane::test {
     template <>
     struct QueryProducer<cte::BasicCte> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Basic CTE: WITH active_users AS (SELECT ...) SELECT * FROM active_users
             auto cte         = with("active_users",
                             select(s.users().id, s.users().name).from(s.users().table).where(s.users().active == true));
             // Using unqualified column names (no context) for CTE result columns
             const auto query = select(col("id"), col("name")).from(cte);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<cte::CteWithSelect> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // CTE with aggregation
             auto cte         = with("user_orders",
@@ -34,14 +34,14 @@ namespace demiplane::test {
                                 .where(s.orders().completed == true)
                                 .group_by(s.orders().user_id));
             const auto query = select(col("user_id"), col("total_amount")).from(cte);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<cte::CteWithJoin> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // CTE with filtered data
             auto cte         = with("published_posts",
@@ -49,14 +49,14 @@ namespace demiplane::test {
                                 .from(s.posts().table)
                                 .where(s.posts().published == true));
             const auto query = select(col("id"), col("title"), col("user_id")).from(cte);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<cte::MultipleCtes> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Single CTE with aggregation (multiple CTEs not yet supported)
             auto cte         = with("post_stats",
@@ -64,14 +64,14 @@ namespace demiplane::test {
                                 .from(s.posts().table)
                                 .group_by(s.posts().user_id));
             const auto query = select(col("user_id"), col("post_count")).from(cte);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<cte::CteWithAggregates> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // CTE with multiple aggregate functions
             auto cte = with("order_stats",
@@ -84,7 +84,7 @@ namespace demiplane::test {
                                 .group_by(s.orders().user_id));
             const auto query =
                 select(col("user_id"), col("order_count"), col("total_spent"), col("avg_order")).from(cte);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 

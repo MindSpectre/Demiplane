@@ -33,7 +33,7 @@ TEST_F(CompiledUpdateTest, UpdateSingleColumn) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 31).where(s.name == std::string{"Alice"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -51,7 +51,7 @@ TEST_F(CompiledUpdateTest, UpdateMultipleColumns) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 26).set("active", true).where(s.name == std::string{"Bob"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -75,7 +75,7 @@ TEST_F(CompiledUpdateTest, UpdateWithInitializerList) {
                          {"active", false}
     })
                      .where(s.name == std::string{"Charlie"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -98,7 +98,7 @@ TEST_F(CompiledUpdateTest, UpdateWithSimpleWhere) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("active", false).where(s.age > 25);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -116,7 +116,7 @@ TEST_F(CompiledUpdateTest, UpdateWithComplexWhere) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 40).where((s.age >= 25) && (s.active == true));
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -134,7 +134,7 @@ TEST_F(CompiledUpdateTest, UpdateWithOrCondition) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 50).where((s.age < 25) || (s.age > 35));
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -169,7 +169,7 @@ TEST_F(CompiledUpdateTest, UpdateString) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("name", std::string{"NewName"}).where(s.age == 30);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -187,7 +187,7 @@ TEST_F(CompiledUpdateTest, UpdateBoolean) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("active", false).where(s.name == std::string{"TestUser"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -205,7 +205,7 @@ TEST_F(CompiledUpdateTest, UpdateInteger) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 50).where(s.name == std::string{"TestUser"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -225,7 +225,7 @@ TEST_F(CompiledUpdateTest, UpdateToNull) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", std::monostate{}).where(s.name == std::string{"TestUser"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -246,7 +246,7 @@ TEST_F(CompiledUpdateTest, UpdateWithTableName) {
 
     const auto& s       = library().schemas().users();
     auto query          = update("users").set("age", 35).where(s.name == std::string{"TestUser"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -264,7 +264,7 @@ TEST_F(CompiledUpdateTest, UpdateNoMatch) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 50).where(s.age > 100);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -278,7 +278,7 @@ TEST_F(CompiledUpdateTest, UpdateNoMatch) {
 TEST_F(CompiledUpdateTest, UpdateEmptyTable) {
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("active", false);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -294,7 +294,7 @@ TEST_F(CompiledUpdateTest, UpdateToSameValue) {
 
     const auto& s       = library().schemas().users();
     auto query          = update(s.table).set("age", 30).where(s.name == std::string{"TestUser"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 

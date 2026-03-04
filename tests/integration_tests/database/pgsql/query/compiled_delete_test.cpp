@@ -38,7 +38,7 @@ TEST_F(CompiledDeleteTest, DeleteSingleRow) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.name == std::string{"Alice"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -77,7 +77,7 @@ TEST_F(CompiledDeleteTest, DeleteWithSimpleWhere) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.age > 25);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -94,7 +94,7 @@ TEST_F(CompiledDeleteTest, DeleteWithComplexWhere) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where((s.age >= 30) && (s.active == true));
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -110,7 +110,7 @@ TEST_F(CompiledDeleteTest, DeleteWithOrCondition) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where((s.age < 25) || (s.age > 35));
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -173,7 +173,7 @@ TEST_F(CompiledDeleteTest, DeleteWithTableName) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from("users").where(s.name == std::string{"TestUser"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -189,7 +189,7 @@ TEST_F(CompiledDeleteTest, DeleteNoMatch) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.age > 100);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -201,7 +201,7 @@ TEST_F(CompiledDeleteTest, DeleteNoMatch) {
 TEST_F(CompiledDeleteTest, DeleteEmptyTable) {
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.active == false);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -216,7 +216,7 @@ TEST_F(CompiledDeleteTest, DeleteWithNullComparison) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.age == 30);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -234,14 +234,14 @@ TEST_F(CompiledDeleteTest, DeleteMultipleSeparateQueries) {
 
     // First delete
     auto query1          = delete_from(s.table).where(s.age == 20);
-    auto compiled_query1 = library().compiler().compile(query1);
+    auto compiled_query1 = library().compiler().compile_dynamic(query1);
     auto result1         = executor().execute(compiled_query1);
     ASSERT_TRUE(result1.is_success()) << "First delete failed: " << result1.error<ErrorContext>();
     EXPECT_EQ(CountRows(), 2);
 
     // Second delete
     auto query2          = delete_from(s.table).where(s.age == 40);
-    auto compiled_query2 = library().compiler().compile(query2);
+    auto compiled_query2 = library().compiler().compile_dynamic(query2);
     auto result2         = executor().execute(compiled_query2);
     ASSERT_TRUE(result2.is_success()) << "Second delete failed: " << result2.error<ErrorContext>();
     EXPECT_EQ(CountRows(), 1);
@@ -259,7 +259,7 @@ TEST_F(CompiledDeleteTest, DeleteWithStringComparison) {
 
     const auto& s       = library().schemas().users();
     auto query          = delete_from(s.table).where(s.name == std::string{"Bob"});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 

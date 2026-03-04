@@ -12,31 +12,31 @@ namespace demiplane::test {
     template <>
     struct QueryProducer<ins::BasicInsert> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(users_schema).into({"name", "age", "active"}).values({...})
             auto query = insert_into(s.users().table)
                              .into({"name", "age", "active"})
                              .values({std::string{"John Doe"}, 25, true});
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ins::InsertWithTableName> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into("users").into({"name", "age"}).values({...})
             auto query = insert_into("users").into({"name", "age"}).values({std::string{"Jane Doe"}, 30});
-            return c.compile(std::move(query));
+            return c.compile_dynamic(std::move(query));
         }
     };
 
     template <>
     struct QueryProducer<ins::InsertWithRecord> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(users_schema).into({...}).values(test_record)
             Record test_record(s.users().table);
@@ -44,14 +44,14 @@ namespace demiplane::test {
             test_record["age"].set(35);
             test_record["active"].set(true);
             auto query = insert_into(s.users().table).into({"name", "age", "active"}).values(test_record);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ins::InsertBatch> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(users_schema).into({...}).batch(records)
             Record record1(s.users().table);
@@ -66,21 +66,21 @@ namespace demiplane::test {
 
             const std::vector records = {record1, record2};
             auto query                = insert_into(s.users().table).into({"name", "age", "active"}).batch(records);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ins::InsertMultipleValues> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: insert_into(...).into({...}).values({...}).values({...})
             auto query = insert_into(s.users().table)
                              .into({"name", "age", "active"})
                              .values({std::string{"User1"}, 25, true})
                              .values({std::string{"User2"}, 30, false});
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 

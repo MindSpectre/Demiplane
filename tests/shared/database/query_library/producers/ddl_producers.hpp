@@ -14,29 +14,29 @@ namespace demiplane::test {
     template <>
     struct QueryProducer<ddl::CreateTableBasic> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Basic CREATE TABLE from existing schema
             auto query = create_table(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::CreateTableIfNotExists> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // CREATE TABLE IF NOT EXISTS
             auto query = create_table(s.users().table, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::CreateTableWithConstraints> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Create a table with PK, NOT NULL, UNIQUE constraints
             auto table = std::make_shared<Table>("ddl_constraints_test");
@@ -46,14 +46,14 @@ namespace demiplane::test {
             table->add_field<int>("status", "INTEGER");
 
             auto query = create_table(table, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::CreateTableWithForeignKey> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Create a table with FOREIGN KEY constraint
             auto table = std::make_shared<Table>("ddl_orders_test");
@@ -62,14 +62,14 @@ namespace demiplane::test {
             table->add_field<double>("amount", "DECIMAL(10,2)");
 
             auto query = create_table(table, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::CreateTableWithDefault> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Create a table with DEFAULT value
             auto table = std::make_shared<Table>("ddl_settings_test");
@@ -86,7 +86,7 @@ namespace demiplane::test {
             }
 
             auto query = create_table(table, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
@@ -95,55 +95,55 @@ namespace demiplane::test {
     template <>
     struct QueryProducer<ddl::DropTableBasic> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Basic DROP TABLE
             auto query = drop_table(s.users().table);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::DropTableIfExists> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE IF EXISTS
             auto query = drop_table(s.users().table, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::DropTableCascade> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE CASCADE
             auto query = drop_table(s.users().table, false, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::DropTableIfExistsCascade> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE IF EXISTS CASCADE
             auto query = drop_table(s.users().table, true, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<ddl::DropTableByName> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE by string name
             auto query = drop_table("ddl_temp_table", true, true);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 

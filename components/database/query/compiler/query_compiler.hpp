@@ -3,7 +3,7 @@
 #include <demiplane/scroll>
 
 #include "param_mode.hpp"
-#include "query/compiled_query.hpp"
+#include "query/compiled_dynamic_query.hpp"
 #include "query/compiled_static_query.hpp"
 #include "query_visitor/sql_generator_visitor.hpp"
 
@@ -40,7 +40,7 @@ namespace demiplane::db {
         // Runtime path -- full compilation with PMR and params
         template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
             requires(Mode != ParamMode::Tuple)
-        CompiledQuery compile(const Expression<Expr>& expr) {
+        CompiledDynamicQuery compile_dynamic(const Expression<Expr>& expr) {
             auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
             if constexpr (Mode == ParamMode::Inline) {
@@ -61,7 +61,7 @@ namespace demiplane::db {
 
         template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
             requires(Mode != ParamMode::Tuple)
-        CompiledQuery compile(Expression<Expr>&& expr) {
+        CompiledDynamicQuery compile_dynamic(Expression<Expr>&& expr) {
             auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
             if constexpr (Mode == ParamMode::Inline) {

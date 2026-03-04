@@ -57,7 +57,7 @@ namespace demiplane::db::postgres {
         return process_result(result);
     }
 
-    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledQuery& query) const {
+    gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledDynamicQuery& query) const {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ec{ErrorCode{ClientErrorCode::SyntaxError}};
             ec.context = "Wrong provider. Query was compiled not by PostgreSQL";

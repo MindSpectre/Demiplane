@@ -11,73 +11,73 @@ namespace demiplane::test {
     template <>
     struct QueryProducer<subq::SubqueryInWhere> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: subquery in WHERE clause
             auto active_users = select(s.users().id).from(s.users().table).where(s.users().active == true);
             auto query =
                 select(s.posts().title).from(s.posts().table).where(in(s.posts().user_id, subquery(active_users)));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::Exists> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: EXISTS expression
             auto published_posts =
                 select(1).from(s.posts().table).where(s.posts().user_id == s.users().id && s.posts().published == true);
             auto query = select(s.users().name).from(s.users().table).where(exists(published_posts));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::NotExists> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: NOT EXISTS expression
             auto pending_orders = select(1)
                                       .from(s.orders().table)
                                       .where(s.orders().user_id == s.users().id && s.orders().completed == false);
             auto query = select(s.users().name).from(s.users().table).where(!exists(pending_orders));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::BasicSubquery> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: basic subquery compilation
             auto post_count_subquery =
                 select(count(s.posts().id)).from(s.posts().table).where(s.posts().user_id == s.users().id);
             auto query = subquery(post_count_subquery);
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::SubqueryStructure> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: SubqueryStructureExpression
             auto user_post_count =
                 select(count(s.posts().id)).from(s.posts().table).where(s.posts().user_id == s.users().id);
             auto sub = subquery(user_post_count);
-            return c.compile(sub);
+            return c.compile_dynamic(sub);
         }
     };
 
     template <>
     struct QueryProducer<subq::InSubqueryMultiple> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: IN with multiple values subquery (high value users)
             auto high_value_users = select(s.users().id)
@@ -87,14 +87,14 @@ namespace demiplane::test {
                                         .having(sum(s.orders().amount) > lit(5000.0));
             auto query =
                 select(s.users().name).from(s.users().table).where(in(s.users().id, subquery(high_value_users)));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::NestedSubqueries> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: nested subqueries
             auto users_with_completed_orders =
@@ -104,14 +104,14 @@ namespace demiplane::test {
                                              .where(in(s.posts().user_id, subquery(users_with_completed_orders)));
             auto query =
                 select(s.users().name).from(s.users().table).where(in(s.users().id, subquery(posts_by_active_users)));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::SubqueryWithAggregates> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: subquery with aggregates
             auto avg_order_amount =
@@ -121,21 +121,21 @@ namespace demiplane::test {
                              .join(s.orders().table)
                              .on(s.orders().user_id == s.users().id)
                              .where(s.orders().amount > subquery(avg_order_amount));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 
     template <>
     struct QueryProducer<subq::SubqueryWithDistinct> {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
-        static db::CompiledQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
+        static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: subquery with DISTINCT
             auto unique_publishers =
                 select_distinct(s.posts().user_id).from(s.posts().table).where(s.posts().published == true);
             auto query =
                 select(s.users().name).from(s.users().table).where(in(s.users().id, subquery(unique_publishers)));
-            return c.compile(query);
+            return c.compile_dynamic(query);
         }
     };
 

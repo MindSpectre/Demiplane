@@ -43,7 +43,7 @@ TEST_F(CompiledInsertTest, InsertSingleRow) {
 TEST_F(CompiledInsertTest, InsertMultipleColumns) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "age", "active"}).values({std::string{"Bob"}, 25, false});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -58,7 +58,7 @@ TEST_F(CompiledInsertTest, InsertMultipleColumns) {
 TEST_F(CompiledInsertTest, InsertPartialColumns) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Charlie"}, 35});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -107,7 +107,7 @@ TEST_F(CompiledInsertTest, InsertBatchRecords) {
 TEST_F(CompiledInsertTest, InsertWithBoolean) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "active"}).values({std::string{"Helen"}, true});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -123,7 +123,7 @@ TEST_F(CompiledInsertTest, InsertWithBoolean) {
 TEST_F(CompiledInsertTest, InsertWithInteger) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Ivan"}, 42});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -139,7 +139,7 @@ TEST_F(CompiledInsertTest, InsertWithInteger) {
 TEST_F(CompiledInsertTest, InsertWithString) {
     const auto& s = library().schemas().users();
     auto query = insert_into(s.table).into({"name"}).values({std::string{"Long Name With Spaces And Special Ch@rs"}});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -157,7 +157,7 @@ TEST_F(CompiledInsertTest, InsertWithString) {
 TEST_F(CompiledInsertTest, InsertWithNullAge) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Julia"}, std::monostate{}});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -197,7 +197,7 @@ TEST_F(CompiledInsertTest, InsertLargeBatch) {
     }
 
     auto query          = insert_into(s.table).into({"name", "age", "active"}).batch(records);
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -210,7 +210,7 @@ TEST_F(CompiledInsertTest, InsertLargeBatch) {
 TEST_F(CompiledInsertTest, InsertEmptyString) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{""}, 25});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 
@@ -221,7 +221,7 @@ TEST_F(CompiledInsertTest, InsertEmptyString) {
 TEST_F(CompiledInsertTest, InsertZeroValues) {
     const auto& s       = library().schemas().users();
     auto query          = insert_into(s.table).into({"name", "age"}).values({std::string{"Zero Age"}, 0});
-    auto compiled_query = library().compiler().compile(query);
+    auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
 

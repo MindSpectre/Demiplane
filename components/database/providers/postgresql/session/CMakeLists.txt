@@ -13,9 +13,6 @@ target_include_directories(${DMP_DATABASE_POSTGRESQL}.Session PUBLIC
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Session
         PUBLIC
         ${DMP_DATABASE_POSTGRESQL}.Session.Cylinder
-        ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync
-        ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async
         ${DMP_DATABASE_POSTGRESQL}.Transaction
-        Boost::asio
 )
 ##############################################################################

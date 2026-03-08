@@ -15,6 +15,11 @@ namespace demiplane::db {
             : condition{std::forward<ConditionExprTp>(cond)},
               value{std::forward<ValueExprTp>(val)} {
         }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.condition), std::forward_like<Self>(self.value));
+        }
     };
 
     // Base class with common functionality
@@ -67,6 +72,12 @@ namespace demiplane::db {
                                                                             std::move(wrapped_else));
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.when_clauses_),
+                                         std::forward_like<Self>(self.alias));
+        }
+
         // Used by base class when() method
         template <typename Self, IsWhenClause NewWhenClause>
         [[nodiscard]] constexpr auto add_when_clause(this Self&& self, NewWhenClause&& new_clause) {
@@ -92,6 +103,13 @@ namespace demiplane::db {
         template <typename Self>
         [[nodiscard]] constexpr auto&& else_clause(this Self&& self) noexcept {
             return std::forward<Self>(self).else_clause_;
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.when_clauses_),
+                                         std::forward_like<Self>(self.else_clause_),
+                                         std::forward_like<Self>(self.alias));
         }
 
         // Used by base class when() method

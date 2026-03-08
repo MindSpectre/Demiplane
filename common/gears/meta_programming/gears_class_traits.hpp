@@ -73,4 +73,7 @@ namespace demiplane::gears {
 
         virtual void wrapped_deserialize(const SerializeStruct& config) = 0;
     };
+
+    template <typename T>
+    struct TypePrinter;
 }  // namespace demiplane::gears

@@ -59,6 +59,15 @@ namespace demiplane::db {
             return type_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.query_),
+                                         std::forward_like<Self>(self.on_condition_),
+                                         std::forward_like<Self>(self.table),
+                                         std::forward_like<Self>(self.type_),
+                                         std::forward_like<Self>(self.alias));
+        }
+
     private:
         Query query_;
         Condition on_condition_;

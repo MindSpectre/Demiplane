@@ -29,6 +29,13 @@ namespace demiplane::db {
             return recursive_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.cte_name_),
+                                         std::forward_like<Self>(self.query_),
+                                         std::forward_like<Self>(self.recursive_));
+        }
+
     private:
         std::string cte_name_;
         Query query_;

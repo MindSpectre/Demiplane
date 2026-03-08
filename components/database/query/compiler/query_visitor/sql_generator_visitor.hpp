@@ -30,13 +30,14 @@ namespace demiplane::db {
 
         template <typename Self>
         constexpr auto decompose(this Self&& self) {
-            return std::make_tuple(std::forward<Self>(self).sql_, std::forward<Self>(self).param_count_);
+            return std::forward_as_tuple(std::forward_like<Self>(self.sql_),
+                                         std::forward_like<Self>(self.param_count_));
         }
 
         // Get results
         template <typename Self>
         [[nodiscard]] constexpr auto sql(this Self&& self) {
-            return std::forward<Self>(self).sql_;
+            return std::forward_like<Self>(self.sql_);
         }
 
         [[nodiscard]] constexpr std::size_t param_count() const noexcept {
@@ -44,10 +45,10 @@ namespace demiplane::db {
         }
 
         // ── Compile-time parameter collection helpers ──────────────
-        template <typename T>
-        constexpr auto capture_param([[maybe_unused]] const T& val) const noexcept {
+        template <typename ValTp>
+        [[nodiscard]] constexpr auto capture_param([[maybe_unused]] ValTp&& val) const noexcept {
             if constexpr (Mode == ParamMode::Tuple) {
-                return std::make_tuple(val);
+                return std::make_tuple(std::forward<ValTp>(val));
             } else {
                 return std::tuple<>{};
             }

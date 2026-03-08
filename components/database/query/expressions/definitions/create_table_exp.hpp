@@ -19,6 +19,12 @@ namespace demiplane::db {
             return if_not_exists_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.table),
+                                         std::forward_like<Self>(self.if_not_exists_));
+        }
+
     private:
         bool if_not_exists_ = false;
     };

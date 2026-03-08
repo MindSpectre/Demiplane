@@ -69,31 +69,22 @@ namespace demiplane::db {
     template <typename T>
     class Literal {
     public:
-        constexpr auto&& value(this auto&& self) {
-            return std::forward<decltype(self)>(self).value_;
-        }
-
-        [[nodiscard]] constexpr const std::string& alias() const noexcept {
-            return alias_;
-        }
-
         template <typename ValueTp>
             requires std::constructible_from<T, ValueTp>
         constexpr explicit Literal(ValueTp&& v)
-            : value_{std::forward<ValueTp>(v)} {
+            : value{std::forward<ValueTp>(v)} {
         }
 
         template <typename Self, gears::IsStringLike StringTp>
         constexpr auto&& as(this Self&& self, StringTp&& alias) {
-            self.alias_ = std::forward<StringTp>(alias);
+            self.alias = std::forward<StringTp>(alias);
             return std::forward<Self>(self);
         }
 
         constexpr decltype(auto) accept(this auto&& self, auto& visitor);
 
-    private:
-        T value_;
-        std::string alias_;
+        T value;
+        std::string alias;
     };
 
     // Deduction guide: Literal(x) deduces T from argument
@@ -139,22 +130,19 @@ namespace demiplane::db {
     public:
         template <gears::IsStringLike StringTp>
         constexpr explicit AliasableExpression(StringTp&& alias)
-            : alias_{std::forward<StringTp>(alias)} {
+            : alias{std::forward<StringTp>(alias)} {
         }
 
         template <typename Self, gears::IsStringLike StringTp>
         constexpr auto&& as(this Self&& self, StringTp&& name) {
-            self.alias_ = std::forward<StringTp>(name);
+            self.alias = std::forward<StringTp>(name);
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
                 std::forward<Self>(self));
         }
 
-        [[nodiscard]] constexpr const std::string& alias() const noexcept {
-            return alias_;
-        }
+        std::string alias;
 
     protected:
-        std::string alias_;
         constexpr AliasableExpression() = default;
     };
 
@@ -197,11 +185,12 @@ namespace demiplane::db {
 
         template <typename Self, IsCondition Condition>
         constexpr auto on(this Self&& self, Condition&& cond) {
-            return JoinExpr<Parent, std::remove_cvref_t<Condition>, TableT>{std::forward<Self>(self).parent_,
-                                                                            std::forward<Self>(self).right_table_name_,
-                                                                            std::forward<Condition>(cond),
-                                                                            std::forward<Self>(self).type_,
-                                                                            std::forward<Self>(self).right_alias_};
+            return JoinExpr<Parent, std::remove_cvref_t<Condition>, TableT>{
+                std::forward_like<Self>(self.parent_),
+                std::forward_like<Self>(self.right_table_name_),
+                std::forward<Condition>(cond),
+                std::forward_like<Self>(self.type_),
+                std::forward_like<Self>(self.right_alias_)};
         }
 
     private:
@@ -218,16 +207,10 @@ namespace demiplane::db {
             requires(!std::same_as<std::remove_cvref_t<ColumnTp>, ColumnHolder>) &&
                     std::constructible_from<ColT, ColumnTp>
         constexpr explicit ColumnHolder(ColumnTp&& col) noexcept
-            : column_{std::forward<ColumnTp>(col)} {
+            : column{std::forward<ColumnTp>(col)} {
         }
 
-        template <typename Self>
-        [[nodiscard]] constexpr auto&& column(this Self&& self) noexcept {
-            return std::forward<Self>(self).column_;
-        }
-
-    private:
-        ColT column_;
+        ColT column;
     };
 
     template <IsTable TableT>
@@ -237,16 +220,10 @@ namespace demiplane::db {
             requires(!std::same_as<std::remove_cvref_t<TableTp>, TableHolder>) &&
                     std::constructible_from<TableT, TableTp>
         constexpr explicit TableHolder(TableTp&& table) noexcept
-            : table_{std::forward<TableTp>(table)} {
+            : table{std::forward<TableTp>(table)} {
         }
 
-        template <typename Self>
-        [[nodiscard]] constexpr auto&& table(this Self&& self) noexcept {
-            return std::forward<Self>(self).table_;
-        }
-
-    private:
-        TableT table_;
+        TableT table;
     };
 
     template <typename Derived, typename... AllowedFeatures>

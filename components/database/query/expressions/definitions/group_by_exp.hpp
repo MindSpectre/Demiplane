@@ -42,6 +42,11 @@ namespace demiplane::db {
             return std::forward<Self>(self).columns_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.query_), std::forward_like<Self>(self.columns_));
+        }
+
     private:
         std::tuple<GroupColumns...> columns_;
     };
@@ -63,6 +68,12 @@ namespace demiplane::db {
         template <typename Self>
         [[nodiscard]] constexpr auto&& criteria(this Self&& self) noexcept {
             return std::forward<Self>(self).grouping_criteria_;
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.query_),
+                                         std::forward_like<Self>(self.grouping_criteria_));
         }
 
     private:

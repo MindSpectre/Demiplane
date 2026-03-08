@@ -32,6 +32,13 @@ namespace demiplane::db {
             return LimitExpr{std::forward<Self>(self).query_, self.count_, new_offset};
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.query_),
+                                         std::forward_like<Self>(self.count_),
+                                         std::forward_like<Self>(self.offset_));
+        }
+
     private:
         Query query_;
         std::size_t count_;

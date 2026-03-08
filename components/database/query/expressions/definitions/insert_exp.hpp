@@ -67,6 +67,13 @@ namespace demiplane::db {
             return std::forward<Self>(self).rows_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.table),
+                                         std::forward_like<Self>(self.columns_),
+                                         std::forward_like<Self>(self.rows_));
+        }
+
     private:
         std::vector<std::string> columns_;
         std::vector<std::vector<FieldValue>> rows_;

@@ -21,7 +21,7 @@
 //
 // Skipped entirely: INSERT, UPDATE, DELETE (FieldValue/vector), DDL (shared_ptr<Table>)
 // =============================================================================
-
+#include <boost/type_index.hpp>
 // Suppress unused-variable warnings: this file is a constexpr audit where variables
 // exist solely to verify they compile as static constexpr — they are intentionally unused.
 #pragma clang diagnostic push
@@ -81,7 +81,7 @@ static constexpr auto q_sel_mixed = select(c_name, "constant", count("id").as("t
 static constexpr auto q_sel_where = select(c_name).from("users").where(c_age > 18);
 
 static_assert(q_sel_where.condition().left().name() == "age");
-static_assert(q_sel_where.condition().right().value() == 18);
+static_assert(q_sel_where.condition().right().value == 18);
 
 // sel::SelectWithGroupBy
 static constexpr auto q_sel_group = select(c_active, count("id").as("user_count")).from("users").group_by(c_active);
@@ -118,7 +118,7 @@ static constexpr auto q_sel_join = select(c_name, c_title).from("users").join("p
 // condition::BinaryEqual
 static constexpr auto q_cond_eq = c_age == 25;
 static_assert(q_cond_eq.left().name() == "age");
-static_assert(q_cond_eq.right().value() == 25);
+static_assert(q_cond_eq.right().value == 25);
 
 // condition::BinaryNotEqual
 static constexpr auto q_cond_neq = c_age != 25;
@@ -126,19 +126,19 @@ static_assert(q_cond_neq.left().name() == "age");
 
 // condition::BinaryGreater
 static constexpr auto q_cond_gt = c_age > 18;
-static_assert(q_cond_gt.right().value() == 18);
+static_assert(q_cond_gt.right().value == 18);
 
 // condition::BinaryGreaterEqual
 static constexpr auto q_cond_gte = c_age >= 18;
-static_assert(q_cond_gte.right().value() == 18);
+static_assert(q_cond_gte.right().value == 18);
 
 // condition::BinaryLess
 static constexpr auto q_cond_lt = c_age < 65;
-static_assert(q_cond_lt.right().value() == 65);
+static_assert(q_cond_lt.right().value == 65);
 
 // condition::BinaryLessEqual
 static constexpr auto q_cond_lte = c_age <= 65;
-static_assert(q_cond_lte.right().value() == 65);
+static_assert(q_cond_lte.right().value == 65);
 
 // condition::LogicalAnd
 static constexpr auto q_cond_and = c_age > 18 && c_active == true;
@@ -148,11 +148,11 @@ static constexpr auto q_cond_or = c_age < 18 || c_age > 65;
 
 // condition::UnaryCondition (equality with false)
 static constexpr auto q_cond_false = c_active == false;
-static_assert(q_cond_false.right().value() == false);
+static_assert(q_cond_false.right().value == false);
 
 // condition::StringComparison
 static constexpr auto q_cond_str = c_name == "john";
-static_assert(q_cond_str.right().value() == "john");
+static_assert(q_cond_str.right().value == "john");
 
 // condition::Between
 static constexpr auto q_cond_between = between(c_age, 18, 65);
@@ -198,11 +198,11 @@ static constexpr auto q_agg_avg   = select(avg(col("age"))).from("users");
 static constexpr auto q_agg_min   = select(min(col("age"))).from("users");
 static constexpr auto q_agg_max   = select(max(col("age"))).from("users");
 
-static_assert(std::get<0>(q_agg_count.select().columns()).column().name() == "id");
-static_assert(std::get<0>(q_agg_sum.select().columns()).column().name() == "age");
-static_assert(std::get<0>(q_agg_avg.select().columns()).column().name() == "age");
-static_assert(std::get<0>(q_agg_min.select().columns()).column().name() == "age");
-static_assert(std::get<0>(q_agg_max.select().columns()).column().name() == "age");
+static_assert(std::get<0>(q_agg_count.select().columns()).column.name() == "id");
+static_assert(std::get<0>(q_agg_sum.select().columns()).column.name() == "age");
+static_assert(std::get<0>(q_agg_avg.select().columns()).column.name() == "age");
+static_assert(std::get<0>(q_agg_min.select().columns()).column.name() == "age");
+static_assert(std::get<0>(q_agg_max.select().columns()).column.name() == "age");
 
 // aggregate::AggregateWithAlias
 static constexpr auto q_agg_aliased = select(count(col("id")).as("total_users"),
@@ -212,33 +212,33 @@ static constexpr auto q_agg_aliased = select(count(col("id")).as("total_users"),
                                              max(col("age")).as("max_age"))
                                           .from("users");
 
-static_assert(std::get<0>(q_agg_aliased.select().columns()).alias() == "total_users");
-static_assert(std::get<1>(q_agg_aliased.select().columns()).alias() == "total_age");
-static_assert(std::get<2>(q_agg_aliased.select().columns()).alias() == "avg_age");
-static_assert(std::get<3>(q_agg_aliased.select().columns()).alias() == "min_age");
-static_assert(std::get<4>(q_agg_aliased.select().columns()).alias() == "max_age");
+static_assert(std::get<0>(q_agg_aliased.select().columns()).alias == "total_users");
+static_assert(std::get<1>(q_agg_aliased.select().columns()).alias == "total_age");
+static_assert(std::get<2>(q_agg_aliased.select().columns()).alias == "avg_age");
+static_assert(std::get<3>(q_agg_aliased.select().columns()).alias == "min_age");
+static_assert(std::get<4>(q_agg_aliased.select().columns()).alias == "max_age");
 
 // aggregate::CountDistinct
 static constexpr auto q_agg_count_dist = select(count_distinct(col("age"))).from("users");
 static_assert(std::get<0>(q_agg_count_dist.select().columns()).distinct());
-static_assert(std::get<0>(q_agg_count_dist.select().columns()).column().name() == "age");
+static_assert(std::get<0>(q_agg_count_dist.select().columns()).column.name() == "age");
 
 // aggregate::CountAll — AllColumns now stores std::string (constexpr-friendly)
 static constexpr auto q_agg_count_all = select(count_all()).from("users");
-static_assert(IsAllColumns<decltype(std::get<0>(q_agg_count_all.select().columns()).column())>);
+static_assert(IsAllColumns<decltype(std::get<0>(q_agg_count_all.select().columns()).column)>);
 static_assert(!std::get<0>(q_agg_count_all.select().columns()).distinct());
 
 // aggregate::AggregateGroupBy
 static constexpr auto q_agg_group =
     select(c_active, count(col("id")).as("user_count")).from("users").group_by(c_active);
 
-static_assert(std::get<1>(q_agg_group.query().select().columns()).alias() == "user_count");
+static_assert(std::get<1>(q_agg_group.query().select().columns()).alias == "user_count");
 
 // aggregate::AggregateHaving
 static constexpr auto q_agg_having =
     select(c_active, count(col("id")).as("user_count")).from("users").group_by(c_active).having(count(col("id")) > 5);
 
-static_assert(std::get<1>(q_agg_having.query().query().select().columns()).alias() == "user_count");
+static_assert(std::get<1>(q_agg_having.query().query().select().columns()).alias == "user_count");
 
 // aggregate::MultipleAggregates
 static constexpr auto q_agg_multi = select(count(col("id")),
@@ -257,19 +257,19 @@ static constexpr auto q_agg_c_avg   = select(avg("age")).from("users");
 static constexpr auto q_agg_c_min   = select(min("age")).from("users");
 static constexpr auto q_agg_c_max   = select(max("age")).from("users");
 
-static_assert(std::get<0>(q_agg_c_count.select().columns()).column().name() == "id");
-static_assert(std::get<0>(q_agg_c_sum.select().columns()).column().name() == "age");
+static_assert(std::get<0>(q_agg_c_count.select().columns()).column.name() == "id");
+static_assert(std::get<0>(q_agg_c_sum.select().columns()).column.name() == "age");
 
 // const char* with aliases
 static constexpr auto q_agg_c_aliased = select(count("id").as("total"), avg("age").as("average")).from("users");
 
-static_assert(std::get<0>(q_agg_c_aliased.select().columns()).alias() == "total");
-static_assert(std::get<1>(q_agg_c_aliased.select().columns()).alias() == "average");
+static_assert(std::get<0>(q_agg_c_aliased.select().columns()).alias == "total");
+static_assert(std::get<1>(q_agg_c_aliased.select().columns()).alias == "average");
 
 // const char* count_distinct
 static constexpr auto q_agg_c_dist = select(count_distinct("name")).from("users");
 static_assert(std::get<0>(q_agg_c_dist.select().columns()).distinct());
-static_assert(std::get<0>(q_agg_c_dist.select().columns()).column().name() == "name");
+static_assert(std::get<0>(q_agg_c_dist.select().columns()).column.name() == "name");
 
 
 // =============================================================================

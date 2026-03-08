@@ -52,7 +52,7 @@ namespace demiplane::scroll {
 
             // Lock only for the actual write (supports multiple loggers sharing this sink)
             {
-                EntryType entry             = make_entry_from_event<EntryType>(event);
+                auto entry                  = make_entry_from_event<EntryType>(event);
                 const std::string formatted = entry.to_string();
                 std::lock_guard lock{mutex_};
                 file_stream_ << formatted;

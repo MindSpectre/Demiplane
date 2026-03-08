@@ -21,7 +21,7 @@ namespace demiplane::db {
         // Constexpr path -- InlineString, no heap allocation, true static constexpr
         template <ParamMode Mode = StaticDefault, std::size_t MaxLen = 1024, IsQuery Expr>
             requires(Mode != ParamMode::Sink)
-        constexpr auto compile_static(const Expression<Expr>& expr) const {
+        [[nodiscard]] constexpr auto compile_static(const Expression<Expr>& expr) const {
             SqlGeneratorVisitor<DialectT, gears::InlineString<MaxLen>, Mode> visitor{};
             auto params = expr.accept(visitor);
             auto sql    = std::move(visitor).sql();
@@ -30,7 +30,7 @@ namespace demiplane::db {
 
         template <ParamMode Mode = StaticDefault, std::size_t MaxLen = 1024, IsQuery Expr>
             requires(Mode != ParamMode::Sink)
-        constexpr auto compile_static(Expression<Expr>&& expr) const {
+        [[nodiscard]] constexpr auto compile_static(Expression<Expr>&& expr) const {
             SqlGeneratorVisitor<DialectT, gears::InlineString<MaxLen>, Mode> visitor{};
             auto params = std::move(expr).accept(visitor);
             auto sql    = std::move(visitor).sql();
@@ -40,7 +40,7 @@ namespace demiplane::db {
         // Runtime path -- full compilation with PMR and params
         template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
             requires(Mode != ParamMode::Tuple)
-        CompiledDynamicQuery compile_dynamic(const Expression<Expr>& expr) {
+        [[nodiscard]] CompiledDynamicQuery compile_dynamic(const Expression<Expr>& expr) {
             auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
             if constexpr (Mode == ParamMode::Inline) {
@@ -63,7 +63,7 @@ namespace demiplane::db {
 
         template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
             requires(Mode != ParamMode::Tuple)
-        CompiledDynamicQuery compile_dynamic(Expression<Expr>&& expr) {
+        [[nodiscard]] CompiledDynamicQuery compile_dynamic(Expression<Expr>&& expr) {
             auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
             if constexpr (Mode == ParamMode::Inline) {

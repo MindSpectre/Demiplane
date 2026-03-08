@@ -25,6 +25,13 @@ namespace demiplane::db {
             return cascade_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.table),
+                                         std::forward_like<Self>(self.if_exists_),
+                                         std::forward_like<Self>(self.cascade_));
+        }
+
     private:
         bool if_exists_ = false;
         bool cascade_   = false;

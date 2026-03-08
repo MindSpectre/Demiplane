@@ -36,6 +36,13 @@ namespace demiplane::db {
             return std::forward<Self>(self).upper_;
         }
 
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.operand_),
+                                         std::forward_like<Self>(self.lower_),
+                                         std::forward_like<Self>(self.upper_));
+        }
+
     private:
         Operand operand_;
         Lower lower_;

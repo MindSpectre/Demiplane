@@ -73,7 +73,7 @@ namespace demiplane::scroll::detail {
         EntryBase(const LogLevel lvl,
                   const std::string_view msg,
                   Metas... metas)  // perfect-forward meta-packs
-            : Metas{metas}...,
+            : Metas{std::move(metas)}...,
               level_{lvl},
               message_{msg} {
         }

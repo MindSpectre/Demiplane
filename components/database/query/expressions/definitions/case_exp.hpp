@@ -40,7 +40,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& when_clauses(this Self&& self) noexcept {
-            return std::forward<Self>(self).when_clauses_;
+            return std::forward_like<Self>(self.when_clauses_);
         }
 
         template <typename Self, typename ConditionExpr, typename ValueExpr>
@@ -68,7 +68,7 @@ namespace demiplane::db {
         [[nodiscard]] constexpr auto else_(this Self&& self, ElseExpr&& else_expr) {
             // Auto-wrap the else expression if needed
             auto wrapped_else = detail::make_literal_if_needed(std::forward<ElseExpr>(else_expr));
-            return CaseExprWithElse<decltype(wrapped_else), WhenClauses...>(std::forward<Self>(self).when_clauses_,
+            return CaseExprWithElse<decltype(wrapped_else), WhenClauses...>(std::forward_like<Self>(self.when_clauses_),
                                                                             std::move(wrapped_else));
         }
 
@@ -82,7 +82,7 @@ namespace demiplane::db {
         template <typename Self, IsWhenClause NewWhenClause>
         [[nodiscard]] constexpr auto add_when_clause(this Self&& self, NewWhenClause&& new_clause) {
             return CaseExpr<WhenClauses..., std::decay_t<NewWhenClause>>(std::tuple_cat(
-                std::forward<Self>(self).when_clauses_, std::make_tuple(std::forward<NewWhenClause>(new_clause))));
+                std::forward_like<Self>(self.when_clauses_), std::make_tuple(std::forward<NewWhenClause>(new_clause))));
         }
     };
 
@@ -102,7 +102,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& else_clause(this Self&& self) noexcept {
-            return std::forward<Self>(self).else_clause_;
+            return std::forward_like<Self>(self.else_clause_);
         }
 
         template <typename Self>
@@ -116,9 +116,9 @@ namespace demiplane::db {
         template <typename Self, IsWhenClause NewWhenClause>
         [[nodiscard]] constexpr auto add_when_clause(this Self&& self, NewWhenClause&& new_clause) {
             return CaseExprWithElse<ElseExpr, WhenClauses..., std::decay_t<NewWhenClause>>(
-                std::tuple_cat(std::forward<Self>(self).when_clauses_,
+                std::tuple_cat(std::forward_like<Self>(self.when_clauses_),
                                std::make_tuple(std::forward<NewWhenClause>(new_clause))),
-                std::forward<Self>(self).else_clause_);
+                std::forward_like<Self>(self.else_clause_));
         }
 
     private:

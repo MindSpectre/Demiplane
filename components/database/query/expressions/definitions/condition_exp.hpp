@@ -17,12 +17,12 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& left(this Self&& self) noexcept {
-            return std::forward<Self>(self).left_;
+            return std::forward_like<Self>(self.left_);
         }
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& right(this Self&& self) noexcept {
-            return std::forward<Self>(self).right_;
+            return std::forward_like<Self>(self.right_);
         }
 
         template <typename Self>
@@ -46,7 +46,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& operand(this Self&& self) noexcept {
-            return std::forward<Self>(self).operand_;
+            return std::forward_like<Self>(self.operand_);
         }
 
     private:

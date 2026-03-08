@@ -24,7 +24,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& select(this Self&& self) noexcept {
-            return std::forward<Self>(self).select_;
+            return std::forward_like<Self>(self.select_);
         }
 
         template <typename Self>
@@ -56,12 +56,12 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& select(this Self&& self) noexcept {
-            return std::forward<Self>(self).select_;
+            return std::forward_like<Self>(self.select_);
         }
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& cte_query(this Self&& self) noexcept {
-            return std::forward<Self>(self).query_;
+            return std::forward_like<Self>(self.query_);
         }
 
         template <typename Self>

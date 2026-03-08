@@ -47,12 +47,12 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {
-            return std::forward<Self>(self).query_;
+            return std::forward_like<Self>(self.query_);
         }
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& on_condition(this Self&& self) noexcept {
-            return std::forward<Self>(self).on_condition_;
+            return std::forward_like<Self>(self.on_condition_);
         }
 
         [[nodiscard]] constexpr JoinType type() const noexcept {

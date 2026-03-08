@@ -373,14 +373,36 @@ constexpr auto and_then(F&& f) & -> std::invoke_result_t<F, T&>;
 
 ### Deducing This (C++23)
 
-Prefer deducing this over CRTP:
+Prefer deducing this over CRTP.
+
+For **member access** in getters and decompose methods, use `std::forward_like<Self>(self.member_)`:
 
 ```cpp
 template <typename Self>
-constexpr decltype(auto) value(this Self&& self) noexcept {
-    return std::forward<Self>(self).value_;
+[[nodiscard]] constexpr auto&& value(this Self&& self) noexcept {
+    return std::forward_like<Self>(self.value_);
 }
 ```
+
+For **method calls** (CRTP dispatch, chaining), use `std::forward<Self>(self).method()`:
+
+```cpp
+template <typename Self>
+constexpr auto&& with_name(this Self&& self, std::string name) {
+    self.name_ = std::move(name);
+    return std::forward<Self>(self);
+}
+
+// CRTP dispatch to derived class
+template <typename Self>
+constexpr auto process(this Self&& self) {
+    return std::forward<Self>(self).derived().do_work();
+}
+```
+
+**Rationale:** `std::forward_like` directly applies the value category of `Self` to the member without going through the
+object. This avoids clang-tidy `bugprone-use-after-move` false positives that occur with
+`std::forward<Self>(self).member_`, and is semantically cleaner for member access.
 
 ## Lambda Captures
 

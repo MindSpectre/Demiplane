@@ -18,12 +18,12 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& update(this Self&& self) noexcept {
-            return std::forward<Self>(self).update_;
+            return std::forward_like<Self>(self.update_);
         }
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& condition(this Self&& self) noexcept {
-            return std::forward<Self>(self).condition_;
+            return std::forward_like<Self>(self.condition_);
         }
 
         template <typename Self>

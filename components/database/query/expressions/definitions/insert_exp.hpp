@@ -59,12 +59,12 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& columns(this Self&& self) noexcept {
-            return std::forward<Self>(self).columns_;
+            return std::forward_like<Self>(self.columns_);
         }
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& rows(this Self&& self) noexcept {
-            return std::forward<Self>(self).rows_;
+            return std::forward_like<Self>(self.rows_);
         }
 
         template <typename Self>

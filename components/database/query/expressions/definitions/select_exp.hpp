@@ -20,7 +20,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& columns(this Self&& self) noexcept {
-            return std::forward<Self>(self).columns_;
+            return std::forward_like<Self>(self.columns_);
         }
 
         [[nodiscard]] constexpr bool distinct() const noexcept {

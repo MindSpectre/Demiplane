@@ -16,7 +16,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {
-            return std::forward<Self>(self).query_;
+            return std::forward_like<Self>(self.query_);
         }
 
     protected:
@@ -39,7 +39,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& columns(this Self&& self) noexcept {
-            return std::forward<Self>(self).columns_;
+            return std::forward_like<Self>(self.columns_);
         }
 
         template <typename Self>
@@ -67,7 +67,7 @@ namespace demiplane::db {
 
         template <typename Self>
         [[nodiscard]] constexpr auto&& criteria(this Self&& self) noexcept {
-            return std::forward<Self>(self).grouping_criteria_;
+            return std::forward_like<Self>(self.grouping_criteria_);
         }
 
         template <typename Self>

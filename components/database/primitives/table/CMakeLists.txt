@@ -16,7 +16,6 @@ target_include_directories(${DMP_DATABASE}.Primitives.Table PUBLIC
 target_link_libraries(${DMP_DATABASE}.Primitives.Table
         PUBLIC
         ${DMP_DATABASE}.Features
-        ${DMP_DATABASE}.Primitives.Schema
         ${DMP_DATABASE}.Primitives.Column
         ${DMP_DATABASE}.Primitives.Field
 )

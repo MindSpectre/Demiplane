@@ -15,7 +15,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_id, user_name)
-            auto query = select(s.users().id, s.users().name).from(s.users().table);
+            auto query = select(s.users.column<"id">(), s.users.column<"name">()).from(s.users);
             return c.compile_dynamic(query);
         }
     };
@@ -26,7 +26,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(all("users"))
-            auto query = select(all("users")).from(s.users().table);
+            auto query = select(all("users")).from(s.users);
             return c.compile_dynamic(query);
         }
     };
@@ -37,7 +37,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select_distinct(user_name, user_age)
-            auto query = select_distinct(s.users().name, s.users().age).from(s.users().table);
+            auto query = select_distinct(s.users.column<"name">(), s.users.column<"age">()).from(s.users);
             return c.compile_dynamic(query);
         }
     };
@@ -48,9 +48,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_name, "constant", count(user_id).as("total")) with GROUP BY
-            auto query = select(s.users().name, "constant", count(s.users().id).as("total"))
-                             .from(s.users().table)
-                             .group_by(s.users().name);
+            auto query = select(s.users.column<"name">(), "constant", count(s.users.column<"id">()).as("total"))
+                             .from(s.users)
+                             .group_by(s.users.column<"name">());
             return c.compile_dynamic(query);
         }
     };
@@ -61,10 +61,10 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_name).from(test_record)
-            Record test_record(s.users().table);
+            Record test_record(s.users_dynamic);
             test_record["id"].set(1);
             test_record["name"].set(std::string("test"));
-            auto query = select(s.users().name).from(test_record);
+            auto query = select(s.users.column<"name">()).from(test_record);
             return c.compile_dynamic(query);
         }
     };
@@ -86,7 +86,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_name).from(users_schema).where(user_age > 18)
-            auto query = select(s.users().name).from(s.users().table).where(s.users().age > 18);
+            auto query = select(s.users.column<"name">()).from(s.users).where(s.users.column<"age">() > 18);
             return c.compile_dynamic(query);
         }
     };
@@ -96,12 +96,11 @@ namespace demiplane::test {
         template <db::IsSqlDialect DialectT, db::ParamMode DefaultMode>
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
-            // Mirrors: select(user_name,
-            // post_title).from(users_schema).join(posts_schema->table_name()).on(post_user_id == user_id)
-            auto query = select(s.users().name, s.posts().title)
-                             .from(s.users().table)
-                             .join(s.posts().table)
-                             .on(s.posts().user_id == s.users().id);
+            // Mirrors: select(user_name, post_title).from(users).join(posts).on(...)
+            auto query = select(s.users.column<"name">(), s.posts.column<"title">())
+                             .from(s.users)
+                             .join(s.posts)
+                             .on(s.posts.column<"user_id">() == s.users.column<"id">());
             return c.compile_dynamic(query);
         }
     };
@@ -112,9 +111,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_active, count(user_id).as("user_count")).from(users_schema).group_by(user_active)
-            auto query = select(s.users().active, count(s.users().id).as("user_count"))
-                             .from(s.users().table)
-                             .group_by(s.users().active);
+            auto query = select(s.users.column<"active">(), count(s.users.column<"id">()).as("user_count"))
+                             .from(s.users)
+                             .group_by(s.users.column<"active">());
             return c.compile_dynamic(query);
         }
     };
@@ -125,10 +124,10 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(...).from(...).group_by(...).having(count(user_id) > 5)
-            auto query = select(s.users().active, count(s.users().id).as("user_count"))
-                             .from(s.users().table)
-                             .group_by(s.users().active)
-                             .having(count(s.users().id) > 5);
+            auto query = select(s.users.column<"active">(), count(s.users.column<"id">()).as("user_count"))
+                             .from(s.users)
+                             .group_by(s.users.column<"active">())
+                             .having(count(s.users.column<"id">()) > 5);
             return c.compile_dynamic(query);
         }
     };
@@ -139,7 +138,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_name).from(users_schema).order_by(asc(user_name))
-            auto query = select(s.users().name).from(s.users().table).order_by(asc(s.users().name));
+            auto query = select(s.users.column<"name">()).from(s.users).order_by(asc(s.users.column<"name">()));
             return c.compile_dynamic(query);
         }
     };
@@ -150,7 +149,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: select(user_name).from(users_schema).limit(10)
-            auto query = select(s.users().name).from(s.users().table).limit(10);
+            auto query = select(s.users.column<"name">()).from(s.users).limit(10);
             return c.compile_dynamic(query);
         }
     };

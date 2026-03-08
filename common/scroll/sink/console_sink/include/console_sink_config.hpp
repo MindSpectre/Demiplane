@@ -2,6 +2,7 @@
 #include <gears_class_traits.hpp>
 #include <json/value.h>
 #include <sink_interface.hpp>
+
 namespace demiplane::scroll {
     /**
      * @brief Configuration for console output
@@ -60,6 +61,7 @@ namespace demiplane::scroll {
         [[nodiscard]] constexpr std::ostream* get_output() const {
             return output_;
         }
+
     protected:
         [[nodiscard]] Json::Value wrapped_serialize() const override {
             Json::Value result;

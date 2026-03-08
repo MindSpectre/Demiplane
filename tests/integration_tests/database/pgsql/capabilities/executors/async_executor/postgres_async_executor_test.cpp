@@ -4,8 +4,8 @@
 #include "postgres_async_executor.hpp"
 
 #include <boost/asio.hpp>
+#include <compiled_query/compiled_static_query.hpp>
 #include <gtest/gtest.h>
-#include <query/compiled_static_query.hpp>
 
 #include "postgres_connection_config.hpp"
 #include "postgres_params.hpp"

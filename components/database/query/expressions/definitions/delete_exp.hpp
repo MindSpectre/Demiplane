@@ -21,11 +21,11 @@ namespace demiplane::db {
     };
 
     // 1. Pointer
-    template <typename TablePtrTp>
-        requires std::constructible_from<TablePtr, std::remove_cvref_t<TablePtrTp>> &&
-                 (!gears::IsStringLike<TablePtrTp>)
-    auto delete_from(TablePtrTp&& table) noexcept {
-        return DeleteExpr<TablePtr>{std::forward<TablePtrTp>(table)};
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>> &&
+                 (!gears::IsStringLike<DynamicTablePtrTp>)
+    auto delete_from(DynamicTablePtrTp&& table) noexcept {
+        return DeleteExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table)};
     }
 
     // 2. std::string (general)
@@ -40,5 +40,11 @@ namespace demiplane::db {
         requires gears::IsStringViewLike<StringTp>
     constexpr auto delete_from(StringTp&& table_name) noexcept {
         return DeleteExpr<std::string_view>{std::forward<StringTp>(table_name)};
+    }
+
+    // 4. Static table
+    template <IsStaticTable TableTp>
+    constexpr auto delete_from(const TableTp& table) noexcept {
+        return DeleteExpr<TableTp>{table};
     }
 }  // namespace demiplane::db

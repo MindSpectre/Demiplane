@@ -5,13 +5,13 @@
 
 namespace demiplane::db {
 
-    template <typename... Params>
+    template <typename SqlStringT, typename... Params>
     struct CompiledStaticQuery {
-        std::string sql_;
+        SqlStringT sql_;
         std::tuple<Params...> params_;
 
         [[nodiscard]] constexpr std::string_view sql() const noexcept {
-            return sql_;
+            return std::string_view{sql_};
         }
 
         [[nodiscard]] constexpr const std::tuple<Params...>& params() const noexcept {
@@ -24,7 +24,7 @@ namespace demiplane::db {
     };
 
     // Deduction guide
-    template <typename... Params>
-    CompiledStaticQuery(std::string, std::tuple<Params...>) -> CompiledStaticQuery<Params...>;
+    template <typename SqlStringT, typename... Params>
+    CompiledStaticQuery(SqlStringT, std::tuple<Params...>) -> CompiledStaticQuery<SqlStringT, Params...>;
 
 }  // namespace demiplane::db

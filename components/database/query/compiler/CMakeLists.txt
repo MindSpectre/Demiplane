@@ -4,8 +4,8 @@
 add_library(${DMP_DATABASE}.Query.Compiler STATIC
         query_compiler.hpp
         param_mode.hpp
-        query/compiled_dynamic_query.hpp
-        query/compiled_static_query.hpp
+        compiled_query/compiled_dynamic_query.hpp
+        compiled_query/compiled_static_query.hpp
         query_visitor/query_visitor.hpp
         query_visitor/sql_generator_visitor.hpp
         query_visitor/sql_generator_visitor.cpp
@@ -19,6 +19,7 @@ target_link_libraries(${DMP_DATABASE}.Query.Compiler
         PUBLIC
         ${DMP_DATABASE}.Query.Expressions
         ${DMP_DATABASE}.Base.Dialect
+        ${DMP_DATABASE}.Base.TypeMapping
         Demiplane::Common::Scroll
         PRIVATE
         Demiplane::Common::Nexus

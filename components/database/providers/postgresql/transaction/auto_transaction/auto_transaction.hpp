@@ -1,7 +1,8 @@
 #pragma once
 
+#include <capability_provider.hpp>
+
 #include "base/transaction.hpp"
-#include "capability_provider.hpp"
 
 namespace demiplane::db::postgres {
 

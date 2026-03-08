@@ -33,7 +33,7 @@ namespace demiplane::db::postgres {
 
         // convenience
         template <class T>
-        std::optional<T> get_opt(const std::size_t r, const std::size_t c) const {
+        [[nodiscard]] std::optional<T> get_opt(const std::size_t r, const std::size_t c) const {
             const auto f = get_row(r)[c];
             if (f.is_null())
                 return std::nullopt;
@@ -41,7 +41,7 @@ namespace demiplane::db::postgres {
         }
 
         template <class T>
-        T get(const std::size_t row, const std::size_t column) const {
+        [[nodiscard]] T get(const std::size_t row, const std::size_t column) const {
             const auto f = get_row(row)[column];
             if (f.is_null())
                 throw std::runtime_error("get() failed");

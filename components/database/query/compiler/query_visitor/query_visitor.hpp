@@ -1,7 +1,7 @@
 #pragma once
 
 #include <db_core_objects.hpp>
-#include <gears_utils.hpp>
+#include <db_typed_column.hpp>
 
 #include "query_expressions.hpp"
 // NOLINTBEGIN(bugprone-use-after-move)
@@ -18,14 +18,14 @@ namespace demiplane::db {
     public:
         // Column and literals - now with perfect forwarding
 
-        constexpr auto visit(const DynamicColumn& col) {
-            derived().visit_dynamic_column_impl(col.name(), col.context());
+        constexpr auto visit(const Column& col) {
+            derived().visit_column_impl(col.name(), col.table_name(), col.alias());
             return derived().no_params();
         }
 
-        template <typename T>
-        constexpr auto visit(const TableColumn<T>& col) {
-            derived().visit_table_column_impl(col.schema(), col.table_name(), col.alias());
+        template <IsTypedColumn ColT>
+        constexpr auto visit(const ColT& col) {
+            derived().visit_column_impl(col.name(), col.table_name(), col.alias());
             return derived().no_params();
         }
 
@@ -196,9 +196,10 @@ namespace demiplane::db {
 
         // Aggregate functions - perfect forwarding
 
-        constexpr auto visit(const CountExpr& expr) {
+        template <IsColumnLike ColT>
+        constexpr auto visit(const CountExpr<ColT>& expr) {
             derived().visit_count_impl(expr.distinct());
-            if (expr.is_all_columns()) {
+            if constexpr (IsAllColumns<ColT>) {
                 derived().visit_all_columns_impl("");
             } else {
                 expr.column().accept(derived());
@@ -207,32 +208,32 @@ namespace demiplane::db {
             return derived().no_params();
         }
 
-
-        constexpr auto visit(const SumExpr& expr) {
+        template <IsColumnLike ColT>
+        constexpr auto visit(const SumExpr<ColT>& expr) {
             derived().visit_sum_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
             return derived().no_params();
         }
 
-
-        constexpr auto visit(const AvgExpr& expr) {
+        template <IsColumnLike ColT>
+        constexpr auto visit(const AvgExpr<ColT>& expr) {
             derived().visit_avg_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
             return derived().no_params();
         }
 
-
-        constexpr auto visit(const MaxExpr& expr) {
+        template <IsColumnLike ColT>
+        constexpr auto visit(const MaxExpr<ColT>& expr) {
             derived().visit_max_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
             return derived().no_params();
         }
 
-
-        constexpr auto visit(const MinExpr& expr) {
+        template <IsColumnLike ColT>
+        constexpr auto visit(const MinExpr<ColT>& expr) {
             derived().visit_min_impl();
             expr.column().accept(derived());
             derived().visit_aggregate_end(expr.alias());
@@ -241,7 +242,8 @@ namespace demiplane::db {
 
         // Order by - perfect forwarding
 
-        constexpr auto visit(const OrderBy& order) {
+        template <IsColumnLike ColT>
+        constexpr auto visit(const OrderBy<ColT>& order) {
             order.column().accept(derived());
             derived().visit_order_direction_impl(order.direction());
             return derived().no_params();
@@ -653,7 +655,7 @@ namespace demiplane::db {
         }
 
         template <typename T>
-        constexpr auto visit_tuple_element(T&& elem, bool is_first) {
+        constexpr auto visit_tuple_element(T&& elem, const bool is_first) {
             if (!is_first) {
                 derived().visit_column_separator();
             }

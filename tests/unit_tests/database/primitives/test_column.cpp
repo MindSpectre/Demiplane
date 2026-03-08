@@ -1,128 +1,108 @@
 #include <string>
-#include <typeindex>
-#include <typeinfo>
 
 #include <db_column.hpp>
-#include <db_field_schema.hpp>
 #include <gtest/gtest.h>
 
 using namespace demiplane::db;
 
-class ColumnTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        test_schema.name     = "test_field";
-        test_schema.db_type  = "INTEGER";
-        test_schema.cpp_type = std::type_index(typeid(int));
-    }
+TEST(ColumnTest, ConstructionWithNameAndTable) {
+    const Column column{"test_field", "test_table"};
 
-    FieldSchema test_schema;
-};
-
-TEST_F(ColumnTest, TypedColumnConstruction) {
-    const TableColumn<int> column(&test_schema, "test_table");
-
-    EXPECT_EQ(column.schema(), &test_schema);
+    EXPECT_EQ(column.name(), "test_field");
     EXPECT_EQ(column.table_name(), "test_table");
     EXPECT_TRUE(column.alias().empty());
-    EXPECT_EQ(column.name(), "test_field");
 }
 
-TEST_F(ColumnTest, TypedColumnWithAlias) {
-    const TableColumn<int> column(&test_schema, "test_table", "t");
+TEST(ColumnTest, ConstructionWithNameOnly) {
+    const Column column{"test_field"};
 
-    EXPECT_EQ(column.schema(), &test_schema);
-    EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_EQ(column.alias(), "t");
     EXPECT_EQ(column.name(), "test_field");
+    EXPECT_TRUE(column.table_name().empty());
+    EXPECT_TRUE(column.alias().empty());
 }
 
-TEST_F(ColumnTest, TypedColumnAliasing) {
-    const TableColumn<int> original(&test_schema, "test_table");
-    const TableColumn<int> aliased = original.as("t");
+TEST(ColumnTest, ColumnWithAlias) {
+    const Column column{"test_field", "test_table"};
+    const Column aliased = column.as("t");
 
-    EXPECT_TRUE(original.alias().empty());
+    EXPECT_TRUE(column.alias().empty());
     EXPECT_EQ(aliased.alias(), "t");
     EXPECT_EQ(aliased.table_name(), "test_table");
-    EXPECT_EQ(aliased.schema(), &test_schema);
+    EXPECT_EQ(aliased.name(), "test_field");
 }
 
-TEST_F(ColumnTest, VoidColumnConstruction) {
-    const TableColumn<void> column(&test_schema, "test_table");
+TEST(ColumnTest, SetTable) {
+    Column column{"test_field"};
+    column.set_table("new_table");
 
-    EXPECT_EQ(column.schema(), &test_schema);
-    EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_TRUE(column.alias().empty());
-    EXPECT_EQ(column.name(), "test_field");
+    EXPECT_EQ(column.table_name(), "new_table");
 }
 
-TEST_F(ColumnTest, VoidColumnWithAlias) {
-    const TableColumn<void> column(&test_schema, "test_table", "t");
+TEST(ColumnTest, SetName) {
+    Column column{"old_name"};
+    column.set_name("new_name");
 
-    EXPECT_EQ(column.schema(), &test_schema);
-    EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_EQ(column.alias(), "t");
-    EXPECT_EQ(column.name(), "test_field");
+    EXPECT_EQ(column.name(), "new_name");
 }
 
-
-TEST_F(ColumnTest, AllColumnsWithTable) {
-    const AllColumns all_cols("users");
+TEST(ColumnTest, AllColumnsWithTable) {
+    const AllColumns all_cols{"users"};
 
     EXPECT_EQ(all_cols.table_name(), "users");
 }
 
-TEST_F(ColumnTest, ColumnCreationHelper) {
-    const auto column = col<int>(&test_schema, "test_table");
+TEST(ColumnTest, AllColumnsDefault) {
+    const AllColumns all_cols;
 
-    EXPECT_EQ(column.schema(), &test_schema);
-    EXPECT_EQ(column.table_name(), "test_table");
-    EXPECT_EQ(column.name(), "test_field");
+    EXPECT_TRUE(all_cols.table_name().empty());
 }
 
-TEST_F(ColumnTest, AllColumnsHelper) {
+TEST(ColumnTest, ColumnCreationHelper) {
+    const auto column = col("test_field", "test_table");
+
+    EXPECT_EQ(column.name(), "test_field");
+    EXPECT_EQ(column.table_name(), "test_table");
+}
+
+TEST(ColumnTest, ColumnCreationHelperNameOnly) {
+    const auto column = col("test_field");
+
+    EXPECT_EQ(column.name(), "test_field");
+    EXPECT_TRUE(column.table_name().empty());
+}
+
+TEST(ColumnTest, AllColumnsHelper) {
     const auto all_with_table = all("users");
 
     EXPECT_EQ(all_with_table.table_name(), "users");
 }
 
-TEST_F(ColumnTest, IsColumnConcept) {
-    // Test that the concept works correctly
-    static_assert(IsColumn<TableColumn<int>>);
-    static_assert(IsColumn<TableColumn<std::string>>);
-    static_assert(IsColumn<TableColumn<void>>);
-    static_assert(IsColumn<AllColumns>);
+TEST(ColumnTest, AllColumnsHelperNoTable) {
+    const auto all_cols = all();
 
-    // Test that non-column types don't match
+    EXPECT_TRUE(all_cols.table_name().empty());
+}
+
+TEST(ColumnTest, IsColumnConcept) {
+    static_assert(IsColumnLike<Column>);
+    static_assert(IsColumnLike<AllColumns>);
+
+    static_assert(!IsColumnLike<int>);
+    static_assert(!IsColumnLike<std::string>);
+}
+
+TEST(ColumnTest, IsColumnExactConcept) {
+    static_assert(IsColumn<Column>);
+    static_assert(!IsColumn<AllColumns>);
     static_assert(!IsColumn<int>);
-    static_assert(!IsColumn<std::string>);
-    static_assert(!IsColumn<FieldSchema>);
 }
 
-TEST_F(ColumnTest, ColumnValueType) {
-    [[maybe_unused]] TableColumn<int> int_column(&test_schema, "test_table");
-    [[maybe_unused]] TableColumn<std::string> string_column(&test_schema, "test_table");
+TEST(ColumnTest, MultipleColumns) {
+    Column id_col{"id", "products"};
+    Column name_col{"name", "products"};
+    Column price_col{"price", "products"};
 
-    static_assert(std::is_same_v<typename decltype(int_column)::value_type, int>);
-    static_assert(std::is_same_v<typename decltype(string_column)::value_type, std::string>);
-}
-
-TEST_F(ColumnTest, MultipleColumnTypes) {
-    FieldSchema string_schema;
-    string_schema.name     = "name";
-    string_schema.db_type  = "VARCHAR(255)";
-    string_schema.cpp_type = std::type_index(typeid(std::string));
-
-    FieldSchema double_schema;
-    double_schema.name     = "price";
-    double_schema.db_type  = "DECIMAL(10,2)";
-    double_schema.cpp_type = std::type_index(typeid(double));
-
-    TableColumn<int> id_col(&test_schema, "products");
-    TableColumn<std::string> name_col(&string_schema, "products");
-    TableColumn<double> price_col(&double_schema, "products");
-
-    EXPECT_EQ(id_col.name(), "test_field");
+    EXPECT_EQ(id_col.name(), "id");
     EXPECT_EQ(name_col.name(), "name");
     EXPECT_EQ(price_col.name(), "price");
 
@@ -131,13 +111,14 @@ TEST_F(ColumnTest, MultipleColumnTypes) {
     EXPECT_EQ(price_col.table_name(), "products");
 }
 
-TEST_F(ColumnTest, ColumnWithComplexAlias) {
-    const TableColumn<int> column(&test_schema, "very_long_table_name", "short");
+TEST(ColumnTest, ColumnWithComplexAlias) {
+    const Column column{"test_field", "very_long_table_name"};
 
-    EXPECT_EQ(column.table_name(), "very_long_table_name");
-    EXPECT_EQ(column.alias(), "short");
-
-    const TableColumn<int> aliased = column.as("even_shorter");
-    EXPECT_EQ(aliased.alias(), "even_shorter");
+    const Column aliased = column.as("short");
     EXPECT_EQ(aliased.table_name(), "very_long_table_name");
+    EXPECT_EQ(aliased.alias(), "short");
+
+    const Column re_aliased = column.as("even_shorter");
+    EXPECT_EQ(re_aliased.alias(), "even_shorter");
+    EXPECT_EQ(re_aliased.table_name(), "very_long_table_name");
 }

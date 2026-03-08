@@ -1,9 +1,7 @@
 #pragma once
 
 #include <optional>
-#include <ostream>
 #include <string>
-#include <string_view>
 
 #include <db_error_codes.hpp>
 #include <libpq-fe.h>

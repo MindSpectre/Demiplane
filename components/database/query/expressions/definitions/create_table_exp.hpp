@@ -23,12 +23,18 @@ namespace demiplane::db {
         bool if_not_exists_ = false;
     };
 
-    // Factory: TablePtr (requires full schema for DDL generation)
-    template <typename TablePtrTp>
-        requires std::constructible_from<TablePtr, std::remove_cvref_t<TablePtrTp>> &&
-                 (!gears::IsStringLike<TablePtrTp>)
-    constexpr auto create_table(TablePtrTp&& table, const bool if_not_exists = false) noexcept {
-        return CreateTableExpr<TablePtr>{std::forward<TablePtrTp>(table), if_not_exists};
+    // Factory: DynamicTablePtr (requires full schema for DDL generation)
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>> &&
+                 (!gears::IsStringLike<DynamicTablePtrTp>)
+    constexpr auto create_table(DynamicTablePtrTp&& table, const bool if_not_exists = false) noexcept {
+        return CreateTableExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table), if_not_exists};
+    }
+
+    // Factory: StaticTable
+    template <IsStaticTable StaticTableTp>
+    constexpr auto create_table(const StaticTableTp& table, const bool if_not_exists = false) noexcept {
+        return CreateTableExpr<StaticTableTp>{table, if_not_exists};
     }
 
 }  // namespace demiplane::db

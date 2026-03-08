@@ -312,7 +312,7 @@ TEST_F(CompiledDdlTest, DropTableByNameExecutes) {
 
 TEST_F(CompiledDdlTest, CreateInsertSelectDropLifecycle) {
     // Create table using DDL expression
-    auto table = std::make_shared<Table>("ddl_test_table");
+    auto table = std::make_shared<DynamicTable>("ddl_test_table");
     table->add_field<int>("id", "SERIAL").primary_key("id");
     table->add_field<std::string>("name", "VARCHAR(100)").nullable("name", false);
     table->add_field<int>("value", "INTEGER");
@@ -344,7 +344,7 @@ TEST_F(CompiledDdlTest, CreateInsertSelectDropLifecycle) {
 
 TEST_F(CompiledDdlTest, CreateTableWithAllConstraintTypes) {
     // Create a comprehensive table with multiple constraint types
-    auto table = std::make_shared<Table>("ddl_comprehensive_test");
+    auto table = std::make_shared<DynamicTable>("ddl_comprehensive_test");
     table->add_field<int>("id", "SERIAL").primary_key("id");
     table->add_field<std::string>("username", "VARCHAR(50)").nullable("username", false).unique("username");
     table->add_field<std::string>("email", "VARCHAR(255)").nullable("email", false).unique("email");

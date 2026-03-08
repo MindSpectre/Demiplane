@@ -73,10 +73,10 @@ namespace demiplane::db {
     };
 
     // INSERT builder function
-    template <typename TablePtrTp>
-        requires std::constructible_from<TablePtr, std::remove_cvref_t<TablePtrTp>>
-    constexpr auto insert_into(TablePtrTp&& table) noexcept {
-        return InsertExpr<TablePtr>{std::forward<TablePtrTp>(table)};
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>>
+    constexpr auto insert_into(DynamicTablePtrTp&& table) noexcept {
+        return InsertExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table)};
     }
 
     template <typename StringTp>
@@ -90,5 +90,10 @@ namespace demiplane::db {
                  std::is_same_v<std::remove_cvref_t<StringTp>, const char*>
     constexpr auto insert_into(StringTp&& table_name) noexcept {
         return InsertExpr<std::string_view>{std::forward<StringTp>(table_name)};
+    }
+
+    template <IsStaticTable TableTp>
+    constexpr auto insert_into(const TableTp& table) noexcept {
+        return InsertExpr<TableTp>{table};
     }
 }  // namespace demiplane::db

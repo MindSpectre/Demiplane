@@ -1,11 +1,11 @@
 #include "db_record.hpp"
 
+#include <../field/schema/db_dynamic_field_schema.hpp>
 #include <db_field.hpp>
-#include <db_field_schema.hpp>
 #include <db_table.hpp>
 
 namespace demiplane::db {
-    Record::Record(TablePtr schema)
+    Record::Record(DynamicTablePtr schema)
         : schema_(std::move(schema)) {
         if (!schema_)
             throw std::invalid_argument("Schema cannot be null");

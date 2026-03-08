@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <demiplane/chrono>
+#include <demiplane/gears>
 #include <format>
 #include <functional>
 #include <iomanip>
@@ -197,8 +198,9 @@ void run_raw_benchmarks(demiplane::db::postgres::SyncExecutor& executor) {
 void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
                              demiplane::test::QueryLibrary<demiplane::db::postgres::PostgresDialect>& library) {
     using namespace demiplane::db;
+    using demiplane::gears::FixedString;
 
-    const auto& s = library.schemas();
+    const auto& u = library.schemas().users;
 
     std::cout << "Running COMPILED benchmarks...\n\n";
 
@@ -206,35 +208,44 @@ void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
         {"SELECT by ID",
          [&] {
              auto query =
-                 select(s.users().id, s.users().name, s.users().age).from("bench_users").where(s.users().id == 1);
+                 select(u.column<FixedString{"id"}>(), u.column<FixedString{"name"}>(), u.column<FixedString{"age"}>())
+                     .from("bench_users")
+                     .where(u.column<FixedString{"id"}>() == 1);
              return library.compiler().compile_dynamic(query);
          }},
         {"SELECT with range",
          [&] {
-             auto query = select(s.users().id, s.users().name).from("bench_users").where(s.users().age > 30);
+             auto query = select(u.column<FixedString{"id"}>(), u.column<FixedString{"name"}>())
+                              .from("bench_users")
+                              .where(u.column<FixedString{"age"}>() > 30);
              return library.compiler().compile_dynamic(query);
          }},
         {"COUNT(*) aggregate",
          [&] {
-             auto query = select(count(s.users().id)).from("bench_users").where(s.users().active == true);
+             auto query = select(count(u.column<FixedString{"id"}>()))
+                              .from("bench_users")
+                              .where(u.column<FixedString{"active"}>() == true);
              return library.compiler().compile_dynamic(query);
          }},
         {"UPDATE single row",
          [&] {
-             auto query = update("bench_users").set("age", 25).where(s.users().id == 1);
+             auto query = update("bench_users").set("age", 25).where(u.column<FixedString{"id"}>() == 1);
              return library.compiler().compile_dynamic(query);
          }},
         {"SELECT ORDER BY LIMIT",
          [&] {
-             auto query = select(s.users().id, s.users().name, s.users().age)
-                              .from("bench_users")
-                              .order_by(desc(s.users().age))
-                              .limit(10);
+             auto query =
+                 select(u.column<FixedString{"id"}>(), u.column<FixedString{"name"}>(), u.column<FixedString{"age"}>())
+                     .from("bench_users")
+                     .order_by(desc(u.column<FixedString{"age"}>()))
+                     .limit(10);
              return library.compiler().compile_dynamic(query);
          }},
         {"GROUP BY with COUNT",
          [&] {
-             auto query = select(s.users().active, count(s.users().id)).from("bench_users").group_by(s.users().active);
+             auto query = select(u.column<FixedString{"active"}>(), count(u.column<FixedString{"id"}>()))
+                              .from("bench_users")
+                              .group_by(u.column<FixedString{"active"}>());
              return library.compiler().compile_dynamic(query);
          }},
     };

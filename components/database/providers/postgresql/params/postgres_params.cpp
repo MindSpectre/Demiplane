@@ -108,7 +108,7 @@ namespace demiplane::db::postgres {
 
     void ParamSink::bind_one(const std::uint64_t i) const {
         // PostgreSQL doesn't have unsigned 64-bit, use text format for NUMERIC
-        auto str = std::to_string(i);
+        const auto str = std::to_string(i);
         std::pmr::string pmr_str{str, mr_};
         params_->str_data.emplace_back(std::move(pmr_str));
 

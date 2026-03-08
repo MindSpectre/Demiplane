@@ -6,6 +6,7 @@
 using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 using namespace demiplane::test;
+using demiplane::gears::FixedString;
 
 // Test fixture for compiled DELETE queries
 class CompiledDeleteTest : public PgsqlTestFixture {
@@ -36,8 +37,8 @@ TEST_F(CompiledDeleteTest, DeleteSingleRow) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Alice', 30, true)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Bob', 25, false)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where(s.name == std::string{"Alice"});
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from(u).where(u.column<FixedString{"name"}>() == std::string{"Alice"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -75,8 +76,8 @@ TEST_F(CompiledDeleteTest, DeleteWithSimpleWhere) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 40)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where(s.age > 25);
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from(u).where(u.column<FixedString{"age"}>() > 25);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -92,8 +93,9 @@ TEST_F(CompiledDeleteTest, DeleteWithComplexWhere) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User3', 35, false)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User4', 40, true)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where((s.age >= 30) && (s.active == true));
+    const auto& u = library().schemas().users;
+    auto query =
+        delete_from(u).where((u.column<FixedString{"age"}>() >= 30) && (u.column<FixedString{"active"}>() == true));
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -108,8 +110,8 @@ TEST_F(CompiledDeleteTest, DeleteWithOrCondition) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 40)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where((s.age < 25) || (s.age > 35));
+    const auto& u = library().schemas().users;
+    auto query = delete_from(u).where((u.column<FixedString{"age"}>() < 25) || (u.column<FixedString{"age"}>() > 35));
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -171,8 +173,8 @@ TEST_F(CompiledDeleteTest, DeleteAllRows) {
 TEST_F(CompiledDeleteTest, DeleteWithTableName) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from("users").where(s.name == std::string{"TestUser"});
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from("users").where(u.column<FixedString{"name"}>() == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -187,8 +189,8 @@ TEST_F(CompiledDeleteTest, DeleteWithTableName) {
 TEST_F(CompiledDeleteTest, DeleteNoMatch) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where(s.age > 100);
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from(u).where(u.column<FixedString{"age"}>() > 100);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -199,8 +201,8 @@ TEST_F(CompiledDeleteTest, DeleteNoMatch) {
 }
 
 TEST_F(CompiledDeleteTest, DeleteEmptyTable) {
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where(s.active == false);
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from(u).where(u.column<FixedString{"active"}>() == false);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -214,8 +216,8 @@ TEST_F(CompiledDeleteTest, DeleteWithNullComparison) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User1', NULL)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where(s.age == 30);
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from(u).where(u.column<FixedString{"age"}>() == 30);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -230,17 +232,17 @@ TEST_F(CompiledDeleteTest, DeleteMultipleSeparateQueries) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User2', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('User3', 40)"));
 
-    const auto& s = library().schemas().users();
+    const auto& u = library().schemas().users;
 
     // First delete
-    auto query1          = delete_from(s.table).where(s.age == 20);
+    auto query1          = delete_from(u).where(u.column<FixedString{"age"}>() == 20);
     auto compiled_query1 = library().compiler().compile_dynamic(query1);
     auto result1         = executor().execute(compiled_query1);
     ASSERT_TRUE(result1.is_success()) << "First delete failed: " << result1.error<ErrorContext>();
     EXPECT_EQ(CountRows(), 2);
 
     // Second delete
-    auto query2          = delete_from(s.table).where(s.age == 40);
+    auto query2          = delete_from(u).where(u.column<FixedString{"age"}>() == 40);
     auto compiled_query2 = library().compiler().compile_dynamic(query2);
     auto result2         = executor().execute(compiled_query2);
     ASSERT_TRUE(result2.is_success()) << "Second delete failed: " << result2.error<ErrorContext>();
@@ -257,8 +259,8 @@ TEST_F(CompiledDeleteTest, DeleteWithStringComparison) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('Bob', 30)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('Charlie', 35)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = delete_from(s.table).where(s.name == std::string{"Bob"});
+    const auto& u       = library().schemas().users;
+    auto query          = delete_from(u).where(u.column<FixedString{"name"}>() == std::string{"Bob"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);

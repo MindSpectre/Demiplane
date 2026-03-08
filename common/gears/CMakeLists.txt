@@ -19,31 +19,30 @@ target_link_libraries(${DMP_GEARS}.Result INTERFACE
 # Traits for classes
 ##############################################################################
 add_library(${DMP_GEARS}.MetaProgramming INTERFACE
-        meta_programming/include/gears_class_traits.hpp
-        meta_programming/include/gears_templates.hpp
-        meta_programming/include/gears_concepts.hpp
-        meta_programming/include/gears_exceptions.hpp
+        meta_programming/gears_class_traits.hpp
+        meta_programming/gears_templates.hpp
+        meta_programming/gears_concepts.hpp
+        meta_programming/gears_exceptions.hpp
 )
 target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
-        meta_programming/include
+        meta_programming/
 )
 ##############################################################################
 
 ##############################################################################
 # Traits for classes
 ##############################################################################
-add_library(${DMP_GEARS}.Utilities STATIC
-        utilities/include/gears_macros.hpp
-        utilities/include/gears_utils.hpp
-        utilities/include/gears_types.hpp
-        utilities/include/gears_hash.hpp
-        utilities/include/gears_convert.hpp
-        utilities/source/gears_utils.cpp
+add_library(${DMP_GEARS}.Utilities INTERFACE
+        utilities/gears_macros.hpp
+        utilities/gears_utils.hpp
+        utilities/gears_types.hpp
+        utilities/gears_hash.hpp
+        utilities/gears_convert.hpp
 )
-target_include_directories(${DMP_GEARS}.Utilities PUBLIC
-        utilities/include
+target_include_directories(${DMP_GEARS}.Utilities INTERFACE
+        utilities/
 )
-target_link_libraries(${DMP_GEARS}.Utilities PUBLIC
+target_link_libraries(${DMP_GEARS}.Utilities INTERFACE
         ${DMP_GEARS}.MetaProgramming
 )
 ##############################################################################

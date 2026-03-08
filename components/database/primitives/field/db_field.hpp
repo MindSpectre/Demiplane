@@ -1,8 +1,8 @@
 #pragma once
 #include <optional>
 
-#include "db_field_schema.hpp"
 #include "db_field_value.hpp"
+#include "schema/db_dynamic_field_schema.hpp"
 
 namespace demiplane::db {
 
@@ -19,7 +19,12 @@ namespace demiplane::db {
          * @brief Construct field with schema
          * @param schema Field schema metadata (non-owning pointer)
          */
-        explicit Field(const FieldSchema* schema);
+        explicit Field(const DynamicFieldSchema* schema)
+            : schema_{schema} {
+            if (!schema_) {
+                throw std::invalid_argument("Schema cannot be null");
+            }
+        }
 
         /**
          * @brief Set field value with type validation
@@ -76,7 +81,7 @@ namespace demiplane::db {
          * @brief Get field schema metadata
          * @return Const reference to schema
          */
-        [[nodiscard]] constexpr const FieldSchema& schema() const noexcept {
+        [[nodiscard]] constexpr const DynamicFieldSchema& schema() const noexcept {
             return *schema_;
         }
 
@@ -90,7 +95,7 @@ namespace demiplane::db {
 
     private:
         FieldValue value_;
-        const FieldSchema* schema_;  // Non-owning, guaranteed to outlive this field
+        const DynamicFieldSchema* schema_;  // Non-owning, guaranteed to outlive this field
     };
 }  // namespace demiplane::db
 

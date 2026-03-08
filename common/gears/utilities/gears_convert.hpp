@@ -1,7 +1,6 @@
 #pragma once
 #include <bit>
 #include <concepts>
-#include <cstdint>
 
 namespace demiplane::gears {
     // Network byte order is big-endian

@@ -3,8 +3,10 @@
 ##############################################################################
 add_library(${DMP_DATABASE}.Primitives.Table STATIC
         db_table.hpp
-        db_table.cpp
-        detail/db_table.inl
+        db_dynamic_table.cpp
+        db_static_table.hpp
+        db_dynamic_table.hpp
+        detail/db_dynamic_table.inl
 )
 
 target_include_directories(${DMP_DATABASE}.Primitives.Table PUBLIC
@@ -13,10 +15,9 @@ target_include_directories(${DMP_DATABASE}.Primitives.Table PUBLIC
 
 target_link_libraries(${DMP_DATABASE}.Primitives.Table
         PUBLIC
-        ${DMP_DATABASE}.Primitives.Schema
         ${DMP_DATABASE}.Features
-        PRIVATE
-        ${DMP_DATABASE}.Primitives.Field
+        ${DMP_DATABASE}.Primitives.Schema
         ${DMP_DATABASE}.Primitives.Column
+        ${DMP_DATABASE}.Primitives.Field
 )
 ##############################################################################

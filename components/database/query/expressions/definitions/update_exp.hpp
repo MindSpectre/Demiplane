@@ -43,10 +43,11 @@ namespace demiplane::db {
         std::vector<std::pair<std::string, FieldValue>> assignments_;
     };
 
-    template <typename TablePtrTp>
-        requires std::constructible_from<TablePtr, TablePtrTp> && (!std::constructible_from<std::string, TablePtrTp>)
-    constexpr auto update(TablePtrTp&& table) {
-        return UpdateExpr<TablePtr>{std::forward<TablePtrTp>(table)};
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, DynamicTablePtrTp> &&
+                 (!std::constructible_from<std::string, DynamicTablePtrTp>)
+    constexpr auto update(DynamicTablePtrTp&& table) {
+        return UpdateExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table)};
     }
 
     template <typename StringTp>
@@ -59,6 +60,11 @@ namespace demiplane::db {
         requires std::is_same_v<std::remove_cvref_t<StringTp>, std::string_view> ||
                  std::is_same_v<std::remove_cvref_t<StringTp>, const char*>
     constexpr auto update(StringTp&& table_name) noexcept {
-        return DeleteExpr<std::string_view>{std::forward<StringTp>(table_name)};
+        return UpdateExpr<std::string_view>{std::forward<StringTp>(table_name)};
+    }
+
+    template <IsStaticTable TableTp>
+    constexpr auto update(const TableTp& table) {
+        return UpdateExpr<TableTp>{table};
     }
 }  // namespace demiplane::db

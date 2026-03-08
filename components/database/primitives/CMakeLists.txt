@@ -5,8 +5,6 @@ add_subdirectory(field)
 
 add_subdirectory(record)
 
-add_subdirectory(schema)
-
 add_subdirectory(table)
 
 ##############################################################################

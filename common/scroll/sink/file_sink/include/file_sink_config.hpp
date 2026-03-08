@@ -1,10 +1,8 @@
 #pragma once
-#include <cstdint>
 #include <demiplane/chrono>
+#include <demiplane/gears>
 #include <filesystem>
 
-#include <gears_class_traits.hpp>
-#include <gears_types.hpp>
 #include <json/value.h>
 #include <sink_interface.hpp>
 

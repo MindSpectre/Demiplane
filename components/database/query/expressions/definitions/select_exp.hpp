@@ -29,9 +29,9 @@ namespace demiplane::db {
 
 
         template <typename Self, typename TableTp>
-            requires std::constructible_from<TablePtr, std::remove_cvref_t<TableTp>>
+            requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<TableTp>>
         [[nodiscard]] constexpr auto from(this Self&& self, TableTp&& table) {
-            return FromTableExpr<SelectExpr, TablePtr>{std::forward<Self>(self), std::forward<TableTp>(table)};
+            return FromTableExpr<SelectExpr, DynamicTablePtr>{std::forward<Self>(self), std::forward<TableTp>(table)};
         }
 
         template <typename Self, typename TableTp>
@@ -48,7 +48,13 @@ namespace demiplane::db {
         template <typename Self, typename T>
             requires std::same_as<std::remove_cvref_t<T>, Record>
         [[nodiscard]] constexpr auto from(this Self&& self, T&& record) {
-            return FromTableExpr<SelectExpr, TablePtr>{std::forward<Self>(self), std::forward<T>(record).table_ptr()};
+            return FromTableExpr<SelectExpr, DynamicTablePtr>{std::forward<Self>(self),
+                                                              std::forward<T>(record).table_ptr()};
+        }
+
+        template <typename Self, IsStaticTable TableTp>
+        [[nodiscard]] constexpr auto from(this Self&& self, const TableTp& table) {
+            return FromTableExpr<SelectExpr, TableTp>{std::forward<Self>(self), table};
         }
 
         template <typename Self, IsCteExpr Query>
@@ -59,7 +65,7 @@ namespace demiplane::db {
 
     private:
         std::tuple<Columns...> columns_;
-        bool distinct_{false};
+        bool distinct_ = false;
     };
 
     template <typename... ColumnsTp>
@@ -75,9 +81,9 @@ namespace demiplane::db {
             .set_distinct(true);
     }
 
-    template <typename TablePtrTp>
-        requires std::constructible_from<TablePtr, TablePtrTp>
-    constexpr auto select_from_schema(TablePtrTp&& schema) {
-        return SelectExpr{all(schema->table_name())}.from(std::forward<TablePtrTp>(schema));
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, DynamicTablePtrTp>
+    constexpr auto select_from_schema(DynamicTablePtrTp&& schema) {
+        return SelectExpr{all(schema->table_name())}.from(std::forward<DynamicTablePtrTp>(schema));
     }
 }  // namespace demiplane::db

@@ -15,7 +15,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: FROM with Table
-            auto query = select(s.users().name).from(s.users().table);
+            auto query = select(s.users.column<"name">()).from(s.users);
             return c.compile_dynamic(query);
         }
     };
@@ -37,7 +37,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Simple WHERE
-            auto query = select(s.users().name).from(s.users().table).where(s.users().active == true);
+            auto query = select(s.users.column<"name">()).from(s.users).where(s.users.column<"active">() == true);
             return c.compile_dynamic(query);
         }
     };
@@ -48,10 +48,11 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: WHERE with AND/OR
-            auto query = select(s.users().name)
-                             .from(s.users_extended().table)
-                             .where(s.users_extended().age > 18 &&
-                                    (s.users_extended().active == true || s.users_extended().salary > lit(50000.0)));
+            auto query = select(s.users.column<"name">())
+                             .from(s.users_extended)
+                             .where(s.users_extended.column<"age">() > 18 &&
+                                    (s.users_extended.column<"active">() == true ||
+                                     s.users_extended.column<"salary">() > lit(50000.0)));
             return c.compile_dynamic(query);
         }
     };
@@ -62,7 +63,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: WHERE with IN
-            auto query = select(s.users().name).from(s.users().table).where(in(s.users().age, 25, 30, 35));
+            auto query = select(s.users.column<"name">()).from(s.users).where(in(s.users.column<"age">(), 25, 30, 35));
             return c.compile_dynamic(query);
         }
     };
@@ -73,9 +74,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: WHERE with BETWEEN (salary)
-            auto query = select(s.users_extended().name)
-                             .from(s.users_extended().table)
-                             .where(between(s.users_extended().salary, lit(30000.0), lit(80000.0)));
+            auto query = select(s.users_extended.column<"name">())
+                             .from(s.users_extended)
+                             .where(between(s.users_extended.column<"salary">(), lit(30000.0), lit(80000.0)));
             return c.compile_dynamic(query);
         }
     };
@@ -86,9 +87,10 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Single column GROUP BY
-            auto query = select(s.users_extended().department, count(s.users_extended().id).as("count"))
-                             .from(s.users_extended().table)
-                             .group_by(s.users_extended().department);
+            auto query =
+                select(s.users_extended.column<"department">(), count(s.users_extended.column<"id">()).as("count"))
+                    .from(s.users_extended)
+                    .group_by(s.users_extended.column<"department">());
             return c.compile_dynamic(query);
         }
     };
@@ -99,11 +101,11 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Multiple column GROUP BY
-            auto query = select(s.users_extended().department,
-                                s.users_extended().active,
-                                count(s.users_extended().id).as("count"))
-                             .from(s.users_extended().table)
-                             .group_by(s.users_extended().department, s.users_extended().active);
+            auto query = select(s.users_extended.column<"department">(),
+                                s.users_extended.column<"active">(),
+                                count(s.users_extended.column<"id">()).as("count"))
+                             .from(s.users_extended)
+                             .group_by(s.users_extended.column<"department">(), s.users_extended.column<"active">());
             return c.compile_dynamic(query);
         }
     };
@@ -114,10 +116,11 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: GROUP BY with WHERE
-            auto query = select(s.users_extended().department, avg(s.users_extended().salary).as("avg_salary"))
-                             .from(s.users_extended().table)
-                             .where(s.users_extended().active == true)
-                             .group_by(s.users_extended().department);
+            auto query = select(s.users_extended.column<"department">(),
+                                avg(s.users_extended.column<"salary">()).as("avg_salary"))
+                             .from(s.users_extended)
+                             .where(s.users_extended.column<"active">() == true)
+                             .group_by(s.users_extended.column<"department">());
             return c.compile_dynamic(query);
         }
     };
@@ -128,10 +131,11 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: HAVING with aggregate condition
-            auto query = select(s.users_extended().department, count(s.users_extended().id).as("count"))
-                             .from(s.users_extended().table)
-                             .group_by(s.users_extended().department)
-                             .having(count(s.users_extended().id) > 5);
+            auto query =
+                select(s.users_extended.column<"department">(), count(s.users_extended.column<"id">()).as("count"))
+                    .from(s.users_extended)
+                    .group_by(s.users_extended.column<"department">())
+                    .having(count(s.users_extended.column<"id">()) > 5);
             return c.compile_dynamic(query);
         }
     };
@@ -142,12 +146,13 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: HAVING with multiple conditions
-            auto query = select(s.users_extended().department,
-                                avg(s.users_extended().salary).as("avg_salary"),
-                                count(s.users_extended().id).as("count"))
-                             .from(s.users_extended().table)
-                             .group_by(s.users_extended().department)
-                             .having(count(s.users_extended().id) > 3 && avg(s.users_extended().salary) > lit(45000.0));
+            auto query = select(s.users_extended.column<"department">(),
+                                avg(s.users_extended.column<"salary">()).as("avg_salary"),
+                                count(s.users_extended.column<"id">()).as("count"))
+                             .from(s.users_extended)
+                             .group_by(s.users_extended.column<"department">())
+                             .having(count(s.users_extended.column<"id">()) > 3 &&
+                                     avg(s.users_extended.column<"salary">()) > lit(45000.0));
             return c.compile_dynamic(query);
         }
     };
@@ -158,11 +163,12 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: HAVING with WHERE and GROUP BY
-            auto query = select(s.users_extended().department, max(s.users_extended().salary).as("max_salary"))
-                             .from(s.users_extended().table)
-                             .where(s.users_extended().active == true)
-                             .group_by(s.users_extended().department)
-                             .having(max(s.users_extended().salary) > lit(70000.0));
+            auto query = select(s.users_extended.column<"department">(),
+                                max(s.users_extended.column<"salary">()).as("max_salary"))
+                             .from(s.users_extended)
+                             .where(s.users_extended.column<"active">() == true)
+                             .group_by(s.users_extended.column<"department">())
+                             .having(max(s.users_extended.column<"salary">()) > lit(70000.0));
             return c.compile_dynamic(query);
         }
     };
@@ -173,7 +179,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: ORDER BY ASC
-            auto query = select(s.users().name, s.users().age).from(s.users().table).order_by(asc(s.users().name));
+            auto query = select(s.users.column<"name">(), s.users.column<"age">())
+                             .from(s.users)
+                             .order_by(asc(s.users.column<"name">()));
             return c.compile_dynamic(query);
         }
     };
@@ -184,9 +192,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: ORDER BY DESC
-            auto query = select(s.users_extended().name, s.users_extended().salary)
-                             .from(s.users_extended().table)
-                             .order_by(desc(s.users_extended().salary));
+            auto query = select(s.users_extended.column<"name">(), s.users_extended.column<"salary">())
+                             .from(s.users_extended)
+                             .order_by(desc(s.users_extended.column<"salary">()));
             return c.compile_dynamic(query);
         }
     };
@@ -197,11 +205,13 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Multiple column ORDER BY
-            auto query = select(s.users_extended().name, s.users_extended().department, s.users_extended().salary)
-                             .from(s.users_extended().table)
-                             .order_by(asc(s.users_extended().department),
-                                       desc(s.users_extended().salary),
-                                       asc(s.users_extended().name));
+            auto query = select(s.users_extended.column<"name">(),
+                                s.users_extended.column<"department">(),
+                                s.users_extended.column<"salary">())
+                             .from(s.users_extended)
+                             .order_by(asc(s.users_extended.column<"department">()),
+                                       desc(s.users_extended.column<"salary">()),
+                                       asc(s.users_extended.column<"name">()));
             return c.compile_dynamic(query);
         }
     };
@@ -212,7 +222,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Basic LIMIT
-            auto query = select(s.users().name).from(s.users().table).limit(10);
+            auto query = select(s.users.column<"name">()).from(s.users).limit(10);
             return c.compile_dynamic(query);
         }
     };
@@ -223,9 +233,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: LIMIT with ORDER BY
-            auto query = select(s.users_extended().name, s.users_extended().salary)
-                             .from(s.users_extended().table)
-                             .order_by(desc(s.users_extended().salary))
+            auto query = select(s.users_extended.column<"name">(), s.users_extended.column<"salary">())
+                             .from(s.users_extended)
+                             .order_by(desc(s.users_extended.column<"salary">()))
                              .limit(5);
             return c.compile_dynamic(query);
         }
@@ -237,10 +247,10 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: LIMIT with WHERE and ORDER BY
-            auto query = select(s.users().name, s.users().age)
-                             .from(s.users().table)
-                             .where(s.users().active == true)
-                             .order_by(asc(s.users().age))
+            auto query = select(s.users.column<"name">(), s.users.column<"age">())
+                             .from(s.users)
+                             .where(s.users.column<"active">() == true)
+                             .order_by(asc(s.users.column<"age">()))
                              .limit(20);
             return c.compile_dynamic(query);
         }
@@ -252,17 +262,18 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Complex query with all clauses
-            // ORDER BY uses columns from GROUP BY
-            auto query = select(s.users_extended().department,
-                                count(s.users_extended().id).as("employee_count"),
-                                avg(s.users_extended().salary).as("avg_salary"),
-                                max(s.users_extended().salary).as("max_salary"))
-                             .from(s.users_extended().table)
-                             .where(s.users_extended().active == true && s.users_extended().age >= 21)
-                             .group_by(s.users_extended().department)
-                             .having(count(s.users_extended().id) >= 3 && avg(s.users_extended().salary) > lit(40000.0))
-                             .order_by(asc(s.users_extended().department))
-                             .limit(10);
+            auto query =
+                select(s.users_extended.column<"department">(),
+                       count(s.users_extended.column<"id">()).as("employee_count"),
+                       avg(s.users_extended.column<"salary">()).as("avg_salary"),
+                       max(s.users_extended.column<"salary">()).as("max_salary"))
+                    .from(s.users_extended)
+                    .where(s.users_extended.column<"active">() == true && s.users_extended.column<"age">() >= 21)
+                    .group_by(s.users_extended.column<"department">())
+                    .having(count(s.users_extended.column<"id">()) >= 3 &&
+                            avg(s.users_extended.column<"salary">()) > lit(40000.0))
+                    .order_by(asc(s.users_extended.column<"department">()))
+                    .limit(10);
             return c.compile_dynamic(query);
         }
     };
@@ -273,17 +284,19 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: Clauses with JOINs
-            // ORDER BY uses columns from GROUP BY
-            auto query = select(s.users_extended().name,
-                                s.users_extended().department,
-                                sum(s.orders_extended().amount).as("total_orders"))
-                             .from(s.users_extended().table)
-                             .join(s.orders_extended().table)
-                             .on(s.orders_extended().user_id == s.users_extended().id)
-                             .where(s.users_extended().active == true && s.orders_extended().status == "completed")
-                             .group_by(s.users_extended().id, s.users_extended().name, s.users_extended().department)
-                             .having(sum(s.orders_extended().amount) > lit(1000.0))
-                             .order_by(desc(s.users_extended().name))
+            auto query = select(s.users_extended.column<"name">(),
+                                s.users_extended.column<"department">(),
+                                sum(s.orders_extended.column<"amount">()).as("total_orders"))
+                             .from(s.users_extended)
+                             .join(s.orders_extended)
+                             .on(s.orders_extended.column<"user_id">() == s.users_extended.column<"id">())
+                             .where(s.users_extended.column<"active">() == true &&
+                                    s.orders_extended.column<"status">() == "completed")
+                             .group_by(s.users_extended.column<"id">(),
+                                       s.users_extended.column<"name">(),
+                                       s.users_extended.column<"department">())
+                             .having(sum(s.orders_extended.column<"amount">()) > lit(1000.0))
+                             .order_by(desc(s.users_extended.column<"name">()))
                              .limit(5);
             return c.compile_dynamic(query);
         }

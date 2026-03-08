@@ -195,7 +195,7 @@ protected:
 };
 
 TEST_F(TableAddFieldTest, AddFieldWithProviderEnum) {
-    Table table("test_table", Providers::PostgreSQL);
+    DynamicTable table("test_table", Providers::PostgreSQL);
     table.add_field<std::int32_t>("id");
     table.add_field<std::string>("name");
     table.add_field<double>("price");
@@ -217,7 +217,7 @@ TEST_F(TableAddFieldTest, AddFieldWithProviderEnum) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithDialectRef) {
-    Table table("test_table", Providers::PostgreSQL);
+    DynamicTable table("test_table", Providers::PostgreSQL);
     table.add_field<bool>("active");
     table.add_field<std::int64_t>("count");
     table.add_field<float>("rate");
@@ -239,7 +239,7 @@ TEST_F(TableAddFieldTest, AddFieldWithDialectRef) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithDialectPtr) {
-    Table table("test_table", Providers::PostgreSQL);
+    DynamicTable table("test_table", Providers::PostgreSQL);
     table.add_field<std::vector<std::uint8_t>>("data");
     table.add_field<std::string_view>("description");
 
@@ -256,7 +256,7 @@ TEST_F(TableAddFieldTest, AddFieldWithDialectPtr) {
 }
 
 TEST_F(TableAddFieldTest, MixedAddFieldApis) {
-    Table table("test_table", Providers::PostgreSQL);
+    DynamicTable table("test_table", Providers::PostgreSQL);
 
     // Two ways to add fields: explicit db_type or inferred from provider
     table.add_field<std::int32_t>("id", "SERIAL PRIMARY KEY");  // explicit (backward compat)
@@ -284,7 +284,7 @@ TEST_F(TableAddFieldTest, MixedAddFieldApis) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithoutProviderThrows) {
-    Table table("test_table");  // No provider set
+    DynamicTable table("test_table");  // No provider set
     EXPECT_EQ(table.provider(), Providers::None);
 
     // Should throw when trying to infer SQL type without provider
@@ -292,7 +292,7 @@ TEST_F(TableAddFieldTest, AddFieldWithoutProviderThrows) {
 }
 
 TEST_F(TableAddFieldTest, AddFieldWithNullDialectPtr) {
-    Table table("test_table");
+    DynamicTable table("test_table");
 
     EXPECT_EQ(table.provider(), Providers::None);
 

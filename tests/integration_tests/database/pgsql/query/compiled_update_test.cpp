@@ -6,6 +6,7 @@
 using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 using namespace demiplane::test;
+using demiplane::gears::FixedString;
 
 // Test fixture for compiled UPDATE queries
 class CompiledUpdateTest : public PgsqlTestFixture {
@@ -31,8 +32,8 @@ protected:
 TEST_F(CompiledUpdateTest, UpdateSingleColumn) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Alice', 30, true)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 31).where(s.name == std::string{"Alice"});
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("age", 31).where(u.column<FixedString{"name"}>() == std::string{"Alice"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -49,8 +50,9 @@ TEST_F(CompiledUpdateTest, UpdateSingleColumn) {
 TEST_F(CompiledUpdateTest, UpdateMultipleColumns) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Bob', 25, false)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 26).set("active", true).where(s.name == std::string{"Bob"});
+    const auto& u = library().schemas().users;
+    auto query =
+        update(u).set("age", 26).set("active", true).where(u.column<FixedString{"name"}>() == std::string{"Bob"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -68,13 +70,13 @@ TEST_F(CompiledUpdateTest, UpdateMultipleColumns) {
 TEST_F(CompiledUpdateTest, UpdateWithInitializerList) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Charlie', 35, true)"));
 
-    const auto& s = library().schemas().users();
-    auto query    = update(s.table)
+    const auto& u = library().schemas().users;
+    auto query    = update(u)
                      .set({
                          {"age",    36   },
                          {"active", false}
     })
-                     .where(s.name == std::string{"Charlie"});
+                     .where(u.column<FixedString{"name"}>() == std::string{"Charlie"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -96,8 +98,8 @@ TEST_F(CompiledUpdateTest, UpdateWithSimpleWhere) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, true)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User3', 40, true)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("active", false).where(s.age > 25);
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("active", false).where(u.column<FixedString{"age"}>() > 25);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -114,8 +116,9 @@ TEST_F(CompiledUpdateTest, UpdateWithComplexWhere) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, true)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User3', 35, false)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 40).where((s.age >= 25) && (s.active == true));
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("age", 40).where((u.column<FixedString{"age"}>() >= 25) &&
+                                                (u.column<FixedString{"active"}>() == true));
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -132,8 +135,9 @@ TEST_F(CompiledUpdateTest, UpdateWithOrCondition) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User2', 30, false)"));
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('User3', 40, true)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 50).where((s.age < 25) || (s.age > 35));
+    const auto& u = library().schemas().users;
+    auto query =
+        update(u).set("age", 50).where((u.column<FixedString{"age"}>() < 25) || (u.column<FixedString{"age"}>() > 35));
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -167,8 +171,8 @@ TEST_F(CompiledUpdateTest, UpdateAllRows) {
 TEST_F(CompiledUpdateTest, UpdateString) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('OldName', 30)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("name", std::string{"NewName"}).where(s.age == 30);
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("name", std::string{"NewName"}).where(u.column<FixedString{"age"}>() == 30);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -185,8 +189,8 @@ TEST_F(CompiledUpdateTest, UpdateString) {
 TEST_F(CompiledUpdateTest, UpdateBoolean) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, active) VALUES ('TestUser', true)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("active", false).where(s.name == std::string{"TestUser"});
+    const auto& u = library().schemas().users;
+    auto query    = update(u).set("active", false).where(u.column<FixedString{"name"}>() == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -203,8 +207,8 @@ TEST_F(CompiledUpdateTest, UpdateBoolean) {
 TEST_F(CompiledUpdateTest, UpdateInteger) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 50).where(s.name == std::string{"TestUser"});
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("age", 50).where(u.column<FixedString{"name"}>() == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -223,8 +227,9 @@ TEST_F(CompiledUpdateTest, UpdateInteger) {
 TEST_F(CompiledUpdateTest, UpdateToNull) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 30)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", std::monostate{}).where(s.name == std::string{"TestUser"});
+    const auto& u = library().schemas().users;
+    auto query =
+        update(u).set("age", std::monostate{}).where(u.column<FixedString{"name"}>() == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -244,8 +249,8 @@ TEST_F(CompiledUpdateTest, UpdateToNull) {
 TEST_F(CompiledUpdateTest, UpdateWithTableName) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update("users").set("age", 35).where(s.name == std::string{"TestUser"});
+    const auto& u = library().schemas().users;
+    auto query    = update("users").set("age", 35).where(u.column<FixedString{"name"}>() == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -262,8 +267,8 @@ TEST_F(CompiledUpdateTest, UpdateWithTableName) {
 TEST_F(CompiledUpdateTest, UpdateNoMatch) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 25)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 50).where(s.age > 100);
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("age", 50).where(u.column<FixedString{"age"}>() > 100);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -276,8 +281,8 @@ TEST_F(CompiledUpdateTest, UpdateNoMatch) {
 }
 
 TEST_F(CompiledUpdateTest, UpdateEmptyTable) {
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("active", false);
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("active", false);
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);
@@ -292,8 +297,8 @@ TEST_F(CompiledUpdateTest, UpdateEmptyTable) {
 TEST_F(CompiledUpdateTest, UpdateToSameValue) {
     EXPECT_TRUE(executor().execute("INSERT INTO users (name, age) VALUES ('TestUser', 30)"));
 
-    const auto& s       = library().schemas().users();
-    auto query          = update(s.table).set("age", 30).where(s.name == std::string{"TestUser"});
+    const auto& u       = library().schemas().users;
+    auto query          = update(u).set("age", 30).where(u.column<FixedString{"name"}>() == std::string{"TestUser"});
     auto compiled_query = library().compiler().compile_dynamic(query);
 
     auto result = executor().execute(compiled_query);

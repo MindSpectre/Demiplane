@@ -5,11 +5,11 @@
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
+#include <compiled_query/compiled_dynamic_query.hpp>
+#include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>
-#include <query/compiled_dynamic_query.hpp>
-#include <query/compiled_static_query.hpp>
 
 namespace demiplane::db::postgres {
 
@@ -119,10 +119,10 @@ namespace demiplane::db::postgres {
          * @param query CompiledStaticQuery object (from compile_static())
          * @return Awaitable result
          */
-        template <typename... Params>
+        template <typename SqlStringT, typename... Params>
             requires(db::IsFieldValueType<Params> && ...)
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const CompiledStaticQuery<Params...>& query) {
+        execute(const CompiledStaticQuery<SqlStringT, Params...>& query) {
             return execute(query.sql(), query.params());
         }
 

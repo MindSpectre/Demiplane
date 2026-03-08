@@ -7,9 +7,6 @@
 #include <gears_outcome.hpp>
 #include <postgres_errors.hpp>
 
-struct pg_conn;
-using PGconn = pg_conn;
-
 namespace demiplane::db::postgres {
 
     class Savepoint : gears::NonCopyable {

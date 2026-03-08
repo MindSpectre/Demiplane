@@ -31,8 +31,24 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.Field
         Demiplane.Component.Database.Primitives
 )
 
-add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.SchemaMember
-        test_schema_member.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.StaticTable
+        test_static_table.cpp
+        LINK_LIBS
+        ${TEST_LIBS}
+        Demiplane.Common.Gears
+        Demiplane.Component.Database.Primitives
+)
+
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.StaticFieldSchema
+        test_static_field_schema.cpp
+        LINK_LIBS
+        ${TEST_LIBS}
+        Demiplane.Common.Gears
+        Demiplane.Component.Database.Primitives
+)
+
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Primitives.StaticColumn
+        test_static_column.cpp
         LINK_LIBS
         ${TEST_LIBS}
         Demiplane.Common.Gears

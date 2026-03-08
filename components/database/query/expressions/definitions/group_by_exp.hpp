@@ -24,7 +24,7 @@ namespace demiplane::db {
     };
 
     // Specialized for column-based grouping
-    template <IsQuery PreGroupQuery, IsColumn... GroupColumns>
+    template <IsQuery PreGroupQuery, IsColumnLike... GroupColumns>
     class GroupByColumnExpr : public GroupByExprBase<GroupByColumnExpr<PreGroupQuery, GroupColumns...>, PreGroupQuery> {
         using Base = GroupByExprBase<GroupByColumnExpr, PreGroupQuery>;
 

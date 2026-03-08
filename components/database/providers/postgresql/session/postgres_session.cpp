@@ -58,25 +58,24 @@ namespace demiplane::db::postgres {
         return cylinder_.is_shutdown();
     }
 
-    gears::Outcome<Transaction, ErrorContext> Session::begin_transaction(TransactionOptions opts) {
+    gears::Outcome<Transaction, ErrorContext> Session::begin_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto* slot = cylinder_.acquire_slot();
         if (!slot) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
-        return Transaction{*slot, std::move(opts)};
+        return Transaction{*slot, opts};
     }
 
-    gears::Outcome<AutoTransaction, ErrorContext> Session::begin_auto_transaction(TransactionOptions opts) {
+    gears::Outcome<AutoTransaction, ErrorContext> Session::begin_auto_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto* slot = cylinder_.acquire_slot();
         if (!slot) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
 
-        Transaction tx{*slot, std::move(opts)};
-        auto begin_result = tx.begin();
-        if (!begin_result.is_success()) {
+        Transaction tx{*slot, opts};
+        if (auto begin_result = tx.begin(); !begin_result.is_success()) {
             return gears::Err(begin_result.error<ErrorContext>());
         }
 

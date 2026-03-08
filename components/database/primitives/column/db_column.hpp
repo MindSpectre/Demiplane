@@ -1,125 +1,68 @@
 #pragma once
-#include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include <gears_concepts.hpp>
 #include <gears_templates.hpp>
 
-#include "db_field_schema.hpp"
+#include "db_typed_column.hpp"
+
 namespace demiplane::db {
 
-    class DynamicColumn {
+    class Column {
     public:
         template <gears::IsStringLike StringTp1, gears::IsStringLike StringTp2>
-        constexpr explicit DynamicColumn(StringTp1&& name, StringTp2&& table)
+        constexpr explicit Column(StringTp1&& name, StringTp2&& table)
             : name_{std::forward<StringTp1>(name)},
-              context_{std::forward<StringTp2>(table)} {
+              table_{std::forward<StringTp2>(table)} {
         }
 
         template <gears::IsStringLike StringTp>
-        constexpr explicit DynamicColumn(StringTp&& name)
+        constexpr explicit Column(StringTp&& name)
             : name_{std::forward<StringTp>(name)} {
         }
 
-        [[nodiscard]] constexpr const std::string& name() const noexcept {
+        [[nodiscard]] constexpr std::string_view name() const noexcept {
             return name_;
         }
 
-        [[nodiscard]] constexpr const std::string& context() const noexcept {
-            return context_;
+        [[nodiscard]] constexpr std::string_view table_name() const noexcept {
+            return table_;
+        }
+
+        [[nodiscard]] constexpr std::string_view alias() const noexcept {
+            return alias_;
         }
 
         template <gears::IsStringLike StringTp>
-        constexpr DynamicColumn& set_context(StringTp&& table) {
-            context_ = std::forward<StringTp>(table);
+        constexpr Column& set_table(StringTp&& table) {
+            table_ = std::forward<StringTp>(table);
             return *this;
         }
 
         template <gears::IsStringLike StringTp>
-        constexpr DynamicColumn& set_name(StringTp&& name) {
+        constexpr Column& set_name(StringTp&& name) {
             name_ = std::forward<StringTp>(name);
             return *this;
+        }
+
+        template <gears::IsStringLike StringTp>
+        [[nodiscard]] constexpr Column as(StringTp&& alias) const {
+            Column result{name_, table_};
+            result.alias_ = std::forward<StringTp>(alias);
+            return result;
         }
 
         constexpr decltype(auto) accept(this auto&& self, auto& visitor);
 
     private:
         std::string name_;
-        std::string context_{};
-    };
-
-    template <typename T>
-    class TableColumn {
-    public:
-        using value_type = T;
-
-        template <gears::IsStringLike StringTp>
-        constexpr TableColumn(const FieldSchema* schema, std::shared_ptr<std::string> table, StringTp&& alias)
-            : schema_{schema},
-              table_{std::move(table)},
-              alias_{std::forward<StringTp>(alias)} {
-        }
-
-
-        constexpr TableColumn(const FieldSchema* schema, std::shared_ptr<std::string> table)
-            : schema_{schema},
-              table_{std::move(table)} {
-        }
-
-
-        template <gears::IsStringLike StringTp>
-        constexpr TableColumn(const FieldSchema* schema, std::string table, StringTp&& alias)
-            : schema_{schema},
-              table_{std::make_shared<std::string>(std::move(table))},
-              alias_{std::forward<StringTp>(alias)} {
-        }
-
-        template <gears::IsStringLike StringTp>
-        constexpr TableColumn(const FieldSchema* schema, StringTp&& table)
-            : schema_{schema},
-              table_{std::make_shared<std::string>(std::forward<StringTp>(table))} {
-        }
-
-        [[nodiscard]] constexpr const FieldSchema* schema() const noexcept {
-            return schema_;
-        }
-
-        [[nodiscard]] constexpr const std::shared_ptr<std::string>& table() const noexcept {
-            return table_;
-        }
-
-        [[nodiscard]] constexpr const std::string& table_name() const noexcept {
-            return *table_;
-        }
-
-        [[nodiscard]] constexpr const std::string& alias() const noexcept {
-            return alias_;
-        }
-
-        [[nodiscard]] constexpr const std::string& name() const noexcept {
-            return schema_->name;
-        }
-
-        template <gears::IsStringLike StringTp>
-        constexpr TableColumn as(StringTp&& alias) const {
-            return TableColumn{schema_, table_, std::forward<StringTp>(alias)};
-        }
-
-        [[nodiscard]] constexpr DynamicColumn as_dynamic() const& {
-            return DynamicColumn{schema_->name, *table_};
-        }
-
-        constexpr decltype(auto) accept(this auto&& self, auto& visitor);
-
-    private:
-        const FieldSchema* schema_;
-        std::shared_ptr<std::string> table_;
-        std::string alias_;
+        std::string table_{};
+        std::string alias_{};
     };
 
 
-    // All columns selector
     class AllColumns {
     public:
         template <gears::IsStringLike StringTp>
@@ -133,9 +76,8 @@ namespace demiplane::db {
             return table_;
         }
 
-        [[nodiscard]] constexpr DynamicColumn as_dynamic() const {
-            //? Does it work for all dialects?
-            return DynamicColumn{"*", table_name()};
+        [[nodiscard]] constexpr Column as_column() const {
+            return Column{"*", table_name()};
         }
 
         constexpr decltype(auto) accept(this auto&& self, auto& visitor);
@@ -145,18 +87,18 @@ namespace demiplane::db {
     };
 
 
+    template <typename CppType>
+    [[nodiscard]] constexpr Column TypedColumn<CppType>::as_column() const {
+        return Column{std::string{name_}, std::string{table_}};
+    }
+
     // Column creation helpers
-    template <typename T>
-    constexpr TableColumn<T> col(const FieldSchema* schema, std::string table) {
-        return TableColumn<T>{schema, std::move(table)};
+    constexpr Column col(const char* name) {
+        return Column{std::string{name}};
     }
 
-    constexpr DynamicColumn col(const char* name) {
-        return DynamicColumn{std::string{name}};
-    }
-
-    constexpr DynamicColumn col(const char* name, const char* table) {
-        return DynamicColumn{std::string{name}, std::string{table}};
+    constexpr Column col(const char* name, const char* table) {
+        return Column{std::string{name}, std::string{table}};
     }
 
     constexpr AllColumns all(std::string table) {
@@ -168,15 +110,17 @@ namespace demiplane::db {
     }
 
     template <typename T>
-    concept IsTableColumn = gears::is_specialization_of_v<std::remove_cvref_t<T>, TableColumn>;
-
-    template <typename T>
-    concept IsDynamicColumn = std::is_same_v<std::remove_cvref_t<T>, DynamicColumn>;
-
-    template <typename T>
     concept IsAllColumns = std::is_same_v<std::remove_cvref_t<T>, AllColumns>;
 
     template <typename T>
-    concept IsColumn = IsDynamicColumn<T> || IsTableColumn<T> || IsAllColumns<T>;
+    concept IsColumn = std::is_same_v<std::remove_cvref_t<T>, Column>;
+
+    template <typename T>
+    concept IsColumnLike = (requires(const std::remove_cvref_t<T>& c) {
+                               { c.name() } -> std::convertible_to<std::string_view>;
+                               { c.table_name() } -> std::convertible_to<std::string_view>;
+                               { c.alias() } -> std::convertible_to<std::string_view>;
+                           }) || IsAllColumns<T>;
+
 
 }  // namespace demiplane::db

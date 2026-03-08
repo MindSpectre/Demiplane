@@ -17,7 +17,7 @@ namespace demiplane::db {
          * @param schema Shared schema for all Records created by this factory.
          *               Must remain valid for the lifetime of created Records.
          */
-        explicit RecordFactory(std::shared_ptr<const Table> schema)
+        explicit RecordFactory(std::shared_ptr<const DynamicTable> schema)
             : schema_(std::move(schema)) {
         }
 
@@ -62,11 +62,11 @@ namespace demiplane::db {
          *
          * @pre Factory must have been initialized with a valid schema.
          */
-        [[nodiscard]] const Table& schema() const {
+        [[nodiscard]] const DynamicTable& schema() const {
             return *schema_;
         }
 
     private:
-        std::shared_ptr<const Table> schema_;
+        std::shared_ptr<const DynamicTable> schema_;
     };
 }  // namespace demiplane::db

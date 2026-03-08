@@ -6,14 +6,14 @@
 
 namespace demiplane::db {
 
-    class Table;
+    class DynamicTable;
 
     /**
      * @brief Database record representing a single row with type-safe field access
      *
      * Record provides a container for database row data with efficient field access
      * patterns. Uses vector<Field> for storage with unordered_map for O(1) name-to-index
-     * mapping. The schema is immutably shared via shared_ptr<const Table> ensuring
+     * mapping. The schema is immutably shared via shared_ptr<const DynamicTable> ensuring
      * consistent field definitions across record instances.
      *
      * @attention Thread-unsafe. Concurrent access requires external synchronization.
@@ -33,7 +33,7 @@ namespace demiplane::db {
          * @throws std::invalid_argument if schema is null
          * @post All fields are initialized with default values according to schema
          */
-        explicit Record(std::shared_ptr<const Table> schema);
+        explicit Record(std::shared_ptr<const DynamicTable> schema);
 
         // Copy and move constructors are automatically generated and safe
 
@@ -94,15 +94,15 @@ namespace demiplane::db {
          * @return Const reference to the associated Table schema
          * @note Lifetime tied to shared_ptr held by this Record
          */
-        [[nodiscard]] constexpr const Table& schema() const {
+        [[nodiscard]] constexpr const DynamicTable& schema() const {
             return *schema_;
         }
         /**
          * @brief Returns shared pointer to the table schema
-         * @return Shared pointer to the associated Table schema
+         * @return Shared pointer to the associated DynamicTable schema
          * @note Allows sharing schema ownership across multiple Records
          */
-        [[nodiscard]] constexpr std::shared_ptr<const Table> table_ptr() const {
+        [[nodiscard]] constexpr std::shared_ptr<const DynamicTable> table_ptr() const {
             return schema_;
         }
 
@@ -152,7 +152,7 @@ namespace demiplane::db {
         }
 
     private:
-        std::shared_ptr<const Table> schema_;
+        std::shared_ptr<const DynamicTable> schema_;
         std::vector<Field> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
     };

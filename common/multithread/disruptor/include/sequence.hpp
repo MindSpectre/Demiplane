@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include "gears_utils.hpp"
+#include <gears_utils.hpp>
 
 namespace demiplane::multithread {
 

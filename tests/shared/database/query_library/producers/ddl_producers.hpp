@@ -8,6 +8,7 @@
 namespace demiplane::test {
 
     // DDL Producers - CREATE TABLE and DROP TABLE expressions
+    // NOTE: DDL operations require DynamicTable (runtime schema), not static Table.
 
     // ============== CREATE TABLE Producers ==============
 
@@ -17,7 +18,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Basic CREATE TABLE from existing schema
-            auto query = create_table(s.users().table);
+            auto query = create_table(s.users_dynamic);
             return c.compile_dynamic(query);
         }
     };
@@ -28,7 +29,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // CREATE TABLE IF NOT EXISTS
-            auto query = create_table(s.users().table, true);
+            auto query = create_table(s.users_dynamic, true);
             return c.compile_dynamic(query);
         }
     };
@@ -39,7 +40,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Create a table with PK, NOT NULL, UNIQUE constraints
-            auto table = std::make_shared<Table>("ddl_constraints_test");
+            auto table = std::make_shared<DynamicTable>("ddl_constraints_test");
             table->add_field<int>("id", "SERIAL").primary_key("id");
             table->add_field<std::string>("email", "VARCHAR(255)").nullable("email", false).unique("email");
             table->add_field<std::string>("name", "VARCHAR(100)").nullable("name", false);
@@ -56,7 +57,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Create a table with FOREIGN KEY constraint
-            auto table = std::make_shared<Table>("ddl_orders_test");
+            auto table = std::make_shared<DynamicTable>("ddl_orders_test");
             table->add_field<int>("id", "SERIAL").primary_key("id");
             table->add_field<int>("user_id", "INTEGER").foreign_key("user_id", "users", "id");
             table->add_field<double>("amount", "DECIMAL(10,2)");
@@ -72,7 +73,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& /*s*/, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Create a table with DEFAULT value
-            auto table = std::make_shared<Table>("ddl_settings_test");
+            auto table = std::make_shared<DynamicTable>("ddl_settings_test");
             table->add_field<int>("id", "SERIAL").primary_key("id");
             table->add_field<bool>("enabled", "BOOLEAN");
             table->add_field<int>("priority", "INTEGER");
@@ -98,7 +99,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Basic DROP TABLE
-            auto query = drop_table(s.users().table);
+            auto query = drop_table(s.users_dynamic);
             return c.compile_dynamic(query);
         }
     };
@@ -109,7 +110,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE IF EXISTS
-            auto query = drop_table(s.users().table, true);
+            auto query = drop_table(s.users_dynamic, true);
             return c.compile_dynamic(query);
         }
     };
@@ -120,7 +121,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE CASCADE
-            auto query = drop_table(s.users().table, false, true);
+            auto query = drop_table(s.users_dynamic, false, true);
             return c.compile_dynamic(query);
         }
     };
@@ -131,7 +132,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // DROP TABLE IF EXISTS CASCADE
-            auto query = drop_table(s.users().table, true, true);
+            auto query = drop_table(s.users_dynamic, true, true);
             return c.compile_dynamic(query);
         }
     };

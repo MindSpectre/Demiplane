@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <vector>
 
-#include <postgres_connection_config.hpp>
 #include <connection_slot.hpp>
 #include <gears_class_traits.hpp>
+#include <postgres_connection_config.hpp>
 #include <sequence.hpp>
 
 #include "../config/cylinder_config.hpp"

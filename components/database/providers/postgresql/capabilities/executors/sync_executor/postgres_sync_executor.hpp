@@ -2,11 +2,11 @@
 
 #include <utility>
 
+#include <compiled_query/compiled_dynamic_query.hpp>
+#include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
 #include <process_pg_result.hpp>
-#include <query/compiled_dynamic_query.hpp>
-#include <query/compiled_static_query.hpp>
 
 namespace demiplane::db::postgres {
 
@@ -142,10 +142,10 @@ namespace demiplane::db::postgres {
          *   auto q = compiler.compile_static(select(name).from("users").where(age > 18));
          *   auto result = executor.execute(q);
          */
-        template <typename... Params>
+        template <typename SqlStringT, typename... Params>
             requires(db::IsFieldValueType<Params> && ...)
         [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext>
-        execute(const CompiledStaticQuery<Params...>& query) const {
+        execute(const CompiledStaticQuery<SqlStringT, Params...>& query) const {
             return execute(query.sql(), query.params());
         }
 

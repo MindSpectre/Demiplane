@@ -32,6 +32,7 @@
 #include <query_compiler.hpp>
 #include <query_expressions.hpp>
 
+
 using namespace demiplane::db;
 using namespace demiplane::db::postgres;
 
@@ -224,7 +225,7 @@ static_assert(std::get<0>(q_agg_count_dist.select().columns()).column().name() =
 
 // aggregate::CountAll — AllColumns now stores std::string (constexpr-friendly)
 static constexpr auto q_agg_count_all = select(count_all()).from("users");
-static_assert(std::get<0>(q_agg_count_all.select().columns()).is_all_columns());
+static_assert(IsAllColumns<decltype(std::get<0>(q_agg_count_all.select().columns()).column())>);
 static_assert(!std::get<0>(q_agg_count_all.select().columns()).distinct());
 
 // aggregate::AggregateGroupBy
@@ -906,10 +907,6 @@ static_assert(compiler
 
 
 int main() {
-    std::tuple<int> a{1};
-    std::tuple<int> b{2};
-    std::cout << (a == b) << std::endl;
-    std::cout << (compiler.compile_static(select(c_id, c_name).from("users")).params() == std::tuple<>{});
     return 0;
 }
 

@@ -1,12 +1,10 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <typeindex>
-#include <typeinfo>
 
 #include <db_field.hpp>
-#include <db_field_schema.hpp>
 #include <gtest/gtest.h>
+#include <schema/db_dynamic_field_schema.hpp>
 
 using namespace demiplane::db;
 
@@ -15,23 +13,20 @@ protected:
     void SetUp() override {
         int_schema.name        = "id";
         int_schema.db_type     = "INTEGER";
-        int_schema.cpp_type    = std::type_index(typeid(int));
         int_schema.is_nullable = false;
 
         string_schema.name        = "name";
         string_schema.db_type     = "VARCHAR(255)";
-        string_schema.cpp_type    = std::type_index(typeid(std::string));
         string_schema.is_nullable = true;
 
         nullable_int_schema.name        = "nullable_id";
         nullable_int_schema.db_type     = "INTEGER";
-        nullable_int_schema.cpp_type    = std::type_index(typeid(int));
         nullable_int_schema.is_nullable = true;
     }
 
-    FieldSchema int_schema;
-    FieldSchema string_schema;
-    FieldSchema nullable_int_schema;
+    DynamicFieldSchema int_schema;
+    DynamicFieldSchema string_schema;
+    DynamicFieldSchema nullable_int_schema;
 };
 
 TEST_F(FieldTest, FieldConstruction) {
@@ -203,10 +198,9 @@ TEST_F(FieldTest, MultipleFieldsFromSameSchema) {
 }
 
 TEST_F(FieldTest, FieldWithDifferentTypes) {
-    FieldSchema double_schema;
-    double_schema.name     = "price";
-    double_schema.db_type  = "DECIMAL(10,2)";
-    double_schema.cpp_type = std::type_index(typeid(double));
+    DynamicFieldSchema double_schema;
+    double_schema.name    = "price";
+    double_schema.db_type = "DECIMAL(10,2)";
 
     Field int_field(&int_schema);
     Field string_field(&string_schema);

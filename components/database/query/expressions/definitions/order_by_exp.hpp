@@ -5,12 +5,13 @@
 namespace demiplane::db {
     enum class OrderDirection { ASC, DESC };
 
-    class OrderBy : public ColumnHolder {
+    template <IsColumnLike ColT>
+    class OrderBy : public ColumnHolder<ColT> {
     public:
-        template <typename DynamicColumnTp>
-            requires IsDynamicColumn<DynamicColumnTp>
-        constexpr explicit OrderBy(DynamicColumnTp&& col, const OrderDirection dir = OrderDirection::ASC) noexcept
-            : ColumnHolder{std::forward<DynamicColumnTp>(col)},
+        template <typename ColumnTp>
+            requires std::constructible_from<ColT, ColumnTp>
+        constexpr explicit OrderBy(ColumnTp&& col, const OrderDirection dir = OrderDirection::ASC) noexcept
+            : ColumnHolder<ColT>{std::forward<ColumnTp>(col)},
               direction_{dir} {
         }
 
@@ -22,26 +23,16 @@ namespace demiplane::db {
         OrderDirection direction_;
     };
 
-    template <typename T>
-    constexpr OrderBy asc(const TableColumn<T>& col) noexcept {
-        return OrderBy{col.as_dynamic(), OrderDirection::ASC};
+    // Unified factories — IsColumnLike
+
+    template <IsColumnLike ColT>
+    constexpr auto asc(ColT&& col) noexcept {
+        return OrderBy<std::remove_cvref_t<ColT>>{std::forward<ColT>(col), OrderDirection::ASC};
     }
 
-    template <typename T>
-    constexpr OrderBy desc(const TableColumn<T>& col) noexcept {
-        return OrderBy{col.as_dynamic(), OrderDirection::DESC};
-    }
-
-    template <typename DynamicColumnTp>
-        requires IsDynamicColumn<DynamicColumnTp>
-    constexpr OrderBy asc(DynamicColumnTp&& col) noexcept {
-        return OrderBy{std::forward<DynamicColumnTp>(col), OrderDirection::ASC};
-    }
-
-    template <typename DynamicColumnTp>
-        requires IsDynamicColumn<DynamicColumnTp>
-    constexpr OrderBy desc(DynamicColumnTp&& col) noexcept {
-        return OrderBy{std::forward<DynamicColumnTp>(col), OrderDirection::DESC};
+    template <IsColumnLike ColT>
+    constexpr auto desc(ColT&& col) noexcept {
+        return OrderBy<std::remove_cvref_t<ColT>>{std::forward<ColT>(col), OrderDirection::DESC};
     }
 
     template <IsQuery Query, IsOrderBy... Orders>

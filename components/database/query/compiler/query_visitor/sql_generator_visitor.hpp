@@ -67,9 +67,7 @@ namespace demiplane::db {
         }
 
         // ALL visit_*_impl methods are PUBLIC - the CRTP base calls them via derived()
-        constexpr void
-        visit_table_column_impl(const FieldSchema* schema, std::string_view table, std::string_view alias);
-        constexpr void visit_dynamic_column_impl(std::string_view name, std::string_view table);
+        constexpr void visit_column_impl(std::string_view name, std::string_view table, std::string_view alias);
         constexpr void visit_value_impl(const FieldValue& value);
         constexpr void visit_value_impl(FieldValue&& value);
         constexpr void visit_null_impl();
@@ -77,8 +75,11 @@ namespace demiplane::db {
 
         constexpr void visit_all_columns_impl(std::string_view table);
 
-        constexpr void visit_table_impl(const TablePtr& table);
+        constexpr void visit_table_impl(const DynamicTablePtr& table);
         constexpr void visit_table_impl(std::string_view table_name);
+
+        template <IsStaticTable TableTp>
+        constexpr void visit_table_impl(const TableTp& table);
 
         constexpr void visit_alias_impl(std::string_view alias);
 
@@ -86,8 +87,10 @@ namespace demiplane::db {
         constexpr void visit_binary_expr_start();
         constexpr void visit_binary_expr_end();
         constexpr void visit_unary_expr_start() {
+            gears::force_non_static(this);
         }
         constexpr void visit_unary_expr_end() {
+            gears::force_non_static(this);
         }
         constexpr void visit_subquery_start();
         constexpr void visit_subquery_end();
@@ -181,7 +184,11 @@ namespace demiplane::db {
 
         // DDL - CREATE TABLE
         constexpr void visit_create_table_start(bool if_not_exists);
-        constexpr void visit_create_table_columns(const TablePtr& table);
+        constexpr void visit_create_table_columns(const DynamicTablePtr& table);
+
+        template <IsStaticTable TableTp>
+        constexpr void visit_create_table_columns(const TableTp& table);
+
         constexpr void visit_create_table_end();
 
         // DDL - DROP TABLE

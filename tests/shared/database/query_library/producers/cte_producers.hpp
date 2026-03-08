@@ -15,7 +15,9 @@ namespace demiplane::test {
             using namespace db;
             // Basic CTE: WITH active_users AS (SELECT ...) SELECT * FROM active_users
             auto cte         = with("active_users",
-                            select(s.users().id, s.users().name).from(s.users().table).where(s.users().active == true));
+                            select(s.users.column<"id">(), s.users.column<"name">())
+                                .from(s.users)
+                                .where(s.users.column<"active">() == true));
             // Using unqualified column names (no context) for CTE result columns
             const auto query = select(col("id"), col("name")).from(cte);
             return c.compile_dynamic(query);
@@ -29,10 +31,10 @@ namespace demiplane::test {
             using namespace db;
             // CTE with aggregation
             auto cte         = with("user_orders",
-                            select(s.orders().user_id, sum(s.orders().amount).as("total_amount"))
-                                .from(s.orders().table)
-                                .where(s.orders().completed == true)
-                                .group_by(s.orders().user_id));
+                            select(s.orders.column<"user_id">(), sum(s.orders.column<"amount">()).as("total_amount"))
+                                .from(s.orders)
+                                .where(s.orders.column<"completed">() == true)
+                                .group_by(s.orders.column<"user_id">()));
             const auto query = select(col("user_id"), col("total_amount")).from(cte);
             return c.compile_dynamic(query);
         }
@@ -45,9 +47,9 @@ namespace demiplane::test {
             using namespace db;
             // CTE with filtered data
             auto cte         = with("published_posts",
-                            select(s.posts().id, s.posts().title, s.posts().user_id)
-                                .from(s.posts().table)
-                                .where(s.posts().published == true));
+                            select(s.posts.column<"id">(), s.posts.column<"title">(), s.posts.column<"user_id">())
+                                .from(s.posts)
+                                .where(s.posts.column<"published">() == true));
             const auto query = select(col("id"), col("title"), col("user_id")).from(cte);
             return c.compile_dynamic(query);
         }
@@ -60,9 +62,9 @@ namespace demiplane::test {
             using namespace db;
             // Single CTE with aggregation (multiple CTEs not yet supported)
             auto cte         = with("post_stats",
-                            select(s.posts().user_id, count(s.posts().id).as("post_count"))
-                                .from(s.posts().table)
-                                .group_by(s.posts().user_id));
+                            select(s.posts.column<"user_id">(), count(s.posts.column<"id">()).as("post_count"))
+                                .from(s.posts)
+                                .group_by(s.posts.column<"user_id">()));
             const auto query = select(col("user_id"), col("post_count")).from(cte);
             return c.compile_dynamic(query);
         }
@@ -75,13 +77,13 @@ namespace demiplane::test {
             using namespace db;
             // CTE with multiple aggregate functions
             auto cte = with("order_stats",
-                            select(s.orders().user_id,
-                                   count(s.orders().id).as("order_count"),
-                                   sum(s.orders().amount).as("total_spent"),
-                                   avg(s.orders().amount).as("avg_order"))
-                                .from(s.orders().table)
-                                .where(s.orders().completed == true)
-                                .group_by(s.orders().user_id));
+                            select(s.orders.column<"user_id">(),
+                                   count(s.orders.column<"id">()).as("order_count"),
+                                   sum(s.orders.column<"amount">()).as("total_spent"),
+                                   avg(s.orders.column<"amount">()).as("avg_order"))
+                                .from(s.orders)
+                                .where(s.orders.column<"completed">() == true)
+                                .group_by(s.orders.column<"user_id">()));
             const auto query =
                 select(col("user_id"), col("order_count"), col("total_spent"), col("avg_order")).from(cte);
             return c.compile_dynamic(query);

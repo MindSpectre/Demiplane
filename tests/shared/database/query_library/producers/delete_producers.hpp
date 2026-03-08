@@ -14,7 +14,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(user_active == false)
-            auto query = delete_from(s.users().table).where(s.users().active == false);
+            auto query = delete_from(s.users).where(s.users.column<"active">() == false);
             return c.compile_dynamic(query);
         }
     };
@@ -25,7 +25,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from("users").where(user_id > 0)
-            auto query = delete_from("users").where(s.users().id > 0);
+            auto query = delete_from("users").where(s.users.column<"id">() > 0);
             return c.compile_dynamic(query);
         }
     };
@@ -36,7 +36,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema)
-            auto query = delete_from(s.users().table);
+            auto query = delete_from(s.users);
             return c.compile_dynamic(query);
         }
     };
@@ -47,7 +47,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(user_active == false)
-            auto query = delete_from(s.users().table).where(s.users().active == false);
+            auto query = delete_from(s.users).where(s.users.column<"active">() == false);
             return c.compile_dynamic(query);
         }
     };
@@ -58,7 +58,8 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(user_active == false && user_age < 18)
-            auto query = delete_from(s.users().table).where(s.users().active == false && s.users().age < 18);
+            auto query =
+                delete_from(s.users).where(s.users.column<"active">() == false && s.users.column<"age">() < 18);
             return c.compile_dynamic(query);
         }
     };
@@ -69,7 +70,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(in(user_age, 18, 19, 20))
-            auto query = delete_from(s.users().table).where(in(s.users().age, 18, 19, 20));
+            auto query = delete_from(s.users).where(in(s.users.column<"age">(), 18, 19, 20));
             return c.compile_dynamic(query);
         }
     };
@@ -80,7 +81,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete_from(users_schema).where(between(user_age, 18, 25))
-            auto query = delete_from(s.users().table).where(between(s.users().age, 18, 25));
+            auto query = delete_from(s.users).where(between(s.users.column<"age">(), 18, 25));
             return c.compile_dynamic(query);
         }
     };
@@ -91,8 +92,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: delete with subquery
-            auto inactive_users = select(s.users().id).from(s.users().table).where(s.users().active == false);
-            auto query          = delete_from(s.users().table).where(in(s.users().id, subquery(inactive_users)));
+            auto inactive_users =
+                select(s.users.column<"id">()).from(s.users).where(s.users.column<"active">() == false);
+            auto query = delete_from(s.users).where(in(s.users.column<"id">(), subquery(inactive_users)));
             return c.compile_dynamic(query);
         }
     };

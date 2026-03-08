@@ -1,11 +1,11 @@
 // PostgreSQL SyncExecutor Functional Tests
 // Tests the synchronous query executor with real PostgreSQL connection
 
+#include <compiled_query/compiled_static_query.hpp>
 #include <gtest/gtest.h>
 #include <postgres_connection_config.hpp>
 #include <postgres_params.hpp>
 #include <postgres_sync_executor.hpp>
-#include <query/compiled_static_query.hpp>
 
 using namespace demiplane::db::postgres;
 using namespace demiplane::db;

@@ -2,9 +2,9 @@
 
 #include <demiplane/scroll>
 
+#include "compiled_query/compiled_dynamic_query.hpp"
+#include "compiled_query/compiled_static_query.hpp"
 #include "param_mode.hpp"
-#include "query/compiled_dynamic_query.hpp"
-#include "query/compiled_static_query.hpp"
 #include "query_visitor/sql_generator_visitor.hpp"
 
 namespace demiplane::db {
@@ -18,22 +18,22 @@ namespace demiplane::db {
     public:
         constexpr QueryCompiler() = default;
 
-        // Constexpr path -- SQL text + typed parameter tuple
-        template <ParamMode Mode = StaticDefault, IsQuery Expr>
+        // Constexpr path -- InlineString, no heap allocation, true static constexpr
+        template <ParamMode Mode = StaticDefault, std::size_t MaxLen = 1024, IsQuery Expr>
             requires(Mode != ParamMode::Sink)
         constexpr auto compile_static(const Expression<Expr>& expr) const {
-            SqlGeneratorVisitor<DialectT, std::string, Mode> v{};
-            auto params = expr.accept(v);
-            auto sql    = std::move(v).sql();
+            SqlGeneratorVisitor<DialectT, gears::InlineString<MaxLen>, Mode> visitor{};
+            auto params = expr.accept(visitor);
+            auto sql    = std::move(visitor).sql();
             return CompiledStaticQuery{std::move(sql), std::move(params)};
         }
 
-        template <ParamMode Mode = StaticDefault, IsQuery Expr>
+        template <ParamMode Mode = StaticDefault, std::size_t MaxLen = 1024, IsQuery Expr>
             requires(Mode != ParamMode::Sink)
         constexpr auto compile_static(Expression<Expr>&& expr) const {
-            SqlGeneratorVisitor<DialectT, std::string, Mode> v{};
-            auto params = std::move(expr).accept(v);
-            auto sql    = std::move(v).sql();
+            SqlGeneratorVisitor<DialectT, gears::InlineString<MaxLen>, Mode> visitor{};
+            auto params = std::move(expr).accept(visitor);
+            auto sql    = std::move(visitor).sql();
             return CompiledStaticQuery{std::move(sql), std::move(params)};
         }
 
@@ -44,19 +44,21 @@ namespace demiplane::db {
             auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
             if constexpr (Mode == ParamMode::Inline) {
-                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Inline> v{arena.get()};
-                expr.accept(v);
-                auto [sql, count] = std::move(v).decompose();
+                SqlGeneratorVisitor<DialectT, std::pmr::string> visitor{arena.get()};
+                expr.accept(visitor);
+                auto [sql, count] = std::move(visitor).decompose();
                 COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
                 return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
-            } else {
+            } else if constexpr (Mode == ParamMode::Sink) {
                 auto bind_packet = DialectT::make_param_sink(arena.get());
-                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> v{bind_packet.sink.get(), arena.get()};
-                expr.accept(v);
-                auto [sql, count] = std::move(v).decompose();
+                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> visitor{bind_packet.sink.get(),
+                                                                                         arena.get()};
+                expr.accept(visitor);
+                auto [sql, count] = std::move(visitor).decompose();
                 COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
                 return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
             }
+            std::unreachable();
         }
 
         template <ParamMode Mode = RuntimeDefault, IsQuery Expr>
@@ -65,19 +67,21 @@ namespace demiplane::db {
             auto arena = std::make_shared<std::pmr::monotonic_buffer_resource>();
 
             if constexpr (Mode == ParamMode::Inline) {
-                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Inline> v{arena.get()};
-                std::move(expr).accept(v);
-                auto [sql, count] = std::move(v).decompose();
+                SqlGeneratorVisitor<DialectT, std::pmr::string> visitor{arena.get()};
+                std::move(expr).accept(visitor);
+                auto [sql, count] = std::move(visitor).decompose();
                 COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
                 return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
-            } else {
+            } else if (Mode == ParamMode::Sink) {
                 auto bind_packet = DialectT::make_param_sink(arena.get());
-                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> v{bind_packet.sink.get(), arena.get()};
-                std::move(expr).accept(v);
-                auto [sql, count] = std::move(v).decompose();
+                SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> visitor{bind_packet.sink.get(),
+                                                                                         arena.get()};
+                std::move(expr).accept(visitor);
+                auto [sql, count] = std::move(visitor).decompose();
                 COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
                 return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
             }
+            std::unreachable();
         }
     };
 }  // namespace demiplane::db

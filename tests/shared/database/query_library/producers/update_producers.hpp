@@ -14,7 +14,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("active", false).where(user_age < 18)
-            auto query = update(s.users().table).set("active", false).where(s.users().age < 18);
+            auto query = update(s.users).set("active", false).where(s.users.column<"age">() < 18);
             return c.compile_dynamic(query);
         }
     };
@@ -25,7 +25,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update("users").set("active", true).where(user_id > 0)
-            auto query = update("users").set("active", true).where(s.users().id > 0);
+            auto query = update("users").set("active", true).where(s.users.column<"id">() > 0);
             return c.compile_dynamic(query);
         }
     };
@@ -36,7 +36,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("active", false).set("age", 21).where(user_age < 18)
-            auto query = update(s.users().table).set("active", false).set("age", 21).where(s.users().age < 18);
+            auto query = update(s.users).set("active", false).set("age", 21).where(s.users.column<"age">() < 18);
             return c.compile_dynamic(query);
         }
     };
@@ -47,12 +47,12 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set({{"active", false}, {"age", 21}}).where(user_age < 18)
-            auto query = update(s.users().table)
+            auto query = update(s.users)
                              .set({
                                  {"active", false},
                                  {"age",    21   }
             })
-                             .where(s.users().age < 18);
+                             .where(s.users.column<"age">() < 18);
             return c.compile_dynamic(query);
         }
     };
@@ -63,7 +63,7 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("active", true)
-            auto query = update(s.users().table).set("active", true);
+            auto query = update(s.users).set("active", true);
             return c.compile_dynamic(query);
         }
     };
@@ -74,11 +74,11 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: update(users_schema).set("name", ...).set("age", ...).set("active", ...).where(...)
-            auto query = update(s.users().table)
+            auto query = update(s.users)
                              .set("name", std::string("New Name"))
                              .set("age", 30)
                              .set("active", true)
-                             .where(s.users().id == 1);
+                             .where(s.users.column<"id">() == 1);
             return c.compile_dynamic(query);
         }
     };

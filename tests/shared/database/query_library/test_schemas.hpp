@@ -3,11 +3,55 @@
 #include <memory>
 #include <string_view>
 
-#include <db_column.hpp>
+#include <db_constraints.hpp>
+#include <db_static_table.hpp>
 #include <db_table.hpp>
-namespace demiplane::test {
 
-    // DDL strings for schema setup (workaround until DDL builder exists)
+namespace demiplane::test {
+    using namespace db::constraints;
+
+    // Static table type aliases
+    using UsersTable = db::StaticTable<"users",
+                                       db::StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                       db::StaticFieldSchema<std::string, "name">,
+                                       db::StaticFieldSchema<int, "age">,
+                                       db::StaticFieldSchema<bool, "active">>;
+
+    using UsersExtendedTable = db::StaticTable<"users",
+                                               db::StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                               db::StaticFieldSchema<std::string, "name">,
+                                               db::StaticFieldSchema<int, "age">,
+                                               db::StaticFieldSchema<bool, "active">,
+                                               db::StaticFieldSchema<std::string, "department">,
+                                               db::StaticFieldSchema<double, "salary">>;
+
+    using PostsTable = db::StaticTable<"posts",
+                                       db::StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                       db::StaticFieldSchema<int, "user_id">,
+                                       db::StaticFieldSchema<std::string, "title">,
+                                       db::StaticFieldSchema<bool, "published">>;
+
+    using OrdersTable = db::StaticTable<"orders",
+                                        db::StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                        db::StaticFieldSchema<int, "user_id">,
+                                        db::StaticFieldSchema<double, "amount">,
+                                        db::StaticFieldSchema<bool, "completed">>;
+
+    using OrdersExtendedTable = db::StaticTable<"orders",
+                                                db::StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                                db::StaticFieldSchema<int, "user_id">,
+                                                db::StaticFieldSchema<double, "amount">,
+                                                db::StaticFieldSchema<bool, "completed">,
+                                                db::StaticFieldSchema<std::string, "status">,
+                                                db::StaticFieldSchema<std::string, "created_date">>;
+
+    using CommentsTable = db::StaticTable<"comments",
+                                          db::StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                          db::StaticFieldSchema<int, "post_id">,
+                                          db::StaticFieldSchema<int, "user_id">,
+                                          db::StaticFieldSchema<std::string, "content">>;
+
+    // DDL strings for schema setup
     struct SchemaDDL {
         static std::string_view users_table(db::Providers dialect);
         static std::string_view users_extended_table(db::Providers dialect);
@@ -18,95 +62,18 @@ namespace demiplane::test {
         static std::string_view drop_all(db::Providers dialect);
     };
 
-    class TestSchemas {
-    public:
-        // users: id, name, age, active
-        struct UsersSchema {
-            std::shared_ptr<db::Table> table;
-            db::TableColumn<int> id{nullptr, ""};
-            db::TableColumn<std::string> name{nullptr, ""};
-            db::TableColumn<int> age{nullptr, ""};
-            db::TableColumn<bool> active{nullptr, ""};
-        };
+    struct TestSchemas {
+        UsersTable users;
+        UsersExtendedTable users_extended;
+        PostsTable posts;
+        OrdersTable orders;
+        OrdersExtendedTable orders_extended;
+        CommentsTable comments;
 
-        // users_extended: id, name, age, active, department, salary
-        struct UsersExtendedSchema {
-            std::shared_ptr<db::Table> table;
-            db::TableColumn<int> id{nullptr, ""};
-            db::TableColumn<std::string> name{nullptr, ""};
-            db::TableColumn<int> age{nullptr, ""};
-            db::TableColumn<bool> active{nullptr, ""};
-            db::TableColumn<std::string> department{nullptr, ""};
-            db::TableColumn<double> salary{nullptr, ""};
-        };
-
-        // posts: id, user_id, title, published
-        struct PostsSchema {
-            std::shared_ptr<db::Table> table;
-            db::TableColumn<int> id{nullptr, ""};
-            db::TableColumn<int> user_id{nullptr, ""};
-            db::TableColumn<std::string> title{nullptr, ""};
-            db::TableColumn<bool> published{nullptr, ""};
-        };
-
-        // orders: id, user_id, amount, completed
-        struct OrdersSchema {
-            std::shared_ptr<db::Table> table;
-            db::TableColumn<int> id{nullptr, ""};
-            db::TableColumn<int> user_id{nullptr, ""};
-            db::TableColumn<double> amount{nullptr, ""};
-            db::TableColumn<bool> completed{nullptr, ""};
-        };
-
-        // orders_extended: id, user_id, amount, completed, status, created_date
-        struct OrdersExtendedSchema {
-            std::shared_ptr<db::Table> table;
-            db::TableColumn<int> id{nullptr, ""};
-            db::TableColumn<int> user_id{nullptr, ""};
-            db::TableColumn<double> amount{nullptr, ""};
-            db::TableColumn<bool> completed{nullptr, ""};
-            db::TableColumn<std::string> status{nullptr, ""};
-            db::TableColumn<std::string> created_date{nullptr, ""};
-        };
-        // comments: id, post_id, user_id, content
-        struct CommentsSchema {
-            std::shared_ptr<db::Table> table;
-            db::TableColumn<int> id{nullptr, ""};
-            db::TableColumn<int> post_id{nullptr, ""};
-            db::TableColumn<int> user_id{nullptr, ""};
-            db::TableColumn<std::string> content{nullptr, ""};
-        };
+        // DynamicTable for Record-based tests (DDL, insert with records, etc.)
+        std::shared_ptr<db::DynamicTable> users_dynamic;
 
         static TestSchemas create(db::Providers provider);
-
-        [[nodiscard]] constexpr const UsersSchema& users() const {
-            return users_;
-        }
-        [[nodiscard]] constexpr const UsersExtendedSchema& users_extended() const {
-            return users_extended_;
-        }
-        [[nodiscard]] constexpr const PostsSchema& posts() const {
-            return posts_;
-        }
-        [[nodiscard]] constexpr const OrdersSchema& orders() const {
-            return orders_;
-        }
-        [[nodiscard]] constexpr const OrdersExtendedSchema& orders_extended() const {
-            return orders_extended_;
-        }
-        [[nodiscard]] constexpr const CommentsSchema& comments() const {
-            return comments_;
-        }
-
-    private:
-        UsersSchema users_;
-        UsersExtendedSchema users_extended_;
-        PostsSchema posts_;
-        OrdersSchema orders_;
-        OrdersExtendedSchema orders_extended_;
-        CommentsSchema comments_;
-
-        void initialize(db::Providers provider);
     };
 
 }  // namespace demiplane::test

@@ -211,40 +211,23 @@ namespace demiplane::db {
         std::string right_alias_;
     };
 
+    template <IsColumnLike ColT>
     class ColumnHolder {
     public:
-        template <typename DynamicColumnTp>
-            requires IsDynamicColumn<DynamicColumnTp>
-        constexpr explicit ColumnHolder(DynamicColumnTp&& column)
-            : column_{std::forward<DynamicColumnTp>(column)} {
+        template <typename ColumnTp>
+            requires(!std::same_as<std::remove_cvref_t<ColumnTp>, ColumnHolder>) &&
+                    std::constructible_from<ColT, ColumnTp>
+        constexpr explicit ColumnHolder(ColumnTp&& col) noexcept
+            : column_{std::forward<ColumnTp>(col)} {
         }
 
-        template <typename AllColumnsTp>
-            requires std::is_same_v<std::remove_cvref_t<AllColumnsTp>, AllColumns>
-        constexpr explicit ColumnHolder(AllColumnsTp&& column) noexcept
-            : column_{std::forward<AllColumnsTp>(column)} {
-        }
-
-        template <typename T>
-            requires std::constructible_from<AllColumns, T> && (!std::same_as<std::remove_cvref_t<T>, AllColumns>)
-        constexpr explicit ColumnHolder(T&& column)
-            : column_{AllColumns{std::forward<T>(column)}} {
-        }
-
-        [[nodiscard]] constexpr const DynamicColumn& column() const& {
-            return std::get<DynamicColumn>(column_);
-        }
-
-        [[nodiscard]] constexpr const AllColumns& all_columns() const& {
-            return std::get<AllColumns>(column_);
-        }
-
-        [[nodiscard]] constexpr bool is_all_columns() const& {
-            return std::holds_alternative<AllColumns>(column_);
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& column(this Self&& self) noexcept {
+            return std::forward<Self>(self).column_;
         }
 
     private:
-        std::variant<DynamicColumn, AllColumns> column_;
+        ColT column_;
     };
 
     template <IsTable TableT>
@@ -278,7 +261,7 @@ namespace demiplane::db {
         }
 
         // GROUP BY
-        template <typename Self, IsColumn... GroupColumns>
+        template <typename Self, IsColumnLike... GroupColumns>
             requires(has_feature<AllowGroupBy, AllowedFeatures...>)
         [[nodiscard]] constexpr auto group_by(this Self&& self, GroupColumns&&... cols) {
             return GroupByColumnExpr<Derived, std::remove_cvref_t<GroupColumns>...>{
@@ -300,12 +283,12 @@ namespace demiplane::db {
                                                                        std::forward<Condition>(cond)};
         }
 
-        // JOIN — TablePtr (shared_ptr-based, runtime)
+        // JOIN — DynamicTablePtr (shared_ptr-based, runtime)
         template <typename Self, typename TableTp>
             requires(has_feature<AllowJoin, AllowedFeatures...>) &&
-                    std::constructible_from<TablePtr, std::remove_cvref_t<TableTp>>
+                    std::constructible_from<DynamicTablePtr, std::remove_cvref_t<TableTp>>
         [[nodiscard]] constexpr auto join(this Self&& self, TableTp&& table, JoinType type = JoinType::INNER) {
-            return JoinBuilder<Derived, TablePtr>{
+            return JoinBuilder<Derived, DynamicTablePtr>{
                 std::forward<Self>(self).derived(), std::forward<TableTp>(table), type};
         }
 
@@ -323,6 +306,13 @@ namespace demiplane::db {
             requires(has_feature<AllowJoin, AllowedFeatures...>)
         [[nodiscard]] constexpr auto join(this Self&& self, const char* table, JoinType type = JoinType::INNER) {
             return JoinBuilder<Derived, std::string_view>{std::forward<Self>(self).derived(), table, type};
+        }
+
+        // JOIN — IsStaticTable (compile-time table)
+        template <typename Self, IsStaticTable TableTp>
+            requires(has_feature<AllowJoin, AllowedFeatures...>)
+        [[nodiscard]] constexpr auto join(this Self&& self, const TableTp& table, JoinType type = JoinType::INNER) {
+            return JoinBuilder<Derived, TableTp>{std::forward<Self>(self).derived(), table, type};
         }
 
         // ORDER BY

@@ -90,30 +90,35 @@ namespace demiplane::db {
     template <typename T>
     concept IsCondition = IsBinaryExpr<T> || IsUnaryExpr<T> || IsExistExpr<T> || IsInListExpr<T> || IsBetweenExpr<T>;
 
+    template <IsColumnLike ColT>
     class CountExpr;
 
     template <typename T>
-    concept IsCountExpr = std::is_same_v<std::remove_cvref_t<T>, CountExpr>;
+    concept IsCountExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, CountExpr>;
 
+    template <IsColumnLike ColT>
     class SumExpr;
 
     template <typename T>
-    concept IsSumExpr = std::is_same_v<std::remove_cvref_t<T>, SumExpr>;
+    concept IsSumExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, SumExpr>;
 
+    template <IsColumnLike ColT>
     class AvgExpr;
 
     template <typename T>
-    concept IsAvgExpr = std::is_same_v<std::remove_cvref_t<T>, AvgExpr>;
+    concept IsAvgExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, AvgExpr>;
 
+    template <IsColumnLike ColT>
     class MinExpr;
 
     template <typename T>
-    concept IsMinExpr = std::is_same_v<std::remove_cvref_t<T>, MinExpr>;
+    concept IsMinExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, MinExpr>;
 
+    template <IsColumnLike ColT>
     class MaxExpr;
 
     template <typename T>
-    concept IsMaxExpr = std::is_same_v<std::remove_cvref_t<T>, MaxExpr>;
+    concept IsMaxExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, MaxExpr>;
 
     template <typename T>
     concept IsAggregate = IsCountExpr<T> || IsSumExpr<T> || IsAvgExpr<T> || IsMaxExpr<T> || IsMinExpr<T>;
@@ -126,13 +131,14 @@ namespace demiplane::db {
      * At least one operand must satisfy this concept for the operator overloads to be selected.
      */
     template <typename T>
-    concept IsDbOperand = IsColumn<T> || IsLiteral<T> || IsParamPlaceholder<T> || IsCondition<T> || IsAggregate<T>;
+    concept IsDbOperand = IsColumnLike<T> || IsLiteral<T> || IsParamPlaceholder<T> || IsCondition<T> || IsAggregate<T>;
 
     // OrderBy expression concept
+    template <IsColumnLike ColT>
     class OrderBy;
 
     template <typename T>
-    concept IsOrderBy = std::is_same_v<std::remove_cvref_t<T>, OrderBy>;
+    concept IsOrderBy = gears::is_specialization_of_v<std::remove_cvref_t<T>, OrderBy>;
 
     template <IsCondition ConditionExpr, typename ValueExpr>
     struct WhenClause;
@@ -152,7 +158,7 @@ namespace demiplane::db {
                          gears::is_specialization_of_v<std::remove_cvref_t<T>, CaseExprWithElse>;
 
     template <typename T>
-    concept IsSelectable = IsColumn<T> || IsAggregate<T> || IsCaseExpr<T> || IsLiteral<T>;
+    concept IsSelectable = IsColumnLike<T> || IsAggregate<T> || IsCaseExpr<T> || IsLiteral<T>;
     // Set operations concept
     template <IsQuery Left, IsQuery Right>
     class SetOpExpr;
@@ -175,7 +181,7 @@ namespace demiplane::db {
     concept IsLimitExpr = gears::is_specialization_of_v<std::remove_cvref_t<T>, LimitExpr>;
 
     // Group by expression concept
-    template <IsQuery Query, IsColumn... GroupColumns>
+    template <IsQuery Query, IsColumnLike... GroupColumns>
     class GroupByColumnExpr;
 
     template <IsQuery PreGroupQuery, IsQuery GroupingCriteria>

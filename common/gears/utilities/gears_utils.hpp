@@ -52,7 +52,7 @@ namespace demiplane::gears {
     /// Constexpr integer-to-string conversion for use in compile-time SQL generation.
     /// std::to_string is not constexpr in C++23, so this provides an alternative
     /// for placeholder indices ($1, $2) and LIMIT/OFFSET clauses.
-    constexpr std::string constexpr_to_string(std::size_t value) {
+    constexpr std::string constexpr_to_string(const std::size_t value) {
         if (value == 0) {
             return "0";
         }

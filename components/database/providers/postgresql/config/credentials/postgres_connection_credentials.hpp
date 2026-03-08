@@ -1,11 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <demiplane/gears>
 #include <string>
 #include <string_view>
 
-#include <gears_class_traits.hpp>
-#include <gears_concepts.hpp>
 #include <json/value.h>
 
 #include "tools/postgres_connection_tools.hpp"
@@ -85,7 +84,7 @@ namespace demiplane::db::postgres {
         }
 
         template <typename Self>
-        constexpr auto&& port(this Self&& self, std::uint16_t value) noexcept {
+        constexpr auto&& port(this Self&& self, const std::uint16_t value) noexcept {
             self.port_ = std::to_string(value);
             return std::forward<Self>(self);
         }

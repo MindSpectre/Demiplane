@@ -14,9 +14,10 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: subquery in WHERE clause
-            auto active_users = select(s.users().id).from(s.users().table).where(s.users().active == true);
-            auto query =
-                select(s.posts().title).from(s.posts().table).where(in(s.posts().user_id, subquery(active_users)));
+            auto active_users = select(s.users.column<"id">()).from(s.users).where(s.users.column<"active">() == true);
+            auto query        = select(s.posts.column<"title">())
+                             .from(s.posts)
+                             .where(in(s.posts.column<"user_id">(), subquery(active_users)));
             return c.compile_dynamic(query);
         }
     };
@@ -27,9 +28,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: EXISTS expression
-            auto published_posts =
-                select(1).from(s.posts().table).where(s.posts().user_id == s.users().id && s.posts().published == true);
-            auto query = select(s.users().name).from(s.users().table).where(exists(published_posts));
+            auto published_posts = select(1).from(s.posts).where(
+                s.posts.column<"user_id">() == s.users.column<"id">() && s.posts.column<"published">() == true);
+            auto query = select(s.users.column<"name">()).from(s.users).where(exists(published_posts));
             return c.compile_dynamic(query);
         }
     };
@@ -40,10 +41,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: NOT EXISTS expression
-            auto pending_orders = select(1)
-                                      .from(s.orders().table)
-                                      .where(s.orders().user_id == s.users().id && s.orders().completed == false);
-            auto query = select(s.users().name).from(s.users().table).where(!exists(pending_orders));
+            auto pending_orders = select(1).from(s.orders).where(
+                s.orders.column<"user_id">() == s.users.column<"id">() && s.orders.column<"completed">() == false);
+            auto query = select(s.users.column<"name">()).from(s.users).where(!exists(pending_orders));
             return c.compile_dynamic(query);
         }
     };
@@ -54,8 +54,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: basic subquery compilation
-            auto post_count_subquery =
-                select(count(s.posts().id)).from(s.posts().table).where(s.posts().user_id == s.users().id);
+            auto post_count_subquery = select(count(s.posts.column<"id">()))
+                                           .from(s.posts)
+                                           .where(s.posts.column<"user_id">() == s.users.column<"id">());
             auto query = subquery(post_count_subquery);
             return c.compile_dynamic(query);
         }
@@ -67,8 +68,9 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: SubqueryStructureExpression
-            auto user_post_count =
-                select(count(s.posts().id)).from(s.posts().table).where(s.posts().user_id == s.users().id);
+            auto user_post_count = select(count(s.posts.column<"id">()))
+                                       .from(s.posts)
+                                       .where(s.posts.column<"user_id">() == s.users.column<"id">());
             auto sub = subquery(user_post_count);
             return c.compile_dynamic(sub);
         }
@@ -80,13 +82,14 @@ namespace demiplane::test {
         static db::CompiledDynamicQuery produce(const TestSchemas& s, db::QueryCompiler<DialectT, DefaultMode>& c) {
             using namespace db;
             // Mirrors: IN with multiple values subquery (high value users)
-            auto high_value_users = select(s.users().id)
-                                        .from(s.orders().table)
-                                        .where(s.orders().amount > lit(1000.0))
-                                        .group_by(s.orders().user_id)
-                                        .having(sum(s.orders().amount) > lit(5000.0));
-            auto query =
-                select(s.users().name).from(s.users().table).where(in(s.users().id, subquery(high_value_users)));
+            auto high_value_users = select(s.users.column<"id">())
+                                        .from(s.orders)
+                                        .where(s.orders.column<"amount">() > lit(1000.0))
+                                        .group_by(s.orders.column<"user_id">())
+                                        .having(sum(s.orders.column<"amount">()) > lit(5000.0));
+            auto query = select(s.users.column<"name">())
+                             .from(s.users)
+                             .where(in(s.users.column<"id">(), subquery(high_value_users)));
             return c.compile_dynamic(query);
         }
     };
@@ -98,12 +101,14 @@ namespace demiplane::test {
             using namespace db;
             // Mirrors: nested subqueries
             auto users_with_completed_orders =
-                select(s.orders().user_id).from(s.orders().table).where(s.orders().completed == true);
-            auto posts_by_active_users = select(s.posts().user_id)
-                                             .from(s.posts().table)
-                                             .where(in(s.posts().user_id, subquery(users_with_completed_orders)));
-            auto query =
-                select(s.users().name).from(s.users().table).where(in(s.users().id, subquery(posts_by_active_users)));
+                select(s.orders.column<"user_id">()).from(s.orders).where(s.orders.column<"completed">() == true);
+            auto posts_by_active_users =
+                select(s.posts.column<"user_id">())
+                    .from(s.posts)
+                    .where(in(s.posts.column<"user_id">(), subquery(users_with_completed_orders)));
+            auto query = select(s.users.column<"name">())
+                             .from(s.users)
+                             .where(in(s.users.column<"id">(), subquery(posts_by_active_users)));
             return c.compile_dynamic(query);
         }
     };
@@ -115,12 +120,12 @@ namespace demiplane::test {
             using namespace db;
             // Mirrors: subquery with aggregates
             auto avg_order_amount =
-                select(avg(s.orders().amount)).from(s.orders().table).where(s.orders().completed == true);
-            auto query = select(s.users().name, s.orders().amount)
-                             .from(s.users().table)
-                             .join(s.orders().table)
-                             .on(s.orders().user_id == s.users().id)
-                             .where(s.orders().amount > subquery(avg_order_amount));
+                select(avg(s.orders.column<"amount">())).from(s.orders).where(s.orders.column<"completed">() == true);
+            auto query = select(s.users.column<"name">(), s.orders.column<"amount">())
+                             .from(s.users)
+                             .join(s.orders)
+                             .on(s.orders.column<"user_id">() == s.users.column<"id">())
+                             .where(s.orders.column<"amount">() > subquery(avg_order_amount));
             return c.compile_dynamic(query);
         }
     };
@@ -132,9 +137,10 @@ namespace demiplane::test {
             using namespace db;
             // Mirrors: subquery with DISTINCT
             auto unique_publishers =
-                select_distinct(s.posts().user_id).from(s.posts().table).where(s.posts().published == true);
-            auto query =
-                select(s.users().name).from(s.users().table).where(in(s.users().id, subquery(unique_publishers)));
+                select_distinct(s.posts.column<"user_id">()).from(s.posts).where(s.posts.column<"published">() == true);
+            auto query = select(s.users.column<"name">())
+                             .from(s.users)
+                             .where(in(s.users.column<"id">(), subquery(unique_publishers)));
             return c.compile_dynamic(query);
         }
     };

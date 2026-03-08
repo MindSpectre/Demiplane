@@ -1,28 +1,19 @@
 #pragma once
 #include <expected>
+
+#include <sql_type_mapping.hpp>
 namespace demiplane::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_column_impl(const FieldSchema* schema,
-                                                                                         const std::string_view table,
-                                                                                         const std::string_view alias) {
-        if (!table.empty()) {
-            visit_table_impl(table);
-            sql_ += ".";
-        }
-        DialectT::quote_identifier(sql_, schema->name);
-        visit_alias_impl(alias);
-    }
-
-    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
-    constexpr void
-    SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_dynamic_column_impl(const std::string_view name,
-                                                                            const std::string_view table) {
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_column_impl(const std::string_view name,
+                                                                                   const std::string_view table,
+                                                                                   const std::string_view alias) {
         if (!table.empty()) {
             visit_table_impl(table);
             sql_ += ".";
         }
         DialectT::quote_identifier(sql_, name);
+        visit_alias_impl(alias);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -69,7 +60,7 @@ namespace demiplane::db {
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_impl(const TablePtr& table) {
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_impl(const DynamicTablePtr& table) {
         if (!table)
             return;
         DialectT::quote_identifier(sql_, table->table_name());
@@ -80,6 +71,12 @@ namespace demiplane::db {
         if (table_name.empty())
             return;
         DialectT::quote_identifier(sql_, table_name);
+    }
+
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    template <IsStaticTable TableTp>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_table_impl(const TableTp& table) {
+        visit_table_impl(table.table_name());
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -579,7 +576,8 @@ namespace demiplane::db {
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
-    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_columns(const TablePtr& table) {
+    constexpr void
+    SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_columns(const DynamicTablePtr& table) {
         if (!table)
             return;
 
@@ -628,6 +626,33 @@ namespace demiplane::db {
                 sql_ += ")";
             }
         }
+        sql_ += ")";
+    }
+
+    template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
+    template <IsStaticTable TableTp>
+    constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_columns(const TableTp& table) {
+        sql_       += " (";
+        bool first  = true;
+        table.for_each_field([&]<typename Schema>() {
+            if (!first)
+                sql_ += ", ";
+            first = false;
+
+            DialectT::quote_identifier(sql_, std::string{Schema::name()});
+            sql_ += " ";
+            sql_ += sql_type_for<typename Schema::value_type, DialectT::type()>();
+
+            if constexpr (Schema::is_primary_key) {
+                sql_ += " PRIMARY KEY";
+            }
+            if constexpr (!Schema::is_nullable && !Schema::is_primary_key) {
+                sql_ += " NOT NULL";
+            }
+            if constexpr (Schema::is_unique && !Schema::is_primary_key) {
+                sql_ += " UNIQUE";
+            }
+        });
         sql_ += ")";
     }
 

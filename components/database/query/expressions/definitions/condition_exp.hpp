@@ -145,8 +145,9 @@ namespace demiplane::db {
     }
 
     // IN with subquery - for variadic IN with individual values, use in() from in_list_exp.hpp
-    template <typename T, IsQuery Query>
-    constexpr auto in(const TableColumn<T>& col, const Subquery<Query>& sq) {
-        return BinaryExpr<TableColumn<T>, Subquery<Query>, OpIn>{col, sq};
+    template <typename ColumnTp, IsQuery Query>
+        requires IsColumnLike<ColumnTp>
+    constexpr auto in(const ColumnTp& col, const Subquery<Query>& sq) {
+        return BinaryExpr<ColumnTp, Subquery<Query>, OpIn>{col, sq};
     }
 }  // namespace demiplane::db

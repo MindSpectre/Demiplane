@@ -14,14 +14,15 @@
 #include <postgres_connection_config.hpp>
 #include <postgres_dialect.hpp>
 #include <postgres_sync_executor.hpp>
+#include <query_compiler.hpp>
+#include <query_expressions.hpp>
 
-#include "query_library.hpp"
 #include "test_schemas.hpp"
 
 namespace demiplane::test {
 
     // Base fixture for PostgreSQL functional tests
-    // Provides common setup: logging, connection, executor, query library
+    // Provides common setup: logging, connection, executor, schemas
     class PgsqlTestFixture : public ::testing::Test {
     protected:
         void SetUp() override {
@@ -33,7 +34,7 @@ namespace demiplane::test {
             }
 
             executor_ = std::make_unique<db::postgres::SyncExecutor>(conn_);
-            library_  = std::make_unique<QueryLibrary<db::postgres::PostgresDialect>>(db::Providers::PostgreSQL);
+            schemas_  = std::make_unique<TestSchemas>(TestSchemas::create(db::Providers::PostgreSQL));
         }
 
         void TearDown() override {
@@ -41,6 +42,12 @@ namespace demiplane::test {
                 PQfinish(conn_);
                 conn_ = nullptr;
             }
+        }
+
+        // Compile a query expression into a CompiledDynamicQuery (Inline mode)
+        template <typename ExprTp>
+        [[nodiscard]] db::CompiledDynamicQuery compile_query(ExprTp&& expr) {
+            return compiler_.compile_dynamic(std::forward<ExprTp>(expr));
         }
 
         // Logging initialization (Nexus singleton)
@@ -391,22 +398,20 @@ namespace demiplane::test {
         }
 
         // Accessors
-        [[nodiscard]] PGconn* connection() const {
+        [[nodiscard]] PGconn* connection() const noexcept {
             return conn_;
         }
         [[nodiscard]] db::postgres::SyncExecutor& executor() const {
             return *executor_;
         }
-        [[nodiscard]] QueryLibrary<db::postgres::PostgresDialect>& library() const {
-            return *library_;
-        }
         [[nodiscard]] const TestSchemas& schemas() const {
-            return library_->schemas();
+            return *schemas_;
         }
 
         PGconn* conn_ = nullptr;
         std::unique_ptr<db::postgres::SyncExecutor> executor_;
-        std::unique_ptr<QueryLibrary<db::postgres::PostgresDialect>> library_;
+        std::unique_ptr<TestSchemas> schemas_;
+        db::QueryCompiler<db::postgres::PostgresDialect, db::ParamMode::Inline> compiler_{};
     };
 
 }  // namespace demiplane::test

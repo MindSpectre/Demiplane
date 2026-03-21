@@ -1,5 +1,5 @@
 // Compiled CLAUSE Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -28,7 +28,7 @@ protected:
 // ============== FROM Clause Tests ==============
 
 TEST_F(CompiledClauseTest, FromTable) {
-    auto query  = library().produce<clause::FromTable>();
+    auto query  = compile_query(select(schemas().users.column<"name">()).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -37,7 +37,7 @@ TEST_F(CompiledClauseTest, FromTable) {
 }
 
 TEST_F(CompiledClauseTest, FromTableName) {
-    auto query  = library().produce<clause::FromTableName>();
+    auto query  = compile_query(select(1).from("test_table"));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -46,7 +46,9 @@ TEST_F(CompiledClauseTest, FromTableName) {
 // ============== WHERE Clause Tests ==============
 
 TEST_F(CompiledClauseTest, WhereSimple) {
-    auto query  = library().produce<clause::WhereSimple>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users)
+                                   .where(schemas().users.column<"active">() == true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -56,21 +58,30 @@ TEST_F(CompiledClauseTest, WhereSimple) {
 }
 
 TEST_F(CompiledClauseTest, WhereComplex) {
-    auto query  = library().produce<clause::WhereComplex>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users_extended)
+                                   .where(schemas().users_extended.column<"age">() > 18 &&
+                                          (schemas().users_extended.column<"active">() == true ||
+                                           schemas().users_extended.column<"salary">() > lit(50000.0))));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledClauseTest, WhereIn) {
-    auto query  = library().produce<clause::WhereIn>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users)
+                                   .where(in(schemas().users.column<"age">(), 25, 30, 35)));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledClauseTest, WhereBetween) {
-    auto query  = library().produce<clause::WhereBetween>();
+    auto query =
+        compile_query(select(schemas().users_extended.column<"name">())
+                          .from(schemas().users_extended)
+                          .where(between(schemas().users_extended.column<"salary">(), lit(30000.0), lit(80000.0))));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -79,7 +90,10 @@ TEST_F(CompiledClauseTest, WhereBetween) {
 // ============== GROUP BY Clause Tests ==============
 
 TEST_F(CompiledClauseTest, GroupBySingle) {
-    auto query  = library().produce<clause::GroupBySingle>();
+    auto query  = compile_query(select(schemas().users_extended.column<"department">(),
+                                      count(schemas().users_extended.column<"id">()).as("count"))
+                                   .from(schemas().users_extended)
+                                   .group_by(schemas().users_extended.column<"department">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -89,14 +103,23 @@ TEST_F(CompiledClauseTest, GroupBySingle) {
 }
 
 TEST_F(CompiledClauseTest, GroupByMultiple) {
-    auto query  = library().produce<clause::GroupByMultiple>();
+    auto query = compile_query(
+        select(schemas().users_extended.column<"department">(),
+               schemas().users_extended.column<"active">(),
+               count(schemas().users_extended.column<"id">()).as("count"))
+            .from(schemas().users_extended)
+            .group_by(schemas().users_extended.column<"department">(), schemas().users_extended.column<"active">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledClauseTest, GroupByWithWhere) {
-    auto query  = library().produce<clause::GroupByWithWhere>();
+    auto query  = compile_query(select(schemas().users_extended.column<"department">(),
+                                      avg(schemas().users_extended.column<"salary">()).as("avg_salary"))
+                                   .from(schemas().users_extended)
+                                   .where(schemas().users_extended.column<"active">() == true)
+                                   .group_by(schemas().users_extended.column<"department">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -105,21 +128,36 @@ TEST_F(CompiledClauseTest, GroupByWithWhere) {
 // ============== HAVING Clause Tests ==============
 
 TEST_F(CompiledClauseTest, HavingSimple) {
-    auto query  = library().produce<clause::HavingSimple>();
+    auto query  = compile_query(select(schemas().users_extended.column<"department">(),
+                                      count(schemas().users_extended.column<"id">()).as("count"))
+                                   .from(schemas().users_extended)
+                                   .group_by(schemas().users_extended.column<"department">())
+                                   .having(count(schemas().users_extended.column<"id">()) > 5));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledClauseTest, HavingMultiple) {
-    auto query  = library().produce<clause::HavingMultiple>();
+    auto query  = compile_query(select(schemas().users_extended.column<"department">(),
+                                      avg(schemas().users_extended.column<"salary">()).as("avg_salary"),
+                                      count(schemas().users_extended.column<"id">()).as("count"))
+                                   .from(schemas().users_extended)
+                                   .group_by(schemas().users_extended.column<"department">())
+                                   .having(count(schemas().users_extended.column<"id">()) > 3 &&
+                                           avg(schemas().users_extended.column<"salary">()) > lit(45000.0)));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledClauseTest, HavingWithWhere) {
-    auto query  = library().produce<clause::HavingWithWhere>();
+    auto query  = compile_query(select(schemas().users_extended.column<"department">(),
+                                      max(schemas().users_extended.column<"salary">()).as("max_salary"))
+                                   .from(schemas().users_extended)
+                                   .where(schemas().users_extended.column<"active">() == true)
+                                   .group_by(schemas().users_extended.column<"department">())
+                                   .having(max(schemas().users_extended.column<"salary">()) > lit(70000.0)));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -128,7 +166,9 @@ TEST_F(CompiledClauseTest, HavingWithWhere) {
 // ============== ORDER BY Clause Tests ==============
 
 TEST_F(CompiledClauseTest, OrderByAsc) {
-    auto query  = library().produce<clause::OrderByAsc>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().users.column<"age">())
+                                   .from(schemas().users)
+                                   .order_by(asc(schemas().users.column<"name">())));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -137,7 +177,10 @@ TEST_F(CompiledClauseTest, OrderByAsc) {
 }
 
 TEST_F(CompiledClauseTest, OrderByDesc) {
-    auto query  = library().produce<clause::OrderByDesc>();
+    auto query =
+        compile_query(select(schemas().users_extended.column<"name">(), schemas().users_extended.column<"salary">())
+                          .from(schemas().users_extended)
+                          .order_by(desc(schemas().users_extended.column<"salary">())));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -146,7 +189,13 @@ TEST_F(CompiledClauseTest, OrderByDesc) {
 }
 
 TEST_F(CompiledClauseTest, OrderByMultiple) {
-    auto query  = library().produce<clause::OrderByMultiple>();
+    auto query  = compile_query(select(schemas().users_extended.column<"name">(),
+                                      schemas().users_extended.column<"department">(),
+                                      schemas().users_extended.column<"salary">())
+                                   .from(schemas().users_extended)
+                                   .order_by(asc(schemas().users_extended.column<"department">()),
+                                             desc(schemas().users_extended.column<"salary">()),
+                                             asc(schemas().users_extended.column<"name">())));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -155,7 +204,7 @@ TEST_F(CompiledClauseTest, OrderByMultiple) {
 // ============== LIMIT Clause Tests ==============
 
 TEST_F(CompiledClauseTest, LimitBasic) {
-    auto query  = library().produce<clause::LimitBasic>();
+    auto query  = compile_query(select(schemas().users.column<"name">()).from(schemas().users).limit(10));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -164,7 +213,11 @@ TEST_F(CompiledClauseTest, LimitBasic) {
 }
 
 TEST_F(CompiledClauseTest, LimitWithOrderBy) {
-    auto query  = library().produce<clause::LimitWithOrderBy>();
+    auto query =
+        compile_query(select(schemas().users_extended.column<"name">(), schemas().users_extended.column<"salary">())
+                          .from(schemas().users_extended)
+                          .order_by(desc(schemas().users_extended.column<"salary">()))
+                          .limit(5));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -173,7 +226,11 @@ TEST_F(CompiledClauseTest, LimitWithOrderBy) {
 }
 
 TEST_F(CompiledClauseTest, LimitWithWhereOrderBy) {
-    auto query  = library().produce<clause::LimitWithWhereOrderBy>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().users.column<"age">())
+                                   .from(schemas().users)
+                                   .where(schemas().users.column<"active">() == true)
+                                   .order_by(asc(schemas().users.column<"age">()))
+                                   .limit(20));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -184,14 +241,39 @@ TEST_F(CompiledClauseTest, LimitWithWhereOrderBy) {
 // ============== Complex Combined Clause Tests ==============
 
 TEST_F(CompiledClauseTest, ComplexAllClauses) {
-    auto query  = library().produce<clause::ComplexAllClauses>();
+    auto query  = compile_query(select(schemas().users_extended.column<"department">(),
+                                      count(schemas().users_extended.column<"id">()).as("employee_count"),
+                                      avg(schemas().users_extended.column<"salary">()).as("avg_salary"),
+                                      max(schemas().users_extended.column<"salary">()).as("max_salary"))
+                                   .from(schemas().users_extended)
+                                   .where(schemas().users_extended.column<"active">() == true &&
+                                          schemas().users_extended.column<"age">() >= 21)
+                                   .group_by(schemas().users_extended.column<"department">())
+                                   .having(count(schemas().users_extended.column<"id">()) >= 3 &&
+                                           avg(schemas().users_extended.column<"salary">()) > lit(40000.0))
+                                   .order_by(asc(schemas().users_extended.column<"department">()))
+                                   .limit(10));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledClauseTest, ClausesWithJoins) {
-    auto query  = library().produce<clause::ClausesWithJoins>();
+    auto query =
+        compile_query(select(schemas().users_extended.column<"name">(),
+                             schemas().users_extended.column<"department">(),
+                             sum(schemas().orders_extended.column<"amount">()).as("total_orders"))
+                          .from(schemas().users_extended)
+                          .join(schemas().orders_extended)
+                          .on(schemas().orders_extended.column<"user_id">() == schemas().users_extended.column<"id">())
+                          .where(schemas().users_extended.column<"active">() == true &&
+                                 schemas().orders_extended.column<"status">() == "completed")
+                          .group_by(schemas().users_extended.column<"id">(),
+                                    schemas().users_extended.column<"name">(),
+                                    schemas().users_extended.column<"department">())
+                          .having(sum(schemas().orders_extended.column<"amount">()) > lit(1000.0))
+                          .order_by(desc(schemas().users_extended.column<"name">()))
+                          .limit(5));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();

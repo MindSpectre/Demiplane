@@ -7,6 +7,6 @@ add_executable(${DMP_BENCHMARKS}.Database.RawVsCompiled
 target_link_libraries(${DMP_BENCHMARKS}.Database.RawVsCompiled
         PRIVATE
         Demiplane::Common::Chrono
-        Demiplane::Tests::Shared::Database
+        Demiplane::Component::Database::PostgreSQL
 )
 ##############################################################################

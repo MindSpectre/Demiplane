@@ -1,5 +1,5 @@
 // Compiled JOIN Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -28,7 +28,10 @@ protected:
 // ============== INNER JOIN Tests ==============
 
 TEST_F(CompiledJoinTest, InnerJoin) {
-    auto query  = library().produce<join::InnerJoin>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -37,7 +40,10 @@ TEST_F(CompiledJoinTest, InnerJoin) {
 }
 
 TEST_F(CompiledJoinTest, LeftJoin) {
-    auto query  = library().produce<join::LeftJoin>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts, JoinType::LEFT)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -47,7 +53,10 @@ TEST_F(CompiledJoinTest, LeftJoin) {
 }
 
 TEST_F(CompiledJoinTest, RightJoin) {
-    auto query  = library().produce<join::RightJoin>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts, JoinType::RIGHT)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -57,35 +66,56 @@ TEST_F(CompiledJoinTest, RightJoin) {
 }
 
 TEST_F(CompiledJoinTest, MultipleJoins) {
-    auto query  = library().produce<join::MultipleJoins>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledJoinTest, JoinComplexCondition) {
-    auto query  = library().produce<join::JoinComplexCondition>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">() &&
+                                       schemas().posts.column<"published">() == true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledJoinTest, JoinWithWhere) {
-    auto query  = library().produce<join::JoinWithWhere>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">())
+                                   .where(schemas().users.column<"active">() == true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledJoinTest, JoinWithAggregates) {
-    auto query  = library().produce<join::JoinWithAggregates>();
+    auto query =
+        compile_query(select(schemas().users.column<"name">(), count(schemas().posts.column<"id">()).as("post_count"))
+                          .from(schemas().users)
+                          .join(schemas().posts, JoinType::LEFT)
+                          .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">())
+                          .group_by(schemas().users.column<"name">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledJoinTest, JoinWithOrderBy) {
-    auto query  = library().produce<join::JoinWithOrderBy>();
+    auto query =
+        compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                          .from(schemas().users)
+                          .join(schemas().posts)
+                          .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">())
+                          .order_by(asc(schemas().users.column<"name">()), desc(schemas().posts.column<"title">())));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();

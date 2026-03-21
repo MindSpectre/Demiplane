@@ -9,7 +9,7 @@ namespace demiplane::db::postgres {
         ARCHIVE         // Historical data
     };
 
-    [[nodiscard]] constexpr std::string_view ssl_mode_to_string(const NodeRole role) noexcept {
+    [[nodiscard]] constexpr std::string_view node_role_to_string(const NodeRole role) noexcept {
         switch (role) {
             case NodeRole::PRIMARY:
                 return "primary";

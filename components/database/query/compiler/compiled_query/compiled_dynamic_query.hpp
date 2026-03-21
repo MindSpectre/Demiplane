@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <memory>
 #include <memory_resource>
 
@@ -9,8 +10,8 @@ namespace demiplane::db {
     public:
         constexpr CompiledDynamicQuery(std::pmr::string sql,
                                        std::shared_ptr<void> backend_packet,
-                                const Providers provider,
-                                std::shared_ptr<std::pmr::monotonic_buffer_resource> arena)
+                                       const Providers provider,
+                                       std::shared_ptr<std::pmr::monotonic_buffer_resource> arena)
             : sql_{std::move(sql)},
               backend_packet_{std::move(backend_packet)},
               provider_{provider},
@@ -25,6 +26,7 @@ namespace demiplane::db {
             return backend_packet_;
         }
 
+        /// @pre The caller must ensure T matches the type originally stored in the backend packet.
         /// @warning UB if wrong type
         template <typename T>
         [[nodiscard]] constexpr std::shared_ptr<T> backend_packet_as() const& noexcept {

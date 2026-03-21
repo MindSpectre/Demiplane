@@ -1,5 +1,5 @@
 // Compiled AGGREGATE Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -29,7 +29,7 @@ protected:
 // ============== Basic Aggregate Tests ==============
 
 TEST_F(CompiledAggregateTest, Count) {
-    auto query  = library().produce<aggregate::Count>();
+    auto query  = compile_query(select(count(schemas().users.column<"id">())).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -39,7 +39,7 @@ TEST_F(CompiledAggregateTest, Count) {
 }
 
 TEST_F(CompiledAggregateTest, Sum) {
-    auto query  = library().produce<aggregate::Sum>();
+    auto query  = compile_query(select(sum(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -48,7 +48,7 @@ TEST_F(CompiledAggregateTest, Sum) {
 }
 
 TEST_F(CompiledAggregateTest, Avg) {
-    auto query  = library().produce<aggregate::Avg>();
+    auto query  = compile_query(select(avg(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -57,7 +57,7 @@ TEST_F(CompiledAggregateTest, Avg) {
 }
 
 TEST_F(CompiledAggregateTest, Min) {
-    auto query  = library().produce<aggregate::Min>();
+    auto query  = compile_query(select(min(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -66,7 +66,7 @@ TEST_F(CompiledAggregateTest, Min) {
 }
 
 TEST_F(CompiledAggregateTest, Max) {
-    auto query  = library().produce<aggregate::Max>();
+    auto query  = compile_query(select(max(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -77,21 +77,26 @@ TEST_F(CompiledAggregateTest, Max) {
 // ============== Advanced Aggregate Tests ==============
 
 TEST_F(CompiledAggregateTest, AggregateWithAlias) {
-    auto query  = library().produce<aggregate::AggregateWithAlias>();
+    auto query  = compile_query(select(count(schemas().users.column<"id">()).as("total_users"),
+                                      sum(schemas().users.column<"age">()).as("total_age"),
+                                      avg(schemas().users.column<"age">()).as("avg_age"),
+                                      min(schemas().users.column<"age">()).as("min_age"),
+                                      max(schemas().users.column<"age">()).as("max_age"))
+                                   .from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledAggregateTest, CountDistinct) {
-    auto query  = library().produce<aggregate::CountDistinct>();
+    auto query  = compile_query(select(count_distinct(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledAggregateTest, CountAll) {
-    auto query  = library().produce<aggregate::CountAll>();
+    auto query  = compile_query(select(count_all()).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -100,7 +105,10 @@ TEST_F(CompiledAggregateTest, CountAll) {
 }
 
 TEST_F(CompiledAggregateTest, AggregateGroupBy) {
-    auto query  = library().produce<aggregate::AggregateGroupBy>();
+    auto query =
+        compile_query(select(schemas().users.column<"active">(), count(schemas().users.column<"id">()).as("user_count"))
+            .from(schemas().users)
+            .group_by(schemas().users.column<"active">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -110,14 +118,24 @@ TEST_F(CompiledAggregateTest, AggregateGroupBy) {
 }
 
 TEST_F(CompiledAggregateTest, AggregateHaving) {
-    auto query  = library().produce<aggregate::AggregateHaving>();
+    auto query =
+        compile_query(select(schemas().users.column<"active">(), count(schemas().users.column<"id">()).as("user_count"))
+                          .from(schemas().users)
+                          .group_by(schemas().users.column<"active">())
+            .having(count(schemas().users.column<"id">()) > 5));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledAggregateTest, MultipleAggregates) {
-    auto query  = library().produce<aggregate::MultipleAggregates>();
+    auto query  = compile_query(select(count(schemas().users.column<"id">()),
+                                      sum(schemas().users.column<"age">()),
+                                      avg(schemas().users.column<"age">()),
+                                      min(schemas().users.column<"age">()),
+                                      max(schemas().users.column<"age">()),
+               count_distinct(schemas().users.column<"name">()))
+            .from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -127,7 +145,12 @@ TEST_F(CompiledAggregateTest, MultipleAggregates) {
 }
 
 TEST_F(CompiledAggregateTest, AggregateMixedTypes) {
-    auto query  = library().produce<aggregate::AggregateMixedTypes>();
+    auto query  = compile_query(select(schemas().users.column<"name">(),
+                                      count(schemas().users.column<"id">()).as("count"),
+               "literal_value",
+               avg(schemas().users.column<"age">()).as("avg_age"))
+            .from(schemas().users)
+            .group_by(schemas().users.column<"name">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();

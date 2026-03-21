@@ -10,7 +10,7 @@ namespace demiplane::db {
                        public QueryOperations<HavingExpr<Query, Condition>, AllowOrderBy, AllowLimit> {
     public:
         template <typename QueryTp, typename ConditionTp>
-            requires std::constructible_from<QueryTp, Query> && std::constructible_from<ConditionTp, Condition>
+            requires std::constructible_from<Query, QueryTp> && std::constructible_from<Condition, ConditionTp>
         constexpr HavingExpr(QueryTp&& q, ConditionTp&& c)
             : query_{std::forward<QueryTp>(q)},
               condition_{std::forward<ConditionTp>(c)} {

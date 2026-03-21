@@ -1,5 +1,5 @@
 // Compiled SELECT Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -30,7 +30,8 @@ protected:
 TEST_F(CompiledSelectTest, BasicSelect) {
     InsertTestUsers();
 
-    auto query  = library().produce<sel::BasicSelect>();
+    auto query =
+        compile_query(select(schemas().users.column<"id">(), schemas().users.column<"name">()).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -42,7 +43,7 @@ TEST_F(CompiledSelectTest, BasicSelect) {
 TEST_F(CompiledSelectTest, SelectAllColumns) {
     InsertTestUsers();
 
-    auto query  = library().produce<sel::SelectAllColumns>();
+    auto query  = compile_query(select(all("users")).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -56,7 +57,8 @@ TEST_F(CompiledSelectTest, SelectDistinct) {
     ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (2, 'Alice', 30, true)"));
     ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (3, 'Bob', 25, false)"));
 
-    auto query  = library().produce<sel::SelectDistinct>();
+    auto query = compile_query(
+        select_distinct(schemas().users.column<"name">(), schemas().users.column<"age">()).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -67,7 +69,8 @@ TEST_F(CompiledSelectTest, SelectDistinct) {
 TEST_F(CompiledSelectTest, SelectWithWhere) {
     InsertTestUsers();
 
-    auto query  = library().produce<sel::SelectWithWhere>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() > 18));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -82,7 +85,10 @@ TEST_F(CompiledSelectTest, SelectWithJoin) {
     ASSERT_TRUE(
         executor().execute("INSERT INTO posts (id, user_id, title, published) VALUES (2, 2, 'Post by Bob', true)"));
 
-    auto query  = library().produce<sel::SelectWithJoin>();
+    auto query  = compile_query(select(schemas().users.column<"name">(), schemas().posts.column<"title">())
+                                   .from(schemas().users)
+                                   .join(schemas().posts)
+                                   .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -93,7 +99,10 @@ TEST_F(CompiledSelectTest, SelectWithJoin) {
 TEST_F(CompiledSelectTest, SelectWithGroupBy) {
     InsertTestUsers();
 
-    auto query  = library().produce<sel::SelectWithGroupBy>();
+    auto query =
+        compile_query(select(schemas().users.column<"active">(), count(schemas().users.column<"id">()).as("user_count"))
+                          .from(schemas().users)
+                          .group_by(schemas().users.column<"active">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -109,7 +118,11 @@ TEST_F(CompiledSelectTest, SelectWithHaving) {
     }
     ASSERT_TRUE(executor().execute("INSERT INTO users (name, age, active) VALUES ('Inactive', 30, false)"));
 
-    auto query  = library().produce<sel::SelectWithHaving>();
+    auto query =
+        compile_query(select(schemas().users.column<"active">(), count(schemas().users.column<"id">()).as("user_count"))
+                          .from(schemas().users)
+                          .group_by(schemas().users.column<"active">())
+                          .having(count(schemas().users.column<"id">()) > 5));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -123,7 +136,8 @@ TEST_F(CompiledSelectTest, SelectWithOrderBy) {
     ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (2, 'Alpha', 25, true)"));
     ASSERT_TRUE(executor().execute("INSERT INTO users (id, name, age, active) VALUES (3, 'Beta', 35, true)"));
 
-    auto query  = library().produce<sel::SelectWithOrderBy>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).order_by(asc(schemas().users.column<"name">())));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -139,7 +153,7 @@ TEST_F(CompiledSelectTest, SelectWithLimit) {
                                        "', " + std::to_string(20 + i) + ", true)"));
     }
 
-    auto query  = library().produce<sel::SelectWithLimit>();
+    auto query  = compile_query(select(schemas().users.column<"name">()).from(schemas().users).limit(10));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -150,7 +164,10 @@ TEST_F(CompiledSelectTest, SelectWithLimit) {
 TEST_F(CompiledSelectTest, SelectMixedTypes) {
     InsertTestUsers();
 
-    auto query  = library().produce<sel::SelectMixedTypes>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">(), "constant", count(schemas().users.column<"id">()).as("total"))
+            .from(schemas().users)
+            .group_by(schemas().users.column<"name">()));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -163,7 +180,8 @@ TEST_F(CompiledSelectTest, SelectMixedTypes) {
 
 TEST_F(CompiledSelectTest, SelectEmptyResult) {
     // Don't insert any data
-    auto query  = library().produce<sel::BasicSelect>();
+    auto query =
+        compile_query(select(schemas().users.column<"id">(), schemas().users.column<"name">()).from(schemas().users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();

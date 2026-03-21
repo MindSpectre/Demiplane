@@ -56,7 +56,7 @@ namespace demiplane::db::postgres {
      * for a central release() method with O(n) slot search.
      */
     struct alignas(64) ConnectionSlot : gears::Immutable {
-        PGconn* conn = nullptr;
+        PGconn* conn                   = nullptr;
         std::atomic<SlotStatus> status = SlotStatus::INACTIVE;
         std::string_view cleanup_sql{};  // set from CylinderConfig during init
 
@@ -67,13 +67,27 @@ namespace demiplane::db::postgres {
          *
          * Called by executor destructors. Safe to call on dead/finished
          * connections — checks PQstatus before issuing cleanup SQL.
+         *
+         * If the connection is unhealthy or cleanup SQL fails, marks the
+         * slot DEAD so the janitor replaces it on the next sweep.
          */
         void reset() noexcept {
-            if (conn && PQstatus(conn) == CONNECTION_OK && !cleanup_sql.empty()) {
-                PGresult* res = PQexec(conn, cleanup_sql.data());
-                PQclear(res);
-                // todo: What if not healthy?
+            if (!conn || PQstatus(conn) != CONNECTION_OK) {
+                status.store(SlotStatus::DEAD, std::memory_order_release);
+                return;
             }
+
+            if (!cleanup_sql.empty()) {
+                PGresult* res = PQexec(conn, cleanup_sql.data());
+                const bool ok = res && PQresultStatus(res) == PGRES_COMMAND_OK;
+                PQclear(res);
+
+                if (!ok) {
+                    status.store(SlotStatus::DEAD, std::memory_order_release);
+                    return;
+                }
+            }
+
             status.store(SlotStatus::FREE, std::memory_order_release);
         }
     };

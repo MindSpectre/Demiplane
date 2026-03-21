@@ -1,5 +1,5 @@
 add_library(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared INTERFACE
-        shared/process_pg_result.hpp
+        shared/process_pgresult.hpp
 )
 
 

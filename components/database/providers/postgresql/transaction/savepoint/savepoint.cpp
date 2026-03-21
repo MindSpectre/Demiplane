@@ -1,5 +1,7 @@
 #include "savepoint.hpp"
 
+#include <format>
+
 #include <postgres_sync_executor.hpp>
 
 #include "log_macros.hpp"
@@ -41,8 +43,7 @@ namespace demiplane::db::postgres {
         if (!active_) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
-        // TODO: Savepoint name is concatenated into SQL without quoting — see Transaction::savepoint() TODO.
-        auto result = execute_control("ROLLBACK TO SAVEPOINT " + name_);
+        auto result = execute_control(std::format(R"(ROLLBACK TO SAVEPOINT "{}")", name_));
         if (result.is_success()) {
             active_ = false;
         }
@@ -54,8 +55,7 @@ namespace demiplane::db::postgres {
         if (!active_) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
-        // TODO: Savepoint name is concatenated into SQL without quoting — see Transaction::savepoint() TODO.
-        auto result = execute_control("RELEASE SAVEPOINT " + name_);
+        auto result = execute_control(std::format(R"(RELEASE SAVEPOINT "{}")", name_));
         if (result.is_success()) {
             active_ = false;
         }

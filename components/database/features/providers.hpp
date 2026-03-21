@@ -12,7 +12,7 @@ namespace demiplane::db {
 #endif
     };
 
-    constexpr const char* to_string(const Providers provider) noexcept {
+    [[nodiscard]] constexpr const char* to_string(const Providers provider) noexcept {
         switch (provider) {
             case Providers::None:
                 return "None";

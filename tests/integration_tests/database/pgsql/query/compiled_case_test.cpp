@@ -1,5 +1,5 @@
 // Compiled CASE Expression Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -31,8 +31,10 @@ protected:
 // ============== Simple CASE Tests ==============
 
 TEST_F(CompiledCaseTest, SimpleCaseWhen) {
-    auto query  = library().produce<case_expr::SimpleCaseWhen>();
-    auto result = executor().execute(query);
+    const auto& s    = schemas();
+    auto case_active = case_when(s.users.column<"active">() == true, lit("Active"));
+    auto query       = compile_query(select(s.users.column<"name">(), case_active.as("status")).from(s.users));
+    auto result      = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -41,8 +43,10 @@ TEST_F(CompiledCaseTest, SimpleCaseWhen) {
 }
 
 TEST_F(CompiledCaseTest, CaseWithElse) {
-    auto query  = library().produce<case_expr::CaseWithElse>();
-    auto result = executor().execute(query);
+    const auto& s    = schemas();
+    auto case_status = case_when(s.users.column<"active">() == true, lit("Active")).else_(lit("Inactive"));
+    auto query       = compile_query(select(s.users.column<"name">(), case_status.as("status")).from(s.users));
+    auto result      = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
     auto& block = result.value();
@@ -50,7 +54,13 @@ TEST_F(CompiledCaseTest, CaseWithElse) {
 }
 
 TEST_F(CompiledCaseTest, CaseMultipleWhen) {
-    auto query  = library().produce<case_expr::CaseMultipleWhen>();
+    const auto& s     = schemas();
+    auto age_category = case_when(s.users.column<"age">() < lit(25), lit("Young"))
+                            .when(s.users.column<"age">() < lit(40), lit("Adult"))
+                            .when(s.users.column<"age">() < lit(60), lit("Middle-aged"))
+                            .else_(lit("Senior"));
+    auto query = compile_query(
+        select(s.users.column<"name">(), s.users.column<"age">(), age_category.as("age_group")).from(s.users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -60,7 +70,13 @@ TEST_F(CompiledCaseTest, CaseMultipleWhen) {
 }
 
 TEST_F(CompiledCaseTest, CaseInSelect) {
-    auto query  = library().produce<case_expr::CaseInSelect>();
+    const auto& s   = schemas();
+    auto order_size = case_when(s.orders.column<"amount">() < lit(100.0), lit("Small"))
+                          .when(s.orders.column<"amount">() < lit(500.0), lit("Medium"))
+                          .else_(lit("Large"));
+    auto query = compile_query(select(s.orders.column<"id">(), s.orders.column<"amount">(), order_size.as("order_size"))
+                                   .from(s.orders)
+                                   .where(s.orders.column<"completed">() == true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -70,14 +86,24 @@ TEST_F(CompiledCaseTest, CaseInSelect) {
 }
 
 TEST_F(CompiledCaseTest, CaseWithComparison) {
-    auto query  = library().produce<case_expr::CaseWithComparison>();
+    const auto& s = schemas();
+    auto priority = case_when(s.orders.column<"amount">() > lit(1000.0), lit(1))
+                        .when(s.orders.column<"amount">() > lit(500.0), lit(2))
+                        .when(s.orders.column<"amount">() > lit(100.0), lit(3))
+                        .else_(lit(4));
+    auto query = compile_query(
+        select(s.orders.column<"id">(), s.orders.column<"amount">(), priority.as("priority")).from(s.orders));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledCaseTest, CaseNested) {
-    auto query  = library().produce<case_expr::CaseNested>();
+    const auto& s   = schemas();
+    auto high_value = case_when(s.users.column<"active">() == true,
+                                case_when(s.users.column<"age">() > lit(30), lit("VIP")).else_(lit("Regular")))
+                          .else_(lit("Inactive"));
+    auto query  = compile_query(select(s.users.column<"name">(), high_value.as("customer_type")).from(s.users));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();

@@ -47,7 +47,7 @@ namespace demiplane::db {
         DynamicTable& indexed(std::string_view field_name);
 
         [[nodiscard]] const DynamicFieldSchema* get_field_schema(std::string_view name) const;
-        DynamicFieldSchema* get_field_schema(std::string_view name);
+        [[nodiscard]] DynamicFieldSchema* get_field_schema(std::string_view name);
 
         [[nodiscard]] constexpr const std::string& table_name() const {
             return table_name_;

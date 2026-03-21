@@ -120,7 +120,7 @@ namespace demiplane::db {
          * @return Mutable iterator to beginning of field vector
          * @note Iterator invalidation follows std::vector semantics
          */
-        constexpr std::vector<Field>::iterator begin() {
+        [[nodiscard]] constexpr std::vector<Field>::iterator begin() noexcept {
             return fields_.begin();
         }
 
@@ -129,7 +129,7 @@ namespace demiplane::db {
          * @return Mutable iterator to end of field vector
          * @note Iterator invalidation follows std::vector semantics
          */
-        constexpr std::vector<Field>::iterator end() {
+        [[nodiscard]] constexpr std::vector<Field>::iterator end() noexcept {
             return fields_.end();
         }
 

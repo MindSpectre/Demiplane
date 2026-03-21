@@ -6,12 +6,11 @@
 # Common link libraries for all query tests
 set(PGSQL_QUERY_TEST_LIBS
         Demiplane::Component::Database::PostgreSQL
-        ${TESTS_SHARED}.Database.QueryLibrary
         ${INTEGRATION_POSTGRESQL_TESTS}.TestFixture
         ${TEST_LIBS}
 )
 
-# SELECT query tests (using QueryLibrary)
+# SELECT query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSelect
         compiled_select_test.cpp
@@ -21,7 +20,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# INSERT query tests (using QueryLibrary)
+# INSERT query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledInsert
         compiled_insert_test.cpp
@@ -30,7 +29,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# UPDATE query tests (using QueryLibrary)
+# UPDATE query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledUpdate
         compiled_update_test.cpp
@@ -39,7 +38,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# DELETE query tests (using QueryLibrary)
+# DELETE query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledDelete
         compiled_delete_test.cpp
@@ -48,7 +47,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# JOIN query tests (using QueryLibrary)
+# JOIN query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledJoin
         compiled_join_test.cpp
@@ -57,7 +56,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# AGGREGATE query tests (using QueryLibrary)
+# AGGREGATE query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledAggregate
         compiled_aggregate_test.cpp
@@ -66,7 +65,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# SUBQUERY query tests (using QueryLibrary)
+# SUBQUERY query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSubquery
         compiled_subquery_test.cpp
@@ -75,7 +74,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# CONDITION query tests (using QueryLibrary)
+# CONDITION query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCondition
         compiled_condition_test.cpp
@@ -84,7 +83,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# CLAUSE query tests (using QueryLibrary)
+# CLAUSE query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledClause
         compiled_clause_test.cpp
@@ -93,7 +92,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# CTE (Common Table Expression) query tests (using QueryLibrary)
+# CTE (Common Table Expression) query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCte
         compiled_cte_test.cpp
@@ -102,7 +101,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# CASE expression query tests (using QueryLibrary)
+# CASE expression query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCase
         compiled_case_test.cpp
@@ -111,7 +110,7 @@ add_integration_test(
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )
 
-# SET operations query tests (using QueryLibrary)
+# SET operations query tests (inline DSL)
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSetOperations
         compiled_set_operations_test.cpp

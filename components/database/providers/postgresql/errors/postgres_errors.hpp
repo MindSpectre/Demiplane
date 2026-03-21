@@ -84,7 +84,7 @@ namespace demiplane::db::postgres {
      *
      * @note Compiled separately to keep header lightweight.
      */
-    std::optional<ErrorContext> extract_error(const PGresult* result);
+    [[nodiscard]] std::optional<ErrorContext> extract_error(const PGresult* result);
 
     /**
      * @brief Extract error code only from PGresult (lightweight)
@@ -96,7 +96,7 @@ namespace demiplane::db::postgres {
      *
      * @note Compiled separately to keep header lightweight.
      */
-    std::optional<ErrorCode> extract_error_code(const PGresult* result);
+    [[nodiscard]] std::optional<ErrorCode> extract_error_code(const PGresult* result);
 
     // ============== Stream Operators (Inline) ==============
 

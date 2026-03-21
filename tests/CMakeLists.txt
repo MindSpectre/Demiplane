@@ -17,8 +17,6 @@ add_subdirectory(integration_tests)
 
 add_subdirectory(functional_tests)
 
-add_subdirectory(codesandbox)
-
 ##############################################################################
 # Http component test
 ##############################################################################
@@ -33,7 +31,6 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database tests will be built")
-    add_subdirectory(shared/database)
     add_subdirectory(unit_tests/database)
     add_subdirectory(integration_tests/database)
 endif ()

@@ -11,11 +11,12 @@
 #include <string>
 #include <vector>
 
+#include <db_static_table.hpp>
 #include <libpq-fe.h>
 #include <postgres_dialect.hpp>
 #include <postgres_sync_executor.hpp>
+#include <query_compiler.hpp>
 #include <query_expressions.hpp>
-#include <query_library.hpp>
 
 namespace {
 
@@ -196,57 +197,59 @@ void run_raw_benchmarks(demiplane::db::postgres::SyncExecutor& executor) {
 }
 
 void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
-                             demiplane::test::QueryLibrary<demiplane::db::postgres::PostgresDialect>& library) {
+                             demiplane::db::QueryCompiler<demiplane::db::postgres::PostgresDialect,
+                                                          demiplane::db::ParamMode::Inline>& compiler) {
     using namespace demiplane::db;
-    using demiplane::gears::FixedString;
+    using namespace demiplane::db::constraints;
 
-    const auto& u = library.schemas().users;
+    using BenchUsersTable = StaticTable<"bench_users",
+                                        StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                        StaticFieldSchema<std::string, "name">,
+                                        StaticFieldSchema<int, "age">,
+                                        StaticFieldSchema<bool, "active">>;
+
+    constexpr BenchUsersTable u{Providers::PostgreSQL};
 
     std::cout << "Running COMPILED benchmarks...\n\n";
 
     std::vector<std::pair<std::string_view, std::function<CompiledDynamicQuery()>>> compiled_queries = {
         {"SELECT by ID",
          [&] {
-             auto query =
-                 select(u.column<FixedString{"id"}>(), u.column<FixedString{"name"}>(), u.column<FixedString{"age"}>())
-                     .from("bench_users")
-                     .where(u.column<FixedString{"id"}>() == 1);
-             return library.compiler().compile_dynamic(query);
+             auto query = select(u.column<"id">(), u.column<"name">(), u.column<"age">())
+                              .from("bench_users")
+                              .where(u.column<"id">() == 1);
+             return compiler.compile_dynamic(query);
          }},
         {"SELECT with range",
          [&] {
-             auto query = select(u.column<FixedString{"id"}>(), u.column<FixedString{"name"}>())
-                              .from("bench_users")
-                              .where(u.column<FixedString{"age"}>() > 30);
-             return library.compiler().compile_dynamic(query);
+             auto query =
+                 select(u.column<"id">(), u.column<"name">()).from("bench_users").where(u.column<"age">() > 30);
+             return compiler.compile_dynamic(query);
          }},
         {"COUNT(*) aggregate",
          [&] {
-             auto query = select(count(u.column<FixedString{"id"}>()))
-                              .from("bench_users")
-                              .where(u.column<FixedString{"active"}>() == true);
-             return library.compiler().compile_dynamic(query);
+             auto query = select(count(u.column<"id">())).from("bench_users").where(u.column<"active">() == true);
+             return compiler.compile_dynamic(query);
          }},
         {"UPDATE single row",
          [&] {
-             auto query = update("bench_users").set("age", 25).where(u.column<FixedString{"id"}>() == 1);
-             return library.compiler().compile_dynamic(query);
+             auto query = update("bench_users").set("age", 25).where(u.column<"id">() == 1);
+             return compiler.compile_dynamic(query);
          }},
         {"SELECT ORDER BY LIMIT",
          [&] {
-             auto query =
-                 select(u.column<FixedString{"id"}>(), u.column<FixedString{"name"}>(), u.column<FixedString{"age"}>())
-                     .from("bench_users")
-                     .order_by(desc(u.column<FixedString{"age"}>()))
-                     .limit(10);
-             return library.compiler().compile_dynamic(query);
+             auto query = select(u.column<"id">(), u.column<"name">(), u.column<"age">())
+                              .from("bench_users")
+                              .order_by(desc(u.column<"age">()))
+                              .limit(10);
+             return compiler.compile_dynamic(query);
          }},
         {"GROUP BY with COUNT",
          [&] {
-             auto query = select(u.column<FixedString{"active"}>(), count(u.column<FixedString{"id"}>()))
+             auto query = select(u.column<"active">(), count(u.column<"id">()))
                               .from("bench_users")
-                              .group_by(u.column<FixedString{"active"}>());
-             return library.compiler().compile_dynamic(query);
+                              .group_by(u.column<"active">());
+             return compiler.compile_dynamic(query);
          }},
     };
 
@@ -286,7 +289,6 @@ void run_compiled_benchmarks(demiplane::db::postgres::SyncExecutor& executor,
 int main(int argc, char* argv[]) {
     using namespace demiplane::db;
     using namespace demiplane::db::postgres;
-    using namespace demiplane::test;
 
     BenchmarkMode mode = BenchmarkMode::Both;
 
@@ -318,9 +320,9 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Connected to PostgreSQL successfully.\n";
 
-    // Create executor and query library
+    // Create executor and compiler
     SyncExecutor executor(conn);
-    QueryLibrary<PostgresDialect> library{Providers::PostgreSQL};
+    QueryCompiler<PostgresDialect, ParamMode::Inline> compiler;
 
     // Setup test tables
     std::cout << "Setting up test tables...\n";
@@ -333,14 +335,14 @@ int main(int argc, char* argv[]) {
             break;
 
         case BenchmarkMode::Compiled:
-            run_compiled_benchmarks(executor, library);
+            run_compiled_benchmarks(executor, compiler);
             break;
 
         case BenchmarkMode::Both:
             std::cout << "=== RAW STRING ===\n";
             run_raw_benchmarks(executor);
             std::cout << "\n=== COMPILED ===\n";
-            run_compiled_benchmarks(executor, library);
+            run_compiled_benchmarks(executor, compiler);
             std::cout << "\nNOTE: For accurate comparison, run --raw and --compiled separately\n";
             std::cout << "with a PostgreSQL restart between runs.\n";
             break;

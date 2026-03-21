@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <concepts>
 #include <string_view>
 #include <type_traits>
@@ -31,7 +30,7 @@ namespace demiplane::db {
 
 
     template <typename T, Providers P>
-    constexpr std::string_view sql_type_for() {
+    [[nodiscard]] constexpr std::string_view sql_type_for() noexcept {
         static_assert(HasSqlTypeMapping<T, P>,
                       "No SQL type mapping exists for this type and provider. "
                       "Add a specialization of SqlTypeMapping<T, Provider>.");
@@ -44,10 +43,10 @@ namespace demiplane::db {
 
 
     template <typename T>
-    constexpr std::string_view sql_type(const Providers provider) {
+    [[nodiscard]] constexpr std::string_view sql_type(const Providers provider) noexcept {
         switch (provider) {
             case Providers::None:
-                assert(false && "Cannot infer SQL type: Table has no provider set.");
+                std::unreachable();
             case Providers::PostgreSQL:
                 return sql_type_for<T, Providers::PostgreSQL>();
         }

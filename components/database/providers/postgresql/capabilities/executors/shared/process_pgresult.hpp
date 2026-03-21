@@ -5,7 +5,6 @@
 #include <postgres_result.hpp>
 
 namespace demiplane::db::postgres {
-    using DatabaseResult = gears::Outcome<ResultBlock, ErrorContext>;
 
     /**
      * @brief Process PostgreSQL result and check for errors
@@ -23,6 +22,6 @@ namespace demiplane::db::postgres {
         }
 
         // Success - wrap result in ResultBlock (takes ownership)
-        return ResultBlock(result);
+        return ResultBlock{result};
     }
 }  // namespace demiplane::db::postgres

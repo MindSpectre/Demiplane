@@ -1,5 +1,5 @@
 // Compiled CONDITION Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -28,7 +28,8 @@ protected:
 // ============== Binary Comparison Tests ==============
 
 TEST_F(CompiledConditionTest, BinaryEqual) {
-    auto query  = library().produce<condition::BinaryEqual>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() == 25));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -37,7 +38,8 @@ TEST_F(CompiledConditionTest, BinaryEqual) {
 }
 
 TEST_F(CompiledConditionTest, BinaryNotEqual) {
-    auto query  = library().produce<condition::BinaryNotEqual>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() != 25));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -46,7 +48,8 @@ TEST_F(CompiledConditionTest, BinaryNotEqual) {
 }
 
 TEST_F(CompiledConditionTest, BinaryGreater) {
-    auto query  = library().produce<condition::BinaryGreater>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() > 18));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -55,7 +58,8 @@ TEST_F(CompiledConditionTest, BinaryGreater) {
 }
 
 TEST_F(CompiledConditionTest, BinaryGreaterEqual) {
-    auto query  = library().produce<condition::BinaryGreaterEqual>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() >= 18));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -64,7 +68,8 @@ TEST_F(CompiledConditionTest, BinaryGreaterEqual) {
 }
 
 TEST_F(CompiledConditionTest, BinaryLess) {
-    auto query  = library().produce<condition::BinaryLess>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() < 65));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -73,7 +78,8 @@ TEST_F(CompiledConditionTest, BinaryLess) {
 }
 
 TEST_F(CompiledConditionTest, BinaryLessEqual) {
-    auto query  = library().produce<condition::BinaryLessEqual>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() <= 65));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -84,7 +90,10 @@ TEST_F(CompiledConditionTest, BinaryLessEqual) {
 // ============== Logical Operator Tests ==============
 
 TEST_F(CompiledConditionTest, LogicalAnd) {
-    auto query  = library().produce<condition::LogicalAnd>();
+    auto query =
+        compile_query(select(schemas().users.column<"name">())
+                          .from(schemas().users)
+                          .where(schemas().users.column<"age">() > 18 && schemas().users.column<"active">() == true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -94,7 +103,10 @@ TEST_F(CompiledConditionTest, LogicalAnd) {
 }
 
 TEST_F(CompiledConditionTest, LogicalOr) {
-    auto query  = library().produce<condition::LogicalOr>();
+    auto query =
+        compile_query(select(schemas().users.column<"name">())
+                          .from(schemas().users)
+                          .where(schemas().users.column<"age">() < 18 || schemas().users.column<"age">() > 65));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -104,7 +116,9 @@ TEST_F(CompiledConditionTest, LogicalOr) {
 }
 
 TEST_F(CompiledConditionTest, UnaryCondition) {
-    auto query  = library().produce<condition::UnaryCondition>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users)
+                                   .where(schemas().users.column<"active">() == false));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -116,7 +130,9 @@ TEST_F(CompiledConditionTest, UnaryCondition) {
 // ============== String Comparison Tests ==============
 
 TEST_F(CompiledConditionTest, StringComparison) {
-    auto query  = library().produce<condition::StringComparison>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users)
+                                   .where(schemas().users.column<"name">() == "john"));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -127,7 +143,9 @@ TEST_F(CompiledConditionTest, StringComparison) {
 // ============== Range Tests ==============
 
 TEST_F(CompiledConditionTest, Between) {
-    auto query  = library().produce<condition::Between>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users)
+                                   .where(between(schemas().users.column<"age">(), 18, 65)));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -137,7 +155,9 @@ TEST_F(CompiledConditionTest, Between) {
 }
 
 TEST_F(CompiledConditionTest, InList) {
-    auto query  = library().produce<condition::InList>();
+    auto query  = compile_query(select(schemas().users.column<"name">())
+                                   .from(schemas().users)
+                                   .where(in(schemas().users.column<"age">(), 18, 25, 30)));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -149,14 +169,20 @@ TEST_F(CompiledConditionTest, InList) {
 // ============== Exists Tests ==============
 
 TEST_F(CompiledConditionTest, ExistsCondition) {
-    auto query  = library().produce<condition::ExistsCondition>();
-    auto result = executor().execute(query);
+    const auto& s = schemas();
+    auto subq     = select(lit(1)).from(s.posts).where(s.posts.column<"user_id">() == s.users.column<"id">() &&
+                                                   s.posts.column<"published">() == lit(true));
+    auto query    = compile_query(select(s.users.column<"name">()).from(s.users).where(exists(subq)));
+    auto result   = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
 }
 
 TEST_F(CompiledConditionTest, SubqueryCondition) {
-    auto query  = library().produce<condition::SubqueryCondition>();
+    const auto& s     = schemas();
+    auto active_users = select(s.users.column<"id">()).from(s.users).where(s.users.column<"active">() == true);
+    auto query        = compile_query(
+        select(s.posts.column<"title">()).from(s.posts).where(in(s.posts.column<"user_id">(), subquery(active_users))));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
@@ -165,7 +191,11 @@ TEST_F(CompiledConditionTest, SubqueryCondition) {
 // ============== Complex Nested Tests ==============
 
 TEST_F(CompiledConditionTest, ComplexNested) {
-    auto query  = library().produce<condition::ComplexNested>();
+    auto query = compile_query(
+        select(schemas().users.column<"name">())
+            .from(schemas().users)
+            .where((schemas().users.column<"age">() > 18 && schemas().users.column<"age">() < 65) ||
+                   (schemas().users.column<"active">() == true && schemas().users.column<"age">() >= 65)));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();

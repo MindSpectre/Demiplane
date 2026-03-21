@@ -1,20 +1,26 @@
 #include "transaction.hpp"
 
+#include <format>
+
 #include <connection_slot.hpp>
 #include <savepoint/savepoint.hpp>
 
+#include "detail/identifier_validation.hpp"
 #include "log_macros.hpp"
 
 namespace demiplane::db::postgres {
 
     Transaction::Transaction(ConnectionSlot& slot, TransactionOptions opts)
         : slot_{&slot},
-          options_{std::move(opts)} {
+          options_{opts} {
         COMPONENT_LOG_INF() << "Transaction created";
     }
 
     Transaction::~Transaction() {
         if (slot_) {
+            if (status_ == TransactionStatus::ACTIVE) {
+                PQclear(PQexec(slot_->conn, "ROLLBACK"));
+            }
             slot_->reset();
             COMPONENT_LOG_INF() << "Transaction destroyed, slot released";
         }
@@ -22,7 +28,7 @@ namespace demiplane::db::postgres {
 
     Transaction::Transaction(Transaction&& other) noexcept
         : slot_{std::exchange(other.slot_, nullptr)},
-          options_{std::move(other.options_)},
+          options_{other.options_},
           status_{std::exchange(other.status_, TransactionStatus::FAILED)} {
     }
 
@@ -32,7 +38,7 @@ namespace demiplane::db::postgres {
                 slot_->reset();
             }
             slot_    = std::exchange(other.slot_, nullptr);
-            options_ = std::move(other.options_);
+            options_ = other.options_;
             status_  = std::exchange(other.status_, TransactionStatus::FAILED);
         }
         return *this;
@@ -99,10 +105,12 @@ namespace demiplane::db::postgres {
         if (status_ != TransactionStatus::ACTIVE) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
-        // TODO: Validate `name` is a safe PostgreSQL identifier (alphanumeric + underscore,
-        //       starting with letter/underscore) to prevent SQL injection via crafted names.
-        //       Alternatively, quote with PQescapeIdentifier().
-        const std::string sql = "SAVEPOINT " + name;
+        if (!is_valid_identifier(name)) {
+            auto err    = ErrorContext{ErrorCode{ClientErrorCode::InvalidArgument}};
+            err.message = std::format("Invalid savepoint name: '{}'", name);
+            return gears::Err(std::move(err));
+        }
+        const std::string sql = std::format(R"(SAVEPOINT "{}")", name);
         if (auto result = execute_control(sql); !result.is_success()) {
             return gears::Err(result.error<ErrorContext>());
         }

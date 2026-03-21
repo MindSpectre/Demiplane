@@ -6,7 +6,7 @@
 #include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
 #include <postgres_params.hpp>
-#include <process_pg_result.hpp>
+#include <process_pgresult.hpp>
 
 namespace demiplane::db::postgres {
 

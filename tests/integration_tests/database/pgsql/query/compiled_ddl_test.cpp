@@ -1,5 +1,5 @@
 // Compiled DDL Query Functional Tests
-// Tests query compilation + execution with SyncExecutor using QueryLibrary
+// Tests query compilation + execution with SyncExecutor
 
 #include <test_fixture.hpp>
 
@@ -97,7 +97,7 @@ protected:
         auto result = executor().execute("SELECT is_nullable FROM information_schema.columns WHERE table_name = '" +
                                          table_name + "' AND column_name = '" + column_name + "'");
         if (result.is_success() && result.value().rows() > 0) {
-            auto nullable = result.value().get<std::string>(0, 0);
+            const auto nullable = result.value().get<std::string>(0, 0);
             return nullable == "NO";
         }
         return false;
@@ -107,7 +107,7 @@ protected:
         auto result = executor().execute("SELECT column_default FROM information_schema.columns WHERE table_name = '" +
                                          table_name + "' AND column_name = '" + column_name + "'");
         if (result.is_success() && result.value().rows() > 0) {
-            auto opt = result.value().get_opt<std::string>(0, 0);
+            const auto opt = result.value().get_opt<std::string>(0, 0);
             return opt.value_or("");
         }
         return "";
@@ -120,7 +120,7 @@ TEST_F(CompiledDdlTest, CreateTableBasicExecutes) {
     // First ensure users table doesn't exist
     (void)executor().execute("DROP TABLE IF EXISTS users CASCADE");
 
-    auto query  = library().produce<ddl::CreateTableBasic>();
+    auto query  = compile_query(create_table(schemas().users_dynamic));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "CREATE TABLE failed: " << result.error<ErrorContext>();
@@ -139,12 +139,12 @@ TEST_F(CompiledDdlTest, CreateTableIfNotExistsDoesNotFail) {
     (void)executor().execute("DROP TABLE IF EXISTS users CASCADE");
 
     // Create once
-    auto query1  = library().produce<ddl::CreateTableIfNotExists>();
+    auto query1  = compile_query(create_table(schemas().users_dynamic, true));
     auto result1 = executor().execute(query1);
     ASSERT_TRUE(result1.is_success()) << "First CREATE failed: " << result1.error<ErrorContext>();
 
     // Create again - should not fail due to IF NOT EXISTS
-    auto query2  = library().produce<ddl::CreateTableIfNotExists>();
+    auto query2  = compile_query(create_table(schemas().users_dynamic, true));
     auto result2 = executor().execute(query2);
     ASSERT_TRUE(result2.is_success()) << "Second CREATE should not fail with IF NOT EXISTS";
 
@@ -155,7 +155,13 @@ TEST_F(CompiledDdlTest, CreateTableIfNotExistsDoesNotFail) {
 }
 
 TEST_F(CompiledDdlTest, CreateTableWithConstraintsExecutes) {
-    auto query  = library().produce<ddl::CreateTableWithConstraints>();
+    auto table = std::make_shared<DynamicTable>("ddl_constraints_test");
+    table->add_field<int>("id", "SERIAL").primary_key("id");
+    table->add_field<std::string>("email", "VARCHAR(255)").nullable("email", false).unique("email");
+    table->add_field<std::string>("name", "VARCHAR(100)").nullable("name", false);
+    table->add_field<int>("status", "INTEGER");
+
+    auto query  = compile_query(create_table(table, true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "CREATE TABLE failed: " << result.error<ErrorContext>();
@@ -182,7 +188,12 @@ TEST_F(CompiledDdlTest, CreateTableWithForeignKeyExecutes) {
     CreateUsersTable();
     InsertTestUsers();
 
-    auto query  = library().produce<ddl::CreateTableWithForeignKey>();
+    auto table = std::make_shared<DynamicTable>("ddl_orders_test");
+    table->add_field<int>("id", "SERIAL").primary_key("id");
+    table->add_field<int>("user_id", "INTEGER").foreign_key("user_id", "users", "id");
+    table->add_field<double>("amount", "DECIMAL(10,2)");
+
+    auto query  = compile_query(create_table(table, true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "CREATE TABLE failed: " << result.error<ErrorContext>();
@@ -203,7 +214,20 @@ TEST_F(CompiledDdlTest, CreateTableWithForeignKeyExecutes) {
 }
 
 TEST_F(CompiledDdlTest, CreateTableWithDefaultExecutes) {
-    auto query  = library().produce<ddl::CreateTableWithDefault>();
+    auto table = std::make_shared<DynamicTable>("ddl_settings_test");
+    table->add_field<int>("id", "SERIAL").primary_key("id");
+    table->add_field<bool>("enabled", "BOOLEAN");
+    table->add_field<int>("priority", "INTEGER");
+
+    // Set default values via FieldSchema
+    if (auto* field = table->get_field_schema("enabled")) {
+        field->default_value = "true";
+    }
+    if (auto* field = table->get_field_schema("priority")) {
+        field->default_value = "0";
+    }
+
+    auto query  = compile_query(create_table(table, true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "CREATE TABLE failed: " << result.error<ErrorContext>();
@@ -236,7 +260,7 @@ TEST_F(CompiledDdlTest, DropTableBasicExecutes) {
     CreateUsersTable();
     ASSERT_TRUE(TableExists("users"));
 
-    auto query  = library().produce<ddl::DropTableBasic>();
+    const auto query = compile_query(drop_table(schemas().users_dynamic));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "DROP TABLE failed: " << result.error<ErrorContext>();
@@ -249,8 +273,8 @@ TEST_F(CompiledDdlTest, DropTableIfExistsDoesNotFail) {
     ASSERT_FALSE(TableExists("users"));
 
     // DROP IF EXISTS on non-existent table should succeed
-    auto query  = library().produce<ddl::DropTableIfExists>();
-    auto result = executor().execute(query);
+    const auto query  = compile_query(drop_table(schemas().users_dynamic, true));
+    const auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "DROP TABLE IF EXISTS should not fail on non-existent table";
 }
@@ -268,7 +292,7 @@ TEST_F(CompiledDdlTest, DropTableCascadeExecutes) {
     ASSERT_TRUE(insert_child.is_success());
 
     // DROP CASCADE should work even with dependent table
-    auto query  = library().produce<ddl::DropTableCascade>();
+    auto query  = compile_query(drop_table(schemas().users_dynamic, false, true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "DROP TABLE CASCADE failed: " << result.error<ErrorContext>();
@@ -285,7 +309,7 @@ TEST_F(CompiledDdlTest, DropTableIfExistsCascadeExecutes) {
         "CREATE TABLE dependent_table (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id))");
     ASSERT_TRUE(create_dep.is_success());
 
-    auto query  = library().produce<ddl::DropTableIfExistsCascade>();
+    auto query  = compile_query(drop_table(schemas().users_dynamic, true, true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "DROP TABLE IF EXISTS CASCADE failed";
@@ -301,7 +325,7 @@ TEST_F(CompiledDdlTest, DropTableByNameExecutes) {
     ASSERT_TRUE(create_result.is_success());
     ASSERT_TRUE(TableExists("ddl_temp_table"));
 
-    auto query  = library().produce<ddl::DropTableByName>();
+    auto query  = compile_query(drop_table("ddl_temp_table", true, true));
     auto result = executor().execute(query);
 
     ASSERT_TRUE(result.is_success()) << "DROP TABLE by name failed: " << result.error<ErrorContext>();
@@ -317,8 +341,7 @@ TEST_F(CompiledDdlTest, CreateInsertSelectDropLifecycle) {
     table->add_field<std::string>("name", "VARCHAR(100)").nullable("name", false);
     table->add_field<int>("value", "INTEGER");
 
-    auto create_expr   = create_table(table, true);
-    auto create_query  = library().compiler().compile_dynamic(create_expr);
+    auto create_query  = compile_query(create_table(table, true));
     auto create_result = executor().execute(create_query);
     ASSERT_TRUE(create_result.is_success()) << "CREATE failed: " << create_result.error<ErrorContext>();
     EXPECT_TRUE(TableExists("ddl_test_table"));
@@ -335,8 +358,7 @@ TEST_F(CompiledDdlTest, CreateInsertSelectDropLifecycle) {
     EXPECT_EQ(select_result.value().get<int>(0, 1), 42);
 
     // Drop table using DDL expression
-    auto drop_expr   = drop_table(table, true, true);
-    auto drop_query  = library().compiler().compile_dynamic(drop_expr);
+    auto drop_query  = compile_query(drop_table(table, true, true));
     auto drop_result = executor().execute(drop_query);
     ASSERT_TRUE(drop_result.is_success()) << "DROP failed: " << drop_result.error<ErrorContext>();
     EXPECT_FALSE(TableExists("ddl_test_table"));
@@ -360,8 +382,7 @@ TEST_F(CompiledDdlTest, CreateTableWithAllConstraintTypes) {
         field->default_value = "CURRENT_TIMESTAMP";
     }
 
-    auto create_expr   = create_table(table, true);
-    auto create_query  = library().compiler().compile_dynamic(create_expr);
+    auto create_query  = compile_query(create_table(table, true));
     auto create_result = executor().execute(create_query);
     ASSERT_TRUE(create_result.is_success()) << "CREATE failed: " << create_result.error<ErrorContext>();
 

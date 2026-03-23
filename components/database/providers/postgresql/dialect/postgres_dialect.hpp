@@ -59,7 +59,7 @@ namespace demiplane::db::postgres {
         static constexpr void escape_string(StringT& out, std::string_view str);
 
         template <typename Container>
-        static std::string format_binary_data(const Container& data);
+        static constexpr std::string format_binary_data(const Container& data);
     };
 
     static_assert(IsSqlDialect<PostgresDialect>);

@@ -16,9 +16,6 @@ namespace demiplane::db::postgres {
         Savepoint(Savepoint&& other) noexcept;
         Savepoint& operator=(Savepoint&& other) noexcept;
 
-        // TODO: Unlike PostgreSQL's native behavior where ROLLBACK TO SAVEPOINT keeps the savepoint
-        //       active, this implementation treats rollback as a terminal operation. Create a new
-        //       savepoint if retry semantics are needed.
         [[nodiscard]] gears::Outcome<void, ErrorContext> rollback();
         [[nodiscard]] gears::Outcome<void, ErrorContext> release();
 

@@ -23,7 +23,7 @@ namespace demiplane::test {
 
     // Base fixture for PostgreSQL functional tests
     // Provides common setup: logging, connection, executor, schemas
-    class PgsqlTestFixture : public ::testing::Test {
+    class PgsqlTestFixture : virtual public ::testing::Test {
     protected:
         void SetUp() override {
             InitializeLogging();

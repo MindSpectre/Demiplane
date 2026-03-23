@@ -21,6 +21,7 @@ set(INTEGRATION_POSTGRESQL_TESTS ${INTEGRATION_TESTING_TARGET}.Database.PostgreS
 add_subdirectory(capabilities)
 add_subdirectory(params)
 add_subdirectory(query)
+add_subdirectory(result)
 add_subdirectory(fixture)
 add_subdirectory(session)
 add_subdirectory(transaction)

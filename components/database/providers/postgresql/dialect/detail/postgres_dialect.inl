@@ -1,4 +1,6 @@
 #pragma once
+#include <charconv>
+
 #include <gears_utils.hpp>
 
 namespace demiplane::db::postgres {
@@ -36,8 +38,13 @@ namespace demiplane::db::postgres {
                     escape_char(query, val);
                     query += "'";
                 } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
-                    // float/double: not needed at compile time, use std::to_string //TODO? need to think about it
-                    query += std::to_string(val);
+                    if consteval {
+                        query += gears::constexpr_to_string(val);
+                    } else {
+                        char buf[32];
+                        auto [end, ec]  = std::to_chars(buf, buf + sizeof(buf), val);
+                        query          += std::string_view{buf, static_cast<std::size_t>(end - buf)};
+                    }
                 } else if constexpr (std::is_integral_v<T>) {
                     if constexpr (std::is_signed_v<T>) {
                         if (val < 0) {
@@ -66,7 +73,7 @@ namespace demiplane::db::postgres {
     }
 
     template <typename Container>
-    std::string PostgresDialect::format_binary_data(const Container& data) {
+    constexpr std::string PostgresDialect::format_binary_data(const Container& data) {
         std::string result;
         result.reserve(5 + data.size() * 2);  // Reserve: "'" + "\x" + 2chars_per_byte + "'"
 

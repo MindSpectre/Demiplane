@@ -206,7 +206,7 @@ TEST_F(SavepointTest, SavepointOnNonActiveTransactionReturnsError) {
     EXPECT_EQ(sp_result.error<ErrorContext>().code, ClientErrorCode::InvalidState);
 }
 
-TEST_F(SavepointTest, DoubleRollbackReturnsError) {
+TEST_F(SavepointTest, DoubleRollbackSucceeds) {
     auto tx_result = session_->begin_transaction();
     ASSERT_TRUE(tx_result.is_success()) << tx_result.error<ErrorContext>().format();
     auto tx = std::move(tx_result.value());
@@ -217,14 +217,57 @@ TEST_F(SavepointTest, DoubleRollbackReturnsError) {
     ASSERT_TRUE(sp_result.is_success()) << sp_result.error<ErrorContext>().format();
     auto sp = std::move(sp_result.value());
 
-    // First rollback succeeds
+    // First rollback succeeds, savepoint stays active (PostgreSQL semantics)
     ASSERT_TRUE(sp.rollback().is_success());
-    EXPECT_FALSE(sp.is_active());
+    EXPECT_TRUE(sp.is_active());
 
-    // Second rollback should fail
-    auto result = sp.rollback();
-    ASSERT_FALSE(result.is_success());
-    EXPECT_EQ(result.error<ErrorContext>().code, ClientErrorCode::InvalidState);
+    // Second rollback also succeeds
+    ASSERT_TRUE(sp.rollback().is_success());
+    EXPECT_TRUE(sp.is_active());
+
+    // Cleanup: release the savepoint
+    ASSERT_TRUE(sp.release().is_success());
+    EXPECT_FALSE(sp.is_active());
+}
+
+TEST_F(SavepointTest, RollbackRetrySemantics) {
+    auto tx_result = session_->begin_transaction();
+    ASSERT_TRUE(tx_result.is_success()) << tx_result.error<ErrorContext>().format();
+    auto tx = std::move(tx_result.value());
+
+    ASSERT_TRUE(tx.begin().is_success());
+
+    // Insert pre-savepoint data
+    auto insert_base = tx.with_sync().execute("INSERT INTO sp_test (name) VALUES ('base')");
+    ASSERT_TRUE(insert_base.is_success()) << insert_base.error<ErrorContext>().format();
+
+    // Create savepoint
+    auto sp_result = tx.savepoint("sp_retry");
+    ASSERT_TRUE(sp_result.is_success()) << sp_result.error<ErrorContext>().format();
+    auto sp = std::move(sp_result.value());
+
+    // First attempt: insert and rollback
+    auto attempt1 = tx.with_sync().execute("INSERT INTO sp_test (name) VALUES ('attempt1')");
+    ASSERT_TRUE(attempt1.is_success()) << attempt1.error<ErrorContext>().format();
+    ASSERT_TRUE(sp.rollback().is_success());
+    EXPECT_TRUE(sp.is_active());
+
+    // Second attempt: insert and rollback again
+    auto attempt2 = tx.with_sync().execute("INSERT INTO sp_test (name) VALUES ('attempt2')");
+    ASSERT_TRUE(attempt2.is_success()) << attempt2.error<ErrorContext>().format();
+    ASSERT_TRUE(sp.rollback().is_success());
+    EXPECT_TRUE(sp.is_active());
+
+    // Release savepoint and commit
+    ASSERT_TRUE(sp.release().is_success());
+    ASSERT_TRUE(tx.commit().is_success());
+
+    // Only 'base' should remain — both attempts were rolled back
+    auto exec   = session_->with_sync();
+    auto select = exec.execute("SELECT name FROM sp_test ORDER BY id");
+    ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
+    EXPECT_EQ(select.value().rows(), 1);
+    EXPECT_EQ(select.value().get<std::string>(0, 0), "base");
 }
 
 TEST_F(SavepointTest, DestructorReleasesSavepointIfActive) {

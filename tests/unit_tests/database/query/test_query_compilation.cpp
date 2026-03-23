@@ -810,4 +810,172 @@ TEST(QueryCompilation, MixedStaticTableStringJoin) {
         R"(SELECT "users"."name", "title" FROM "users" INNER JOIN "articles" ON ("users"."id" = "author_id"))");
 }
 
+// =============================================================================
+// 22. format_value branch coverage (Inline mode)
+//     Tests every branch of PostgresDialect::format_value_impl
+// =============================================================================
+
+// -- monostate → NULL --
+TEST(QueryCompilation, FormatValueNull) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_name == std::monostate{})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("users"."name" = NULL))");
+}
+
+// -- bool true → TRUE --
+TEST(QueryCompilation, FormatValueBoolTrue) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_active == true)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("users"."active" = TRUE))");
+}
+
+// -- bool false → FALSE --
+TEST(QueryCompilation, FormatValueBoolFalse) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_active == false)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("users"."active" = FALSE))");
+}
+
+// -- char → 'X' --
+TEST(QueryCompilation, FormatValueChar) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("flag") == char{'A'})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("flag" = 'A'))");
+}
+
+// -- char escape: single quote → '''' --
+TEST(QueryCompilation, FormatValueCharEscapeSingleQuote) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("flag") == char{'\''})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("flag" = ''''))");
+}
+
+// -- char escape: backslash → '\\' --
+TEST(QueryCompilation, FormatValueCharEscapeBackslash) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("flag") == char{'\\'})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("flag" = '\\'))");
+}
+
+// -- signed int positive --
+TEST(QueryCompilation, FormatValueSignedIntPositive) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_age == 42)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("users"."age" = 42))");
+}
+
+// -- signed int zero --
+TEST(QueryCompilation, FormatValueSignedIntZero) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_age == 0)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("users"."age" = 0))");
+}
+
+// -- signed int negative --
+TEST(QueryCompilation, FormatValueSignedIntNegative) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_age > -5)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("users"."age" > -5))");
+}
+
+// -- signed int16_t --
+TEST(QueryCompilation, FormatValueInt16) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_age == int16_t{100})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("users"."age" = 100))");
+}
+
+// -- signed int64_t --
+TEST(QueryCompilation, FormatValueInt64) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("big") == int64_t{999999}))
+            .sql() == R"(SELECT "users"."id" FROM "users" WHERE ("big" = 999999))");
+}
+
+// -- unsigned int (uint16_t) --
+TEST(QueryCompilation, FormatValueUint16) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_age == uint16_t{65535})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("users"."age" = 65535))");
+}
+
+// -- unsigned int (uint32_t) --
+TEST(QueryCompilation, FormatValueUint32) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("val") == uint32_t{42})).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("val" = 42))");
+}
+
+// -- unsigned int (uint64_t) --
+TEST(QueryCompilation, FormatValueUint64) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("val") == uint64_t{12345}))
+            .sql() == R"(SELECT "users"."id" FROM "users" WHERE ("val" = 12345))");
+}
+
+// -- string with single quote → escape to '' --
+TEST(QueryCompilation, FormatValueStringEscapeSingleQuote) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_name == "O'Brien")).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("users"."name" = 'O''Brien'))");
+}
+
+// -- string with backslash → escape to \\\\ --
+TEST(QueryCompilation, FormatValueStringEscapeBackslash) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_name == "path\\file")).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("users"."name" = 'path\\file'))");
+}
+
+// -- string with both escapes --
+TEST(QueryCompilation, FormatValueStringEscapeBoth) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(u_name == "it's a \\test")).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("users"."name" = 'it''s a \\test'))");
+}
+
+// -- binary data (vector<uint8_t>) --
+TEST(QueryCompilation, FormatValueBinaryData) {
+    static_assert(compiler
+                      .compile_static<ParamMode::Inline>(select(u_id).from(users).where(
+                          col("data") == std::vector<std::uint8_t>{0xDE, 0xAD, 0xBE, 0xEF}))
+                      .sql() == R"(SELECT "users"."id" FROM "users" WHERE ("data" = '\xdeadbeef'))");
+}
+
+TEST(QueryCompilation, FormatValueBinaryDataEmpty) {
+    static_assert(compiler
+                      .compile_static<ParamMode::Inline>(
+                          select(u_id).from(users).where(col("data") == std::vector<std::uint8_t>{}))
+                      .sql() == R"(SELECT "users"."id" FROM "users" WHERE ("data" = '\x'))");
+}
+
+// -- float (via constexpr_to_string digit extraction at compile time) --
+TEST(QueryCompilation, FormatValueFloat) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("val") > 3.14f)).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("val" > 3.14))");
+}
+
+TEST(QueryCompilation, FormatValueFloatNegative) {
+    static_assert(
+        compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(col("val") > -1.5f)).sql() ==
+        R"(SELECT "users"."id" FROM "users" WHERE ("val" > -1.5))");
+}
+
+// -- double (via constexpr_to_string digit extraction at compile time) --
+TEST(QueryCompilation, FormatValueDouble) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(o_amount > 99.5)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("orders"."amount" > 99.5))");
+}
+
+TEST(QueryCompilation, FormatValueDoubleSmallFraction) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(o_amount == 0.001)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("orders"."amount" = 0.001))");
+}
+
+TEST(QueryCompilation, FormatValueDoubleWhole) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(o_amount == 42.0)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("orders"."amount" = 42))");
+}
+
+TEST(QueryCompilation, FormatValueDoubleNegative) {
+    static_assert(compiler.compile_static<ParamMode::Inline>(select(u_id).from(users).where(o_amount > -3.14)).sql() ==
+                  R"(SELECT "users"."id" FROM "users" WHERE ("orders"."amount" > -3.14))");
+}
+
 #pragma clang diagnostic pop

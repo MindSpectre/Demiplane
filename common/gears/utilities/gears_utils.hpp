@@ -1,6 +1,8 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <utility>
 
@@ -52,20 +54,44 @@ namespace demiplane::gears {
     /// Constexpr integer-to-string conversion for use in compile-time SQL generation.
     /// std::to_string is not constexpr in C++23, so this provides an alternative
     /// for placeholder indices ($1, $2) and LIMIT/OFFSET clauses.
+    /// Uses 2-digit lookup table to halve the number of divisions.
     constexpr std::string constexpr_to_string(const std::size_t value) {
         if (value == 0) {
             return "0";
         }
 
+        // 2-digit lookup: digits[i*2] = tens digit, digits[i*2+1] = units digit of i
+        constexpr char digits[] = "00010203040506070809"
+                                  "10111213141516171819"
+                                  "20212223242526272829"
+                                  "30313233343536373839"
+                                  "40414243444546474849"
+                                  "50515253545556575859"
+                                  "60616263646566676869"
+                                  "70717273747576777879"
+                                  "80818283848586878889"
+                                  "90919293949596979899";
+
         // Maximum digits for std::size_t (64-bit): 20 digits
         char buffer[20] = {};
         std::size_t pos = 0;
 
-        // Extract digits in reverse order
+        // Extract 2 digits at a time in reverse order
         auto temp = value;
-        while (temp > 0) {
-            buffer[pos++]  = static_cast<char>('0' + temp % 10);
-            temp          /= 10;
+        while (temp >= 100) {
+            const auto idx  = (temp % 100) * 2;
+            buffer[pos++]   = digits[idx + 1];  // units
+            buffer[pos++]   = digits[idx];      // tens
+            temp           /= 100;
+        }
+
+        // Handle remaining 1-2 digits
+        if (temp >= 10) {
+            const auto idx = temp * 2;
+            buffer[pos++]  = digits[idx + 1];
+            buffer[pos++]  = digits[idx];
+        } else {
+            buffer[pos++] = static_cast<char>('0' + temp);
         }
 
         // Build string by reading buffer in reverse
@@ -73,6 +99,62 @@ namespace demiplane::gears {
         result.reserve(pos);
         for (std::size_t i = pos; i > 0; --i) {
             result += buffer[i - 1];
+        }
+
+        return result;
+    }
+    /// Naive constexpr float/double-to-string via digit extraction.
+    /// Extracts integer part via constexpr_to_string(size_t), then fractional
+    /// digits by repeated multiply-by-10. Uses N-1 fractional digits (6 for float,
+    /// 14 for double) to stay below representation noise in the last ULP.
+    template <std::floating_point FloatT>
+    constexpr std::string constexpr_to_string(const FloatT val) {
+        if (val != val)
+            return "NaN";
+        if (val == std::numeric_limits<FloatT>::infinity())
+            return "Infinity";
+        if (val == -std::numeric_limits<FloatT>::infinity())
+            return "-Infinity";
+
+        std::string result;
+        auto abs_val = val;
+        if (val < FloatT{0}) {
+            result  += '-';
+            abs_val  = -val;
+        }
+        if (abs_val == FloatT{0})
+            return result + '0';
+
+        // Integer part
+        const auto int_part  = static_cast<std::uint64_t>(abs_val);
+        result              += constexpr_to_string(int_part);
+
+        // Fractional part via digit extraction
+        auto frac = abs_val - static_cast<FloatT>(int_part);
+        if (frac == FloatT{0})
+            return result;
+
+        // N-1 digits: avoids noise from the last representable bit
+        constexpr int max_frac = std::is_same_v<FloatT, float> ? 6 : 14;
+
+        char frac_buf[16] = {};
+        int frac_len      = 0;
+
+        for (int i = 0; i < max_frac; ++i) {
+            frac       *= FloatT{10};
+            auto digit  = static_cast<unsigned>(frac);
+            if (digit > 9)
+                digit = 9;  // guard against fp accumulation
+            frac_buf[frac_len++]  = static_cast<char>('0' + digit);
+            frac                 -= static_cast<FloatT>(digit);
+        }
+
+        // Strip trailing zeros
+        while (frac_len > 0 && frac_buf[frac_len - 1] == '0') --frac_len;
+
+        if (frac_len > 0) {
+            result += '.';
+            for (int i = 0; i < frac_len; ++i) result += frac_buf[i];
         }
 
         return result;

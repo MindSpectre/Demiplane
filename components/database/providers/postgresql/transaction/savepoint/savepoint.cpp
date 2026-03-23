@@ -44,9 +44,6 @@ namespace demiplane::db::postgres {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control(std::format(R"(ROLLBACK TO SAVEPOINT "{}")", name_));
-        if (result.is_success()) {
-            active_ = false;
-        }
         return result;
     }
 

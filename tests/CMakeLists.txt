@@ -1,8 +1,8 @@
-set(TESTS_SHARED ${PROJECT_NAME}.Tests.Registries)
-set(UNIT_TESTING_TARGET ${PROJECT_NAME}.Tests.Unit)
-set(FUNCTIONAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Functional)
-set(INTEGRATION_TESTING_TARGET ${PROJECT_NAME}.Tests.Integration)
-set(MANUAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Manual)
+set(TESTS_TARGET ${PROJECT_NAME}.Tests)
+set(UNIT_TESTING_TARGET ${TESTS_TARGET}.Unit)
+set(FUNCTIONAL_TESTING_TARGET ${TESTS_TARGET}.Functional)
+set(INTEGRATION_TESTING_TARGET ${TESTS_TARGET}.Integration)
+set(MANUAL_TESTING_TARGET ${TESTS_TARGET}.Manual)
 
 set(TEST_LIBS
         GTest::gtest
@@ -17,6 +17,7 @@ add_subdirectory(integration_tests)
 
 add_subdirectory(functional_tests)
 
+add_subdirectory(codesandbox)
 ##############################################################################
 # Http component test
 ##############################################################################

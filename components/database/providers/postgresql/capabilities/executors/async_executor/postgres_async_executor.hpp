@@ -8,6 +8,7 @@
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
+#include <gears_concepts.hpp>
 #include <postgres_params.hpp>
 #include <process_pgresult.hpp>
 
@@ -60,11 +61,14 @@ namespace demiplane::db::postgres {
 
         /**
          * @brief Execute simple query
-         * @param query SQL query string
+         * @param query SQL query string (must be null-terminated: std::string, pmr::string, const char*)
          * @return Awaitable result
          */
+        template <gears::IsNullTerminatedString QueryT>
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(std::string_view query) const;
+        execute(const QueryT& query) const {
+            co_return co_await execute_impl(gears::as_c_str(query), nullptr);
+        }
 
         /**
          * @brief Execute parameterized query
@@ -72,8 +76,11 @@ namespace demiplane::db::postgres {
          * @param params Parameter pack
          * @return Awaitable result
          */
+        template <gears::IsNullTerminatedString QueryT>
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(std::string_view query, const Params& params) const;
+        execute(const QueryT& query, const Params& params) const {
+            co_return co_await execute_impl(gears::as_c_str(query), &params);
+        }
 
         /**
          * @brief Execute with variadic parameters (convenience)
@@ -83,10 +90,10 @@ namespace demiplane::db::postgres {
          *
          * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", 42);
          */
-        template <typename... Args>
+        template <gears::IsNullTerminatedString QueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const std::string_view query, Args&&... args) {
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> execute(const QueryT& query,
+                                                                                                Args&&... args) {
             // NOT a coroutine - runs synchronously to completion
             // Temporaries are still alive here
 
@@ -96,7 +103,7 @@ namespace demiplane::db::postgres {
             (sink.push(FieldValue{std::forward<Args>(args)}), ...);
 
             // Pass ownership to coroutine (shared_ptrs copied to coroutine frame before initial_suspend)
-            return execute_with_resources(query, std::move(pool), sink.native_packet());
+            return execute_with_resources(gears::as_c_str(query), std::move(pool), sink.native_packet());
         }
 
         /**
@@ -107,10 +114,10 @@ namespace demiplane::db::postgres {
          *
          * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", std::tuple{42});
          */
-        template <typename... Args>
+        template <gears::IsNullTerminatedString QueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const std::string_view query, const std::tuple<Args...>& args) {
+        execute(const QueryT& query, const std::tuple<Args...>& args) {
             return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
         }
 
@@ -123,7 +130,7 @@ namespace demiplane::db::postgres {
             requires(db::IsFieldValueType<Params> && ...)
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
         execute(const CompiledStaticQuery<SqlStringT, Params...>& query) {
-            return execute(query.sql(), query.params());
+            return execute(query.c_sql(), query.params());
         }
 
         /**
@@ -154,7 +161,7 @@ namespace demiplane::db::postgres {
 
         // Core implementation
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute_with_resources(std::string_view query,
+        execute_with_resources(const char* query,
                                std::shared_ptr<std::pmr::memory_resource> pool,
                                std::shared_ptr<Params> params) const;
 

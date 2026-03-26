@@ -114,18 +114,8 @@ namespace demiplane::db::postgres {
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Public execute overloads
+    // Public execute overloads (non-template)
     // ─────────────────────────────────────────────────────────────────────────────
-
-    asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-    AsyncExecutor::execute(const std::string_view query) const {
-        co_return co_await execute_impl(query.data(), nullptr);
-    }
-
-    asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> AsyncExecutor::execute(const std::string_view query,
-                                                                                      const Params& params) const {
-        co_return co_await execute_impl(query.data(), &params);
-    }
 
     asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
     AsyncExecutor::execute(const CompiledDynamicQuery& query) const {
@@ -137,9 +127,9 @@ namespace demiplane::db::postgres {
         }
 
         if (const auto params_ptr = query.backend_packet_as<Params>()) {
-            co_return co_await execute_impl(query.sql().data(), params_ptr.get());
+            co_return co_await execute_impl(query.c_sql(), params_ptr.get());
         }
-        co_return co_await execute_impl(query.sql().data(), nullptr);
+        co_return co_await execute_impl(query.c_sql(), nullptr);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -147,13 +137,13 @@ namespace demiplane::db::postgres {
     // ─────────────────────────────────────────────────────────────────────────────
 
     asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-    AsyncExecutor::execute_with_resources(const std::string_view query,
+    AsyncExecutor::execute_with_resources(const char* query,
                                           const std::shared_ptr<std::pmr::memory_resource> pool,
                                           const std::shared_ptr<Params> params) const {
         gears::unused_value(pool);
         // pool and params are on coroutine frame (copied as shared_ptr before initial_suspend)
         // They keep memory alive across all suspension points
-        co_return co_await execute(query, *params);
+        co_return co_await execute_impl(query, params.get());
     }
 
     asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> AsyncExecutor::execute_impl(const char* query,
@@ -237,7 +227,7 @@ namespace demiplane::db::postgres {
         while (true) {
             boost::system::error_code ec;
             co_await socket_->async_wait(asio::posix::stream_descriptor::wait_read,
-                                         asio::redirect_error(asio::use_awaitable, ec));
+                                         redirect_error(asio::use_awaitable, ec));
 
             if (ec) {
                 ErrorContext ctx{ErrorCode{ServerErrorCode::RuntimeError}};

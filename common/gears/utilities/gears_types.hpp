@@ -77,6 +77,10 @@ namespace demiplane::gears {
             return data_;
         }
 
+        [[nodiscard]] constexpr const char* c_str() const noexcept {
+            return data_;
+        }
+
         constexpr bool operator==(const std::string_view other) const noexcept {
             return view() == other;
         }

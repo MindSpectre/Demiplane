@@ -1,10 +1,12 @@
 #pragma once
 
+#include <demiplane/scroll>
 #include <utility>
 
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
+#include <gears_concepts.hpp>
 #include <postgres_params.hpp>
 #include <process_pgresult.hpp>
 
@@ -72,10 +74,13 @@ namespace demiplane::db::postgres {
 
         /**
          * @brief Execute a simple query without parameters
-         * @param query SQL query string
+         * @param query SQL query string (must be null-terminated: std::string, pmr::string, const char*)
          * @return ResultBlock on success, ErrorContext on failure
          */
-        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(std::string_view query) const;
+        template <gears::IsNullTerminatedString QueryT>
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query) const {
+            return execute_impl(gears::as_c_str(query), nullptr);
+        }
 
         /**
          * @brief Execute a query with parameters
@@ -83,8 +88,11 @@ namespace demiplane::db::postgres {
          * @param params Parameter values
          * @return ResultBlock on success, ErrorContext on failure
          */
-        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(std::string_view query,
-                                                                        const Params& params) const;
+        template <gears::IsNullTerminatedString QueryT>
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
+                                                                        const Params& params) const {
+            return execute_impl(gears::as_c_str(query), &params);
+        }
 
         /**
          * @brief Execute a query with variadic parameters (convenience overload)
@@ -97,10 +105,9 @@ namespace demiplane::db::postgres {
          *
          * Uses stack-allocated buffer for small parameter sets (< 2KB), falls back to heap if needed.
          */
-        template <typename... Args>
+        template <gears::IsNullTerminatedString QueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const std::string_view query,
-                                                                        Args&&... args) const {
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query, Args&&... args) const {
             // Stack buffer for small parameter sets (avoids heap allocation)
             std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
@@ -108,11 +115,11 @@ namespace demiplane::db::postgres {
             ParamSink sink(&pool);
 
             // Push all parameters as FieldValues
-            (sink.push(db::FieldValue{std::forward<Args>(args)}), ...);
+            (sink.push(FieldValue{std::forward<Args>(args)}), ...);
 
             // Get params and execute (pool stays alive during synchronous execute call)
             const auto params = sink.native_packet();
-            return execute(query, *params);
+            return execute_impl(gears::as_c_str(query), params.get());
         }
 
         /**
@@ -124,9 +131,9 @@ namespace demiplane::db::postgres {
          *
          * Example: execute("SELECT * FROM users WHERE id = $1 AND active = $2", std::tuple{42, true})
          */
-        template <typename... Args>
+        template <gears::IsNullTerminatedString QueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const std::string_view query,
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
                                                                         const std::tuple<Args...>& args) const {
             return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
         }
@@ -146,7 +153,7 @@ namespace demiplane::db::postgres {
             requires(db::IsFieldValueType<Params> && ...)
         [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext>
         execute(const CompiledStaticQuery<SqlStringT, Params...>& query) const {
-            return execute(query.sql(), query.params());
+            return execute(query.c_sql(), query.params());
         }
 
         /**
@@ -161,6 +168,9 @@ namespace demiplane::db::postgres {
         }
 
     private:
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
+                                                                             const Params* params) const;
+
         PGconn* conn_;
         ConnectionSlot* slot_ = nullptr;
     };

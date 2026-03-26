@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 
 #include <gears_class_traits.hpp>
 #include <json/value.h>
@@ -110,8 +109,8 @@ namespace demiplane::db::postgres {
         [[nodiscard]] constexpr std::chrono::seconds max_lifetime() const noexcept {
             return max_lifetime_;
         }
-        [[nodiscard]] constexpr std::string_view cleanup_sql() const noexcept {
-            return cleanup_sql_;
+        [[nodiscard]] constexpr const char* cleanup_sql() const noexcept {
+            return cleanup_sql_.c_str();
         }
 
         // ============== Factory Methods ==============
@@ -125,10 +124,7 @@ namespace demiplane::db::postgres {
         }
 
         [[nodiscard]] static CylinderConfig high_performance() {
-            return CylinderConfig{}
-                .capacity(64)
-                .min_connections(8)
-                .health_check_interval(std::chrono::seconds{15});
+            return CylinderConfig{}.capacity(64).min_connections(8).health_check_interval(std::chrono::seconds{15});
         }
 
     protected:
@@ -139,10 +135,10 @@ namespace demiplane::db::postgres {
         std::size_t capacity_        = 16;
         std::size_t min_connections_ = 2;
 
-        std::chrono::seconds connect_timeout_      = std::chrono::seconds{10};
-        std::chrono::seconds idle_timeout_         = std::chrono::seconds{300};
+        std::chrono::seconds connect_timeout_       = std::chrono::seconds{10};
+        std::chrono::seconds idle_timeout_          = std::chrono::seconds{300};
         std::chrono::seconds health_check_interval_ = std::chrono::seconds{30};
-        std::chrono::seconds max_lifetime_         = std::chrono::seconds{3600};
+        std::chrono::seconds max_lifetime_          = std::chrono::seconds{3600};
 
         std::string cleanup_sql_ = "DISCARD ALL";
     };

@@ -26,7 +26,7 @@ namespace demiplane::db::postgres {
         friend class Transaction;
         Savepoint(PGconn* conn, std::string name);
 
-        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(std::string_view sql) const;
+        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
 
         PGconn* conn_;
         std::string name_;

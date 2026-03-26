@@ -22,6 +22,10 @@ namespace demiplane::db {
             return sql_;
         }
 
+        [[nodiscard]] constexpr const char* c_sql() const& noexcept {
+            return sql_.c_str();
+        }
+
         [[nodiscard]] constexpr std::shared_ptr<void> backend_packet() const& noexcept {
             return backend_packet_;
         }

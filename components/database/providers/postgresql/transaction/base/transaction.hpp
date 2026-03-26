@@ -47,7 +47,7 @@ namespace demiplane::db::postgres {
         friend class Session;
         Transaction(ConnectionSlot& slot, TransactionOptions opts);
 
-        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(std::string_view sql) const;
+        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
 
         ConnectionSlot* slot_;
         TransactionOptions options_;

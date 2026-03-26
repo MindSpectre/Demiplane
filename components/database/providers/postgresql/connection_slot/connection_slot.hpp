@@ -58,7 +58,7 @@ namespace demiplane::db::postgres {
     struct alignas(64) ConnectionSlot : gears::Immutable {
         PGconn* conn                   = nullptr;
         std::atomic<SlotStatus> status = SlotStatus::INACTIVE;
-        std::string_view cleanup_sql{};  // set from CylinderConfig during init
+        const char* cleanup_sql        = nullptr;  // set from CylinderConfig during init
 
         ConnectionSlot() noexcept = default;
 
@@ -77,8 +77,8 @@ namespace demiplane::db::postgres {
                 return;
             }
 
-            if (!cleanup_sql.empty()) {
-                PGresult* res = PQexec(conn, cleanup_sql.data());
+            if (cleanup_sql != nullptr && cleanup_sql[0] != '\0') {
+                PGresult* res = PQexec(conn, cleanup_sql);
                 const bool ok = res && PQresultStatus(res) == PGRES_COMMAND_OK;
                 PQclear(res);
 
@@ -86,7 +86,7 @@ namespace demiplane::db::postgres {
                     status.store(SlotStatus::DEAD, std::memory_order_release);
                     return;
                 }
-            }
+            }  // TODO: what we should do if we need to reset but we have invalid statemenet
 
             status.store(SlotStatus::FREE, std::memory_order_release);
         }

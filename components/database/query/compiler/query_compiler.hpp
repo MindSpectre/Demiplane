@@ -72,7 +72,7 @@ namespace demiplane::db {
                 auto [sql, count] = std::move(visitor).decompose();
                 COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
                 return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
-            } else if (Mode == ParamMode::Sink) {
+            } else if constexpr (Mode == ParamMode::Sink) {
                 auto bind_packet = DialectT::make_param_sink(arena.get());
                 SqlGeneratorVisitor<DialectT, std::pmr::string, ParamMode::Sink> visitor{bind_packet.sink.get(),
                                                                                          arena.get()};

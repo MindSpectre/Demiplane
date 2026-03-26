@@ -66,7 +66,7 @@ namespace demiplane::db::postgres {
         return active_;
     }
 
-    gears::Outcome<void, ErrorContext> Savepoint::execute_control(const std::string_view sql) const {
+    gears::Outcome<void, ErrorContext> Savepoint::execute_control(const std::string& sql) const {
         const SyncExecutor exec{conn_};
         if (auto result = exec.execute(sql); !result.is_success()) {
             return gears::Err(result.error<ErrorContext>());

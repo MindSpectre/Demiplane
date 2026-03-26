@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 
+#include "gears_concepts.hpp"
 #include "gears_templates.hpp"
 
 namespace demiplane::gears {
@@ -103,12 +104,14 @@ namespace demiplane::gears {
 
         return result;
     }
+
     /// Naive constexpr float/double-to-string via digit extraction.
     /// Extracts integer part via constexpr_to_string(size_t), then fractional
     /// digits by repeated multiply-by-10. Uses N-1 fractional digits (6 for float,
     /// 14 for double) to stay below representation noise in the last ULP.
     template <std::floating_point FloatT>
     constexpr std::string constexpr_to_string(const FloatT val) {
+        // ReSharper disable once CppIdenticalOperandsInBinaryExpression
         if (val != val)
             return "NaN";
         if (val == std::numeric_limits<FloatT>::infinity())
@@ -150,13 +153,25 @@ namespace demiplane::gears {
         }
 
         // Strip trailing zeros
-        while (frac_len > 0 && frac_buf[frac_len - 1] == '0') --frac_len;
+        while (frac_len > 0 && frac_buf[frac_len - 1] == '0')
+            --frac_len;
 
         if (frac_len > 0) {
             result += '.';
-            for (int i = 0; i < frac_len; ++i) result += frac_buf[i];
+            for (int i = 0; i < frac_len; ++i)
+                result += frac_buf[i];
         }
 
         return result;
+    }
+
+    /// Extract null-terminated const char* from any IsNullTerminatedString
+    template <IsNullTerminatedString T>
+    constexpr const char* as_c_str(const T& s) noexcept {
+        if constexpr (requires { s.c_str(); }) {
+            return s.c_str();
+        } else {
+            return s;
+        }
     }
 }  // namespace demiplane::gears

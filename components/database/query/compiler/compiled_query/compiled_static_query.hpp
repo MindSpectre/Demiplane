@@ -14,6 +14,10 @@ namespace demiplane::db {
             return std::string_view{sql_};
         }
 
+        [[nodiscard]] constexpr const char* c_sql() const noexcept {
+            return sql_.c_str();
+        }
+
         [[nodiscard]] constexpr const std::tuple<Params...>& params() const noexcept {
             return params_;
         }

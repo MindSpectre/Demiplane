@@ -10,7 +10,7 @@
 
 namespace demiplane::db::postgres {
 
-    Transaction::Transaction(ConnectionSlot& slot, TransactionOptions opts)
+    Transaction::Transaction(ConnectionSlot& slot, const TransactionOptions opts)
         : slot_{&slot},
           options_{opts} {
         COMPONENT_LOG_INF() << "Transaction created";
@@ -130,7 +130,7 @@ namespace demiplane::db::postgres {
         return slot_ ? slot_->conn : nullptr;
     }
 
-    gears::Outcome<void, ErrorContext> Transaction::execute_control(const std::string_view sql) const {
+    gears::Outcome<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {
         const SyncExecutor exec{slot_->conn};
         if (auto result = exec.execute(sql); !result.is_success()) {
             return gears::Err(result.error<ErrorContext>());

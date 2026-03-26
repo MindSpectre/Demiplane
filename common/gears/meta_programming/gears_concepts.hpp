@@ -49,5 +49,10 @@ namespace demiplane::gears {
     template <typename T>
     concept IsStringViewLike = IsStringLike<T> && std::convertible_to<std::remove_cvref_t<T>, std::string_view>;
 
+    /// Matches types that guarantee null-terminated storage (std::string, pmr::string, const char*, char[])
+    template <typename T>
+    concept IsNullTerminatedString = requires(const std::remove_cvref_t<T>& s) {
+        { s.c_str() } -> std::convertible_to<const char*>;
+    } || std::is_convertible_v<std::remove_cvref_t<T>, const char*>;
 
 }  // namespace demiplane::gears

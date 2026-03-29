@@ -136,16 +136,6 @@ namespace demiplane::db::postgres {
     // Core implementation
     // ─────────────────────────────────────────────────────────────────────────────
 
-    asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-    AsyncExecutor::execute_with_resources(const char* query,
-                                          const std::shared_ptr<std::pmr::memory_resource> pool,
-                                          const std::shared_ptr<Params> params) const {
-        gears::unused_value(pool);
-        // pool and params are on coroutine frame (copied as shared_ptr before initial_suspend)
-        // They keep memory alive across all suspension points
-        co_return co_await execute_impl(query, params.get());
-    }
-
     asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> AsyncExecutor::execute_impl(const char* query,
                                                                                            const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();

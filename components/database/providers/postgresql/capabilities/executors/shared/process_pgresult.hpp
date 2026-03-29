@@ -1,7 +1,7 @@
 #pragma once
 
-#include <postgres_errors.hpp>
 #include <gears_outcome.hpp>
+#include <postgres_errors.hpp>
 #include <postgres_result.hpp>
 
 namespace demiplane::db::postgres {

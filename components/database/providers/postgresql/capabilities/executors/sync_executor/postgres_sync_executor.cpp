@@ -2,6 +2,37 @@
 
 namespace demiplane::db::postgres {
 
+    SyncExecutor::SyncExecutor(PGconn* conn) noexcept
+        : conn_{conn} {
+    }
+
+    SyncExecutor::SyncExecutor(ConnectionSlot& slot) noexcept
+        : conn_{slot.conn},
+          slot_{&slot} {
+    }
+
+    SyncExecutor::~SyncExecutor() {
+        if (slot_) {
+            slot_->reset();
+        }
+    }
+
+    SyncExecutor::SyncExecutor(SyncExecutor&& other) noexcept
+        : conn_{std::exchange(other.conn_, nullptr)},
+          slot_{std::exchange(other.slot_, nullptr)} {
+    }
+
+    SyncExecutor& SyncExecutor::operator=(SyncExecutor&& other) noexcept {
+        if (this != &other) {
+            if (slot_) {
+                slot_->reset();
+            }
+            conn_ = std::exchange(other.conn_, nullptr);
+            slot_ = std::exchange(other.slot_, nullptr);
+        }
+        return *this;
+    }
+
     gears::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledDynamicQuery& query) const {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ec{ErrorCode{ClientErrorCode::SyntaxError}};

@@ -6,6 +6,7 @@
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
+#include <executor_concept.hpp>
 #include <gears_concepts.hpp>
 #include <postgres_params.hpp>
 #include <process_pgresult.hpp>
@@ -28,41 +29,20 @@ namespace demiplane::db::postgres {
          * @brief Construct a sync executor with a PostgreSQL connection (standalone)
          * @param conn PostgreSQL connection (must be valid and connected)
          */
-        explicit SyncExecutor(PGconn* conn) noexcept
-            : conn_{conn} {
-        }
+        explicit SyncExecutor(PGconn* conn) noexcept;
 
         /**
          * @brief Construct a sync executor from a cylinder slot (cylinder-managed)
          * @param slot Connection slot acquired from the cylinder
          */
-        explicit SyncExecutor(ConnectionSlot& slot) noexcept
-            : conn_{slot.conn},
-              slot_{&slot} {
-        }
+        explicit SyncExecutor(ConnectionSlot& slot) noexcept;
 
-        ~SyncExecutor() {
-            if (slot_) {
-                slot_->reset();
-            }
-        }
+        ~SyncExecutor();
 
         // Move-only
-        SyncExecutor(SyncExecutor&& other) noexcept
-            : conn_{std::exchange(other.conn_, nullptr)},
-              slot_{std::exchange(other.slot_, nullptr)} {
-        }
+        SyncExecutor(SyncExecutor&& other) noexcept;
 
-        SyncExecutor& operator=(SyncExecutor&& other) noexcept {
-            if (this != &other) {
-                if (slot_) {
-                    slot_->reset();
-                }
-                conn_ = std::exchange(other.conn_, nullptr);
-                slot_ = std::exchange(other.slot_, nullptr);
-            }
-            return *this;
-        }
+        SyncExecutor& operator=(SyncExecutor&& other) noexcept;
 
         [[nodiscard]] bool valid() const noexcept {
             return conn_ != nullptr;
@@ -174,5 +154,7 @@ namespace demiplane::db::postgres {
         PGconn* conn_;
         ConnectionSlot* slot_ = nullptr;
     };
+
+    static_assert(IsExecutor<SyncExecutor>);
 
 }  // namespace demiplane::db::postgres

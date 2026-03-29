@@ -4,14 +4,25 @@ set(DMP_GEARS ${DMP_COMMON}.Gears)
 # Result class for convenient handling
 ##############################################################################
 add_library(${DMP_GEARS}.Result INTERFACE
-        result/include/gears_exception_result.hpp
-        result/include/gears_outcome.hpp
+        result/gears_exception_result.hpp
+        result/gears_outcome.hpp
 )
 target_include_directories(${DMP_GEARS}.Result INTERFACE
-        result/include/
+        result/
 )
 target_link_libraries(${DMP_GEARS}.Result INTERFACE
         ${DMP_GEARS}.MetaProgramming
+)
+##############################################################################
+
+##############################################################################
+# Custom string library
+##############################################################################
+add_library(${DMP_GEARS}.Strings INTERFACE
+        strings/gears_strings.hpp
+)
+target_include_directories(${DMP_GEARS}.Strings INTERFACE
+        strings/
 )
 ##############################################################################
 
@@ -59,6 +70,7 @@ add_combined_library(${DMP_GEARS}
         ${DMP_GEARS}.Result
         ${DMP_GEARS}.MetaProgramming
         ${DMP_GEARS}.Utilities
+        ${DMP_GEARS}.Strings
 )
 
 add_library(Demiplane::Common::Gears ALIAS ${DMP_GEARS})

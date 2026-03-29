@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include <gears_types.hpp>
+#include <gears_strings.hpp>
 
 namespace demiplane::db {
     namespace constraints {

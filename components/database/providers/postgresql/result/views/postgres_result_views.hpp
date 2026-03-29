@@ -32,7 +32,7 @@ namespace demiplane::db::postgres {
         }
 
         template <typename T>
-        std::optional<T> get() const {
+        [[nodiscard]] std::optional<T> get() const {
             if (is_null_)
                 return std::nullopt;
             return as<T>();

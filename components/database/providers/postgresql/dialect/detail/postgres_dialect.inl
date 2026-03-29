@@ -23,55 +23,6 @@ namespace demiplane::db::postgres {
         }
     }
 
-    template <Appendable StringT>
-    constexpr void PostgresDialect::format_value_impl(StringT& query, const FieldValue& value) {
-        std::visit(
-            [&query]<typename TX>(const TX& val) -> void {
-                using T = std::decay_t<TX>;
-
-                if constexpr (std::is_same_v<T, std::monostate>) {
-                    query += "NULL";
-                } else if constexpr (std::is_same_v<T, bool>) {
-                    query += val ? "TRUE" : "FALSE";
-                } else if constexpr (std::is_same_v<T, char>) {
-                    query += "'";
-                    escape_char(query, val);
-                    query += "'";
-                } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
-                    if consteval {
-                        query += gears::constexpr_to_string(val);
-                    } else {
-                        char buf[32];
-                        auto [end, ec]  = std::to_chars(buf, buf + sizeof(buf), val);
-                        query          += std::string_view{buf, static_cast<std::size_t>(end - buf)};
-                    }
-                } else if constexpr (std::is_integral_v<T>) {
-                    if constexpr (std::is_signed_v<T>) {
-                        if (val < 0) {
-                            query += '-';
-                            query +=
-                                gears::constexpr_to_string(static_cast<std::size_t>(-static_cast<std::int64_t>(val)));
-                        } else {
-                            query += gears::constexpr_to_string(static_cast<std::size_t>(val));
-                        }
-                    } else {
-                        query += gears::constexpr_to_string(static_cast<std::size_t>(val));
-                    }
-                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> ||
-                                     std::is_same_v<T, std::pmr::string>) {
-                    query += "'";
-                    escape_string(query, val);
-                    query += "'";
-                } else if constexpr (std::is_same_v<T, std::vector<std::uint8_t>> ||
-                                     std::is_same_v<T, std::span<const std::uint8_t>>) {
-                    query += format_binary_data(val);
-                } else {
-                    gears::unreachable_c<T>();
-                }
-            },
-            value);
-    }
-
     template <typename Container>
     constexpr std::string PostgresDialect::format_binary_data(const Container& data) {
         std::string result;
@@ -88,4 +39,89 @@ namespace demiplane::db::postgres {
         result += "'";
         return result;
     }
+
+    // ── Per-type formatters ──────────────────────────────────────────────────
+
+    template <Appendable StringT>
+    constexpr void PostgresDialect::format_null(StringT& query) {
+        query += "NULL";
+    }
+
+    template <Appendable StringT>
+    constexpr void PostgresDialect::format_bool(StringT& query, const bool val) {
+        query += val ? "TRUE" : "FALSE";
+    }
+
+    template <Appendable StringT>
+    constexpr void PostgresDialect::format_char(StringT& query, const char val) {
+        query += "'";
+        escape_char(query, val);
+        query += "'";
+    }
+
+    template <Appendable StringT, std::floating_point FloatT>
+    constexpr void PostgresDialect::format_floating(StringT& query, const FloatT val) {
+        if consteval {
+            query += gears::constexpr_to_string(val);  // TODO:C++26: to_chars for floating is not marked as constexpr
+        } else {
+            char buf[32];
+            auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), val);
+            gears::unused_value(ec);  // ignore errors
+            std::string_view view{buf, static_cast<std::size_t>(end - buf)};
+            query += view;
+        }
+    }
+
+    template <Appendable StringT, std::integral IntT>
+    constexpr void PostgresDialect::format_integral(StringT& query, const IntT val) {
+        char buf[24];
+        auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), val);
+        gears::unused_value(ec);  // ignore errors
+        std::string_view view{buf, static_cast<std::size_t>(end - buf)};
+        query += view;
+    }
+
+    template <Appendable StringT, typename StringValT>
+    constexpr void PostgresDialect::format_string_value(StringT& query, const StringValT& val) {
+        query += "'";
+        escape_string(query, val);
+        query += "'";
+    }
+
+    template <Appendable StringT, typename Container>
+    constexpr void PostgresDialect::format_binary(StringT& query, const Container& val) {
+        query += format_binary_data(val);
+    }
+
+    // ── Dispatch ─────────────────────────────────────────────────────────────
+
+    template <Appendable StringT>
+    constexpr void PostgresDialect::format_value_impl(StringT& query, const FieldValue& value) {
+        std::visit(
+            [&query]<typename TX>(const TX& val) -> void {
+                using T = std::decay_t<TX>;
+
+                if constexpr (std::is_same_v<T, std::monostate>) {
+                    format_null(query);
+                } else if constexpr (std::is_same_v<T, bool>) {
+                    format_bool(query, val);
+                } else if constexpr (std::is_same_v<T, char>) {
+                    format_char(query, val);
+                } else if constexpr (std::is_floating_point_v<T>) {
+                    format_floating(query, val);
+                } else if constexpr (std::is_integral_v<T>) {
+                    format_integral(query, val);
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view> ||
+                                     std::is_same_v<T, std::pmr::string>) {
+                    format_string_value(query, val);
+                } else if constexpr (std::is_same_v<T, std::vector<std::uint8_t>> ||
+                                     std::is_same_v<T, std::span<const std::uint8_t>>) {
+                    format_binary(query, val);
+                } else {
+                    gears::unreachable_c<T>();
+                }
+            },
+            value);
+    }
+
 }  // namespace demiplane::db::postgres

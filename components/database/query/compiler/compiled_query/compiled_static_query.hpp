@@ -5,6 +5,7 @@
 
 namespace demiplane::db {
 
+    // TODO:DOC: SqlStringT is only inline for compiler
     template <typename SqlStringT, typename... Params>
     struct CompiledStaticQuery {
         SqlStringT sql_;

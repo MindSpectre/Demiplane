@@ -52,6 +52,31 @@ namespace demiplane::db::postgres {
         template <Appendable StringT>
         static constexpr void format_value_impl(StringT& query, const FieldValue& value);
 
+        // ── Per-type formatters ──────────────────────────────────────────────
+
+        template <Appendable StringT>
+        static constexpr void format_null(StringT& query);
+
+        template <Appendable StringT>
+        static constexpr void format_bool(StringT& query, bool val);
+
+        template <Appendable StringT>
+        static constexpr void format_char(StringT& query, char val);
+
+        template <Appendable StringT, std::floating_point FloatT>
+        static constexpr void format_floating(StringT& query, FloatT val);
+
+        template <Appendable StringT, std::integral IntT>
+        static constexpr void format_integral(StringT& query, IntT val);
+
+        template <Appendable StringT, typename StringValT>
+        static constexpr void format_string_value(StringT& query, const StringValT& val);
+
+        template <Appendable StringT, typename Container>
+        static constexpr void format_binary(StringT& query, const Container& val);
+
+        // ── Helpers ──────────────────────────────────────────────────────────
+
         template <Appendable StringT>
         static constexpr void escape_char(StringT& out, char c);
 

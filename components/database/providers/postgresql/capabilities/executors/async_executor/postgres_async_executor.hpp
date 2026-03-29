@@ -8,6 +8,7 @@
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
 #include <connection_slot.hpp>
+#include <executor_concept.hpp>
 #include <gears_concepts.hpp>
 #include <postgres_params.hpp>
 #include <process_pgresult.hpp>
@@ -24,10 +25,11 @@ namespace demiplane::db::postgres {
      * When constructed with a ConnectionSlot, resets the slot on destruction,
      * eliminating the need for a separate scoped wrapper.
      *
-     * Usage:
-     *   auto exec = AsyncExecutor(conn, co_await asio::this_coro::executor);
-     *   auto result = co_await exec.execute("SELECT * FROM users WHERE id = $1", 42);
-     *   if (result) { process(result.value()); }
+     * @details
+     * Usage:\n
+     *   auto exec = AsyncExecutor(conn, co_await asio::this_coro::executor);\n
+     *   auto result = co_await exec.execute("SELECT * FROM users WHERE id = $1", 42);\n
+     *   if (result) { process(result.value()); }\n
      *
      * Thread safety: NOT thread-safe. Use strand if concurrent access needed.
      * Cancellation: Supports asio cancellation_slot for query cancellation.
@@ -57,8 +59,16 @@ namespace demiplane::db::postgres {
 
         // Movable
         AsyncExecutor(AsyncExecutor&& other) noexcept;
+
         AsyncExecutor& operator=(AsyncExecutor&& other) noexcept;
 
+        [[nodiscard]] bool valid() const noexcept {
+            return conn_ != nullptr && socket_ != nullptr;
+        }
+
+        [[nodiscard]] explicit operator bool() const noexcept {
+            return valid();
+        }
         /**
          * @brief Execute simple query
          * @param query SQL query string (must be null-terminated: std::string, pmr::string, const char*)
@@ -94,16 +104,16 @@ namespace demiplane::db::postgres {
             requires(db::IsFieldValueType<Args> && ...)
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> execute(const QueryT& query,
                                                                                                 Args&&... args) {
-            // NOT a coroutine - runs synchronously to completion
-            // Temporaries are still alive here
+            std::array<std::byte, 2048> stack_buffer{};
+            std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
 
-            auto pool = std::make_shared<std::pmr::unsynchronized_pool_resource>();
-            ParamSink sink(pool.get());
+            ParamSink sink(&pool);
 
             (sink.push(FieldValue{std::forward<Args>(args)}), ...);
 
-            // Pass ownership to coroutine (shared_ptrs copied to coroutine frame before initial_suspend)
-            return execute_with_resources(gears::as_c_str(query), std::move(pool), sink.native_packet());
+            const auto params = sink.native_packet();
+            // pool + params live on coroutine frame — alive across all suspension points
+            co_return co_await execute_impl(gears::as_c_str(query), params.get());
         }
 
         /**
@@ -145,11 +155,9 @@ namespace demiplane::db::postgres {
         [[nodiscard]] executor_type get_executor() const noexcept {
             return executor_;
         }
+
         [[nodiscard]] PGconn* native_handle() const noexcept {
             return conn_;
-        }
-        [[nodiscard]] bool valid() const noexcept {
-            return conn_ != nullptr && socket_ != nullptr;
         }
 
     private:
@@ -160,11 +168,6 @@ namespace demiplane::db::postgres {
         ConnectionSlot* slot_          = nullptr;
 
         // Core implementation
-        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute_with_resources(const char* query,
-                               std::shared_ptr<std::pmr::memory_resource> pool,
-                               std::shared_ptr<Params> params) const;
-
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
         execute_impl(const char* query, const Params* params) const;
 
@@ -181,5 +184,7 @@ namespace demiplane::db::postgres {
         // Shared setup logic
         void setup_connection();
     };
+
+    static_assert(IsExecutor<AsyncExecutor>);
 
 }  // namespace demiplane::db::postgres

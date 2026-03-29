@@ -39,8 +39,11 @@ namespace demiplane::db {
         template <gears::FixedString Name>
         [[nodiscard]] constexpr auto column() const {
             constexpr auto I = find_index<Name>();
-            using T          = pack_element_t<I, FieldSchemas...>::value_type;
-            return TypedColumn<T>{Name.view(), table_name()};
+            static_assert(I < N, "Column name not found in StaticTable");
+            if constexpr (I < N) {
+                using T = pack_element_t<I, FieldSchemas...>::value_type;
+                return TypedColumn<T>{Name.view(), table_name()};
+            }
         }
 
         /// Positional access — returns TypedColumn with deduced name and type
@@ -80,7 +83,7 @@ namespace demiplane::db {
                 if (names[i] == std::string_view{Name})
                     return i;
             }
-            std::unreachable();
+            return N;  // sentinel — triggers static_assert at call site
         }
 
         Providers provider_ = Providers::None;

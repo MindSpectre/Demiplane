@@ -590,39 +590,39 @@ namespace demiplane::db {
             first = false;
 
             // Column name
-            DialectT::quote_identifier(sql_, field->name);
+            DialectT::quote_identifier(sql_, field.name);
             sql_ += " ";
 
             // Column type
-            sql_ += field->db_type;
+            sql_ += field.db_type;
 
             // PRIMARY KEY constraint
-            if (field->is_primary_key) {
+            if (field.is_primary_key) {
                 sql_ += " PRIMARY KEY";
             }
 
             // NOT NULL constraint (skip if primary key - already implies NOT NULL)
-            if (!field->is_nullable && !field->is_primary_key) {
+            if (!field.is_nullable && !field.is_primary_key) {
                 sql_ += " NOT NULL";
             }
 
             // UNIQUE constraint (skip if primary key - already unique)
-            if (field->is_unique && !field->is_primary_key) {
+            if (field.is_unique && !field.is_primary_key) {
                 sql_ += " UNIQUE";
             }
 
             // DEFAULT value
-            if (!field->default_value.empty()) {
+            if (!field.default_value.empty()) {
                 sql_ += " DEFAULT ";
-                sql_ += field->default_value;
+                sql_ += field.default_value;
             }
 
             // FOREIGN KEY constraint
-            if (field->is_foreign_key && !field->foreign_table.empty()) {
+            if (field.is_foreign_key && !field.foreign_table.empty()) {
                 sql_ += " REFERENCES ";
-                DialectT::quote_identifier(sql_, field->foreign_table);
+                DialectT::quote_identifier(sql_, field.foreign_table);
                 sql_ += "(";
-                DialectT::quote_identifier(sql_, field->foreign_column);
+                DialectT::quote_identifier(sql_, field.foreign_column);
                 sql_ += ")";
             }
         }

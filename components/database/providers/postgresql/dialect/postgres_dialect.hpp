@@ -10,7 +10,7 @@ namespace demiplane::db::postgres {
         template <Appendable StringT>
         static constexpr void quote_identifier(StringT& query, std::string_view name) {
             query += '"';
-            query += name;
+            escape_identifier(query, name);
             query += '"';
         }
 
@@ -82,6 +82,9 @@ namespace demiplane::db::postgres {
 
         template <Appendable StringT>
         static constexpr void escape_string(StringT& out, std::string_view str);
+
+        template <Appendable StringT>
+        static constexpr void escape_identifier(StringT& out, std::string_view name);
 
         template <typename Container>
         static constexpr std::string format_binary_data(const Container& data);

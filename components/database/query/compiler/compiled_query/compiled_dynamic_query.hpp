@@ -37,7 +37,7 @@ namespace demiplane::db {
             return std::static_pointer_cast<T>(backend_packet_);
         }
 
-        [[nodiscard]] constexpr Providers provider() const {
+        [[nodiscard]] constexpr Providers provider() const noexcept {
             return provider_;
         }
 

@@ -12,8 +12,8 @@ namespace demiplane::db {
 
         fields_.reserve(schema_->field_count());
         for (const auto& field_schema : schema_->fields()) {
-            field_index_[field_schema->name] = fields_.size();
-            fields_.emplace_back(field_schema.get());
+            field_index_[field_schema.name] = fields_.size();
+            fields_.emplace_back(&field_schema);
         }
     }
 

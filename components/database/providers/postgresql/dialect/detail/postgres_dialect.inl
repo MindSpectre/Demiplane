@@ -23,6 +23,17 @@ namespace demiplane::db::postgres {
         }
     }
 
+    template <Appendable StringT>
+    constexpr void PostgresDialect::escape_identifier(StringT& out, const std::string_view name) {
+        for (const char c : name) {
+            if (c == '"') {
+                out += "\"\"";
+            } else {
+                out += c;
+            }
+        }
+    }
+
     template <typename Container>
     constexpr std::string PostgresDialect::format_binary_data(const Container& data) {
         std::string result;

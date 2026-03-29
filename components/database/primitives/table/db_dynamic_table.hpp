@@ -49,15 +49,15 @@ namespace demiplane::db {
         [[nodiscard]] const DynamicFieldSchema* get_field_schema(std::string_view name) const;
         [[nodiscard]] DynamicFieldSchema* get_field_schema(std::string_view name);
 
-        [[nodiscard]] constexpr const std::string& table_name() const {
+        [[nodiscard]] constexpr const std::string& table_name() const noexcept {
             return table_name_;
         }
 
-        [[nodiscard]] constexpr std::size_t field_count() const {
+        [[nodiscard]] constexpr std::size_t field_count() const noexcept {
             return fields_.size();
         }
 
-        [[nodiscard]] constexpr const std::vector<std::unique_ptr<DynamicFieldSchema>>& fields() const {
+        [[nodiscard]] constexpr const std::vector<DynamicFieldSchema>& fields() const noexcept {
             return fields_;
         }
 
@@ -68,15 +68,13 @@ namespace demiplane::db {
         // Get all column names
         [[nodiscard]] std::vector<std::string> field_names() const;
 
-        [[nodiscard]] std::shared_ptr<DynamicTable> clone();
-
         [[nodiscard]] static std::shared_ptr<DynamicTable> make_ptr(std::string name) {
             return std::make_shared<DynamicTable>(std::move(name));
         }
 
     private:
         std::string table_name_;
-        std::vector<std::unique_ptr<DynamicFieldSchema>> fields_;
+        std::vector<DynamicFieldSchema> fields_;
         boost::unordered_map<std::string, std::size_t, gears::StringHash, gears::StringEqual> field_index_;
         Providers provider_ = Providers::None;
     };

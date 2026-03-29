@@ -19,6 +19,7 @@ namespace demiplane::db::postgres {
     Transaction::~Transaction() {
         if (slot_) {
             if (status_ == TransactionStatus::ACTIVE) {
+                COMPONENT_LOG_WRN() << "Transaction destroyed while still active — performing safety-net ROLLBACK";
                 PQclear(PQexec(slot_->conn, "ROLLBACK"));
             }
             slot_->reset();

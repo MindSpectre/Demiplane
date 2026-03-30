@@ -9,6 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN dnf -y group install development-tools
 RUN dnf -y install  \
     clang  \
+    clang-tools-extra \
     perl-IPC-Cmd  \
     kernel-headers \
     curl  \

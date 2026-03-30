@@ -18,7 +18,9 @@ RUN dnf -y install  \
     make  \
     cmake \
     autoconf \
+    autoconf-archive \
     automake  \
+    libtool \
     ninja
 
 RUN dnf install -y perl-CPAN

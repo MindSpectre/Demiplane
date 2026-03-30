@@ -1,35 +1,50 @@
 #pragma once
 
-#include <algorithm>
+#include <gears_concepts.hpp>
 
 #include "../basic.hpp"
-#include "db_table_schema.hpp"
 
 namespace demiplane::db {
-    class DeleteExpr : public Expression<DeleteExpr> {
+    template <IsTable TableT>
+    class DeleteExpr : public Expression<DeleteExpr<TableT>>, public TableHolder<TableT> {
     public:
-        constexpr explicit DeleteExpr(TableSchemaPtr t)
-            : table_(std::move(t)) {
+        template <IsTable TableTp = std::remove_cvref_t<TableT>>
+        constexpr explicit DeleteExpr(TableTp&& t)
+            : TableHolder<TableT>{std::forward<TableTp>(t)} {
         }
 
-        template <IsCondition Condition>
-        [[nodiscard]] auto where(Condition cond) const {
-            return DeleteWhereExpr<Condition>{*this, std::move(cond)};
+        template <typename Self, IsCondition ConditionTp>
+        [[nodiscard]] constexpr auto where(this Self&& self, ConditionTp&& cond) noexcept {
+            return DeleteWhereExpr<TableT, std::remove_cvref_t<ConditionTp>>{std::forward<Self>(self),
+                                                                             std::forward<ConditionTp>(cond)};
         }
-
-        [[nodiscard]] const TableSchemaPtr& table() const {
-            return table_;
-        }
-
-    private:
-        TableSchemaPtr table_;
     };
 
-    inline auto delete_from(TableSchemaPtr table) {
-        return DeleteExpr{std::move(table)};
+    // 1. Pointer
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>> &&
+                 (!gears::IsStringLike<DynamicTablePtrTp>)
+    auto delete_from(DynamicTablePtrTp&& table) noexcept {
+        return DeleteExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table)};
     }
 
-    inline auto delete_from(std::string table_name) {
-        return DeleteExpr{TableSchema::make_ptr(std::move(table_name))};
+    // 2. std::string (general)
+    template <typename StringTp>
+        requires gears::IsStringLike<StringTp> && (!gears::IsStringViewLike<StringTp>)
+    constexpr auto delete_from(StringTp&& table_name) noexcept {
+        return DeleteExpr<std::string>{std::forward<StringTp>(table_name)};
+    }
+
+    // 3. string_view (more specific - wins due to subsumption)
+    template <typename StringTp>
+        requires gears::IsStringViewLike<StringTp>
+    constexpr auto delete_from(StringTp&& table_name) noexcept {
+        return DeleteExpr<std::string_view>{std::forward<StringTp>(table_name)};
+    }
+
+    // 4. Static table
+    template <IsStaticTable TableTp>
+    constexpr auto delete_from(const TableTp& table) noexcept {
+        return DeleteExpr<TableTp>{table};
     }
 }  // namespace demiplane::db

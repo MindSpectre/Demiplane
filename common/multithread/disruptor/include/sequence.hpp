@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-#include "gears_utils.hpp"
+#include <gears_utils.hpp>
 
 namespace demiplane::multithread {
 
@@ -143,7 +143,7 @@ namespace demiplane::multithread {
         std::atomic<std::int64_t> value_;
 
         // Padding to ensure 64-byte cache-line alignment
-        char padding_[64 - sizeof(std::atomic<std::int64_t>)];
+        char padding_[64 - sizeof(std::atomic<std::int64_t>)]{};
     };
 
     // Compile-time verification that our alignment worked

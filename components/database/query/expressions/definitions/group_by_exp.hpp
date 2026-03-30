@@ -1,7 +1,5 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 
 namespace demiplane::db {
@@ -10,13 +8,15 @@ namespace demiplane::db {
     class GroupByExprBase : public Expression<Derived>,
                             public QueryOperations<Derived, AllowHaving, AllowOrderBy, AllowLimit> {
     public:
-        constexpr explicit GroupByExprBase(PreGroupQuery q)
-            : query_(std::move(q)) {
+        template <typename PreGroupQueryTp>
+            requires std::constructible_from<PreGroupQuery, PreGroupQueryTp>
+        constexpr explicit GroupByExprBase(PreGroupQueryTp&& q) noexcept
+            : query_{std::forward<PreGroupQueryTp>(q)} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& query(this Self&& self) {
-            return std::forward<Self>(self).query_;
+        [[nodiscard]] constexpr auto&& query(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.query_);
         }
 
     protected:
@@ -24,19 +24,27 @@ namespace demiplane::db {
     };
 
     // Specialized for column-based grouping
-    template <IsQuery PreGroupQuery, IsColumn... GroupColumns>
+    template <IsQuery PreGroupQuery, IsColumnLike... GroupColumns>
     class GroupByColumnExpr : public GroupByExprBase<GroupByColumnExpr<PreGroupQuery, GroupColumns...>, PreGroupQuery> {
         using Base = GroupByExprBase<GroupByColumnExpr, PreGroupQuery>;
 
     public:
-        constexpr explicit GroupByColumnExpr(PreGroupQuery q, GroupColumns... cols)
-            : Base(std::move(q)),
-              columns_(cols...) {
+        template <typename PreGroupQueryTp, typename... GroupColumnsTp>
+            requires std::constructible_from<PreGroupQuery, PreGroupQueryTp> &&
+                         (std::constructible_from<GroupColumns, GroupColumnsTp> && ...)
+        constexpr explicit GroupByColumnExpr(PreGroupQueryTp&& q, GroupColumnsTp&&... cols) noexcept
+            : Base{std::forward<PreGroupQueryTp>(q)},
+              columns_{std::forward<GroupColumnsTp>(cols)...} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& columns(this Self&& self) {
-            return std::forward<Self>(self).columns_;
+        [[nodiscard]] constexpr auto&& columns(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.columns_);
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.query_), std::forward_like<Self>(self.columns_));
         }
 
     private:
@@ -49,14 +57,23 @@ namespace demiplane::db {
         using Base = GroupByExprBase<GroupByQueryExpr, PreGroupQuery>;
 
     public:
-        constexpr GroupByQueryExpr(PreGroupQuery q, GroupingCriteria&& criteria)
-            : Base(std::move(q)),
-              grouping_criteria_(std::forward<GroupingCriteria>(criteria)) {
+        template <typename GroupByExprBaseTp, typename GroupingCriteriaTp>
+            requires std::constructible_from<PreGroupQuery, GroupByExprBaseTp> &&
+                         std::constructible_from<GroupingCriteria, GroupingCriteriaTp>
+        constexpr GroupByQueryExpr(GroupByExprBaseTp&& q, GroupingCriteriaTp&& criteria) noexcept
+            : Base{std::forward<GroupByExprBaseTp>(q)},
+              grouping_criteria_{std::forward<GroupingCriteriaTp>(criteria)} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& criteria(this Self&& self) {
-            return std::forward<Self>(self).grouping_criteria_;
+        [[nodiscard]] constexpr auto&& criteria(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.grouping_criteria_);
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.query_),
+                                         std::forward_like<Self>(self.grouping_criteria_));
         }
 
     private:

@@ -13,9 +13,9 @@
 using namespace demiplane::nexus;
 using namespace std::chrono_literals;
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Test Fixtures & Helpers (Global scope)
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 struct LifecycleTracker {
     static constexpr uint32_t nexus_id = 0x9001;
@@ -136,9 +136,9 @@ protected:
     Nexus nexus;
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Basic Registration & Spawning Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class BasicOperationsTest : public NexusTestFixture {};
 
@@ -238,9 +238,9 @@ TEST_F(BasicOperationsTest, CustomIds_SameTypeMultipleInstances) {
     EXPECT_EQ(error_logger->level, "ERROR");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Dependency Injection Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class DependencyInjectionTest : public NexusTestFixture {};
 
@@ -270,9 +270,9 @@ TEST_F(DependencyInjectionTest, SharedDependency_SameInstance) {
     EXPECT_EQ(service1->dep.get(), direct_service.get());
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Lifetime Policy Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class LifetimePolicyTest : public NexusTestFixture {};
 
@@ -334,9 +334,9 @@ TEST_F(LifetimePolicyTest, Timed_AccessRenewsLease) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Thread Safety Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class ThreadSafetyTest : public NexusTestFixture {};
 
@@ -447,9 +447,9 @@ TEST_F(ThreadSafetyTest, MixedOperations_StressTest) {
     EXPECT_EQ(errors.load(), 0);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Error Handling Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class ErrorHandlingTest : public NexusTestFixture {};
 
@@ -474,9 +474,9 @@ TEST_F(ErrorHandlingTest, FactoryException_Propagated) {
     EXPECT_THROW(nexus.get<Service>(), std::runtime_error);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Performance Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class PerformanceTest : public NexusTestFixture {};
 
@@ -526,9 +526,9 @@ TEST_F(PerformanceTest, ScalabilityTest_ManyTypes) {
     EXPECT_LT(spawn_time, 1s);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+
 // Integration Tests
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 class IntegrationTest : public NexusTestFixture {};
 

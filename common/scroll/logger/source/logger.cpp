@@ -1,5 +1,8 @@
 #include "logger.hpp"
 
+#include "console_sink.hpp"
+#include "light_entry.hpp"
+
 namespace demiplane::scroll {
     void Logger::shutdown() {
         if (!running_.load(std::memory_order_acquire)) {
@@ -20,7 +23,6 @@ namespace demiplane::scroll {
     }
     void Logger::consumer_loop() {
         std::int64_t next_seq = 0;
-
         while (running_.load(std::memory_order_acquire)) {
             // Wait for published sequences
             const std::int64_t available = disruptor_.sequencer().get_highest_published(next_seq, disruptor_.sequencer().get_cursor());

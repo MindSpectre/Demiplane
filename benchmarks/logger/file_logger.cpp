@@ -75,7 +75,8 @@ void run_throughput_benchmark(
     auto logger = std::make_unique<demiplane::scroll::Logger>(
         demiplane::scroll::LoggerConfig{}
             .wait_strategy<demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin>()
-            .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium));
+            .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium)
+            .finalize());
     logger->add_sink(sink);
 
     std::vector<std::thread> threads;
@@ -100,12 +101,10 @@ void run_throughput_benchmark(
         for (auto& thread : threads) {
             thread.join();
         }
-
-        logger->shutdown();
     });
-
+    logger->shutdown();
     // Count entries in file
-    auto result    = count_log_entries(sink->config().file);
+    auto result    = count_log_entries(sink->config().get_file());
     result.elapsed = elapsed;
 
     // Calculate throughput and latency
@@ -121,21 +120,22 @@ int main() {
     std::cout << "Configuration: " << THREAD_COUNT << " threads × " << RECORDS_PER_THREAD
               << " entries = " << TOTAL_EXPECTED_RECORDS << " total\n";
 
-    demiplane::scroll::FileSinkConfig config{
-        .threshold            = demiplane::scroll::LogLevel::Debug,
-        .file                 = "benchmark_throughput.log",
-        .add_time_to_filename = false,
-        .max_file_size        = demiplane::gears::literals::operator""_mb(500),
-        .flush_each_entry     = false,  // Maximum throughput mode
-    };
+    demiplane::scroll::FileSinkConfig config = demiplane::scroll::FileSinkConfig{}
+                                                   .threshold(demiplane::scroll::LogLevel::Debug)
+                                                   .file("benchmark_throughput.log")
+                                                   .add_time_to_filename(false)
+                                                   .max_file_size(demiplane::gears::literals::operator""_mb(500))
+                                                   .flush_each_entry(false)
+                                                   .rotation(false)
+                                                   .finalize();  // Maximum throughput mode
 
-    std::filesystem::remove(config.file);
+    std::filesystem::remove(config.get_file());
 
     const auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(config);
 
     run_throughput_benchmark(file_sink);
 
-    std::cout << "\nLog file: " << config.file << "\n";
+    std::cout << "\nLog file: " << config.get_file() << "\n";
 
     return 0;
 }

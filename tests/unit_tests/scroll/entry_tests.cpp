@@ -10,7 +10,7 @@ class ServiceTest {
 public:
     void do_something() const {
         std::cout << "Doing something" << std::endl;
-        demiplane::gears::enforce_non_static(this);
+        demiplane::gears::force_non_static(this);
     }
 
     constexpr static std::string_view name = "ServiceTest";
@@ -76,19 +76,16 @@ TEST(TestEntries, MakeEntryFromEvent) {
     LogEvent event{INF, "Test message from event", std::source_location::current()};
 
     // Create DetailedEntry from LogEvent
-    auto detailed_entry = make_entry_from_event<DetailedEntry>(event);
+    auto detailed_entry         = make_entry_from_event<DetailedEntry>(event);
     std::string detailed_output = detailed_entry.to_string();
 
     EXPECT_TRUE(detailed_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(detailed_output.find("INF") != std::string::npos);
 
     // Create LightEntry from same LogEvent
-    auto light_entry = make_entry_from_event<LightEntry>(event);
+    auto light_entry         = make_entry_from_event<LightEntry>(event);
     std::string light_output = light_entry.to_string();
 
     EXPECT_TRUE(light_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(light_output.find("INF") != std::string::npos);
 }
-
-
-

@@ -1,9 +1,9 @@
 
+#include <chrono>
 #include <demiplane/scroll>
+#include <thread>
 
 #include <gtest/gtest.h>
-#include <thread>
-#include <chrono>
 
 
 class ServiceX final : demiplane::scroll::TestLoggerProvider {
@@ -33,7 +33,7 @@ public:
         for (const auto& msg : expected_messages) {
             EXPECT_TRUE(output.find(msg) != std::string::npos) << "Message not found: " << msg;
         }
-        demiplane::gears::enforce_non_const(this);
+        demiplane::gears::force_non_const(this);
     }
     static constexpr std::string_view name = "ServiceX";
 };
@@ -44,19 +44,18 @@ TEST(LoggerProviderTest, StreamStyleLogging) {
 }
 
 TEST(LoggerProviderTest, FormatStyleLogging) {
-    auto logger = std::make_shared<demiplane::scroll::Logger>();
+    const auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
-        demiplane::scroll::ConsoleSinkConfig{
-            .threshold = demiplane::scroll::LogLevel::Debug,
-            .enable_colors = false,
-            .flush_each_entry = true
-        }
-    ));
+        demiplane::scroll::ConsoleSinkConfig{}
+            .threshold(demiplane::scroll::LogLevel::Debug)
+            .enable_colors(false)
+            .flush_each_entry(true)
+            .finalize()));
 
     testing::internal::CaptureStdout();
 
     std::string username = "alice";
-    int count = 42;
+    int count            = 42;
 
     LOG_DIRECT_FMT_INF(logger, "User {} has {} items", username, count);
     LOG_DIRECT_FMT_DBG(logger, "Debug message with value {}", 123);
@@ -72,12 +71,11 @@ TEST(LoggerProviderTest, FormatStyleLogging) {
 TEST(LoggerProviderTest, OverloadedMacros) {
     const auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
-        demiplane::scroll::ConsoleSinkConfig{
-            .threshold = demiplane::scroll::LogLevel::Debug,
-            .enable_colors = false,
-            .flush_each_entry = true
-        }
-    ));
+        demiplane::scroll::ConsoleSinkConfig{}
+            .threshold(demiplane::scroll::LogLevel::Debug)
+            .enable_colors(false)
+            .flush_each_entry(true)
+            .finalize()));
 
 
     testing::internal::CaptureStdout();

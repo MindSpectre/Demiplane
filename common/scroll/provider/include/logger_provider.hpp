@@ -20,7 +20,8 @@ namespace demiplane::scroll {
         LoggerProvider() = default;
 
         explicit LoggerProvider(std::shared_ptr<Logger> logger)
-            : logger_{std::move(logger)} {}
+            : logger_{std::move(logger)} {
+        }
 
         [[nodiscard]] Logger* get_logger() noexcept {
             return logger_.get();
@@ -75,13 +76,8 @@ namespace demiplane::scroll {
     public:
         explicit TestLoggerProvider() {
             auto logger = std::make_shared<Logger>();
-            logger->add_sink(std::make_unique<ConsoleSink<DetailedEntry>>(
-                ConsoleSinkConfig{
-                    .threshold = LogLevel::Debug,
-                    .enable_colors = true,
-                    .flush_each_entry = true  // Important for tests
-                }
-            ));
+            logger->add_sink(std::make_shared<ConsoleSink<DetailedEntry>>(
+                ConsoleSinkConfig{}.threshold(LogLevel::Debug).enable_colors(true).flush_each_entry(true)));
             set_logger(std::move(logger));
         }
     };

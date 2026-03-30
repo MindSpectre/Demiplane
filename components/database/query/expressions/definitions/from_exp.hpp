@@ -1,36 +1,43 @@
 #pragma once
 
-#include <algorithm>
 #include <utility>
 
 #include "../basic.hpp"
 
 namespace demiplane::db {
-    template <IsQuery Select>
-    class FromTableExpr
-        : public AliasableExpression<FromTableExpr<Select>>,
-          public QueryOperations<FromTableExpr<Select>, AllowGroupBy, AllowOrderBy, AllowLimit, AllowJoin, AllowWhere> {
+    template <IsQuery Select, IsTable TableT>
+    class FromTableExpr : public AliasableExpression<FromTableExpr<Select, TableT>>,
+                          public QueryOperations<FromTableExpr<Select, TableT>,
+                                                 AllowGroupBy,
+                                                 AllowOrderBy,
+                                                 AllowLimit,
+                                                 AllowJoin,
+                                                 AllowWhere>,
+                          public TableHolder<TableT> {
     public:
-        constexpr FromTableExpr(Select select_q, TableSchemaPtr table)
-            : select_(std::move(select_q)),
-              table_(std::move(table)) {
+        template <typename SelectTp, typename TableTp>
+            requires std::constructible_from<Select, SelectTp> && std::constructible_from<TableT, TableTp>
+        constexpr FromTableExpr(SelectTp&& select_q, TableTp&& table) noexcept
+            : TableHolder<TableT>{std::forward<TableTp>(table)},
+              select_{std::forward<SelectTp>(select_q)} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& select(this Self&& self) {
-            return std::forward<Self>(self).select_;
+        [[nodiscard]] constexpr auto&& select(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.select_);
         }
 
-        [[nodiscard]] const TableSchemaPtr& table() const {
-            return table_;
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.select_),
+                                         std::forward_like<Self>(self.table),
+                                         std::forward_like<Self>(self.alias));
         }
 
     private:
         Select select_;
-        TableSchemaPtr table_;
     };
 
-    // FromQueryExpr with proper inheritance order
     template <IsQuery Select, IsCteExpr CteQuery>
     class FromCteExpr : public Expression<FromCteExpr<Select, CteQuery>>,
                         public QueryOperations<FromCteExpr<Select, CteQuery>,
@@ -40,19 +47,26 @@ namespace demiplane::db {
                                                AllowJoin,
                                                AllowWhere> {
     public:
-        constexpr FromCteExpr(Select select_q, CteQuery&& expr)
-            : select_(std::move(select_q)),
-              query_(std::forward<CteQuery>(expr)) {
+        template <typename SelectTp, typename CteQueryTp>
+            requires std::constructible_from<Select, SelectTp> && std::constructible_from<CteQuery, CteQueryTp>
+        constexpr FromCteExpr(SelectTp&& select_q, CteQueryTp&& expr) noexcept
+            : select_{std::forward<SelectTp>(select_q)},
+              query_{std::forward<CteQueryTp>(expr)} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& select(this Self&& self) {
-            return std::forward<Self>(self).select_;
+        [[nodiscard]] constexpr auto&& select(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.select_);
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& cte_query(this Self&& self) {
-            return std::forward<Self>(self).query_;
+        [[nodiscard]] constexpr auto&& cte_query(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.query_);
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.select_), std::forward_like<Self>(self.query_));
         }
 
     private:

@@ -1,31 +1,35 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
 #include "delete_exp.hpp"
 
 namespace demiplane::db {
-    template <IsCondition Condition>
-    class DeleteWhereExpr : public Expression<DeleteWhereExpr<Condition>> {
+    template <IsTable TableT, IsCondition Condition>
+    class DeleteWhereExpr : public Expression<DeleteWhereExpr<TableT, Condition>> {
     public:
-        DeleteWhereExpr(DeleteExpr d, Condition c)
-            : del_(std::move(d)),
-              condition_(std::move(c)) {
+        template <typename DeleteExprTp, typename ConditionTp>
+        constexpr DeleteWhereExpr(DeleteExprTp&& d, ConditionTp&& c)
+            : del_{std::forward<DeleteExprTp>(d)},
+              condition_{std::forward<ConditionTp>(c)} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& del(this Self&& self) {
-            return std::forward<Self>(self).del_;
+        [[nodiscard]] constexpr auto&& del(this Self&& self) {
+            return std::forward_like<Self>(self.del_);
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& condition(this Self&& self) {
-            return std::forward<Self>(self).condition_;
+        [[nodiscard]] constexpr auto&& condition(this Self&& self) {
+            return std::forward_like<Self>(self.condition_);
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.del_), std::forward_like<Self>(self.condition_));
         }
 
     private:
-        DeleteExpr del_;
+        DeleteExpr<TableT> del_;
         Condition condition_;
     };
 }  // namespace demiplane::db

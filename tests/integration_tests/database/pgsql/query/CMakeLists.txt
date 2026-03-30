@@ -1,0 +1,129 @@
+##############################################################################
+# PostgreSQL Compiled Query Functional Tests
+# Tests query compilation + execution with SyncExecutor
+##############################################################################
+
+# Common link libraries for all query tests
+set(PGSQL_QUERY_TEST_LIBS
+        Demiplane::Component::Database::PostgreSQL
+        ${INTEGRATION_POSTGRESQL_TESTS}.TestFixture
+        ${TEST_LIBS}
+)
+
+# SELECT query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSelect
+        compiled_select_test.cpp
+        LINK_LIBS
+        ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# INSERT query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledInsert
+        compiled_insert_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# UPDATE query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledUpdate
+        compiled_update_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# DELETE query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledDelete
+        compiled_delete_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# JOIN query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledJoin
+        compiled_join_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# AGGREGATE query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledAggregate
+        compiled_aggregate_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# SUBQUERY query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSubquery
+        compiled_subquery_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# CONDITION query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCondition
+        compiled_condition_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# CLAUSE query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledClause
+        compiled_clause_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# CTE (Common Table Expression) query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCte
+        compiled_cte_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# CASE expression query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledCase
+        compiled_case_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# SET operations query tests (inline DSL)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledSetOperations
+        compiled_set_operations_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+# DDL query tests (CREATE TABLE, DROP TABLE)
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.Query.CompiledDdl
+        compiled_ddl_test.cpp
+        LINK_LIBS ${PGSQL_QUERY_TEST_LIBS}
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)

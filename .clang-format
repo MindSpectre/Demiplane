@@ -179,13 +179,13 @@ IncludeCategories:
     CaseSensitive: false
 
   # Priority 2: System/library headers ending with .hpp in angle brackets
-  - Regex: '^<.*\.hpp>$'
+  - Regex: '^<.*\.hpp|.h>$'
     Priority: 2
     SortPriority: 2
     CaseSensitive: false
 
   # Priority 3: Project headers ending with .hpp in quotes
-  - Regex: '^".*\.hpp"$'
+  - Regex: '^".*\.hpp|.h"$'
     Priority: 3
     SortPriority: 3
     CaseSensitive: false

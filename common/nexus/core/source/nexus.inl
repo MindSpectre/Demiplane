@@ -20,7 +20,7 @@ namespace demiplane::nexus {
     template <class T, typename Factory>
         requires std::is_invocable_v<Factory>
     void Nexus::register_instance(Factory&& f, const nexus_id_t id, const Lifetime lt) {
-        boost::unique_lock lk{mtx_};
+        std::unique_lock lk{mtx_};
         Slot& s   = map_[Key{typeid(T), id}];
         s.obj     = nullptr;  // lazy
         s.factory = to_void_factory(std::forward<Factory>(f));
@@ -29,7 +29,7 @@ namespace demiplane::nexus {
 
     template <class T>
     void Nexus::register_instance(std::shared_ptr<T> sp, const nexus_id_t id, const Lifetime lt) {
-        boost::unique_lock lk{mtx_};
+        std::unique_lock lk{mtx_};
         Slot& s      = map_[Key{typeid(T), id}];
         s.obj        = std::move(sp);
         s.factory    = nullptr;
@@ -49,7 +49,7 @@ namespace demiplane::nexus {
 
         // Fast path - check if already constructed
         {
-            boost::shared_lock r_lock{mtx_};
+            std::shared_lock r_lock{mtx_};
             const auto it = map_.find(k);
             if (it == map_.end()) {
                 throw std::runtime_error("Nexus::spawn – not registered");
@@ -72,7 +72,7 @@ namespace demiplane::nexus {
         std::function<std::shared_ptr<void>()> factory_copy;
 
         {
-            boost::shared_lock r_lock{mtx_};
+            std::shared_lock r_lock{mtx_};
             const auto it = map_.find(k);
             if (it == map_.end()) {
                 throw std::runtime_error("Nexus::spawn – not registered");
@@ -89,7 +89,7 @@ namespace demiplane::nexus {
 
         // Double-check after acquiring construction lock
         {
-            boost::shared_lock r_lock{mtx_};
+            std::shared_lock r_lock{mtx_};
             if (const auto it = map_.find(k); it != map_.end()) {
                 // Check again if object was constructed by another thread
                 if (auto& sl = it->second; std::holds_alternative<Timed>(sl.lt) && sl.expired_flag &&
@@ -112,7 +112,7 @@ namespace demiplane::nexus {
 
         // Store the constructed object
         {
-            boost::unique_lock w_lock{mtx_};
+            std::unique_lock w_lock{mtx_};
             const auto it = map_.find(k);
             if (it == map_.end()) {
                 throw std::runtime_error("Nexus::spawn – registration removed during construction");
@@ -135,7 +135,7 @@ namespace demiplane::nexus {
 
     template <class T>
     void Nexus::reset(const std::uint32_t id) {
-        boost::unique_lock lk{mtx_};
+        std::unique_lock lk{mtx_};
         const Key k{typeid(T), id};
         const auto it = map_.find(k);
         if (it == map_.end()) {
@@ -148,7 +148,7 @@ namespace demiplane::nexus {
     }
     template <class T>
     bool Nexus::has(const nexus_id_t id) const noexcept {
-        boost::shared_lock lk{mtx_};
+        std::shared_lock lk{mtx_};
         return map_.contains(Key{typeid(T), id});
     }
 
@@ -161,7 +161,7 @@ namespace demiplane::nexus {
     }
 
     inline std::size_t Nexus::size() const noexcept {
-        boost::shared_lock lk{mtx_};
+        std::shared_lock lk{mtx_};
         return map_.size();
     }
 }  // namespace demiplane::nexus

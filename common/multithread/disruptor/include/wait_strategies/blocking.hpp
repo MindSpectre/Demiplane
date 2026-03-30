@@ -1,4 +1,6 @@
 #pragma once
+#include <condition_variable>
+#include <mutex>
 
 #include "wait_strategy.hpp"
 

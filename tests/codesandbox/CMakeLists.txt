@@ -1,7 +1,5 @@
-add_executable(${PROJECT_NAME}.Tests.Sandbox
+add_unit_test(${TESTS_TARGET}.Codesandbox
         main.cpp
-)
-target_link_libraries(${PROJECT_NAME}.Tests.Sandbox
-        PRIVATE
-        Demiplane::Common::Scroll
+        LINK_LIBS
+        ${TEST_LIBS}
 )

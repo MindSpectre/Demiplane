@@ -97,9 +97,12 @@ Testing/
 # ===========================
 # Private specific
 # ===========================
-tests/codesandbox/
-
 
 # AI
 /CLAUDE.md
 .claude/
+
+# Test environment overrides
+.env.test.local
+
+/tests/codesandbox/

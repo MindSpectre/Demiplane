@@ -4,11 +4,11 @@ set(DMP_GEARS ${DMP_COMMON}.Gears)
 # Result class for convenient handling
 ##############################################################################
 add_library(${DMP_GEARS}.Result INTERFACE
-        result/include/gears_exception_result.hpp
-        result/include/gears_outcome.hpp
+        result/gears_exception_result.hpp
+        result/gears_outcome.hpp
 )
 target_include_directories(${DMP_GEARS}.Result INTERFACE
-        result/include/
+        result/
 )
 target_link_libraries(${DMP_GEARS}.Result INTERFACE
         ${DMP_GEARS}.MetaProgramming
@@ -16,16 +16,27 @@ target_link_libraries(${DMP_GEARS}.Result INTERFACE
 ##############################################################################
 
 ##############################################################################
+# Custom string library
+##############################################################################
+add_library(${DMP_GEARS}.Strings INTERFACE
+        strings/gears_strings.hpp
+)
+target_include_directories(${DMP_GEARS}.Strings INTERFACE
+        strings/
+)
+##############################################################################
+
+##############################################################################
 # Traits for classes
 ##############################################################################
 add_library(${DMP_GEARS}.MetaProgramming INTERFACE
-        meta_programming/include/gears_class_traits.hpp
-        meta_programming/include/gears_templates.hpp
-        meta_programming/include/gears_concepts.hpp
-        meta_programming/include/gears_exceptions.hpp
+        meta_programming/gears_class_traits.hpp
+        meta_programming/gears_templates.hpp
+        meta_programming/gears_concepts.hpp
+        meta_programming/gears_exceptions.hpp
 )
 target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
-        meta_programming/include
+        meta_programming/
 )
 ##############################################################################
 
@@ -33,13 +44,17 @@ target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
 # Traits for classes
 ##############################################################################
 add_library(${DMP_GEARS}.Utilities INTERFACE
-        utilities/include/gears_macros.hpp
-        utilities/include/gears_utils.hpp
-        utilities/include/gears_types.hpp
-        utilities/include/gears_hash.hpp
+        utilities/gears_macros.hpp
+        utilities/gears_utils.hpp
+        utilities/gears_types.hpp
+        utilities/gears_hash.hpp
+        utilities/gears_convert.hpp
 )
 target_include_directories(${DMP_GEARS}.Utilities INTERFACE
-        utilities/include
+        utilities/
+)
+target_link_libraries(${DMP_GEARS}.Utilities INTERFACE
+        ${DMP_GEARS}.MetaProgramming
 )
 ##############################################################################
 
@@ -55,6 +70,7 @@ add_combined_library(${DMP_GEARS}
         ${DMP_GEARS}.Result
         ${DMP_GEARS}.MetaProgramming
         ${DMP_GEARS}.Utilities
+        ${DMP_GEARS}.Strings
 )
 
 add_library(Demiplane::Common::Gears ALIAS ${DMP_GEARS})

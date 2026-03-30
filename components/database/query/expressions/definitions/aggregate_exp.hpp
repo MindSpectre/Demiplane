@@ -3,99 +3,129 @@
 #include <utility>
 
 #include "../basic.hpp"
-#include "aggregate_exp.hpp"
-#include "db_column.hpp"
 
 namespace demiplane::db {
-    // Count expression with optional distinct support
-    class CountExpr : public AliasableExpression<CountExpr>, public ColumnHolder {
+    template <IsColumnLike ColT>
+    class CountExpr : public AliasableExpression<CountExpr<ColT>>, public ColumnHolder<ColT> {
     public:
-        explicit CountExpr(DynamicColumn col, const bool dist)
-            : ColumnHolder{std::move(col)},
-              distinct_(dist) {
-        }
-
-        explicit CountExpr(AllColumns col, const bool dist)
-            : ColumnHolder{std::move(col)},
+        template <typename ColumnTp>
+            requires std::constructible_from<ColT, ColumnTp>
+        constexpr CountExpr(ColumnTp&& col, const bool dist) noexcept
+            : ColumnHolder<ColT>{std::forward<ColumnTp>(col)},
               distinct_{dist} {
         }
 
-        [[nodiscard]] bool distinct() const {
+        [[nodiscard]] constexpr bool distinct() const noexcept {
             return distinct_;
         }
 
     private:
-        bool distinct_{false};
+        bool distinct_ = false;
     };
 
-    // Simple aggregate expressions
-    class SumExpr : public AliasableExpression<SumExpr>, public ColumnHolder {
+    template <IsColumnLike ColT>
+    class SumExpr : public AliasableExpression<SumExpr<ColT>>, public ColumnHolder<ColT> {
     public:
-        explicit SumExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {
+        template <typename ColumnTp>
+            requires std::constructible_from<ColT, ColumnTp>
+        constexpr explicit SumExpr(ColumnTp&& column) noexcept
+            : ColumnHolder<ColT>{std::forward<ColumnTp>(column)} {
         }
     };
 
-    class AvgExpr : public AliasableExpression<AvgExpr>, public ColumnHolder {
+    template <IsColumnLike ColT>
+    class AvgExpr : public AliasableExpression<AvgExpr<ColT>>, public ColumnHolder<ColT> {
     public:
-        explicit AvgExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {
+        template <typename ColumnTp>
+            requires std::constructible_from<ColT, ColumnTp>
+        constexpr explicit AvgExpr(ColumnTp&& column) noexcept
+            : ColumnHolder<ColT>{std::forward<ColumnTp>(column)} {
         }
     };
 
-    class MaxExpr : public AliasableExpression<MaxExpr>, public ColumnHolder {
+    template <IsColumnLike ColT>
+    class MaxExpr : public AliasableExpression<MaxExpr<ColT>>, public ColumnHolder<ColT> {
     public:
-        explicit MaxExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {
+        template <typename ColumnTp>
+            requires std::constructible_from<ColT, ColumnTp>
+        constexpr explicit MaxExpr(ColumnTp&& column) noexcept
+            : ColumnHolder<ColT>{std::forward<ColumnTp>(column)} {
         }
     };
 
-
-    class MinExpr : public AliasableExpression<MinExpr>, public ColumnHolder {
+    template <IsColumnLike ColT>
+    class MinExpr : public AliasableExpression<MinExpr<ColT>>, public ColumnHolder<ColT> {
     public:
-        explicit MinExpr(DynamicColumn column)
-            : ColumnHolder(std::move(column)) {
+        template <typename ColumnTp>
+            requires std::constructible_from<ColT, ColumnTp>
+        constexpr explicit MinExpr(ColumnTp&& column) noexcept
+            : ColumnHolder<ColT>{std::forward<ColumnTp>(column)} {
         }
     };
 
+    // Unified factories — IsColumnLike (Column, TypedColumn<T>, AllColumns)
 
-    // Aggregate function factories
-    template <typename T>
-    CountExpr count(const TableColumn<T>& col) {
-        return CountExpr{col.as_dynamic(), false};
+    template <IsColumnLike ColT>
+    constexpr auto count(ColT&& col) noexcept {
+        return CountExpr<std::remove_cvref_t<ColT>>{std::forward<ColT>(col), false};
     }
 
-
-    template <typename T>
-    CountExpr count_distinct(const TableColumn<T>& col) {
-        return CountExpr{col.as_dynamic(), true};
+    template <IsColumnLike ColT>
+    constexpr auto count_distinct(ColT&& col) noexcept {
+        return CountExpr<std::remove_cvref_t<ColT>>{std::forward<ColT>(col), true};
     }
 
-    inline CountExpr count_all() {
-        return CountExpr{AllColumns{""}, false};
+    constexpr auto count_all() noexcept {
+        return CountExpr<AllColumns>{AllColumns{}, false};
     }
 
-    inline CountExpr count_all_distinct() {
-        return CountExpr{AllColumns{""}, true};
+    constexpr auto count_all_distinct() noexcept {
+        return CountExpr<AllColumns>{AllColumns{}, true};
     }
 
-    template <typename T>
-    SumExpr sum(const TableColumn<T>& col) {
-        return SumExpr{col.as_dynamic()};
+    template <IsColumnLike ColT>
+    constexpr auto sum(ColT&& col) noexcept {
+        return SumExpr<std::remove_cvref_t<ColT>>{std::forward<ColT>(col)};
     }
 
-    template <typename T>
-    AvgExpr avg(const TableColumn<T>& col) {
-        return AvgExpr{col.as_dynamic()};
+    template <IsColumnLike ColT>
+    constexpr auto avg(ColT&& col) noexcept {
+        return AvgExpr<std::remove_cvref_t<ColT>>{std::forward<ColT>(col)};
     }
 
-    template <typename T>
-    MaxExpr max(const TableColumn<T>& col) {
-        return MaxExpr{col.as_dynamic()};
+    template <IsColumnLike ColT>
+    constexpr auto max(ColT&& col) noexcept {
+        return MaxExpr<std::remove_cvref_t<ColT>>{std::forward<ColT>(col)};
     }
 
-    template <typename T>
-    MinExpr min(const TableColumn<T>& col) {
-        return MinExpr{col.as_dynamic()};
+    template <IsColumnLike ColT>
+    constexpr auto min(ColT&& col) noexcept {
+        return MinExpr<std::remove_cvref_t<ColT>>{std::forward<ColT>(col)};
+    }
+
+    // Convenience factories — const char* (constructs Column inline)
+
+    constexpr auto count(const char* name) noexcept {
+        return CountExpr<Column>{Column{name}, false};
+    }
+
+    constexpr auto count_distinct(const char* name) noexcept {
+        return CountExpr<Column>{Column{name}, true};
+    }
+
+    constexpr auto sum(const char* name) noexcept {
+        return SumExpr<Column>{Column{name}};
+    }
+
+    constexpr auto avg(const char* name) noexcept {
+        return AvgExpr<Column>{Column{name}};
+    }
+
+    constexpr auto max(const char* name) noexcept {
+        return MaxExpr<Column>{Column{name}};
+    }
+
+    constexpr auto min(const char* name) noexcept {
+        return MinExpr<Column>{Column{name}};
     }
 }  // namespace demiplane::db

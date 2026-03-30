@@ -26,6 +26,7 @@ namespace demiplane::db::postgres::detail {
             case PGRES_COPY_BOTH:
             case PGRES_SINGLE_TUPLE:
             case PGRES_PIPELINE_SYNC:
+            case PGRES_TUPLES_CHUNK:
                 return std::nullopt;  // Success
 
             // TODO: Pipeline mode is not yet implemented. When the Pipeline class is added,

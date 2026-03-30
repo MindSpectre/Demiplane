@@ -181,6 +181,8 @@ namespace demiplane::db::postgres {
             case CONNECTION_GSS_STARTUP:
             case CONNECTION_CHECK_TARGET:
             case CONNECTION_CHECK_STANDBY:
+            case CONNECTION_ALLOCATED:
+            case CONNECTION_AUTHENTICATING:
                 return ErrorCode(ClientErrorCode::InvalidState);
         }
 

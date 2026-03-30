@@ -166,6 +166,7 @@
  * - Mechanical Sympathy: https://mechanical-sympathy.blogspot.com/
  * - Lock-Free Programming: https://preshing.com/20120612/an-introduction-to-lock-free-programming/
  */
+#include <gears_class_traits.hpp>
 
 #include "dynamic_multi_producer_sequencer.hpp"
 #include "dynamic_ring_buffer.hpp"

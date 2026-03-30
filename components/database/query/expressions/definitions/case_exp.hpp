@@ -8,33 +8,48 @@ namespace demiplane::db {
         ConditionExpr condition;
         ValueExpr value;
 
-        constexpr WhenClause(ConditionExpr cond, ValueExpr val)
-            : condition(std::move(cond)),
-              value(std::move(val)) {
+        template <typename ConditionExprTp, typename ValueExprTp>
+            requires std::constructible_from<ConditionExpr, ConditionExprTp> &&
+                         std::constructible_from<ValueExpr, ValueExprTp>
+        constexpr WhenClause(ConditionExprTp&& cond, ValueExprTp&& val) noexcept
+            : condition{std::forward<ConditionExprTp>(cond)},
+              value{std::forward<ValueExprTp>(val)} {
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.condition), std::forward_like<Self>(self.value));
         }
     };
 
     // Base class with common functionality
-    template <typename Derived, IsWhenClause... WhenClauses>
+    template <IsCaseExpr Derived, IsWhenClause... WhenClauses>
     class CaseExprBase : public AliasableExpression<Derived> {
     public:
-        constexpr explicit CaseExprBase(std::tuple<WhenClauses...> clauses)
-            : when_clauses_(std::move(clauses)) {
+        template <typename TupleTp>
+            requires std::constructible_from<std::tuple<WhenClauses...>, TupleTp>
+        constexpr explicit CaseExprBase(TupleTp&& clauses) noexcept
+            : when_clauses_{std::forward<TupleTp>(clauses)} {
         }
 
-        constexpr explicit CaseExprBase(WhenClauses... clauses)
-            : when_clauses_(clauses...) {
+        template <typename... WhenClausesTp>
+            requires(std::constructible_from<WhenClauses, WhenClausesTp> && ...)
+        constexpr explicit CaseExprBase(WhenClausesTp&&... clauses) noexcept
+            : when_clauses_{std::forward<WhenClausesTp>(clauses)...} {
         }
 
-        [[nodiscard]] const std::tuple<WhenClauses...>& when_clauses() const {
-            return when_clauses_;
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& when_clauses(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.when_clauses_);
         }
 
-        template <typename ConditionExpr, typename ValueExpr>
-        [[nodiscard]] auto when(ConditionExpr&& condition, ValueExpr&& value) const {
-            using NewWhenClause = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
-            return static_cast<const Derived&>(*this).add_when_clause(
-                NewWhenClause(std::forward<ConditionExpr>(condition), std::forward<ValueExpr>(value)));
+        template <typename Self, typename ConditionExpr, typename ValueExpr>
+        [[nodiscard]] constexpr auto when(this Self&& self, ConditionExpr&& condition, ValueExpr&& value) {
+            auto wrapped_value  = detail::make_literal_if_needed(std::forward<ValueExpr>(value));
+            using NewWhenClause = WhenClause<std::decay_t<ConditionExpr>, decltype(wrapped_value)>;
+
+            return std::forward<Self>(self).add_when_clause(
+                NewWhenClause(std::forward<ConditionExpr>(condition), std::move(wrapped_value)));
         }
 
     protected:
@@ -49,17 +64,25 @@ namespace demiplane::db {
     public:
         using Base::Base;  // Inherit constructors
 
-        template <typename ElseExpr>
-        [[nodiscard]] auto else_(ElseExpr&& else_expr) const {
-            return CaseExprWithElse<std::decay_t<ElseExpr>, WhenClauses...>(this->when_clauses_,
-                                                                            std::forward<ElseExpr>(else_expr));
+        template <typename Self, typename ElseExpr>
+        [[nodiscard]] constexpr auto else_(this Self&& self, ElseExpr&& else_expr) {
+            // Auto-wrap the else expression if needed
+            auto wrapped_else = detail::make_literal_if_needed(std::forward<ElseExpr>(else_expr));
+            return CaseExprWithElse<decltype(wrapped_else), WhenClauses...>(std::forward_like<Self>(self.when_clauses_),
+                                                                            std::move(wrapped_else));
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.when_clauses_),
+                                         std::forward_like<Self>(self.alias));
         }
 
         // Used by base class when() method
-        template <typename NewWhenClause>
-        [[nodiscard]] auto add_when_clause(NewWhenClause&& new_clause) const {
-            return CaseExpr<WhenClauses..., std::decay_t<NewWhenClause>>(
-                std::tuple_cat(this->when_clauses_, std::make_tuple(std::forward<NewWhenClause>(new_clause))));
+        template <typename Self, IsWhenClause NewWhenClause>
+        [[nodiscard]] constexpr auto add_when_clause(this Self&& self, NewWhenClause&& new_clause) {
+            return CaseExpr<WhenClauses..., std::decay_t<NewWhenClause>>(std::tuple_cat(
+                std::forward_like<Self>(self.when_clauses_), std::make_tuple(std::forward<NewWhenClause>(new_clause))));
         }
     };
 
@@ -69,21 +92,33 @@ namespace demiplane::db {
         using Base = CaseExprBase<CaseExprWithElse, WhenClauses...>;
 
     public:
-        constexpr CaseExprWithElse(const std::tuple<WhenClauses...>& when_clauses, ElseExpr else_expr)
-            : Base(when_clauses),
-              else_clause_(std::move(else_expr)) {
+        template <typename TupleTp, typename ElseExprTp>
+            requires std::constructible_from<std::tuple<WhenClauses...>, TupleTp> &&
+                         std::constructible_from<ElseExpr, ElseExprTp>
+        constexpr CaseExprWithElse(TupleTp&& when_clauses, ElseExprTp&& else_expr) noexcept
+            : Base{std::forward<TupleTp>(when_clauses)},
+              else_clause_{std::forward<ElseExprTp>(else_expr)} {
         }
 
-        [[nodiscard]] const ElseExpr& else_clause() const {
-            return else_clause_;
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& else_clause(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.else_clause_);
+        }
+
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.when_clauses_),
+                                         std::forward_like<Self>(self.else_clause_),
+                                         std::forward_like<Self>(self.alias));
         }
 
         // Used by base class when() method
-        template <typename NewWhenClause>
-        [[nodiscard]] auto add_when_clause(NewWhenClause&& new_clause) const {
+        template <typename Self, IsWhenClause NewWhenClause>
+        [[nodiscard]] constexpr auto add_when_clause(this Self&& self, NewWhenClause&& new_clause) {
             return CaseExprWithElse<ElseExpr, WhenClauses..., std::decay_t<NewWhenClause>>(
-                std::tuple_cat(this->when_clauses_, std::make_tuple(std::forward<NewWhenClause>(new_clause))),
-                else_clause_);
+                std::tuple_cat(std::forward_like<Self>(self.when_clauses_),
+                               std::make_tuple(std::forward<NewWhenClause>(new_clause))),
+                std::forward_like<Self>(self.else_clause_));
         }
 
     private:
@@ -93,8 +128,11 @@ namespace demiplane::db {
     // Factory function
     template <IsCondition ConditionExpr, typename ValueExpr>
     [[nodiscard]] constexpr auto case_when(ConditionExpr&& condition, ValueExpr&& value) {
-        using WhenType = WhenClause<std::decay_t<ConditionExpr>, std::decay_t<ValueExpr>>;
-        return CaseExpr<WhenType>(WhenType(std::forward<ConditionExpr>(condition), std::forward<ValueExpr>(value)));
+        // Auto-wrap the value if needed
+        auto wrapped_value = detail::make_literal_if_needed(std::forward<ValueExpr>(value));
+        using WhenType     = WhenClause<std::decay_t<ConditionExpr>, decltype(wrapped_value)>;
+
+        return CaseExpr<WhenType>(WhenType(std::forward<ConditionExpr>(condition), std::move(wrapped_value)));
     }
 
 }  // namespace demiplane::db

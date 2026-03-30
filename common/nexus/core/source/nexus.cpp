@@ -20,7 +20,7 @@ namespace demiplane::nexus {
     }
 
     void Nexus::clear() noexcept {
-        boost::unique_lock lk{mtx_};
+        std::unique_lock lk{mtx_};
         map_.clear();
     }
 
@@ -35,7 +35,7 @@ namespace demiplane::nexus {
 
     void Nexus::sweep() {
         const auto now = std::chrono::steady_clock::now();
-        boost::unique_lock w{mtx_};
+        std::unique_lock w{mtx_};
 
         for (auto it = map_.begin(); it != map_.end();) {
             const bool should_clear = std::visit(

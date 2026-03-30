@@ -6,9 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include <sliding_window_sorter.hpp>
-
 #include <gtest/gtest.h>
+#include <sliding_window_sorter.hpp>
 
 using namespace demiplane::algorithms;  // Updated namespace
 

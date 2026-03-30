@@ -16,7 +16,7 @@ namespace demiplane::scroll {
      */
     struct LogEvent {
         // Core data
-        LogLevel level{LogLevel::Debug};
+        LogLevel level = LogLevel::Debug;
         std::string message;  // Already formatted with std::format or stream
 
         // Metadata (captured in producer thread - correct TID/PID)

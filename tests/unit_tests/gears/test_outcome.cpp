@@ -2,25 +2,16 @@
 #include <vector>
 
 #include <gears_outcome.hpp>
+#include <gtest/gtest.h>
 
 #include "gears_utils.hpp"
-
-#include <gtest/gtest.h>
 
 using namespace demiplane::gears;
 
 // Test error types
-enum class IOError {
-    FileNotFound,
-    PermissionDenied,
-    DiskFull
-};
+enum class IOError { FileNotFound, PermissionDenied, DiskFull };
 
-enum class NetworkError {
-    Timeout,
-    ConnectionRefused,
-    InvalidResponse
-};
+enum class NetworkError { Timeout, ConnectionRefused, InvalidResponse };
 
 struct ParseError {
     std::string message;
@@ -151,26 +142,23 @@ TEST(OutcomeTest, MoveSemantics) {
 
 TEST(OutcomeTest, AndThenSuccess) {
     Outcome<int, IOError> result(5);
-    auto doubled = result.and_then([](int x) {
-        return Outcome<int, IOError>(x * 2);
-    });
+    auto doubled = result.and_then([](int x) { return Outcome<int, IOError>(x * 2); });
     EXPECT_TRUE(doubled.is_success());
     EXPECT_EQ(doubled.value(), 10);
 }
 
 TEST(OutcomeTest, AndThenError) {
     Outcome<int, IOError> result = Err(IOError::FileNotFound);
-    auto doubled = result.and_then([](int x) {
-        return Outcome<int, IOError>(x * 2);
-    });
+    auto doubled                 = result.and_then([](int x) { return Outcome<int, IOError>(x * 2); });
     EXPECT_TRUE(doubled.is_error());
     EXPECT_EQ(doubled.error<IOError>(), IOError::FileNotFound);
 }
 
 TEST(OutcomeTest, AndThenChaining) {
-    auto result = Outcome<int, IOError>(10)
-                      .and_then([](int x) { return Outcome<int, IOError>(x + 5); })
-                      .and_then([](int x) { return Outcome<int, IOError>(x * 2); });
+    auto result =
+        Outcome<int, IOError>(10).and_then([](int x) { return Outcome<int, IOError>(x + 5); }).and_then([](int x) {
+            return Outcome<int, IOError>(x * 2);
+        });
     EXPECT_TRUE(result.is_success());
     EXPECT_EQ(result.value(), 30);
 }
@@ -189,26 +177,20 @@ TEST(OutcomeTest, AndThenErrorPropagation) {
 
 TEST(OutcomeTest, OrElseSuccess) {
     Outcome<int, IOError> result(42);
-    auto recovered = result.or_else([]() {
-        return Outcome<int, IOError>(0);
-    });
+    auto recovered = result.or_else([]() { return Outcome<int, IOError>(0); });
     EXPECT_TRUE(recovered.is_success());
     EXPECT_EQ(recovered.value(), 42);
 }
 
 TEST(OutcomeTest, OrElseError) {
     Outcome<int, IOError> result = Err(IOError::FileNotFound);
-    auto recovered = result.or_else([]() {
-        return Outcome<int, IOError>(100);
-    });
+    auto recovered               = result.or_else([]() { return Outcome<int, IOError>(100); });
     EXPECT_TRUE(recovered.is_success());
     EXPECT_EQ(recovered.value(), 100);
 }
 TEST(OutcomeTest, OrElseErrorOther) {
     Outcome<int, IOError> result = Err(IOError::FileNotFound);
-    auto recovered = result.or_else([]() {
-        return Outcome<int, NetworkError>(100);
-    });
+    auto recovered               = result.or_else([]() { return Outcome<int, NetworkError>(100); });
     EXPECT_TRUE(recovered.is_success());
     EXPECT_EQ(recovered.value(), 100);
 }
@@ -225,7 +207,7 @@ TEST(OutcomeTest, TransformSuccess) {
 
 TEST(OutcomeTest, TransformError) {
     Outcome<int, IOError> result = Err(IOError::FileNotFound);
-    auto squared = result.transform([](int x) { return x * x; });
+    auto squared                 = result.transform([](int x) { return x * x; });
     EXPECT_TRUE(squared.is_error());
     EXPECT_EQ(squared.error<IOError>(), IOError::FileNotFound);
 }
@@ -253,31 +235,23 @@ TEST(OutcomeTest, TransformChaining) {
 
 TEST(OutcomeTest, VisitSuccess) {
     Outcome<int, IOError, NetworkError> result(42);
-    int value = result.visit(
-        [](int x) { return x; },
-        [](IOError) { return -1; },
-        [](NetworkError) { return -2; }
-    );
+    int value = result.visit([](int x) { return x; }, [](IOError) { return -1; }, [](NetworkError) { return -2; });
     EXPECT_EQ(value, 42);
 }
 
 TEST(OutcomeTest, VisitIOError) {
     Outcome<int, IOError, NetworkError> result = Err(IOError::FileNotFound);
-    int value = result.visit(
-        []([[maybe_unused]] int x) { return 0; },
-        [](IOError err) { return static_cast<int>(err) + 10; },
-        [](NetworkError) { return -1; }
-    );
+    int value                                  = result.visit([]([[maybe_unused]] int x) { return 0; },
+                             [](IOError err) { return static_cast<int>(err) + 10; },
+                             [](NetworkError) { return -1; });
     EXPECT_EQ(value, 10);
 }
 
 TEST(OutcomeTest, VisitNetworkError) {
     Outcome<int, IOError, NetworkError> result = Err(NetworkError::Timeout);
-    int value = result.visit(
-        []([[maybe_unused]] int x) { return 0; },
-        [](IOError) { return -1; },
-        [](NetworkError err) { return static_cast<int>(err) + 20; }
-    );
+    int value                                  = result.visit([]([[maybe_unused]] int x) { return 0; },
+                             [](IOError) { return -1; },
+                             [](NetworkError err) { return static_cast<int>(err) + 20; });
     EXPECT_EQ(value, 20);
 }
 
@@ -330,62 +304,44 @@ TEST(OutcomeVoidTest, EnsureSuccess) {
 }
 
 TEST(OutcomeVoidTest, AndThen) {
-    auto result = Outcome<void, IOError>().and_then([]() {
-        return Outcome<int, IOError>(42);
-    });
+    auto result = Outcome<void, IOError>().and_then([]() { return Outcome<int, IOError>(42); });
     EXPECT_TRUE(result.is_success());
     EXPECT_EQ(result.value(), 42);
 
-    auto error_result = Outcome<void, IOError>::error(IOError::FileNotFound)
-                            .and_then([]() {
-                                return Outcome<int, IOError>(42);
-                            });
+    auto error_result =
+        Outcome<void, IOError>::error(IOError::FileNotFound).and_then([]() { return Outcome<int, IOError>(42); });
     EXPECT_TRUE(error_result.is_error());
     EXPECT_EQ(error_result.error<IOError>(), IOError::FileNotFound);
 }
 
 TEST(OutcomeVoidTest, OrElse) {
-    auto success = Outcome<void, IOError>().or_else([]() {
-        return Outcome<void, IOError>::error(IOError::DiskFull);
-    });
+    auto success = Outcome<void, IOError>().or_else([]() { return Outcome<void, IOError>::error(IOError::DiskFull); });
     EXPECT_TRUE(success.is_success());
 
-    auto recovered = Outcome<void, IOError>::error(IOError::FileNotFound)
-                         .or_else([]() {
-                             return Outcome<void, IOError>();
-                         });
+    auto recovered =
+        Outcome<void, IOError>::error(IOError::FileNotFound).or_else([]() { return Outcome<void, IOError>(); });
     EXPECT_TRUE(recovered.is_success());
 }
 
 TEST(OutcomeVoidTest, Transform) {
-    auto result = Outcome<void, IOError>().transform([]() {
-        return 42;
-    });
+    auto result = Outcome<void, IOError>().transform([]() { return 42; });
     EXPECT_TRUE(result.is_success());
     EXPECT_EQ(result.value(), 42);
 
-    auto error_result = Outcome<void, IOError>::error(IOError::FileNotFound)
-                            .transform([]() {
-                                return 42;
-                            });
+    auto error_result = Outcome<void, IOError>::error(IOError::FileNotFound).transform([]() { return 42; });
     EXPECT_TRUE(error_result.is_error());
 }
 
 TEST(OutcomeVoidTest, Visit) {
     Outcome<void, IOError, NetworkError> success;
-    int value = success.visit(
-        [](std::monostate) { return 0; },
-        [](IOError) { return 1; },
-        [](NetworkError) { return 2; }
-    );
+    int value =
+        success.visit([](std::monostate) { return 0; }, [](IOError) { return 1; }, [](NetworkError) { return 2; });
     EXPECT_EQ(value, 0);
 
     Outcome<void, IOError, NetworkError> error = Err(IOError::DiskFull);
-    value = error.visit(
-        [](std::monostate) { return 0; },
-        [](IOError err) { return static_cast<int>(err) + 10; },
-        [](NetworkError) { return 2; }
-    );
+    value                                      = error.visit([](std::monostate) { return 0; },
+                        [](IOError err) { return static_cast<int>(err) + 10; },
+                        [](NetworkError) { return 2; });
     EXPECT_EQ(value, 12);
 }
 
@@ -464,12 +420,8 @@ TEST(RealWorldTest, FileReadingError) {
 
 TEST(RealWorldTest, FileReadingChain) {
     auto result = read_file("test.txt")
-                      .transform([](const std::string& content) {
-                          return content.size();
-                      })
-                      .and_then([](size_t size) {
-                          return Outcome<int, IOError>(static_cast<int>(size) * 2);
-                      });
+                      .transform([](const std::string& content) { return content.size(); })
+                      .and_then([](size_t size) { return Outcome<int, IOError>(static_cast<int>(size) * 2); });
     EXPECT_TRUE(result.is_success());
     EXPECT_EQ(result.value(), 26);  // "file contents" = 13 chars * 2
 }

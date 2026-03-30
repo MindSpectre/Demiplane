@@ -1,7 +1,9 @@
-set(UNIT_TESTING_TARGET ${PROJECT_NAME}.Tests.Unit)
-set(FUNCTIONAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Functional)
-set(INTEGRATION_TESTING_TARGET ${PROJECT_NAME}.Tests.Integration)
-set(MANUAL_TESTING_TARGET ${PROJECT_NAME}.Tests.Manual)
+set(TESTS_TARGET ${PROJECT_NAME}.Tests)
+set(UNIT_TESTING_TARGET ${TESTS_TARGET}.Unit)
+set(FUNCTIONAL_TESTING_TARGET ${TESTS_TARGET}.Functional)
+set(INTEGRATION_TESTING_TARGET ${TESTS_TARGET}.Integration)
+set(MANUAL_TESTING_TARGET ${TESTS_TARGET}.Manual)
+
 set(TEST_LIBS
         GTest::gtest
         GTest::gtest_main
@@ -9,14 +11,13 @@ set(TEST_LIBS
         GTest::gmock_main
 )
 
-add_subdirectory(manual_tests)
-
 add_subdirectory(unit_tests)
 
 add_subdirectory(integration_tests)
 
-add_subdirectory(codesandbox)
+add_subdirectory(functional_tests)
 
+add_subdirectory(codesandbox)
 ##############################################################################
 # Http component test
 ##############################################################################
@@ -32,7 +33,7 @@ endif ()
 if (BUILD_DATABASE)
     message("Database tests will be built")
     add_subdirectory(unit_tests/database)
-    add_subdirectory(manual_tests/database)
+    add_subdirectory(integration_tests/database)
 endif ()
 ##############################################################################
 

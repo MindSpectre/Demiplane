@@ -1,67 +1,89 @@
 #pragma once
 
-#include <algorithm>
-
 #include "../basic.hpp"
-#include "db_column.hpp"
-#include "db_record.hpp"
-#include "db_table_schema.hpp"
 
 namespace demiplane::db {
     template <IsSelectable... Columns>
     class SelectExpr : public Expression<SelectExpr<Columns...>> {
     public:
-        constexpr explicit SelectExpr(Columns... cols)
-            : columns_(std::move(cols)...) {
-        }
-
-        constexpr SelectExpr& set_distinct(const bool d = true) {
-            distinct_ = d;
-            return *this;
+        template <typename... ColumnsTp>
+            requires(std::constructible_from<Columns, ColumnsTp> && ...)
+        constexpr explicit SelectExpr(ColumnsTp&&... cols) noexcept
+            : columns_{std::forward<ColumnsTp>(cols)...} {
         }
 
         template <typename Self>
-        [[nodiscard]] auto&& columns(this Self&& self) {
-            return std::forward<Self>(self).columns_;
+        constexpr auto&& set_distinct(this Self&& self, const bool d = true) noexcept {
+            self.distinct_ = d;
+            return std::forward<Self>(self);
         }
 
-        [[nodiscard]] bool distinct() const {
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& columns(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.columns_);
+        }
+
+        [[nodiscard]] constexpr bool distinct() const noexcept {
             return distinct_;
         }
 
-        [[nodiscard]] auto from(TableSchemaPtr table) const {
-            return FromTableExpr<SelectExpr>{*this, std::move(table)};
+
+        template <typename Self, typename TableTp>
+            requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<TableTp>>
+        [[nodiscard]] constexpr auto from(this Self&& self, TableTp&& table) {
+            return FromTableExpr<SelectExpr, DynamicTablePtr>{std::forward<Self>(self), std::forward<TableTp>(table)};
         }
 
-        [[nodiscard]] auto from(std::string table_name) const {
-            return FromTableExpr<SelectExpr>{*this, TableSchema::make_ptr(std::move(table_name))};
+        template <typename Self, typename TableTp>
+            requires gears::IsStringLike<TableTp> && (!gears::IsStringViewLike<TableTp>)
+        [[nodiscard]] constexpr auto from(this Self&& self, TableTp&& table_name) {
+            return FromTableExpr<SelectExpr, std::string>{std::forward<Self>(self), std::forward<TableTp>(table_name)};
         }
 
-        [[nodiscard]] auto from(const Record& record) const {
-            return FromTableExpr<SelectExpr>{*this, record.schema_ptr()};
+        template <typename Self>
+        [[nodiscard]] constexpr auto from(this Self&& self, const char* table_name) {
+            return FromTableExpr<SelectExpr, std::string_view>{std::forward<Self>(self), table_name};
         }
 
-        template <IsCteExpr Query>
-        [[nodiscard]] auto from(Query&& query) const {
-            return FromCteExpr<SelectExpr, Query>{*this, std::forward<Query>(query)};
+        template <typename Self, typename T>
+            requires std::same_as<std::remove_cvref_t<T>, Record>
+        [[nodiscard]] constexpr auto from(this Self&& self, T&& record) {
+            return FromTableExpr<SelectExpr, DynamicTablePtr>{std::forward<Self>(self),
+                                                              std::forward<T>(record).table_ptr()};
+        }
+
+        template <typename Self, IsStaticTable TableTp>
+        [[nodiscard]] constexpr auto from(this Self&& self, const TableTp& table) {
+            return FromTableExpr<SelectExpr, TableTp>{std::forward<Self>(self), table};
+        }
+
+        template <typename Self, IsCteExpr Query>
+        [[nodiscard]] constexpr auto from(this Self&& self, Query&& query) {
+            return FromCteExpr<SelectExpr, std::remove_cvref_t<Query>>{std::forward<Self>(self),
+                                                                       std::forward<Query>(query)};
         }
 
     private:
         std::tuple<Columns...> columns_;
-        bool distinct_{false};
+        bool distinct_ = false;
     };
 
-    template <IsSelectable... Columns>
-    constexpr auto select(Columns... columns) {
-        return SelectExpr<Columns...>{std::move(columns)...};
+    template <typename... ColumnsTp>
+    constexpr auto select(ColumnsTp&&... columns) {
+        return SelectExpr<decltype(detail::make_literal_if_needed(std::forward<ColumnsTp>(columns)))...>{
+            detail::make_literal_if_needed(std::forward<ColumnsTp>(columns))...};
     }
 
-    template <IsSelectable... Columns>
-    constexpr auto select_distinct(Columns... columns) {
-        return SelectExpr<Columns...>{std::move(columns)...}.set_distinct(true);
+    template <typename... ColumnsTp>
+    constexpr auto select_distinct(ColumnsTp&&... columns) {
+        return SelectExpr<decltype(detail::make_literal_if_needed(std::forward<ColumnsTp>(columns)))...>{
+            detail::make_literal_if_needed(std::forward<ColumnsTp>(columns))...}
+            .set_distinct(true);
     }
 
-    inline auto select_from_schema(TableSchemaPtr schema) {
-        return SelectExpr{all(schema->table_name())}.from(std::move(schema));
+    template <typename DynamicTablePtrTp>
+        requires std::constructible_from<DynamicTablePtr, DynamicTablePtrTp>
+    constexpr auto select_from_schema(DynamicTablePtrTp&& schema) {
+        return SelectExpr{all(schema->table_name())}.from(std::forward<DynamicTablePtrTp>(schema));
     }
 }  // namespace demiplane::db

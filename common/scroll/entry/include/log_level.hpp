@@ -28,6 +28,7 @@ namespace demiplane::scroll {
         // Extend with additional levels if needed.
     };
 
+    inline constexpr auto TRC = LogLevel::Trace;
     inline constexpr auto DBG = LogLevel::Debug;
     inline constexpr auto INF = LogLevel::Info;
     inline constexpr auto WRN = LogLevel::Warning;
@@ -36,6 +37,8 @@ namespace demiplane::scroll {
 
     constexpr const char* log_level_to_string(const LogLevel level) {
         switch (level) {
+            case LogLevel::Trace:
+                return "TRC";
             case LogLevel::Debug:
                 return "DBG";
             case LogLevel::Info:
@@ -46,8 +49,6 @@ namespace demiplane::scroll {
                 return "ERR";
             case LogLevel::Fatal:
                 return "FAT";
-            case LogLevel::Trace:
-                return "TRC";
         }
         return "UNKNOWN";
     }

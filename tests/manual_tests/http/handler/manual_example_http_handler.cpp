@@ -39,7 +39,7 @@ private:
             x += generator.generate_random_t<int>();
         }
 
-        demiplane::gears::enforce_non_const(this);
+        demiplane::gears::force_non_const(this);
         const std::string json =
             R"({"id":)" + std::to_string(x) + R"(,"name":"User )" + std::to_string(*user_id) + R"("})";
         co_return ResponseFactory::json(json);
@@ -49,7 +49,7 @@ private:
         if (!ctx.is_json()) {
             return ResponseFactory::bad_request("Expected JSON content");
         }
-        demiplane::gears::enforce_non_const(this);
+        demiplane::gears::force_non_const(this);
         // Create user logic...
         return ResponseFactory::created(R"({"id":123,"status":"created"})");
     }
@@ -58,7 +58,7 @@ private:
         if (const auto user_id = ctx.path<int>("id"); !user_id) {
             return ResponseFactory::bad_request("Invalid user ID");
         }
-        demiplane::gears::enforce_non_const(this);
+        demiplane::gears::force_non_const(this);
         // Update logic...
         return ResponseFactory::ok("Updated successfully");
     }
@@ -67,7 +67,7 @@ private:
         if (const auto user_id = ctx.path<int>("id"); !user_id) {
             return ResponseFactory::bad_request("Invalid user ID");
         }
-        demiplane::gears::enforce_non_const(this);
+        demiplane::gears::force_non_const(this);
         // Delete logic...
         return ResponseFactory::no_content();
     }

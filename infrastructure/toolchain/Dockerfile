@@ -9,6 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN dnf -y group install development-tools
 RUN dnf -y install  \
     clang  \
+    clang-tools-extra \
     perl-IPC-Cmd  \
     kernel-headers \
     curl  \
@@ -18,7 +19,9 @@ RUN dnf -y install  \
     make  \
     cmake \
     autoconf \
+    autoconf-archive \
     automake  \
+    libtool \
     ninja
 
 RUN dnf install -y perl-CPAN

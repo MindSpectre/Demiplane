@@ -189,6 +189,7 @@ namespace demiplane::scroll {
     #define COMPONENT_LOG_ERR() LOG_DIRECT_STREAM_ERR(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_FAT() LOG_DIRECT_STREAM_FAT(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_ENTER_FUNCTION() COMPONENT_LOG_INF() << "Entering function " << __func__
+    #define COMPONENT_LOG_LEAVE_FUNCTION() COMPONENT_LOG_INF() << "Leaving function " << __func__
 #else
     // When component logging is disabled, use scroll's dummy implementations
     #define COMPONENT_LOG(level, message) ((void)0)
@@ -198,4 +199,5 @@ namespace demiplane::scroll {
     #define COMPONENT_LOG_ERR() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_FAT() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_ENTER_FUNCTION() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_LEAVE_FUNCTION() ::demiplane::scroll::DummyStream()
 #endif

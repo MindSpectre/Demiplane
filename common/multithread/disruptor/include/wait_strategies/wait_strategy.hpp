@@ -1,11 +1,5 @@
 #pragma once
 
-#include <chrono>
-#include <condition_variable>
-#include <demiplane/gears>
-#include <mutex>
-#include <thread>
-
 #include "../sequence.hpp"
 
 namespace demiplane::multithread {

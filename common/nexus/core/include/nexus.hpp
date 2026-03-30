@@ -5,10 +5,9 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <thread>
 #include <unordered_map>
-
-#include <boost/thread/shared_mutex.hpp>
 
 #include "../details.hpp"
 #include "../nexus_traits.hpp"
@@ -46,10 +45,7 @@ namespace demiplane::nexus {
          */
         ~Nexus() noexcept;
 
-        // ═══════════════════════════════════════════════════════════════════════
         // Registration Methods
-        // ═══════════════════════════════════════════════════════════════════════
-
         /**
          * @brief Registers a singleton factory function
          *
@@ -129,10 +125,7 @@ namespace demiplane::nexus {
             requires std::is_object_v<T>
         void register_instance(T value, nexus_id_t id, Lifetime lt = get_nexus_policy<T>());
 
-        // ═══════════════════════════════════════════════════════════════════════
         // Access Methods
-        // ═══════════════════════════════════════════════════════════════════════
-
         /**
          * @brief Retrieves a service instance
          *
@@ -152,10 +145,7 @@ namespace demiplane::nexus {
         template <class Interface>
         std::shared_ptr<Interface> get(nexus_id_t id = 0);
 
-        // ═══════════════════════════════════════════════════════════════════════
         // Management Methods
-        // ═══════════════════════════════════════════════════════════════════════
-
         /**
          * @brief Resets a service instance (Resettable lifetime only)
          *
@@ -252,10 +242,10 @@ namespace demiplane::nexus {
 
         // State members
         std::unordered_map<Key, Slot, KeyHash> map_;                ///< Service registry
-        mutable boost::shared_mutex mtx_;                           ///< Read-write lock for thread safety
+        mutable std::shared_mutex mtx_;                             ///< Read-write lock for thread safety
         std::jthread janitor_;                                      ///< Background cleanup thread
         std::atomic<bool> stop_                           = false;  ///< Stop flag for janitor
-        std::atomic<std::chrono::seconds> sweep_interval_ = std::chrono::seconds(5);  ///< Cleanup interval
+        std::atomic<std::chrono::seconds> sweep_interval_ = std::chrono::seconds(2);  ///< Cleanup interval
     };
 
     /**

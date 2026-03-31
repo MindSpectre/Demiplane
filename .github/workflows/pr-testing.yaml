@@ -24,8 +24,8 @@ jobs:
           else
             git diff --name-only ${{ github.event.before }} ${{ github.event.after }} > changed_files.txt
           fi
-          
-          if grep -q "infrastructure/toolchain/" changed_files.txt || grep -q "vcpkg.json" changed_files.txt; then
+
+          if grep -q "infrastructure/toolchain/" changed_files.txt; then
             echo "Toolchain files changed"
             echo "changed=true" >> $GITHUB_OUTPUT
           else
@@ -69,7 +69,6 @@ jobs:
         with:
           context: .
           file: infrastructure/toolchain/Dockerfile
-          target: toolchain
           push: false
           load: true
           tags: local/dmp_toolchain:latest
@@ -89,13 +88,25 @@ jobs:
         run: |
           docker pull ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable
 
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-binary-cache
+          key: vcpkg-binary-${{ hashFiles('vcpkg.json') }}-x64-linux
+          restore-keys: |
+            vcpkg-binary-
+
       - name: Run build and test
         run: |
+          mkdir -p vcpkg-binary-cache
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
+            -v ${{ github.workspace }}/vcpkg-binary-cache:/root/.cache/vcpkg/archives \
+            -e VCPKG_BINARY_SOURCES="clear;files,/root/.cache/vcpkg/archives,readwrite" \
             -w /workspace \
             ${{ steps.container.outputs.image }} \
             bash -c "
+              ln -sfn /opt/vcpkg vcpkg &&
               cmake --preset release &&
               cmake --build --preset release -- -j\$(nproc) &&
               ctest --preset release --output-on-failure
@@ -105,7 +116,7 @@ jobs:
   push-pr-toolchain:
     needs: [ check-toolchain-changes, build-and-test ]
     if: |
-      github.event_name == 'pull_request' && 
+      github.event_name == 'pull_request' &&
       needs.check-toolchain-changes.outputs.toolchain_changed == 'true' &&
       needs.build-and-test.result == 'success'
     runs-on: ubuntu-latest
@@ -130,7 +141,6 @@ jobs:
         with:
           context: .
           file: infrastructure/toolchain/Dockerfile
-          target: toolchain
           push: true
           tags: ghcr.io/${{steps.env.outputs.owner }}/dmp_toolchain:pr-${{ github.event.number }}
           cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache

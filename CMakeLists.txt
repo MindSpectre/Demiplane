@@ -26,13 +26,8 @@ endif ()
 message("_______________________________________________________________________________________________________________")
 
 
-set(VCPKG_FEATURE_FLAGS "manifests")
-
 message("\tVCPKG PROPERTIES")
-
-message("Vcpkg installed dir: ${VCPKG_INSTALLED_DIR}")
-message("Vcpkg manifest isntall: ${VCPKG_MANIFEST_INSTALL}")
-message("VCPKG Flags are ${VCPKG_FEATURE_FLAGS}")
+message("Vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
 message("_______________________________________________________________________________________________________________")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)

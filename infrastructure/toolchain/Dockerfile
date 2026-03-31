@@ -1,9 +1,8 @@
-FROM fedora:latest AS base
+FROM fedora:latest
 
 ENV VCPKG_ROOT=/opt/vcpkg
-ENV DEBIAN_FRONTEND=noninteractive \
-    VCPKG_DISABLE_METRICS=1 \
-    VCPKG_FEATURE_FLAGS=manifests
+ENV VCPKG_DISABLE_METRICS=1 \
+    VCPKG_DEFAULT_TRIPLET=x64-linux
 
 # 1. Core build tooling
 RUN dnf -y group install development-tools
@@ -27,31 +26,12 @@ RUN dnf -y install  \
 RUN dnf install -y perl-CPAN
 RUN cpan "IPC::Cmd"
 
-# 2. vcpkg bootstrap
+# 2. vcpkg bootstrap (executable only, no packages installed)
 RUN git clone https://github.com/microsoft/vcpkg ${VCPKG_ROOT} && \
     cd ${VCPKG_ROOT} && \
     ./bootstrap-vcpkg.sh
 
-# Intermediate stage for building dependencies
-FROM base AS dependencies
-
-# Copy manifest files to a temporary location
-COPY vcpkg*.json /tmp/
-
-
-# Install dependencies using the manifest
-WORKDIR /tmp
-RUN ${VCPKG_ROOT}/vcpkg install --triplet x64-linux
-
-# Final toolchain stage
-FROM base AS toolchain
-
-# Copy the installed packages from the dependencies stage
-COPY --from=dependencies /tmp/vcpkg_installed ${VCPKG_ROOT}/installed
-
 # Set up workspace
 WORKDIR /workspace
-COPY . .
-# Expose environment variables
-ENV PATH="$VCPKG_ROOT:$PATH" \
-    VCPKG_DEFAULT_TRIPLET=x64-linux
+
+ENV PATH="$VCPKG_ROOT:$PATH"

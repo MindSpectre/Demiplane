@@ -53,11 +53,21 @@ jobs:
 
       - name: Setup vcpkg
         run: |
-          git clone https://github.com/Microsoft/vcpkg.git /opt/vcpkg
-          /opt/vcpkg/bootstrap-vcpkg.sh
+          git clone https://github.com/Microsoft/vcpkg.git vcpkg
+          ./vcpkg/bootstrap-vcpkg.sh
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-binary-cache
+          key: vcpkg-binary-${{ hashFiles('vcpkg.json') }}-x64-linux
+          restore-keys: |
+            vcpkg-binary-
 
       - name: Configure CMake
         run: cmake --preset debug
+        env:
+          VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-binary-cache,readwrite"
 
       - name: Build
         run: cmake --build build/debug -j$(nproc)

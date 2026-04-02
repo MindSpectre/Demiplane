@@ -25,7 +25,9 @@ RUN dnf -y install  \
     autoconf-archive \
     automake  \
     libtool \
-    ninja
+    ninja \
+    ccache \
+    mold
 
 RUN dnf install -y perl-CPAN
 RUN cpan "IPC::Cmd"

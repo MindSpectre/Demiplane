@@ -4,6 +4,10 @@ ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_DISABLE_METRICS=1 \
     VCPKG_DEFAULT_TRIPLET=x64-linux
 
+# Disable Cisco openh264 repo (region-restricted CDN,
+# enabled by default and is not required here)
+RUN dnf config-manager setopt fedora-cisco-openh264.enabled=0
+
 # 1. Core build tooling
 RUN dnf -y group install development-tools
 RUN dnf -y install  \

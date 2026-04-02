@@ -1,0 +1,19 @@
+{
+  "name": "Demiplane",
+  "build": {
+    "dockerfile": "../infrastructure/toolchain/Dockerfile"
+  },
+  "postCreateCommand": "ln -sfn /opt/vcpkg vcpkg",
+  "mounts": [
+    "type=volume,source=demiplane-vcpkg-cache,target=/root/.cache/vcpkg/archives"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools"
+      ]
+    }
+  }
+}

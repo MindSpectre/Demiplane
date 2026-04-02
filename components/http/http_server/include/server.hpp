@@ -16,14 +16,14 @@ namespace demiplane::http {
 
     class Server {
     public:
-        NEXUS_REGISTER(nexus::Immortal);  // CRC32/ISO-HDLC of demiplane::http::Server
+        NEXUS_REGISTER(nexus::Immortal);
 
         explicit Server(std::size_t threads = 1);
         ~Server();
 
         // Controller management - Server only handles processing
         template <typename ControllerT>
-        void add_controller(std::shared_ptr<ControllerT> controller);
+        void add_controller(const std::shared_ptr<ControllerT>& controller);
 
         // Middleware
         void use_middleware(Middleware middleware);
@@ -86,7 +86,7 @@ namespace demiplane::http {
     };
 
     template <typename ControllerT>
-    void Server::add_controller(std::shared_ptr<ControllerT> controller) {
+    void Server::add_controller(const std::shared_ptr<ControllerT>& controller) {
         static_assert(std::is_base_of_v<HttpController, ControllerT>, "Controller must inherit from HttpController");
 
         controllers_.push_back(controller);

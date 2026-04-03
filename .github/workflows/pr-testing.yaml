@@ -38,6 +38,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d test_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -96,7 +110,7 @@ jobs:
           restore-keys: |
             vcpkg-binary-
 
-      - name: Run build and test
+      - name: Build
         run: |
           mkdir -p vcpkg-binary-cache
           docker run --rm \
@@ -108,9 +122,30 @@ jobs:
             bash -c "
               ln -sfn /opt/vcpkg vcpkg &&
               cmake --preset release &&
-              cmake --build --preset release -- -j\$(nproc) &&
-              ctest --preset release --output-on-failure
+              cmake --build --preset release -- -j\$(nproc)
             "
+
+      - name: Unit testing
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${{ steps.container.outputs.image }} \
+            bash -c "ctest --preset release -L unit --output-on-failure"
+
+      - name: Integration testing
+        run: |
+          docker run --rm \
+            --network=host \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e POSTGRES_HOST=localhost \
+            -e POSTGRES_PORT=5433 \
+            -e POSTGRES_DB=test_db \
+            -e POSTGRES_USER=test_user \
+            -e POSTGRES_PASSWORD=test_password \
+            ${{ steps.container.outputs.image }} \
+            bash -c "ctest --preset release -L integration --output-on-failure"
 
   # This allows testing the new toolchain in PRs before merging
   push-pr-toolchain:

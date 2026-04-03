@@ -283,3 +283,93 @@ TEST_F(AsyncExecutorEdgeTest, NullConstruction) {
     EXPECT_EQ(error.code, ClientErrorCode::NotConnected);
     EXPECT_FALSE(error.message.empty());
 }
+
+// ============== Coroutine Lifetime Safety Tests ==============
+// These tests verify that variadic/tuple/compiled-static execute overloads
+// safely capture temporaries by value into the coroutine frame.
+// Boost.Asio awaitables are lazy (suspend at initial_suspend), so reference
+// parameters to temporaries would dangle before the coroutine body runs.
+
+TEST_F(AsyncExecutorEdgeTest, VariadicTemporaryString) {
+    // Temporary std::string passed as variadic arg — must be captured by value
+    run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Tmp', 20)"); });
+
+    auto result = run_async([this]() {
+        return executor_->execute("SELECT name FROM test_users WHERE name = $1", std::string{"Tmp"});
+    });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->is_success()) << "Temporary string arg failed: " << result->error<ErrorContext>().format();
+    EXPECT_EQ(result->value().rows(), 1);
+}
+
+TEST_F(AsyncExecutorEdgeTest, VariadicMultipleTemporaries) {
+    // Multiple temporaries of mixed types — all captured by value
+    auto result = run_async([this]() {
+        return executor_->execute("INSERT INTO test_users (name, age, email, active) VALUES ($1, $2, $3, $4)",
+                                  std::string{"TmpMulti"},
+                                  33,
+                                  std::string{"tmp@test.com"},
+                                  true);
+    });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->is_success()) << "Multiple temporaries failed: " << result->error<ErrorContext>().format();
+
+    // Verify data was inserted correctly
+    auto select = run_async([this]() {
+        return executor_->execute("SELECT name, age, email FROM test_users WHERE name = $1", std::string{"TmpMulti"});
+    });
+    ASSERT_TRUE(select.has_value() && select->is_success());
+    EXPECT_EQ(select->value().rows(), 1);
+}
+
+TEST_F(AsyncExecutorEdgeTest, VariadicMovedString) {
+    // std::move'd string — must survive coroutine lazy start
+    std::string name = "MovedUser";
+    auto result = run_async([this, name = std::move(name)]() mutable {
+        return executor_->execute("INSERT INTO test_users (name, age) VALUES ($1, $2)", std::move(name), 40);
+    });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->is_success()) << "Moved string failed: " << result->error<ErrorContext>().format();
+}
+
+TEST_F(AsyncExecutorEdgeTest, TupleTemporaries) {
+    // Tuple of temporaries — tuple taken by value, delegates to variadic
+    run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('TupleUser', 50)"); });
+
+    auto result = run_async([this]() {
+        return executor_->execute("SELECT name FROM test_users WHERE name = $1 AND age = $2",
+                                  std::tuple{std::string{"TupleUser"}, 50});
+    });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->is_success()) << "Tuple temporaries failed: " << result->error<ErrorContext>().format();
+    EXPECT_EQ(result->value().rows(), 1);
+}
+
+TEST_F(AsyncExecutorEdgeTest, CompiledStaticQueryTemporary) {
+    // CompiledStaticQuery temporary — taken by value, delegates via co_return co_await
+    run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('CSQUser', 55)"); });
+
+    auto result = run_async([this]() {
+        return executor_->execute(
+            CompiledStaticQuery{std::string{R"(SELECT "name" FROM "test_users" WHERE "name" = $1)"},
+                                std::tuple{std::string{"CSQUser"}}});
+    });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->is_success()) << "CompiledStaticQuery temporary failed: "
+                                      << result->error<ErrorContext>().format();
+    EXPECT_EQ(result->value().rows(), 1);
+}
+
+TEST_F(AsyncExecutorEdgeTest, VariadicEmptyArgs) {
+    // Zero variadic args — should resolve to simple query overload, no lifetime issue
+    auto result = run_async([this]() { return executor_->execute("SELECT 1 AS number"); });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->is_success()) << "Empty variadic failed: " << result->error<ErrorContext>().format();
+    EXPECT_EQ(result->value().rows(), 1);
+}

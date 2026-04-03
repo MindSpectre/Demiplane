@@ -294,9 +294,8 @@ TEST_F(AsyncExecutorEdgeTest, VariadicTemporaryString) {
     // Temporary std::string passed as variadic arg — must be captured by value
     run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Tmp', 20)"); });
 
-    auto result = run_async([this]() {
-        return executor_->execute("SELECT name FROM test_users WHERE name = $1", std::string{"Tmp"});
-    });
+    auto result = run_async(
+        [this]() { return executor_->execute("SELECT name FROM test_users WHERE name = $1", std::string{"Tmp"}); });
 
     ASSERT_TRUE(result.has_value());
     ASSERT_TRUE(result->is_success()) << "Temporary string arg failed: " << result->error<ErrorContext>().format();
@@ -327,7 +326,7 @@ TEST_F(AsyncExecutorEdgeTest, VariadicMultipleTemporaries) {
 TEST_F(AsyncExecutorEdgeTest, VariadicMovedString) {
     // std::move'd string — must survive coroutine lazy start
     std::string name = "MovedUser";
-    auto result = run_async([this, name = std::move(name)]() mutable {
+    auto result      = run_async([this, name = std::move(name)]() mutable {
         return executor_->execute("INSERT INTO test_users (name, age) VALUES ($1, $2)", std::move(name), 40);
     });
 
@@ -354,9 +353,8 @@ TEST_F(AsyncExecutorEdgeTest, CompiledStaticQueryTemporary) {
     run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('CSQUser', 55)"); });
 
     auto result = run_async([this]() {
-        return executor_->execute(
-            CompiledStaticQuery{std::string{R"(SELECT "name" FROM "test_users" WHERE "name" = $1)"},
-                                std::tuple{std::string{"CSQUser"}}});
+        return executor_->execute(CompiledStaticQuery{
+            std::string{R"(SELECT "name" FROM "test_users" WHERE "name" = $1)"}, std::tuple{std::string{"CSQUser"}}});
     });
 
     ASSERT_TRUE(result.has_value());

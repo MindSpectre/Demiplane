@@ -14,8 +14,9 @@
         "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-        "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=mold",
-        "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=mold -lc++abi",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold -lc++abi",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
         "VCPKG_TARGET_TRIPLET": "x64-linux-clang"
@@ -61,9 +62,9 @@
       "description": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
       "inherits": "debug",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls",
-        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined -fuse-ld=mold",
-        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined -fuse-ld=mold"
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined -fuse-ld=mold -lc++abi",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined -fuse-ld=mold -lc++abi"
       },
       "binaryDir": "build/asan"
     },
@@ -73,8 +74,8 @@
       "description": "Debug build with llvm source-based coverage (use llvm-profdata + llvm-cov)",
       "inherits": "debug",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -fcoverage-mapping",
-        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate -fuse-ld=mold"
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate -fuse-ld=mold -lc++abi"
       },
       "binaryDir": "build/llvm-coverage"
     },
@@ -84,8 +85,8 @@
       "description": "Debug build with gcov coverage (compatible with CLion CTest coverage)",
       "inherits": "debug",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "--coverage",
-        "CMAKE_EXE_LINKER_FLAGS": "--coverage -fuse-ld=mold"
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ --coverage",
+        "CMAKE_EXE_LINKER_FLAGS": "--coverage -fuse-ld=mold -lc++abi"
       },
       "binaryDir": "build/gcc-coverage"
     },
@@ -104,6 +105,7 @@
       "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets"
       },

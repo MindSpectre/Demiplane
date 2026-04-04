@@ -1,7 +1,7 @@
 #pragma once
 
-#include <chrono>
 #include <string_view>
+#include <type_traits>
 
 namespace demiplane::gears {
     template <typename T>

@@ -114,6 +114,6 @@ TEST(StaticTableTest, SingleFieldTable) {
 
 TEST(StaticTableTest, StaticConstexprTable) {
     static constexpr UsersTable users{};
-    static_assert(users.table_name() == "users");
+    static_assert(UsersTable::table_name() == "users");
     static_assert(users.field_count() == 4);
 }

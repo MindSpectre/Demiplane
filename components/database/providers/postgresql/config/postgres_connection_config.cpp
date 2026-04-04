@@ -13,10 +13,10 @@ namespace demiplane::db::postgres {
         result["cluster_name"] = cluster_name_;
 
         // Timeouts (as seconds)
-        result["connect_timeout"]             = connect_timeout_.count();
-        result["statement_timeout"]           = statement_timeout_.count();
-        result["idle_in_transaction_timeout"] = idle_in_transaction_timeout_.count();
-        result["lock_timeout"]                = lock_timeout_.count();
+        result["connect_timeout"]             = static_cast<Json::Int64>(connect_timeout_.count());
+        result["statement_timeout"]           = static_cast<Json::Int64>(statement_timeout_.count());
+        result["idle_in_transaction_timeout"] = static_cast<Json::Int64>(idle_in_transaction_timeout_.count());
+        result["lock_timeout"]                = static_cast<Json::Int64>(lock_timeout_.count());
 
         // SSL
         result["ssl_mode"] = static_cast<int>(ssl_mode_);

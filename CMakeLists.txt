@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.30.5)
 project("Demiplane" LANGUAGES CXX VERSION 0.2)
 # Specify the C++ standard
 
+include(cmake/utils.cmake)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -11,7 +13,7 @@ set(CMAKE_CXX_CLANG_TIDY
     --header-filter=${CMAKE_SOURCE_DIR}/.*
 )
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
-
+SeparateLines()
 message("\tGENERAL SETTINGS")
 message("Build type is " ${CMAKE_BUILD_TYPE})
 message("CXX Flags are ${CMAKE_CXX_FLAGS}")
@@ -23,17 +25,12 @@ if (${CMAKE_CXX_STANDARD_REQUIRED})
 else ()
     message("Standard is ${CMAKE_CXX_STANDARD} and not required")
 endif ()
-message("_______________________________________________________________________________________________________________")
+SeparateLines()
 
-
-set(VCPKG_FEATURE_FLAGS "manifests")
 
 message("\tVCPKG PROPERTIES")
-
-message("Vcpkg installed dir: ${VCPKG_INSTALLED_DIR}")
-message("Vcpkg manifest isntall: ${VCPKG_MANIFEST_INSTALL}")
-message("VCPKG Flags are ${VCPKG_FEATURE_FLAGS}")
-message("_______________________________________________________________________________________________________________")
+message("Vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+SeparateLines()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
@@ -71,7 +68,7 @@ if (DMP_COMPONENT_LOGGING)
     add_compile_definitions(DMP_COMPONENT_LOGGING)
     message("Added DMP_COMPONENT_LOGGING compile definition")
 endif ()
-message("_______________________________________________________________________________________________________________")
+SeparateLines()
 #custom directives
 include(cmake/tests.cmake)
 include(cmake/combined_library.cmake)
@@ -120,7 +117,7 @@ if (NOT Boost_FOUND)
 endif ()
 
 
-message("_______________________________________________________________________________________________________________")
+SeparateLines()
 ##############################################################################
 
 message("\tPROJECT TARGETS LOGS")
@@ -158,4 +155,4 @@ if (DO_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif ()
 ##############################################################################
-message("_______________________________________________________________________________________________________________")
+SeparateLines()

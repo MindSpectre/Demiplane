@@ -36,12 +36,12 @@ namespace demiplane::chrono {
             return flags_[i];
         }
 
-        std::pair<duration, duration> delta_t(const std::size_t i) const {
+        [[nodiscard]] std::pair<duration, duration> delta_t(const std::size_t i) const {
             if (i >= flags_.size() || i == 0) {
                 return {duration::zero(), duration::zero()};
             }
             const duration since_start = std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
-            duration since_prev;
+            duration since_prev{duration::zero()};
             if (i >= 1) {
                 since_prev = std::chrono::duration_cast<duration>(flags_[i] - flags_[i - 1]);
             }
@@ -49,22 +49,22 @@ namespace demiplane::chrono {
             return {since_prev, since_start};
         }
 
-        duration from_start(const std::size_t i) const {
+        [[nodiscard]] duration from_start(const std::size_t i) const {
             return std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
         }
-        duration from_prev(const std::size_t i) const {
+        [[nodiscard]] duration from_prev(const std::size_t i) const {
             return std::chrono::duration_cast<duration>(flags_[i] - flags_[i - 1]);
         }
 
-        duration total_time() const {
+        [[nodiscard]] duration total_time() const {
             return std::chrono::duration_cast<duration>(flags_.back() - flags_[0]);
         }
 
-        const std::vector<time_point>& get_flags() const {
+        [[nodiscard]] const std::vector<time_point>& get_flags() const {
             return flags_;
         }
 
-        duration average_delta() const {
+        [[nodiscard]] duration average_delta() const {
             duration total = duration::zero();
             for (std::size_t i = 1; i < flags_.size(); ++i) {
                 auto d  = flags_[i] - flags_[i - 1];

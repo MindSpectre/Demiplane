@@ -99,7 +99,7 @@ TEST_F(StopwatchTest, AverageDelta) {
 // Test the new measure function
 TEST_F(StopwatchTest, MeasureLambda) {
     // Measure a lambda that sleeps for 50ms
-    const auto duration = stopwatch.measure([] { sleep_for(50ms); });
+    const auto duration = Stopwatch<>::measure([] { sleep_for(50ms); });
 
     // Check that the duration is approximately 50ms
     EXPECT_GE(duration.count(), 45);
@@ -110,7 +110,7 @@ TEST_F(StopwatchTest, MeasureLambda) {
 TEST_F(StopwatchTest, MeasureComplexLogic) {
     long long result = 0;
 
-    const auto duration = stopwatch.measure([&result] {
+    const auto duration = Stopwatch<>::measure([&result] {
         // Do some computational work
         std::uniform_int_distribution dist(0, 5);
         for (std::size_t i = 0; i < 10000; ++i) {
@@ -132,7 +132,7 @@ TEST_F(StopwatchTest, MeasureFunctionReference) {
     // Define a function to be measured
     std::function<void()> testFunc = [] { sleep_for(20ms); };
 
-    const auto duration = stopwatch.measure(testFunc);
+    const auto duration = Stopwatch<>::measure(testFunc);
 
     // Check duration
     EXPECT_GE(duration.count(), 15);
@@ -142,9 +142,9 @@ TEST_F(StopwatchTest, MeasureFunctionReference) {
 // Test measure with multiple calls
 TEST_F(StopwatchTest, MeasureMultipleCalls) {
     // Measure multiple different durations
-    const auto d1 = stopwatch.measure([] { sleep_for(10ms); });
-    const auto d2 = stopwatch.measure([] { sleep_for(20ms); });
-    const auto d3 = stopwatch.measure([] { sleep_for(30ms); });
+    const auto d1 = Stopwatch<>::measure([] { sleep_for(10ms); });
+    const auto d2 = Stopwatch<>::measure([] { sleep_for(20ms); });
+    const auto d3 = Stopwatch<>::measure([] { sleep_for(30ms); });
 
     // Each duration should be approximately its sleep time
     EXPECT_GE(d1.count(), 5);
@@ -165,7 +165,7 @@ TEST_F(StopwatchTest, MeasureDoesntChangeFlags) {
     const auto flagsBefore = stopwatch.get_flags().size();
 
     // Measure something
-    stopwatch.measure([] { sleep_for(10ms); });
+    Stopwatch<>::measure([] { sleep_for(10ms); });
 
     const auto flagsAfter = stopwatch.get_flags().size();
 

@@ -4,6 +4,7 @@
 #include "postgres_params.hpp"
 
 #include <cmath>
+#include <cstdlib>
 #include <demiplane/gears>
 #include <memory_resource>
 
@@ -905,7 +906,7 @@ TEST_F(PostgresParamsTest, InsertAndSelect) {
                      0);
 
     ASSERT_EQ(PQresultStatus(insert_result), PGRES_TUPLES_OK) << PQerrorMessage(conn_);
-    const int id = std::atoi(PQgetvalue(insert_result, 0, 0));
+    const int id = static_cast<int>(std::strtol(PQgetvalue(insert_result, 0, 0), nullptr, 10));
     PQclear(insert_result);
 
     postgres::ParamSink select_sink(&pool);

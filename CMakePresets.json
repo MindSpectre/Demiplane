@@ -7,58 +7,319 @@
   },
   "configurePresets": [
     {
-      "name": "release",
-      "displayName": "Release toolchain",
-      "hidden": false,
+      "name": "linux-base",
+      "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
-        "CMAKE_TOOLCHAIN_FILE": "/opt/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_BUILD_TYPE": "Release",
-        "VCPKG_INSTALLED_DIR": "/opt/vcpkg/installed",
-        "VCPKG_MANIFEST_INSTALL": "OFF"
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=mold -lc++abi",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold -lc++abi",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-clang"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "build/debug"
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       },
       "binaryDir": "build/release"
     },
     {
-      "name": "setup",
-      "displayName": "Setup toolchain",
-      "hidden": false,
-      "generator": "Ninja",
+      "name": "dev-slim",
+      "displayName": "Dev Slim (no components/benchmarks)",
+      "description": "Fast iteration build — only common/ libraries, no components or benchmarks",
+      "inherits": "debug",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "/opt/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_INSTALLED_DIR": "/opt/vcpkg/installed",
-        "VCPKG_MANIFEST_MODE": "ON"
+        "BUILD_COMPONENTS": "OFF",
+        "DO_BENCHMARKS": "OFF"
       },
-      "binaryDir": "build/setup"
+      "binaryDir": "build/dev-slim"
     },
     {
-      "name": "debug",
-      "displayName": "Debug toolchain",
-      "hidden": false,
+      "name": "asan",
+      "displayName": "ASan + UBSan (Debug)",
+      "description": "Debug build with AddressSanitizer and UndefinedBehaviorSanitizer",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fsanitize=address,undefined -fno-omit-frame-pointer -fno-optimize-sibling-calls",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined -fuse-ld=mold -lc++abi",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined -fuse-ld=mold -lc++abi"
+      },
+      "binaryDir": "build/asan"
+    },
+    {
+      "name": "llvm-coverage",
+      "displayName": "Code Coverage — llvm-cov (Debug)",
+      "description": "Debug build with llvm source-based coverage (use llvm-profdata + llvm-cov)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate -fuse-ld=mold -lc++abi"
+      },
+      "binaryDir": "build/llvm-coverage"
+    },
+    {
+      "name": "gcc-coverage",
+      "displayName": "Code Coverage — gcov (Debug)",
+      "description": "Debug build with gcov coverage (compatible with CLion CTest coverage)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ --coverage",
+        "CMAKE_EXE_LINKER_FLAGS": "--coverage -fuse-ld=mold -lc++abi"
+      },
+      "binaryDir": "build/gcc-coverage"
+    },
+    {
+      "name": "release-lto",
+      "displayName": "Release + LTO",
+      "description": "Release build with Link-Time Optimization",
+      "inherits": "release",
+      "cacheVariables": {
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
+      },
+      "binaryDir": "build/release-lto"
+    },
+    {
+      "name": "macos-base",
+      "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "/opt/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "VCPKG_MANIFEST_MODE": "OFF",
-        "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets"
       },
-      "binaryDir": "build/debug"
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-arm64-debug",
+      "displayName": "macOS ARM64 Debug",
+      "description": "macOS Apple Silicon debug build (experimental)",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-clang"
+      },
+      "binaryDir": "build/macos-arm64-debug"
+    },
+    {
+      "name": "macos-arm64-release",
+      "displayName": "macOS ARM64 Release",
+      "description": "macOS Apple Silicon release build (experimental)",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-clang"
+      },
+      "binaryDir": "build/macos-arm64-release"
+    },
+    {
+      "name": "macos-x64-debug",
+      "displayName": "macOS x64 Debug",
+      "description": "macOS Intel debug build (experimental)",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VCPKG_TARGET_TRIPLET": "x64-osx-clang"
+      },
+      "binaryDir": "build/macos-x64-debug"
+    },
+    {
+      "name": "macos-x64-release",
+      "displayName": "macOS x64 Release",
+      "description": "macOS Intel release build (experimental)",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-osx-clang"
+      },
+      "binaryDir": "build/macos-x64-release"
+    },
+    {
+      "name": "windows-msvc-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC Debug",
+      "description": "Windows debug build with MSVC (experimental, requires VS Developer Prompt)",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "build/windows-msvc-debug"
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC Release",
+      "description": "Windows release build with MSVC (experimental, requires VS Developer Prompt)",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "build/windows-msvc-release"
+    },
+    {
+      "name": "windows-clangcl-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-clangcl"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-clangcl-debug",
+      "displayName": "Windows clang-cl Debug",
+      "description": "Windows debug build with clang-cl (experimental, requires VS Developer Prompt)",
+      "inherits": "windows-clangcl-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "build/windows-clangcl-debug"
+    },
+    {
+      "name": "windows-clangcl-release",
+      "displayName": "Windows clang-cl Release",
+      "description": "Windows release build with clang-cl (experimental, requires VS Developer Prompt)",
+      "inherits": "windows-clangcl-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "build/windows-clangcl-release"
     }
   ],
   "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "configuration": "Debug"
+    },
     {
       "name": "release",
       "configurePreset": "release",
       "configuration": "Release"
     },
     {
-      "name": "debug",
-      "configurePreset": "debug",
+      "name": "dev-slim",
+      "configurePreset": "dev-slim",
       "configuration": "Debug"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "configuration": "Debug"
+    },
+    {
+      "name": "llvm-coverage",
+      "configurePreset": "llvm-coverage",
+      "configuration": "Debug"
+    },
+    {
+      "name": "gcc-coverage",
+      "configurePreset": "gcc-coverage",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release-lto",
+      "configurePreset": "release-lto",
+      "configuration": "Release"
+    },
+    {
+      "name": "macos-arm64-debug",
+      "configurePreset": "macos-arm64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "macos-arm64-release",
+      "configurePreset": "macos-arm64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "macos-x64-debug",
+      "configurePreset": "macos-x64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "macos-x64-release",
+      "configurePreset": "macos-x64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-clangcl-debug",
+      "configurePreset": "windows-clangcl-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-clangcl-release",
+      "configurePreset": "windows-clangcl-release",
+      "configuration": "Release"
     }
   ],
   "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
     {
       "name": "release",
       "configurePreset": "release",
@@ -68,9 +329,105 @@
       }
     },
     {
-      "name": "debug",
-      "configurePreset": "debug",
+      "name": "dev-slim",
+      "configurePreset": "dev-slim",
       "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "llvm-coverage",
+      "configurePreset": "gcc-coverage",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "gcc-coverage",
+      "configurePreset": "gcc-coverage",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release-lto",
+      "configurePreset": "release-lto",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-debug",
+      "configurePreset": "macos-arm64-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-release",
+      "configurePreset": "macos-arm64-release",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x64-debug",
+      "configurePreset": "macos-x64-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x64-release",
+      "configurePreset": "macos-x64-release",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc-release",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-clangcl-debug",
+      "configurePreset": "windows-clangcl-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-clangcl-release",
+      "configurePreset": "windows-clangcl-release",
+      "configuration": "Release",
       "output": {
         "outputOnFailure": true
       }

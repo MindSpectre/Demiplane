@@ -13,6 +13,8 @@ RUN dnf -y group install development-tools
 RUN dnf -y install  \
     clang  \
     clang-tools-extra \
+    libcxx-devel \
+    libcxxabi-devel \
     perl-IPC-Cmd  \
     kernel-headers \
     curl  \

@@ -77,7 +77,7 @@ static constexpr auto o_user_id = orders.column<"user_id">();
 static constexpr auto o_amount  = orders.column<"amount">();
 static constexpr auto o_status  = orders.column<"status">();
 
-static constexpr auto cm_id      = comments.column<"id">();
+[[maybe_unused]] static constexpr auto cm_id = comments.column<"id">();
 static constexpr auto cm_post_id = comments.column<"post_id">();
 static constexpr auto cm_body    = comments.column<"body">();
 
@@ -108,8 +108,8 @@ TEST(QueryCompilation, ColumnAccess) {
     static_assert(std::is_same_v<decltype(u_active)::value_type, bool>);
     static_assert(std::is_same_v<decltype(o_amount)::value_type, double>);
 
-    static constexpr auto u_col0 = users.column<0>();
-    static constexpr auto u_col1 = users.column<1>();
+    [[maybe_unused]] static constexpr auto u_col0 = users.column<0>();
+    [[maybe_unused]] static constexpr auto u_col1 = users.column<1>();
     static_assert(std::is_same_v<decltype(u_col0)::value_type, int>);
     static_assert(std::is_same_v<decltype(u_col1)::value_type, std::string>);
 
@@ -724,14 +724,11 @@ TEST(QueryCompilation, ParamsBoolean) {
 }
 
 TEST(QueryCompilation, ParamsCaseWhenCount) {
-    static_assert(
-        compiler
-            .compile_static(
-                select(
-                    u_id,
-                    case_when(u_age < 18, lit("Minor")).when(u_age < 65, lit("Adult")).else_(lit("Senior")).as("group"))
-                    .from(users))
-            .size() == 5);
+    static constexpr auto r = compiler.compile_static(
+        select(u_id,
+               case_when(u_age < 18, lit("Minor")).when(u_age < 65, lit("Adult")).else_(lit("Senior")).as("group"))
+            .from(users));
+    static_assert(r.size() == 5);
 }
 
 TEST(QueryCompilation, ParamsUnion) {
@@ -749,7 +746,8 @@ TEST(QueryCompilation, ParamsExistsInner) {
 }
 
 TEST(QueryCompilation, ParamsEmpty) {
-    static_assert(compiler.compile_static(select(u_id, u_name).from(users)).size() == 0);
+    static constexpr auto r = compiler.compile_static(select(u_id, u_name).from(users));
+    static_assert(r.size() == 0);
 }
 
 // =============================================================================
@@ -779,10 +777,9 @@ TEST(QueryCompilation, ParamPlaceholderMultiple) {
 }
 
 TEST(QueryCompilation, ParamPlaceholderNoValues) {
-    static_assert(
-        compiler
-            .compile_static<ParamMode::Inline>(select(u_id).from(users).where(p_published == ParamPlaceholder<bool>()))
-            .size() == 0);
+    static constexpr auto r = compiler.compile_static<ParamMode::Inline>(
+        select(u_id).from(users).where(p_published == ParamPlaceholder<bool>()));
+    static_assert(r.size() == 0);
 }
 
 // =============================================================================

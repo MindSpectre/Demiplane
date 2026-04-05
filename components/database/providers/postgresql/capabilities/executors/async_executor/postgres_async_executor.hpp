@@ -74,9 +74,9 @@ namespace demiplane::db::postgres {
          * @param query SQL query string (must be null-terminated: std::string, pmr::string, const char*)
          * @return Awaitable result
          */
-        template <gears::IsNullTerminatedString QueryT>
+        template <gears::IsNullTerminatedString StringQueryT>
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const QueryT& query) const {
+        execute(const StringQueryT& query) const {
             co_return co_await execute_impl(gears::as_c_str(query), nullptr);
         }
 
@@ -86,9 +86,9 @@ namespace demiplane::db::postgres {
          * @param params Parameter pack
          * @return Awaitable result
          */
-        template <gears::IsNullTerminatedString QueryT>
+        template <gears::IsNullTerminatedString StringQueryT>
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const QueryT& query, const Params& params) const {
+        execute(const StringQueryT& query, const Params& params) const {
             co_return co_await execute_impl(gears::as_c_str(query), &params);
         }
 
@@ -98,21 +98,24 @@ namespace demiplane::db::postgres {
          * @param args Values convertible to FieldValue
          * @return Awaitable result
          *
+         * Parameters are taken by value because Boost.Asio awaitables are lazy
+         * (suspend at initial_suspend). Reference parameters would dangle before
+         * the coroutine body runs.
+         *
          * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", 42);
          */
-        template <gears::IsNullTerminatedString QueryT, typename... Args>
-            requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> execute(const QueryT& query,
-                                                                                                Args&&... args) {
+        template <gears::IsNullTerminatedString StringQueryT, typename... Args>
+            requires(db::IsFieldValueType<std::remove_cvref_t<Args>> && ...)
+        [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> execute(StringQueryT query,
+                                                                                                Args... args) const {
             std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
 
             ParamSink sink(&pool);
 
-            (sink.push(FieldValue{std::forward<Args>(args)}), ...);
+            (sink.push(FieldValue{std::move(args)}), ...);
 
             const auto params = sink.native_packet();
-            // pool + params live on coroutine frame — alive across all suspension points
             co_return co_await execute_impl(gears::as_c_str(query), params.get());
         }
 
@@ -122,25 +125,29 @@ namespace demiplane::db::postgres {
          * @param args Values packed in a tuple
          * @return Awaitable result
          *
+         * Tuple is taken by value for coroutine safety (see variadic overload).
+         *
          * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", std::tuple{42});
          */
-        template <gears::IsNullTerminatedString QueryT, typename... Args>
+        template <gears::IsNullTerminatedString StringQueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const QueryT& query, const std::tuple<Args...>& args) {
-            return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
+        execute(StringQueryT query, std::tuple<Args...> args) const {
+            co_return co_await std::apply([&](Args&... a) { return execute(std::move(query), std::move(a)...); }, args);
         }
 
         /**
          * @brief Execute a compiled static query
          * @param query CompiledStaticQuery object (from compile_static())
          * @return Awaitable result
+         *
+         * Query is taken by value for coroutine safety (see variadic overload).
          */
         template <typename SqlStringT, typename... Params>
             requires(db::IsFieldValueType<Params> && ...)
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
-        execute(const CompiledStaticQuery<SqlStringT, Params...>& query) {
-            return execute(query.c_sql(), query.params());
+        execute(CompiledStaticQuery<SqlStringT, Params...> query) const {
+            co_return co_await execute(query.c_sql(), query.params());
         }
 
         /**

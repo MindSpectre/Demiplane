@@ -6,10 +6,10 @@ namespace demiplane::db::postgres {
         Json::Value result;
         result["capacity"]              = capacity_;
         result["min_connections"]       = min_connections_;
-        result["connect_timeout"]       = connect_timeout_.count();
-        result["idle_timeout"]          = idle_timeout_.count();
-        result["health_check_interval"] = health_check_interval_.count();
-        result["max_lifetime"]          = max_lifetime_.count();
+        result["connect_timeout"]       = static_cast<Json::Int64>(connect_timeout_.count());
+        result["idle_timeout"]          = static_cast<Json::Int64>(idle_timeout_.count());
+        result["health_check_interval"] = static_cast<Json::Int64>(health_check_interval_.count());
+        result["max_lifetime"]          = static_cast<Json::Int64>(max_lifetime_.count());
         result["cleanup_sql"]           = cleanup_sql_;
         return result;
     }

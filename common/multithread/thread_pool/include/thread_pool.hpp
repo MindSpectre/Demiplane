@@ -1,9 +1,9 @@
 #pragma once
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <future>
-#include <iostream>
 #include <list>
 #include <mutex>
 #include <queue>

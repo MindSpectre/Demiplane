@@ -195,7 +195,6 @@ namespace demiplane::http {
             trigger_response_callbacks(response);
             co_return response;
         }
-        Response response;
         // Note: Middleware integration would need adjustment for ContextHandler
         auto response_result = co_await handler(std::move(ctx));
         trigger_response_callbacks(response_result);

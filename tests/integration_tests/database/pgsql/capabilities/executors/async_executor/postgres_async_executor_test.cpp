@@ -751,7 +751,7 @@ TEST_F(AsyncExecutorTest, ExecutorMoveSemantics) {
     // Move assign
     AsyncExecutor executor3{std::move(executor2)};
     EXPECT_TRUE(executor3.valid());
-    EXPECT_FALSE(executor2.valid());
+    EXPECT_FALSE(executor2.valid());  // NOLINT(*-use-after-move)
     EXPECT_EQ(executor3.native_handle(), original_conn);
 
     // Verify moved executor still works

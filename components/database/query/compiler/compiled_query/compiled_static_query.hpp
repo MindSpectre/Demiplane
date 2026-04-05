@@ -3,6 +3,9 @@
 #include <string>
 #include <tuple>
 
+#include "gears_exception_result.hpp"
+#include "gears_utils.hpp"
+
 namespace demiplane::db {
 
     // TODO:DOC: SqlStringT is only inline for compiler
@@ -23,7 +26,8 @@ namespace demiplane::db {
             return params_;
         }
 
-        [[nodiscard]] static constexpr std::size_t size() noexcept {
+        [[nodiscard]] constexpr std::size_t size() const noexcept {
+            gears::force_non_static(this);
             return sizeof...(Params);
         }
     };

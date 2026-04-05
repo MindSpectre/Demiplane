@@ -15,6 +15,7 @@ fi
 
 if [ -f "$ENV_FILE" ]; then
     set -a
+    # shellcheck disable=SC1090
     source <(grep -v '^#' "$ENV_FILE" | grep -v '^$')
     set +a
 fi
@@ -33,8 +34,8 @@ echo "🐳 Starting PostgreSQL test database..."
 $DOCKER_COMPOSE -f docker-compose.test.yml up -d
 
 echo "⏳ Waiting for PostgreSQL to be ready..."
-for i in {1..30}; do
-    if $DOCKER_COMPOSE -f docker-compose.test.yml exec -T postgres-test pg_isready -U $POSTGRES_USER -d $POSTGRES_DB &> /dev/null; then
+for _ in {1..30}; do
+    if $DOCKER_COMPOSE -f docker-compose.test.yml exec -T postgres-test pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" &> /dev/null; then
         echo "✅ PostgreSQL is ready!"
         echo ""
         echo "Connection: postgresql://$POSTGRES_USER:***@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB"

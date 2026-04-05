@@ -18,7 +18,7 @@ namespace demiplane::scroll::detail {
 
         MetaSource() = default;
 
-        explicit constexpr MetaSource(const std::source_location& loc)
+        explicit constexpr MetaSource(const std::source_location& loc) noexcept
             : location{loc} {
         }
     };
@@ -29,7 +29,7 @@ namespace demiplane::scroll::detail {
         char tid_str[16]{};
         char pid_str[16]{};
 
-        ThreadLocalCache() {
+        ThreadLocalCache() noexcept {
             tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
             pid = getpid();
             snprintf(tid_str, sizeof(tid_str), "%lu", tid);
@@ -43,7 +43,7 @@ namespace demiplane::scroll::detail {
         uint64_t tid;
         std::string tid_str;
 
-        MetaThread()
+        MetaThread() noexcept
             : tid{tl_cache.tid},
               tid_str{tl_cache.tid_str} {
         }
@@ -53,7 +53,7 @@ namespace demiplane::scroll::detail {
         int32_t pid;
         std::string pid_str;
 
-        MetaProcess()
+        MetaProcess() noexcept
             : pid{tl_cache.pid},
               pid_str{tl_cache.pid_str} {
         }
@@ -62,7 +62,7 @@ namespace demiplane::scroll::detail {
     struct MetaTimePoint {
         std::chrono::time_point<std::chrono::system_clock> time_point;
 
-        MetaTimePoint()
+        MetaTimePoint() noexcept
             : time_point{chrono::Clock::now()} {
         }
     };
@@ -78,11 +78,11 @@ namespace demiplane::scroll::detail {
               message_{msg} {
         }
 
-        [[nodiscard]] LogLevel level() const {
+        [[nodiscard]] LogLevel level() const noexcept {
             return level_;
         }
 
-        [[nodiscard]] std::string_view message() const {
+        [[nodiscard]] std::string_view message() const noexcept {
             return message_;
         }
 
@@ -100,7 +100,7 @@ namespace demiplane::scroll::detail {
         std::string message_;
         static constexpr std::array<const char*, 6> level_strings = {"TRC", "DBG", "INF", "WRN", "ERR", "FAT"};
 
-        [[nodiscard]] const char* level_cstr() const {
+        [[nodiscard]] constexpr const char* level_cstr() const noexcept {
             return level_strings[static_cast<std::size_t>(level_)];
         }
     };

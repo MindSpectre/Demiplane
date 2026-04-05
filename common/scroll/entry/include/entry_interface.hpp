@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <demiplane/chrono>
 #include <demiplane/gears>
 #include <source_location>
@@ -41,21 +42,21 @@ namespace demiplane::scroll::detail {
 
     struct MetaThread {
         uint64_t tid;
-        std::string tid_str;
+        char tid_str[16]{};
 
         MetaThread() noexcept
-            : tid{tl_cache.tid},
-              tid_str{tl_cache.tid_str} {
+            : tid{tl_cache.tid} {
+            std::memcpy(tid_str, tl_cache.tid_str, sizeof(tid_str));
         }
     };
 
     struct MetaProcess {
         int32_t pid;
-        std::string pid_str;
+        char pid_str[16]{};
 
         MetaProcess() noexcept
-            : pid{tl_cache.pid},
-              pid_str{tl_cache.pid_str} {
+            : pid{tl_cache.pid} {
+            std::memcpy(pid_str, tl_cache.pid_str, sizeof(pid_str));
         }
     };
 
@@ -88,7 +89,7 @@ namespace demiplane::scroll::detail {
 
         virtual ~EntryBase()                                = default;
         EntryBase()                                         = default;
-        [[nodiscard]] virtual std::string to_string() const = 0;
+        [[nodiscard]] virtual const std::string& to_string() const = 0;
 
     protected:
         static std::string& get_tl_buffer() {
@@ -109,6 +110,6 @@ namespace demiplane::scroll::detail {
     concept EntryConcept = requires(const T& entry) {
         { entry.level() } -> std::same_as<LogLevel>;
         { entry.message() } -> std::same_as<std::string_view>;
-        { entry.to_string() } -> std::same_as<std::string>;
+        { entry.to_string() } -> std::same_as<const std::string&>;
     };
 }  // namespace demiplane::scroll::detail

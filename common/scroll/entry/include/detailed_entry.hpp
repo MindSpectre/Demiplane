@@ -10,7 +10,7 @@ namespace demiplane::scroll {
     public:
         using EntryBase::EntryBase;
 
-        [[nodiscard]] std::string to_string() const override;
+        [[nodiscard]] const std::string& to_string() const override;
 
         static bool comp(const DetailedEntry& lhs, const DetailedEntry& rhs) {
             // Optimized comparison using single 64-bit compare when possible

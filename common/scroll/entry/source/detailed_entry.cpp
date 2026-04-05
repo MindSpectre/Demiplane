@@ -12,7 +12,7 @@ namespace {
 }  // namespace
 
 namespace demiplane::scroll {
-    std::string DetailedEntry::to_string() const {
+    const std::string& DetailedEntry::to_string() const {
         // Reuse thread-local buffer
         std::string& tl_string_buffer = get_tl_buffer();
         tl_string_buffer.clear();
@@ -45,6 +45,6 @@ namespace demiplane::scroll {
         tl_string_buffer.append(message_);
         tl_string_buffer.push_back('\n');
 
-        return std::move(tl_string_buffer);
+        return tl_string_buffer;
     }
 }  // namespace demiplane::scroll

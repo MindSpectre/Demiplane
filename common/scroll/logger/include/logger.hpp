@@ -77,15 +77,19 @@ namespace demiplane::scroll {
         template <typename... Args>
         constexpr void
         log(const LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
-            // 1. Claim sequence
-            const std::int64_t seq    = disruptor_.sequencer().next();
-            // 2. Format message (happens in producer thread)
-            std::string formatted_msg = std::format(fmt, std::forward<Args>(args)...);
-            // 3. Write LogEvent to ring buffer
-            auto& event               = disruptor_.ring_buffer()[seq];
-            event                     = LogEvent{lvl, std::move(formatted_msg), loc};
+            // Format + capture metadata BEFORE claiming slot (outside critical path)
+            thread_local std::string tl_msg_buf;
+            tl_msg_buf.clear();
+            std::format_to(std::back_inserter(tl_msg_buf), fmt, std::forward<Args>(args)...);
+            const auto meta = EventMeta{lvl, loc};
 
-            // 4. Publish (makes visible to consumer)
+            // Critical path: claim → swap → publish (minimal time holding slot)
+            const std::int64_t seq = disruptor_.sequencer().next();
+            auto& event            = disruptor_.ring_buffer()[seq];
+
+            event.message.swap(tl_msg_buf);
+            apply_meta(event, meta);
+
             disruptor_.sequencer().publish(seq);
         }
 
@@ -98,9 +102,17 @@ namespace demiplane::scroll {
         void log(const LogLevel lvl,
                  const std::string_view msg,
                  const std::source_location& loc = std::source_location::current()) {
+            thread_local std::string tl_msg_buf;
+            tl_msg_buf.clear();
+            tl_msg_buf.append(msg);
+            const auto meta = EventMeta{lvl, loc};
+
             const std::int64_t seq = disruptor_.sequencer().next();
             auto& event            = disruptor_.ring_buffer()[seq];
-            event                  = LogEvent{lvl, std::string{msg}, loc};
+
+            event.message.swap(tl_msg_buf);
+            apply_meta(event, meta);
+
             disruptor_.sequencer().publish(seq);
         }
 
@@ -129,10 +141,17 @@ namespace demiplane::scroll {
             }
 
             ~StreamProxy() noexcept {
-                // Publish when proxy is destroyed (end of statement)
+                thread_local std::string tl_msg_buf;
+                tl_msg_buf.clear();
+                tl_msg_buf.append(stream_.view());
+                const auto meta = EventMeta{level_, loc_};
+
                 const std::int64_t seq = logger_->disruptor_.sequencer().next();
                 auto& event            = logger_->disruptor_.ring_buffer()[seq];
-                event                  = LogEvent{level_, stream_.str(), loc_};
+
+                event.message.swap(tl_msg_buf);
+                apply_meta(event, meta);
+
                 logger_->disruptor_.sequencer().publish(seq);
             }
 
@@ -167,6 +186,34 @@ namespace demiplane::scroll {
         std::vector<std::shared_ptr<Sink>> sinks_;
         std::jthread consumer_thread_;
         std::atomic<bool> running_{false};
+
+        /**
+         * @brief Pre-captured metadata (built outside the CAS critical path)
+         */
+        struct EventMeta {
+            LogLevel level;
+            detail::MetaSource location;
+            detail::MetaTimePoint time_point;
+            detail::MetaThread tid;
+            detail::MetaProcess pid;
+
+            EventMeta(const LogLevel lvl, const std::source_location& loc) noexcept
+                : level{lvl},
+                  location{loc} {
+            }
+        };
+
+        /**
+         * @brief Apply pre-captured metadata to ring buffer slot (minimal critical path)
+         */
+        static void apply_meta(LogEvent& event, const EventMeta& meta) noexcept {
+            event.level           = meta.level;
+            event.location        = meta.location;
+            event.time_point      = meta.time_point;
+            event.tid             = meta.tid;
+            event.pid             = meta.pid;
+            event.shutdown_signal = false;
+        }
 
         /**
          * @brief Consumer thread loop - processes events and dispatches to sinks

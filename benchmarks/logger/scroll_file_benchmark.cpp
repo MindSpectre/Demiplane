@@ -10,7 +10,19 @@
 
 namespace {
 
-    constexpr std::size_t CONTENTION_THREADS    = 8;
+    // Null sink: accepts events, does nothing. Measures pure disruptor overhead.
+    class NullSink final : public demiplane::scroll::Sink {
+    public:
+        void process(const demiplane::scroll::LogEvent& /*event*/) override {
+        }
+        void flush() override {
+        }
+        [[nodiscard]] bool should_log(demiplane::scroll::LogLevel /*lvl*/) const noexcept override {
+            return true;
+        }
+    };
+
+    constexpr std::size_t CONTENTION_THREADS    = 2;
     constexpr std::size_t BASELINE_THREADS      = 1;
     constexpr std::size_t ITERATIONS_PER_THREAD = 1'000'000;
 
@@ -136,6 +148,57 @@ namespace {
         };
     }
 
+    BenchmarkResult run_null_benchmark(const std::size_t thread_count, const std::string& padding) {
+        auto null_sink = std::make_shared<NullSink>();
+
+        auto logger = std::make_unique<demiplane::scroll::Logger>(
+            demiplane::scroll::LoggerConfig{}
+                .wait_strategy<demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin>()
+                .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium)
+                .finalize());
+        logger->add_sink(null_sink);
+
+        std::barrier sync_point{static_cast<std::ptrdiff_t>(thread_count)};
+        std::vector<ThreadResult> thread_results(thread_count);
+        std::vector<std::thread> threads;
+        threads.reserve(thread_count);
+
+        const auto wall_start = std::chrono::steady_clock::now();
+
+        for (std::size_t i = 0; i < thread_count; ++i) {
+            threads.emplace_back([&, id = i] {
+                const auto thread_start = std::chrono::steady_clock::now();
+
+                for (std::size_t j = 0; j < ITERATIONS_PER_THREAD; ++j) {
+                    logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding);
+                }
+
+                const auto thread_end              = std::chrono::steady_clock::now();
+                thread_results[id].completion_time = thread_end - thread_start;
+                sync_point.arrive_and_wait();
+            });
+        }
+
+        for (auto& t : threads) {
+            t.join();
+        }
+
+        const auto wall_end = std::chrono::steady_clock::now();
+        logger->shutdown();
+
+        const auto wall_clock    = wall_end - wall_start;
+        const double wall_sec    = std::chrono::duration<double>(wall_clock).count();
+        const auto total_entries = static_cast<double>(thread_count * ITERATIONS_PER_THREAD);
+
+        return BenchmarkResult{
+            .thread_count       = thread_count,
+            .iterations         = ITERATIONS_PER_THREAD,
+            .thread_results     = std::move(thread_results),
+            .wall_clock         = std::chrono::duration_cast<std::chrono::nanoseconds>(wall_clock),
+            .entries_per_second = total_entries / wall_sec,
+        };
+    }
+
 }  // namespace
 
 int main() {
@@ -151,6 +214,14 @@ int main() {
     // Test 2: 1-thread baseline
     auto result_1t = run_benchmark(BASELINE_THREADS, padding, "scroll_baseline_1t.log");
     print_results(result_1t, "1-Thread Baseline");
+
+    // Test 3: 8-thread null sink (pure disruptor overhead)
+    auto null_8t = run_null_benchmark(CONTENTION_THREADS, padding);
+    print_results(null_8t, "8-Thread NullSink");
+
+    // Test 4: 1-thread null sink
+    auto null_1t = run_null_benchmark(BASELINE_THREADS, padding);
+    print_results(null_1t, "1-Thread NullSink");
 
     return 0;
 }

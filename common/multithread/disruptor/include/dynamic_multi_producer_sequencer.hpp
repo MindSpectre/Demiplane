@@ -6,6 +6,8 @@
 #include <thread>
 #include <vector>
 
+#include <immintrin.h>
+
 #include "sequence.hpp"
 #include "wait_strategies/wait_strategy.hpp"
 
@@ -155,10 +157,17 @@ namespace demiplane::multithread {
                     // Consumer hasn't caught up - we'd overwrite data
                     std::int64_t gating_seq = cached_gating_seq;
 
-                    // Spin until consumer advances enough
+                    // Spin-pause before falling back to yield (avoids syscall overhead)
+                    std::int32_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        std::this_thread::yield();
+                        if (++spin_count < 100) {
+                            // TODO: compiler aware
+                            _mm_pause();
+                        } else {
+                            std::this_thread::yield();
+                            spin_count = 0;
+                        }
                     }
                 }
 
@@ -235,9 +244,16 @@ namespace demiplane::multithread {
                 if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(buffer_size_);
                     wrap_point > cached_gating_seq) {
                     std::int64_t gating_seq = cached_gating_seq;
+                    std::int32_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        std::this_thread::yield();
+                        if (++spin_count < 100) {
+                            // TODO: compiler aware
+                            _mm_pause();
+                        } else {
+                            std::this_thread::yield();
+                            spin_count = 0;
+                        }
                     }
                 }
             } while (!cursor_.compare_and_set(current, next));

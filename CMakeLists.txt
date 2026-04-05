@@ -12,25 +12,41 @@ set(CMAKE_CXX_CLANG_TIDY
     clang-tidy
     --header-filter=${CMAKE_SOURCE_DIR}/.*
 )
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
-SeparateLines()
-message("\tGENERAL SETTINGS")
-message("Build type is " ${CMAKE_BUILD_TYPE})
-message("CXX Flags are ${CMAKE_CXX_FLAGS}")
-message("CXX Compiler path: ${CMAKE_CXX_COMPILER}")
-message("Toolchain location: ${CMAKE_TOOLCHAIN_FILE}")
 
-if (${CMAKE_CXX_STANDARD_REQUIRED})
-    message("Standard is ${CMAKE_CXX_STANDARD} and required")
-else ()
-    message("Standard is ${CMAKE_CXX_STANDARD} and not required")
-endif ()
-SeparateLines()
+# ── Tool versions ────────────────────────────────────────────────────────────
+query_tool_version(CLANG_VERSION clang++ --version)
+query_tool_version(CMAKE_VER_STR cmake --version)
+query_tool_version(NINJA_VERSION ninja --version)
+query_tool_version(CCACHE_VERSION ccache --version)
+query_tool_version(MOLD_VERSION mold --version)
 
+# vcpkg lives inside the source tree (toolchain is at vcpkg/scripts/buildsystems/vcpkg.cmake)
+get_filename_component(_vcpkg_root "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
+get_filename_component(_vcpkg_root "${_vcpkg_root}/../.." ABSOLUTE)
+vcpkg_commit_hash(VCPKG_COMMIT "${_vcpkg_root}")
 
-message("\tVCPKG PROPERTIES")
-message("Vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
-SeparateLines()
+PrintLineSeparator()
+message("\tTOOLCHAIN")
+message("Clang:    ${CLANG_VERSION}")
+message("CMake:    ${CMAKE_VER_STR}")
+message("Ninja:    ${NINJA_VERSION}")
+message("ccache:   ${CCACHE_VERSION}")
+message("mold:     ${MOLD_VERSION}")
+PrintLineSeparator()
+
+message("\tBUILD CONFIGURATION")
+message("Build type:   ${CMAKE_BUILD_TYPE}")
+message("C++ standard: ${CMAKE_CXX_STANDARD} (required: ${CMAKE_CXX_STANDARD_REQUIRED})")
+message("CXX flags:    ${CMAKE_CXX_FLAGS}")
+message("Linker flags: ${CMAKE_EXE_LINKER_FLAGS}")
+message("Compiler:     ${CMAKE_CXX_COMPILER}")
+PrintLineSeparator()
+
+message("\tVCPKG")
+message("Toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+message("Triplet:   ${VCPKG_TARGET_TRIPLET}")
+message("Commit:    ${VCPKG_COMMIT}")
+PrintLineSeparator()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
@@ -68,7 +84,7 @@ if (DMP_COMPONENT_LOGGING)
     add_compile_definitions(DMP_COMPONENT_LOGGING)
     message("Added DMP_COMPONENT_LOGGING compile definition")
 endif ()
-SeparateLines()
+PrintLineSeparator()
 #custom directives
 include(cmake/tests.cmake)
 include(cmake/combined_library.cmake)
@@ -117,7 +133,7 @@ if (NOT Boost_FOUND)
 endif ()
 
 
-SeparateLines()
+PrintLineSeparator()
 ##############################################################################
 
 message("\tPROJECT TARGETS LOGS")
@@ -155,4 +171,4 @@ if (DO_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif ()
 ##############################################################################
-SeparateLines()
+PrintLineSeparator()

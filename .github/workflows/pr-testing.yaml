@@ -110,13 +110,25 @@ jobs:
           restore-keys: |
             vcpkg-binary-
 
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ccache-cache
+          key: ccache-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ github.ref }}-
+            ccache-
+
       - name: Build
         run: |
-          mkdir -p vcpkg-binary-cache
+          mkdir -p vcpkg-binary-cache ccache-cache
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -v ${{ github.workspace }}/vcpkg-binary-cache:/root/.cache/vcpkg/archives \
+            -v ${{ github.workspace }}/ccache-cache:/root/.cache/ccache \
             -e VCPKG_BINARY_SOURCES="clear;files,/root/.cache/vcpkg/archives,readwrite" \
+            -e CCACHE_DIR=/root/.cache/ccache \
+            -e CCACHE_MAXSIZE=500M \
             -w /workspace \
             ${{ steps.container.outputs.image }} \
             bash -c "

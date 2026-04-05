@@ -1,4 +1,4 @@
-FROM fedora:latest
+FROM fedora:43
 
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_DISABLE_METRICS=1 \

@@ -1,5 +1,8 @@
 #pragma once
 #include <chrono>
+#include <cstdio>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -54,7 +57,7 @@ namespace demiplane::chrono {
             if constexpr (CT == ClockType::UTC) {
                 len = snprintf(timestamp,
                                sizeof(timestamp),
-                               "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
+                               "%04d-%02d-%02dT%02d:%02d:%02d.%03lldZ",
                                tm.tm_year + 1900,
                                tm.tm_mon + 1,
                                tm.tm_mday,
@@ -65,7 +68,7 @@ namespace demiplane::chrono {
             } else {
                 len = snprintf(timestamp,
                                sizeof(timestamp),
-                               "%04d-%02d-%02dT%02d:%02d:%02d.%03ld ",
+                               "%04d-%02d-%02dT%02d:%02d:%02d.%03lld ",
                                tm.tm_year + 1900,
                                tm.tm_mon + 1,
                                tm.tm_mday,
@@ -86,7 +89,7 @@ namespace demiplane::chrono {
             if constexpr (CT == ClockType::UTC) {
                 len = snprintf(timestamp,
                                sizeof(timestamp),
-                               "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ",
+                               "%04d-%02d-%02dT%02d:%02d:%02d.%03lldZ",
                                tm.tm_year + 1900,
                                tm.tm_mon + 1,
                                tm.tm_mday,
@@ -97,7 +100,7 @@ namespace demiplane::chrono {
             } else {
                 len = snprintf(timestamp,
                                sizeof(timestamp),
-                               "%04d-%02d-%02dT%02d:%02d:%02d.%03ld ",
+                               "%04d-%02d-%02dT%02d:%02d:%02d.%03lld ",
                                tm.tm_year + 1900,
                                tm.tm_mon + 1,
                                tm.tm_mday,

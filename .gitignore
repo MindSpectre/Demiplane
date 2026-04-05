@@ -102,6 +102,12 @@ Testing/
 /CLAUDE.md
 .claude/
 
+# Worktrees
+.worktrees/
+
+# Local vcpkg
+vcpkg/
+
 # Test environment overrides
 .env.test.local
 

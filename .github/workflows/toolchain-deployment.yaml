@@ -26,7 +26,7 @@ jobs:
           # Compare with current commit
           git diff --name-only $PREV_COMMIT HEAD > changed_files.txt
           
-          if grep -q "infrastructure/toolchain/" changed_files.txt || grep -q "vcpkg.json" changed_files.txt; then
+          if grep -q "infrastructure/toolchain/" changed_files.txt; then
             echo "Toolchain files changed"
             echo "changed=true" >> $GITHUB_OUTPUT
           else
@@ -67,7 +67,6 @@ jobs:
         with:
           context: .
           file: infrastructure/toolchain/Dockerfile
-          target: toolchain
           push: true
           tags: |
             ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable

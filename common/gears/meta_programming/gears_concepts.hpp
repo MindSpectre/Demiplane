@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <string_view>
+#include <type_traits>
 
 namespace demiplane::gears {
     template <typename T>
@@ -22,6 +23,7 @@ namespace demiplane::gears {
 
     template <typename T>
     concept IsDuration = std::chrono::__is_duration_v<T>;
+
 
     template <typename T, typename... Args>
     concept OneOf = (std::is_same_v<Args, T> || ...);

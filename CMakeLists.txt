@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.30.5)
 project("Demiplane" LANGUAGES CXX VERSION 0.2)
 # Specify the C++ standard
 
+include(cmake/utils.cmake)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -10,30 +12,41 @@ set(CMAKE_CXX_CLANG_TIDY
     clang-tidy
     --header-filter=${CMAKE_SOURCE_DIR}/.*
 )
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
 
-message("\tGENERAL SETTINGS")
-message("Build type is " ${CMAKE_BUILD_TYPE})
-message("CXX Flags are ${CMAKE_CXX_FLAGS}")
-message("CXX Compiler path: ${CMAKE_CXX_COMPILER}")
-message("Toolchain location: ${CMAKE_TOOLCHAIN_FILE}")
+# ── Tool versions ────────────────────────────────────────────────────────────
+query_tool_version(CLANG_VERSION clang++ --version)
+query_tool_version(CMAKE_VER_STR cmake --version)
+query_tool_version(NINJA_VERSION ninja --version)
+query_tool_version(CCACHE_VERSION ccache --version)
+query_tool_version(MOLD_VERSION mold --version)
 
-if (${CMAKE_CXX_STANDARD_REQUIRED})
-    message("Standard is ${CMAKE_CXX_STANDARD} and required")
-else ()
-    message("Standard is ${CMAKE_CXX_STANDARD} and not required")
-endif ()
-message("_______________________________________________________________________________________________________________")
+# vcpkg lives inside the source tree (toolchain is at vcpkg/scripts/buildsystems/vcpkg.cmake)
+get_filename_component(_vcpkg_root "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
+get_filename_component(_vcpkg_root "${_vcpkg_root}/../.." ABSOLUTE)
+vcpkg_commit_hash(VCPKG_COMMIT "${_vcpkg_root}")
 
+PrintLineSeparator()
+message("\tTOOLCHAIN")
+message("Clang:    ${CLANG_VERSION}")
+message("CMake:    ${CMAKE_VER_STR}")
+message("Ninja:    ${NINJA_VERSION}")
+message("ccache:   ${CCACHE_VERSION}")
+message("mold:     ${MOLD_VERSION}")
+PrintLineSeparator()
 
-set(VCPKG_FEATURE_FLAGS "manifests")
+message("\tBUILD CONFIGURATION")
+message("Build type:   ${CMAKE_BUILD_TYPE}")
+message("C++ standard: ${CMAKE_CXX_STANDARD} (required: ${CMAKE_CXX_STANDARD_REQUIRED})")
+message("CXX flags:    ${CMAKE_CXX_FLAGS}")
+message("Linker flags: ${CMAKE_EXE_LINKER_FLAGS}")
+message("Compiler:     ${CMAKE_CXX_COMPILER}")
+PrintLineSeparator()
 
-message("\tVCPKG PROPERTIES")
-
-message("Vcpkg installed dir: ${VCPKG_INSTALLED_DIR}")
-message("Vcpkg manifest isntall: ${VCPKG_MANIFEST_INSTALL}")
-message("VCPKG Flags are ${VCPKG_FEATURE_FLAGS}")
-message("_______________________________________________________________________________________________________________")
+message("\tVCPKG")
+message("Toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+message("Triplet:   ${VCPKG_TARGET_TRIPLET}")
+message("Commit:    ${VCPKG_COMMIT}")
+PrintLineSeparator()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
@@ -71,7 +84,7 @@ if (DMP_COMPONENT_LOGGING)
     add_compile_definitions(DMP_COMPONENT_LOGGING)
     message("Added DMP_COMPONENT_LOGGING compile definition")
 endif ()
-message("_______________________________________________________________________________________________________________")
+PrintLineSeparator()
 #custom directives
 include(cmake/tests.cmake)
 include(cmake/combined_library.cmake)
@@ -120,7 +133,7 @@ if (NOT Boost_FOUND)
 endif ()
 
 
-message("_______________________________________________________________________________________________________________")
+PrintLineSeparator()
 ##############################################################################
 
 message("\tPROJECT TARGETS LOGS")
@@ -158,4 +171,4 @@ if (DO_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif ()
 ##############################################################################
-message("_______________________________________________________________________________________________________________")
+PrintLineSeparator()

@@ -16,7 +16,7 @@
 
 namespace {
 
-    constexpr std::size_t CONTENTION_THREADS    = 2;
+    constexpr std::size_t CONTENTION_THREADS    = 8;
     constexpr std::size_t BASELINE_THREADS      = 1;
     constexpr std::size_t ITERATIONS_PER_THREAD = 1'000'000;
 
@@ -228,7 +228,7 @@ int main() {
     std::cout << "Abseil File Logger Benchmark\n";
     std::cout << "Padding size: " << ABSEIL_PAD_SIZE << " bytes (target record ~" << TARGET_RECORD_SIZE << " bytes)\n";
 
-    // Test 1: 8-thread contention97
+    // Test 1: 8-thread contention
     auto result_8t = run_benchmark(CONTENTION_THREADS, padding, "abseil_contention_8t.log");
     print_results(result_8t, "8-Thread Contention");
 

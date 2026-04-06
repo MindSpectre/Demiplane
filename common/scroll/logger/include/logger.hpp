@@ -3,10 +3,17 @@
 #include <atomic>
 #include <demiplane/multithread>
 #include <format>
+#include <future>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <thread>
 #include <vector>
+
+#include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/thread_pool.hpp>
 
 #include "logger_config.hpp"
 #include "sink_interface.hpp"
@@ -40,10 +47,38 @@ namespace demiplane::scroll {
      *   // Stream style
      *   logger.stream(LogLevel::Info) << "User " << username << " logged in";
      */
+    /**
+     * @brief Per-sink slot: pairs a sink with its asio::strand for serial dispatch
+     */
+    struct SinkSlot {
+        std::shared_ptr<Sink> sink;
+        boost::asio::strand<boost::asio::any_io_executor> strand;
+    };
+
     class Logger {
     public:
-        constexpr explicit Logger(const LoggerConfig& cfg = {}) noexcept
-            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())} {
+        /**
+         * @brief Construct with external executor (recommended)
+         *
+         * The executor's thread pool runs sink processing. Multiple loggers
+         * can share the same executor (e.g., with HTTP/DB components).
+         */
+        explicit Logger(boost::asio::any_io_executor executor, const LoggerConfig& cfg = {})
+            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
+              executor_{std::move(executor)} {
+            running_.store(true, std::memory_order_release);
+            consumer_thread_ = std::jthread([this] { consumer_loop(); });
+        }
+
+        /**
+         * @brief Construct with internal thread pool (backward-compatible)
+         *
+         * Creates an internal asio::thread_pool sized by LoggerConfig::pool_size.
+         */
+        explicit Logger(const LoggerConfig& cfg = {})
+            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
+              owned_pool_{std::in_place, cfg.get_pool_size()},
+              executor_{owned_pool_->get_executor()} {
             running_.store(true, std::memory_order_release);
             consumer_thread_ = std::jthread([this] { consumer_loop(); });
         }
@@ -54,13 +89,13 @@ namespace demiplane::scroll {
 
         /**
          * @brief Add a sink to receive log events
-         * @param sink Unique pointer to sink (ConsoleSink, FileSink, custom)
+         * @param sink Shared pointer to sink (ConsoleSink, FileSink, custom)
          *
-         * Thread-safe: Can be called before logging starts.
-         * NOT thread-safe during logging.
+         * Each sink is paired with a strand on the executor for serial dispatch.
+         * Can be called before logging starts. NOT thread-safe during logging.
          */
-        constexpr void add_sink(std::shared_ptr<Sink> sink) {
-            sinks_.push_back(std::move(sink));
+        void add_sink(std::shared_ptr<Sink> sink) {
+            sink_slots_.push_back(SinkSlot{std::move(sink), boost::asio::make_strand(executor_)});
         }
 
         /**
@@ -179,14 +214,16 @@ namespace demiplane::scroll {
         void shutdown();
 
         void flush() const {
-            for (const auto& sink : sinks_) {
+            for (const auto& [sink, strand] : sink_slots_) {
                 sink->flush();
             }
         }
 
     private:
         multithread::DynamicDisruptor<LogEvent> disruptor_;
-        std::vector<std::shared_ptr<Sink>> sinks_;
+        std::optional<boost::asio::thread_pool> owned_pool_;
+        boost::asio::any_io_executor executor_;
+        std::vector<SinkSlot> sink_slots_;
         std::jthread consumer_thread_;
         std::atomic<bool> running_{false};
 

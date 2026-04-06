@@ -22,7 +22,7 @@ namespace {
         }
     };
 
-    constexpr std::size_t CONTENTION_THREADS    = 2;
+    constexpr std::size_t CONTENTION_THREADS    = 8;
     constexpr std::size_t BASELINE_THREADS      = 1;
     constexpr std::size_t ITERATIONS_PER_THREAD = 1'000'000;
 

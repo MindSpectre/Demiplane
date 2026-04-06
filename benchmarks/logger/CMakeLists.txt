@@ -38,4 +38,5 @@ target_link_libraries(${DMP_BENCHMARKS}.Abseil.FileBenchmark
         absl::log_sink
         absl::log_initialize
         absl::log_globals
+        Demiplane::Common::Gears
 )

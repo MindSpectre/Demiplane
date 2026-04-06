@@ -1,20 +1,8 @@
 ##############################################################################
-# Benchmark File logger
-##############################################################################
-add_executable(${DMP_BENCHMARKS}.Scroll.FileLogger
-        file_logger.cpp
-)
-target_link_libraries(${DMP_BENCHMARKS}.Scroll.FileLogger
-        PRIVATE
-        Demiplane::Common::Scroll
-        Demiplane::Common::Nexus
-        Demiplane::Common::Math
-)
-
-##############################################################################
 # Benchmark Scroll file logger (8-thread contention + 1-thread baseline)
 ##############################################################################
 add_executable(${DMP_BENCHMARKS}.Scroll.FileBenchmark
+        benchmark_harness.hpp
         scroll_file_benchmark.cpp
 )
 target_link_libraries(${DMP_BENCHMARKS}.Scroll.FileBenchmark
@@ -30,6 +18,7 @@ target_link_libraries(${DMP_BENCHMARKS}.Scroll.FileBenchmark
 find_package(absl CONFIG REQUIRED)
 
 add_executable(${DMP_BENCHMARKS}.Abseil.FileBenchmark
+        benchmark_harness.hpp
         abseil_file_benchmark.cpp
 )
 target_link_libraries(${DMP_BENCHMARKS}.Abseil.FileBenchmark

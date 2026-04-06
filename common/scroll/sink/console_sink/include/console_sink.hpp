@@ -43,15 +43,15 @@ namespace demiplane::scroll {
             }
 
             // Convert LogEvent → EntryType using existing factory pattern
-            auto entry                   = make_entry_from_event<EntryType>(event);
-            const std::string& formatted = entry.to_string();
+            auto entry = make_entry_from_event<EntryType>(event);
+            entry.format_into(format_buffer_);
 
             std::lock_guard lock{mutex_};
 
             if (config_.is_enable_colors()) {
-                *config_.get_output() << colorize_by_level(formatted, entry.level());
+                *config_.get_output() << colorize_by_level(format_buffer_, entry.level());
             } else {
-                *config_.get_output() << formatted;
+                *config_.get_output() << format_buffer_;
             }
 
             if (config_.is_flush_each_entry()) {
@@ -80,6 +80,7 @@ namespace demiplane::scroll {
     private:
         ConsoleSinkConfig config_;
         mutable std::mutex mutex_;
+        std::string format_buffer_;
 
         /**
          * @brief Colorize text based on log level

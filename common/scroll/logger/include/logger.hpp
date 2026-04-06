@@ -77,7 +77,8 @@ namespace demiplane::scroll {
         template <typename... Args>
         constexpr void
         log(const LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
-            // Format + capture metadata BEFORE claiming slot (outside critical path)
+            // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
+            // This TL buffer is safe as long as format→swap is non-interruptible.
             thread_local std::string tl_msg_buf;
             tl_msg_buf.clear();
             std::format_to(std::back_inserter(tl_msg_buf), fmt, std::forward<Args>(args)...);
@@ -102,6 +103,7 @@ namespace demiplane::scroll {
         void log(const LogLevel lvl,
                  const std::string_view msg,
                  const std::source_location& loc = std::source_location::current()) {
+            // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
             thread_local std::string tl_msg_buf;
             tl_msg_buf.clear();
             tl_msg_buf.append(msg);
@@ -141,6 +143,7 @@ namespace demiplane::scroll {
             }
 
             ~StreamProxy() noexcept {
+                // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
                 thread_local std::string tl_msg_buf;
                 tl_msg_buf.clear();
                 tl_msg_buf.append(stream_.view());

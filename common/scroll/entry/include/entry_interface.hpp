@@ -87,16 +87,11 @@ namespace demiplane::scroll::detail {
             return message_;
         }
 
-        virtual ~EntryBase()                                = default;
-        EntryBase()                                         = default;
-        [[nodiscard]] virtual const std::string& to_string() const = 0;
+        virtual ~EntryBase()                             = default;
+        EntryBase()                                      = default;
+        virtual void format_into(std::string& out) const = 0;
 
     protected:
-        static std::string& get_tl_buffer() {
-            thread_local std::string buffer;
-            return buffer;
-        }
-
         LogLevel level_{LogLevel::Debug};
         std::string message_;
         static constexpr std::array<const char*, 6> level_strings = {"TRC", "DBG", "INF", "WRN", "ERR", "FAT"};
@@ -110,6 +105,6 @@ namespace demiplane::scroll::detail {
     concept EntryConcept = requires(const T& entry) {
         { entry.level() } -> std::same_as<LogLevel>;
         { entry.message() } -> std::same_as<std::string_view>;
-        { entry.to_string() } -> std::same_as<const std::string&>;
+        { entry.format_into(std::declval<std::string&>()) } -> std::same_as<void>;
     };
 }  // namespace demiplane::scroll::detail

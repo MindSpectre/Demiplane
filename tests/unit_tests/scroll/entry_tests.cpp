@@ -47,7 +47,7 @@ TEST(TestEntries, DetailedEntry) {
     constexpr std::source_location loc = std::source_location::current();
     const auto entry                   = make_entry<DetailedEntry>(INF, message, loc);
     std::string output;
-    EXPECT_NO_THROW(output = entry.to_string());
+    EXPECT_NO_THROW(entry.format_into(output));
     std::cout << output;
     EXPECT_NO_THROW({
         check_message(output, message);
@@ -61,7 +61,7 @@ TEST(TestEntries, LightEntry) {
     constexpr std::source_location loc = std::source_location::current();
     const auto entry                   = make_entry<LightEntry>(INF, message, loc);
     std::string output;
-    EXPECT_NO_THROW(output = entry.to_string());
+    EXPECT_NO_THROW(entry.format_into(output));
     std::cout << output;
 
     EXPECT_NO_THROW({
@@ -77,14 +77,22 @@ TEST(TestEntries, MakeEntryFromEvent) {
 
     // Create DetailedEntry from LogEvent
     auto detailed_entry         = make_entry_from_event<DetailedEntry>(event);
-    std::string detailed_output = detailed_entry.to_string();
+    std::string detailed_output = ([&] {
+        std::string s;
+        detailed_entry.format_into(s);
+        return s;
+    }());
 
     EXPECT_TRUE(detailed_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(detailed_output.find("INF") != std::string::npos);
 
     // Create LightEntry from same LogEvent
     auto light_entry         = make_entry_from_event<LightEntry>(event);
-    std::string light_output = light_entry.to_string();
+    std::string light_output = ([&] {
+        std::string s;
+        light_entry.format_into(s);
+        return s;
+    }());
 
     EXPECT_TRUE(light_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(light_output.find("INF") != std::string::npos);

@@ -37,12 +37,18 @@ namespace demiplane::multithread {
      */
     class BusySpinWaitStrategy final : public WaitStrategy {
     public:
-        std::int64_t wait_for(std::int64_t sequence, const Sequence& cursor) override {
+        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) override {
             std::int64_t available_sequence;
 
             // Tight spin loop - no pauses, no yields
             while ((available_sequence = cursor.get()) < sequence) {
-                // Optional: CPU pause hint (x86: PAUSE instruction)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+                _mm_pause();
+#elif defined(__aarch64__)
+                asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
                 // Reduces power and gives hyperthread a chance
                 // std::this_thread::yield();  // Uncomment for slightly lower power
             }

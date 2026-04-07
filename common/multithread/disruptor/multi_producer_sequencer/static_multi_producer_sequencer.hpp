@@ -1,14 +1,13 @@
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <bit>
 #include <memory>
 #include <thread>
-#include <vector>
-
-#include <immintrin.h>
 
 #include "sequence.hpp"
+#include "shared/constants.hpp"
 #include "wait_strategies/wait_strategy.hpp"
 
 namespace demiplane::multithread {
@@ -33,7 +32,7 @@ namespace demiplane::multithread {
      *
      * Track which sequences have been published:
      * ```
-     * available_[sequence & index_mask_] = true;  // Mark as published
+     * available_[sequence & INDEX_MASK] = true;  // Mark as published
      * ```
      *
      * Consumer scans for first gap:
@@ -44,7 +43,7 @@ namespace demiplane::multithread {
      * return 101;  // All available
      * ```
      *
-     * ## Memory Layout (buffer_size_ = 8)
+     * ## Memory Layout (BufferSize = 8)
      *
      * ```
      * Cursor: [    105    ]  (atomic, cache-aligned)
@@ -73,31 +72,32 @@ namespace demiplane::multithread {
      *
      * This prevents overwriting data the consumer hasn't processed yet.
      *
+     * @tparam BufferSize Size of ring buffer (must be power of 2)
      */
+    template <std::size_t BufferSize>
+    class StaticMultiProducerSequencer {
+        static_assert(std::has_single_bit(BufferSize), "BufferSize must be a power of 2");
 
-    class DynamicMultiProducerSequencer {
     public:
+        static constexpr std::size_t INDEX_MASK = BufferSize - 1;
+
         /**
          * @brief Construct sequencer with wait strategy and consumer tracking
-         * @param buffer_size
          * @param wait_strategy How consumer waits (takes ownership)
          * @param initial_cursor Starting sequence (default: -1, means "nothing claimed yet")
          *
          * Note: With -1 initial value, first claimed sequence is 0.
          * Gating sequence also starts at -1, representing "nothing consumed yet".
          */
-        explicit DynamicMultiProducerSequencer(const std::size_t buffer_size,
-                                               std::unique_ptr<WaitStrategy> wait_strategy,
-                                               const std::int64_t initial_cursor = -1)
+        explicit StaticMultiProducerSequencer(std::unique_ptr<WaitStrategy> wait_strategy,
+                                              const std::int64_t initial_cursor = -1)
             : cursor_{initial_cursor},
               gating_sequence_{initial_cursor},
-              buffer_size_{buffer_size},
-              wait_strategy_{std::move(wait_strategy)},
-              available_flags_{buffer_size_} {
-            if (!std::has_single_bit(buffer_size_)) {
-                throw std::invalid_argument("Buffer size must be a power of 2");
-            }
+              wait_strategy_{std::move(wait_strategy)} {
             // Initialize all slots as unavailable
+            for (auto& slot : available_flags_) {
+                slot.store(false, std::memory_order_relaxed);
+            }
         }
 
         /**
@@ -114,7 +114,7 @@ namespace demiplane::multithread {
          * 6. If CAS fails: retry from step 1 (another thread claimed it)
          * 7. Return claimed sequence
          *
-         * ## Example Execution (buffer_size_ = 4)
+         * ## Example Execution (BufferSize = 4)
          *
          * Thread A:
          * ```
@@ -150,20 +150,25 @@ namespace demiplane::multithread {
                 const std::int64_t cached_gating_seq = gating_sequence_.get();
 
                 // Backpressure: wait for consumer to advance
-                // We have buffer_size_ slots. If distance between next and gating > buffer_size_,
+                // We have BufferSize slots. If distance between next and gating > BufferSize,
                 // we'd overwrite unconsumed data.
-                if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(buffer_size_);
+                if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(BufferSize);
                     wrap_point > cached_gating_seq) {
                     // Consumer hasn't caught up - we'd overwrite data
                     std::int64_t gating_seq = cached_gating_seq;
 
-                    // Spin-pause before falling back to yield (avoids syscall overhead)
-                    std::int32_t spin_count = 0;
+                    // Spin until consumer advances enough
+                    std::int16_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        if (++spin_count < 100) {
-                            // TODO: compiler aware
+                        if (++spin_count < SPIN_BEFORE_YIELD) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
                             _mm_pause();
+#elif defined(__aarch64__)
+                            asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
                         } else {
                             std::this_thread::yield();
                             spin_count = 0;
@@ -203,7 +208,7 @@ namespace demiplane::multithread {
             const std::int64_t next = current + 1;
 
             // Check backpressure
-            if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(buffer_size_);
+            if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(BufferSize);
                 wrap_point > gating_sequence_.get()) {
                 return -1;  // Buffer full, would block
             }
@@ -241,15 +246,20 @@ namespace demiplane::multithread {
                 const std::int64_t cached_gating_seq = gating_sequence_.get();
 
                 // Check backpressure
-                if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(buffer_size_);
+                if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(BufferSize);
                     wrap_point > cached_gating_seq) {
                     std::int64_t gating_seq = cached_gating_seq;
-                    std::int32_t spin_count = 0;
+                    std::int16_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        if (++spin_count < 100) {
-                            // TODO: compiler aware
+                        if (++spin_count < SPIN_BEFORE_YIELD) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
                             _mm_pause();
+#elif defined(__aarch64__)
+                            asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
                         } else {
                             std::this_thread::yield();
                             spin_count = 0;
@@ -286,8 +296,7 @@ namespace demiplane::multithread {
         void publish(const std::int64_t sequence) noexcept {
             // Mark as available with release semantics
             // All writes to ring_buffer[sequence] are now visible to consumers
-            available_flags_[static_cast<std::size_t>(sequence) & index_mask_].value.store(true,
-                                                                                           std::memory_order_release);
+            available_flags_[static_cast<std::size_t>(sequence) & INDEX_MASK].store(true, std::memory_order_release);
 
             // Wake waiting consumers
             wait_strategy_->signal();
@@ -309,8 +318,7 @@ namespace demiplane::multithread {
          */
         void publish_batch(const std::int64_t lo, const std::int64_t hi) noexcept {
             for (std::int64_t seq = lo; seq <= hi; ++seq) {
-                available_flags_[static_cast<std::size_t>(seq) & index_mask_].value.store(true,
-                                                                                          std::memory_order_release);
+                available_flags_[static_cast<std::size_t>(seq) & INDEX_MASK].store(true, std::memory_order_release);
             }
             wait_strategy_->signal();
         }
@@ -346,8 +354,7 @@ namespace demiplane::multithread {
             // Scan forward looking for first gap
             for (std::int64_t seq = lower_bound; seq <= available_sequence; ++seq) {
                 // Acquire load ensures we see data written before publish()
-                if (!available_flags_[static_cast<std::size_t>(seq) & index_mask_].value.load(
-                        std::memory_order_acquire)) {
+                if (!available_flags_[static_cast<std::size_t>(seq) & INDEX_MASK].load(std::memory_order_acquire)) {
                     return seq - 1;  // Gap found, return previous sequence
                 }
             }
@@ -362,8 +369,7 @@ namespace demiplane::multithread {
          * @return true if published and ready for consumption
          */
         [[nodiscard]] bool is_available(const std::int64_t sequence) const noexcept {
-            return available_flags_[static_cast<std::size_t>(sequence) & index_mask_].value.load(
-                std::memory_order_acquire);
+            return available_flags_[static_cast<std::size_t>(sequence) & INDEX_MASK].load(std::memory_order_acquire);
         }
 
         /**
@@ -373,7 +379,7 @@ namespace demiplane::multithread {
          * After consumer processes data, mark slot as available for reuse.
          * This prevents issues when sequence wraps around the ring buffer.
          *
-         * Example (buffer_size_ = 8):
+         * Example (BufferSize = 8):
          * ```
          * Process seq 100 (slot 4): available_[4] = true
          * Done with seq 100: mark_consumed(100) -> available_[4] = false
@@ -383,8 +389,7 @@ namespace demiplane::multithread {
          * Without cleanup, seq 108 would appear "already published"!
          */
         void mark_consumed(const std::int64_t sequence) noexcept {
-            available_flags_[static_cast<std::size_t>(sequence) & index_mask_].value.store(false,
-                                                                                           std::memory_order_release);
+            available_flags_[static_cast<std::size_t>(sequence) & INDEX_MASK].store(false, std::memory_order_release);
         }
 
         /**
@@ -424,7 +429,7 @@ namespace demiplane::multithread {
             const std::int64_t consumed     = gating_value;
             const std::int64_t produced     = cursor_value;
 
-            return static_cast<std::int64_t>(buffer_size_) - (produced - consumed);
+            return static_cast<std::int64_t>(BufferSize) - (produced - consumed);
         }
 
     private:
@@ -445,31 +450,22 @@ namespace demiplane::multithread {
          */
         Sequence gating_sequence_;
 
-        std::size_t buffer_size_ = 8192;
-
-        std::size_t index_mask_ = buffer_size_ - 1;
-
-
-        /**
-         * @brief Wait strategy for consumers
-         */
-        std::unique_ptr<WaitStrategy> wait_strategy_;
-
-
-        struct atomic_wrap {
-            std::atomic<bool> value{false};
-        };
         /**
          * @brief Track which sequences have been published
          *
-         * Array size = buffer_size_ (ring buffer size)
+         * Array size = BufferSize (ring buffer size)
          * Each element corresponds to one ring buffer slot.
          *
          * When sequence wraps around, we reuse the same slot:
          * - Sequence 100 uses available_[100 & MASK]
          * - Sequence 100+BufferSize uses same slot (must mark_consumed first!)
          */
-        std::vector<atomic_wrap> available_flags_;
+        std::array<std::atomic<bool>, BufferSize> available_flags_;
+
+        /**
+         * @brief Wait strategy for consumers
+         */
+        std::unique_ptr<WaitStrategy> wait_strategy_;
     };
 
 }  // namespace demiplane::multithread

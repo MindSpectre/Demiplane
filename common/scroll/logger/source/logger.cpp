@@ -1,8 +1,5 @@
 #include "logger.hpp"
 
-#include <atomic>
-#include <future>
-
 #include "console_sink.hpp"
 #include "light_entry.hpp"
 
@@ -55,6 +52,9 @@ namespace demiplane::scroll {
                 disruptor_.sequencer().get_highest_published(next_seq, disruptor_.sequencer().get_cursor());
 
             if (available < next_seq) {
+                // Nothing published yet — back off using the configured wait strategy
+                // (BusySpin / Yielding / Blocking) instead of tight-spinning
+                std::ignore = disruptor_.sequencer().wait_for(next_seq);
                 continue;
             }
 

@@ -17,7 +17,7 @@ void static_disruptor_baseline_test() {
     constexpr std::int64_t ENTRIES_PER_PRODUCER = 1'000'000;
     constexpr std::int64_t TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    Disruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<BusySpinWaitStrategy>()};
+    StaticDisruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<BusySpinWaitStrategy>()};
 
     std::barrier sync_point{NUM_PRODUCERS + 1};
     std::atomic<bool> running{true};
@@ -59,7 +59,7 @@ void static_disruptor_baseline_test() {
             sync_point.arrive_and_wait();
 
             for (std::int64_t i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
-                const std::int64_t seq      = disruptor.sequencer().next();  // One CAS per entry
+                const std::int64_t seq       = disruptor.sequencer().next();  // One CAS per entry
                 disruptor.ring_buffer()[seq] = static_cast<std::int64_t>(tid * ENTRIES_PER_PRODUCER + i);
                 disruptor.sequencer().publish(seq);
             }
@@ -105,7 +105,7 @@ void static_disruptor_batched_test() {
     constexpr std::int64_t TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
     constexpr std::int64_t BATCH_SIZE           = 16;  // Claim 16 sequences at once
 
-    Disruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<BusySpinWaitStrategy>()};
+    StaticDisruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<BusySpinWaitStrategy>()};
 
     std::barrier sync_point{NUM_PRODUCERS + 1};
     std::atomic<bool> running{true};
@@ -152,7 +152,7 @@ void static_disruptor_batched_test() {
 
                 // Fill the batch
                 for (std::int64_t j = 0; j < BATCH_SIZE && (i + j) < ENTRIES_PER_PRODUCER; ++j) {
-                    const std::int64_t seq      = first_seq + j;
+                    const std::int64_t seq       = first_seq + j;
                     disruptor.ring_buffer()[seq] = tid * ENTRIES_PER_PRODUCER + i + j;
                 }
 
@@ -245,7 +245,7 @@ void dynamic_disruptor_baseline_test() {
             sync_point.arrive_and_wait();
 
             for (std::int64_t i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
-                const std::int64_t seq      = disruptor.sequencer().next();  // One CAS per entry
+                const std::int64_t seq       = disruptor.sequencer().next();  // One CAS per entry
                 disruptor.ring_buffer()[seq] = static_cast<std::int64_t>(tid * ENTRIES_PER_PRODUCER + i);
                 disruptor.sequencer().publish(seq);
             }
@@ -303,7 +303,7 @@ void dynamic_disruptor_batched_test() {
 
         std::int64_t next_seq           = 0;
         std::int64_t processed          = 0;
-        constexpr std::int64_t expected      = TOTAL_ENTRIES;
+        constexpr std::int64_t expected = TOTAL_ENTRIES;
 
         while (running.load(std::memory_order_acquire) || processed < expected) {
             const std::int64_t cursor = disruptor.sequencer().get_cursor();
@@ -339,7 +339,7 @@ void dynamic_disruptor_batched_test() {
 
                 // Fill the batch
                 for (std::int64_t j = 0; j < BATCH_SIZE && (i + j) < ENTRIES_PER_PRODUCER; ++j) {
-                    const std::int64_t seq      = first_seq + j;
+                    const std::int64_t seq       = first_seq + j;
                     disruptor.ring_buffer()[seq] = tid * ENTRIES_PER_PRODUCER + i + j;
                 }
 

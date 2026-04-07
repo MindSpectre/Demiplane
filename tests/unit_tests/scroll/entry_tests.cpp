@@ -72,27 +72,30 @@ TEST(TestEntries, LightEntry) {
 }
 
 TEST(TestEntries, MakeEntryFromEvent) {
-    // Test the new make_entry_from_event function
-    LogEvent event{INF, "Test message from event", std::source_location::current()};
+    // Build LogEvent the same way the logger does: default-construct, then populate fields
+    constexpr std::source_location loc = std::source_location::current();
+
+    LogEvent event;
+    event.level           = INF;
+    event.message         = "Test message from event";
+    event.location        = detail::MetaSource{loc};
+    event.time_point      = detail::MetaTimePoint{};
+    event.tid             = detail::MetaThread{};
+    event.pid             = detail::MetaProcess{};
+    event.shutdown_signal = false;
 
     // Create DetailedEntry from LogEvent
-    auto detailed_entry         = make_entry_from_event<DetailedEntry>(event);
-    std::string detailed_output = ([&] {
-        std::string s;
-        detailed_entry.format_into(s);
-        return s;
-    }());
+    auto detailed_entry = make_entry_from_event<DetailedEntry>(event);
+    std::string detailed_output;
+    detailed_entry.format_into(detailed_output);
 
     EXPECT_TRUE(detailed_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(detailed_output.find("INF") != std::string::npos);
 
     // Create LightEntry from same LogEvent
-    auto light_entry         = make_entry_from_event<LightEntry>(event);
-    std::string light_output = ([&] {
-        std::string s;
-        light_entry.format_into(s);
-        return s;
-    }());
+    auto light_entry = make_entry_from_event<LightEntry>(event);
+    std::string light_output;
+    light_entry.format_into(light_output);
 
     EXPECT_TRUE(light_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(light_output.find("INF") != std::string::npos);

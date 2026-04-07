@@ -63,7 +63,7 @@ namespace demiplane::scroll {
          * The executor's thread pool runs sink processing. Multiple loggers
          * can share the same executor (e.g., with HTTP/DB components).
          */
-        explicit Logger(boost::asio::any_io_executor executor, const LoggerConfig& cfg = {})
+        constexpr explicit Logger(boost::asio::any_io_executor executor, const LoggerConfig& cfg = {})
             : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
               executor_{std::move(executor)} {
             running_.store(true, std::memory_order_release);
@@ -75,7 +75,7 @@ namespace demiplane::scroll {
          *
          * Creates an internal asio::thread_pool sized by LoggerConfig::pool_size.
          */
-        explicit Logger(const LoggerConfig& cfg = {})
+        constexpr explicit Logger(const LoggerConfig& cfg = {})
             : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
               owned_pool_{std::in_place, cfg.get_pool_size()},
               executor_{owned_pool_->get_executor()} {
@@ -135,9 +135,9 @@ namespace demiplane::scroll {
          * @param msg Message
          * @param loc Source location (auto-captured)
          */
-        void log(const LogLevel lvl,
-                 const std::string_view msg,
-                 const std::source_location& loc = std::source_location::current()) {
+        constexpr void log(const LogLevel lvl,
+                           const std::string_view msg,
+                           const std::source_location& loc = std::source_location::current()) {
             // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
             thread_local std::string tl_msg_buf;
             tl_msg_buf.clear();
@@ -177,7 +177,7 @@ namespace demiplane::scroll {
                 return *this;
             }
 
-            ~StreamProxy() noexcept {
+            constexpr ~StreamProxy() noexcept {
                 // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
                 thread_local std::string tl_msg_buf;
                 tl_msg_buf.clear();
@@ -215,7 +215,7 @@ namespace demiplane::scroll {
 
         void flush() const {
             for (const auto& [sink, strand] : sink_slots_) {
-                sink->flush();
+                boost::asio::post(strand, [sink] { sink->flush(); });
             }
         }
 
@@ -237,7 +237,7 @@ namespace demiplane::scroll {
             detail::MetaThread tid;
             detail::MetaProcess pid;
 
-            EventMeta(const LogLevel lvl, const std::source_location& loc) noexcept
+            constexpr EventMeta(const LogLevel lvl, const std::source_location& loc) noexcept
                 : level{lvl},
                   location{loc} {
             }
@@ -246,7 +246,7 @@ namespace demiplane::scroll {
         /**
          * @brief Apply pre-captured metadata to ring buffer slot (minimal critical path)
          */
-        static void apply_meta(LogEvent& event, const EventMeta& meta) noexcept {
+        constexpr static void apply_meta(LogEvent& event, const EventMeta& meta) noexcept {
             event.level           = meta.level;
             event.location        = meta.location;
             event.time_point      = meta.time_point;

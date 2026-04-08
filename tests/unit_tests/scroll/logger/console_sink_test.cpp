@@ -7,7 +7,7 @@ protected:
     std::unique_ptr<Logger> logger;
     std::shared_ptr<ConsoleSink<LightEntry>> console_sink;
     ConsoleSinkConfig cfg =
-        ConsoleSinkConfig{}.threshold(LogLevel::Debug).enable_colors(false).flush_each_entry(false).finalize();
+        ConsoleSinkConfig::Builder{}.threshold(LogLevel::Debug).enable_colors(false).flush_each_entry(false).finalize();
     void TearDown() override {
         logger->shutdown();
         logger.reset();
@@ -49,7 +49,7 @@ TEST_F(ConsoleSinkTest, LogsEntryWhenAboveThreshold) {
 TEST_F(ConsoleSinkTest, FiltersEntriesBelowThreshold) {
     // Set threshold to ERROR
     testing::internal::CaptureStdout();
-    console_sink->config().threshold(ERR);
+    console_sink->set_config(ConsoleSinkConfig::Builder{console_sink->config()}.threshold(ERR).finalize());
 
     // Log an INFO message (below the threshold)
     logger->log(INF, "This should not appear");
@@ -95,7 +95,7 @@ TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
 
     // Recreate logger with new threshold
     const ConsoleSinkConfig cfg =
-        ConsoleSinkConfig{}.threshold(WRN).enable_colors(false).flush_each_entry(true).finalize();
+        ConsoleSinkConfig::Builder{}.threshold(WRN).enable_colors(false).flush_each_entry(true).finalize();
 
     reinit_logger(cfg);
     // Recapture for next test
@@ -134,7 +134,7 @@ TEST_F(ConsoleSinkTest, ThresholdChangeAffectsLogging) {
 // Test all log levels
 TEST_F(ConsoleSinkTest, AllLogLevels) {
     // Make sure a threshold is at the lowest level
-    console_sink->config().threshold(DBG);
+    console_sink->set_config(ConsoleSinkConfig::Builder{console_sink->config()}.threshold(DBG).finalize());
 
     // Test each log level
     std::vector<std::pair<LogLevel, std::string>> levels = {
@@ -166,7 +166,8 @@ TEST_F(ConsoleSinkTest, AllLogLevels) {
 
         // Recreate logger for next iteration
         if (level != FAT) {
-            auto cfg = ConsoleSinkConfig{}.threshold(DBG).enable_colors(true).flush_each_entry(false).finalize();
+            auto cfg =
+                ConsoleSinkConfig::Builder{}.threshold(DBG).enable_colors(true).flush_each_entry(false).finalize();
             reinit_logger(std::move(cfg));
         }
     }

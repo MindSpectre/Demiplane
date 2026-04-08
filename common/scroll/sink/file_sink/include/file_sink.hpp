@@ -52,10 +52,10 @@ namespace demiplane::scroll {
 
             // Lock only for the actual write (supports multiple loggers sharing this sink)
             {
-                auto entry                  = make_entry_from_event<EntryType>(event);
-                const std::string formatted = entry.to_string();
+                auto entry = make_entry_from_event<EntryType>(event);
+                entry.format_into(format_buffer_);
                 std::lock_guard lock{mutex_};
-                file_stream_ << formatted;
+                file_stream_ << format_buffer_;
 
                 if (config_.is_flush_each_entry()) {
                     file_stream_.flush();
@@ -94,6 +94,7 @@ namespace demiplane::scroll {
         std::ofstream file_stream_;
         std::filesystem::path file_path_;
         std::mutex mutex_;
+        std::string format_buffer_;                    // Reused across process() calls (no TL dependency)
         alignas(64) char stream_buffer_[64 * 1024]{};  // 64KB static buffer, cache-line aligned
 
         void init() {
@@ -103,8 +104,8 @@ namespace demiplane::scroll {
                 const std::string stem             = full_path.stem().string();
                 const std::string ext              = full_path.extension().string();
                 const std::filesystem::path parent = full_path.parent_path();
-                const std::string time             = chrono::LocalClock::current_time(config_.get_time_format_in_file_name());
-                full_path                          = parent / (stem + "_" + time + ext);
+                const std::string time = chrono::LocalClock::current_time(config_.get_time_format_in_file_name());
+                full_path              = parent / (stem + "_" + time + ext);
             }
 
             if (!full_path.parent_path().empty()) {

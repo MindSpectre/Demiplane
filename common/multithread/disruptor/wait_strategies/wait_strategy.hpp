@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../sequence.hpp"
+#include "sequence.hpp"
 
 namespace demiplane::multithread {
 

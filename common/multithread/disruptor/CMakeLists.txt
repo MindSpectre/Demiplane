@@ -14,21 +14,24 @@
 # - MultiProducerSequencer: Claim/publish protocol coordinator
 ##############################################################################
 add_library(${DMP_MULTITHREAD}.Disruptor INTERFACE
-        include/disruptor.hpp
-        include/multi_producer_sequencer.hpp
-        include/dynamic_multi_producer_sequencer.hpp
-        include/dynamic_ring_buffer.hpp
-        include/ring_buffer.hpp
-        include/sequence.hpp
-        include/wait_strategies/wait_strategy.hpp
-        include/wait_strategies/blocking.hpp
-        include/wait_strategies/busy_spin.hpp
-        include/wait_strategies/timeout_blocking.hpp
-        include/wait_strategies/yielding_strategy.hpp
+        wait_strategies/blocking.hpp
+        wait_strategies/busy_spin.hpp
+        wait_strategies/timeout_blocking.hpp
+        wait_strategies/yielding_strategy.hpp
+        wait_strategies/wait_strategy.hpp
+        shared/constants.hpp
+        multi_producer_sequencer/dynamic_multi_producer_sequencer.hpp
+        multi_producer_sequencer/static_multi_producer_sequencer.hpp
+        ring_buffer/dynamic_ring_buffer.hpp
+        ring_buffer/static_ring_buffer.hpp
+        disruptor/dynamic_disruptor.hpp
+        disruptor/static_disruptor.hpp
+        disruptor.hpp
+        sequence.hpp
 )
 
 target_include_directories(${DMP_MULTITHREAD}.Disruptor INTERFACE
-        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${DMP_MULTITHREAD}.Disruptor INTERFACE

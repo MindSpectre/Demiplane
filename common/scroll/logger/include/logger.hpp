@@ -3,10 +3,17 @@
 #include <atomic>
 #include <demiplane/multithread>
 #include <format>
+#include <future>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <thread>
 #include <vector>
+
+#include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/thread_pool.hpp>
 
 #include "logger_config.hpp"
 #include "sink_interface.hpp"
@@ -40,10 +47,38 @@ namespace demiplane::scroll {
      *   // Stream style
      *   logger.stream(LogLevel::Info) << "User " << username << " logged in";
      */
+    /**
+     * @brief Per-sink slot: pairs a sink with its asio::strand for serial dispatch
+     */
+    struct SinkSlot {
+        std::shared_ptr<Sink> sink;
+        boost::asio::strand<boost::asio::any_io_executor> strand;
+    };
+
     class Logger {
     public:
-        constexpr explicit Logger(const LoggerConfig& cfg = {}) noexcept
-            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())} {
+        /**
+         * @brief Construct with external executor (recommended)
+         *
+         * The executor's thread pool runs sink processing. Multiple loggers
+         * can share the same executor (e.g., with HTTP/DB components).
+         */
+        constexpr explicit Logger(boost::asio::any_io_executor executor, const LoggerConfig& cfg = {})
+            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
+              executor_{std::move(executor)} {
+            running_.store(true, std::memory_order_release);
+            consumer_thread_ = std::jthread([this] { consumer_loop(); });
+        }
+
+        /**
+         * @brief Construct with internal thread pool (backward-compatible)
+         *
+         * Creates an internal asio::thread_pool sized by LoggerConfig::pool_size.
+         */
+        constexpr explicit Logger(const LoggerConfig& cfg = {})
+            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
+              owned_pool_{std::in_place, cfg.get_pool_size()},
+              executor_{owned_pool_->get_executor()} {
             running_.store(true, std::memory_order_release);
             consumer_thread_ = std::jthread([this] { consumer_loop(); });
         }
@@ -54,13 +89,13 @@ namespace demiplane::scroll {
 
         /**
          * @brief Add a sink to receive log events
-         * @param sink Unique pointer to sink (ConsoleSink, FileSink, custom)
+         * @param sink Shared pointer to sink (ConsoleSink, FileSink, custom)
          *
-         * Thread-safe: Can be called before logging starts.
-         * NOT thread-safe during logging.
+         * Each sink is paired with a strand on the executor for serial dispatch.
+         * Can be called before logging starts. NOT thread-safe during logging.
          */
-        constexpr void add_sink(std::shared_ptr<Sink> sink) {
-            sinks_.push_back(std::move(sink));
+        void add_sink(std::shared_ptr<Sink> sink) {
+            sink_slots_.push_back(SinkSlot{std::move(sink), boost::asio::make_strand(executor_)});
         }
 
         /**
@@ -77,15 +112,20 @@ namespace demiplane::scroll {
         template <typename... Args>
         constexpr void
         log(const LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
-            // 1. Claim sequence
-            const std::int64_t seq    = disruptor_.sequencer().next();
-            // 2. Format message (happens in producer thread)
-            std::string formatted_msg = std::format(fmt, std::forward<Args>(args)...);
-            // 3. Write LogEvent to ring buffer
-            auto& event               = disruptor_.ring_buffer()[seq];
-            event                     = LogEvent{lvl, std::move(formatted_msg), loc};
+            // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
+            // This TL buffer is safe as long as format→swap is non-interruptible.
+            thread_local std::string tl_msg_buf;
+            tl_msg_buf.clear();
+            std::format_to(std::back_inserter(tl_msg_buf), fmt, std::forward<Args>(args)...);
+            const auto meta = EventMeta{lvl, loc};
 
-            // 4. Publish (makes visible to consumer)
+            // Critical path: claim → swap → publish (minimal time holding slot)
+            const std::int64_t seq = disruptor_.sequencer().next();
+            auto& event            = disruptor_.ring_buffer()[seq];
+
+            event.message.swap(tl_msg_buf);
+            apply_meta(event, meta);
+
             disruptor_.sequencer().publish(seq);
         }
 
@@ -95,12 +135,21 @@ namespace demiplane::scroll {
          * @param msg Message
          * @param loc Source location (auto-captured)
          */
-        void log(const LogLevel lvl,
-                 const std::string_view msg,
-                 const std::source_location& loc = std::source_location::current()) {
+        constexpr void log(const LogLevel lvl,
+                           const std::string_view msg,
+                           const std::source_location& loc = std::source_location::current()) {
+            // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
+            thread_local std::string tl_msg_buf;
+            tl_msg_buf.clear();
+            tl_msg_buf.append(msg);
+            const auto meta = EventMeta{lvl, loc};
+
             const std::int64_t seq = disruptor_.sequencer().next();
             auto& event            = disruptor_.ring_buffer()[seq];
-            event                  = LogEvent{lvl, std::string{msg}, loc};
+
+            event.message.swap(tl_msg_buf);
+            apply_meta(event, meta);
+
             disruptor_.sequencer().publish(seq);
         }
 
@@ -128,11 +177,19 @@ namespace demiplane::scroll {
                 return *this;
             }
 
-            ~StreamProxy() noexcept {
-                // Publish when proxy is destroyed (end of statement)
+            constexpr ~StreamProxy() noexcept {
+                // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
+                thread_local std::string tl_msg_buf;
+                tl_msg_buf.clear();
+                tl_msg_buf.append(stream_.view());
+                const auto meta = EventMeta{level_, loc_};
+
                 const std::int64_t seq = logger_->disruptor_.sequencer().next();
                 auto& event            = logger_->disruptor_.ring_buffer()[seq];
-                event                  = LogEvent{level_, stream_.str(), loc_};
+
+                event.message.swap(tl_msg_buf);
+                apply_meta(event, meta);
+
                 logger_->disruptor_.sequencer().publish(seq);
             }
 
@@ -157,16 +214,46 @@ namespace demiplane::scroll {
         void shutdown();
 
         void flush() const {
-            for (const auto& sink : sinks_) {
-                sink->flush();
+            for (const auto& [sink, strand] : sink_slots_) {
+                boost::asio::post(strand, [sink] { sink->flush(); });
             }
         }
 
     private:
         multithread::DynamicDisruptor<LogEvent> disruptor_;
-        std::vector<std::shared_ptr<Sink>> sinks_;
+        std::optional<boost::asio::thread_pool> owned_pool_;
+        boost::asio::any_io_executor executor_;
+        std::vector<SinkSlot> sink_slots_;
         std::jthread consumer_thread_;
         std::atomic<bool> running_{false};
+
+        /**
+         * @brief Pre-captured metadata (built outside the CAS critical path)
+         */
+        struct EventMeta {
+            LogLevel level;
+            detail::MetaSource location;
+            detail::MetaTimePoint time_point;
+            detail::MetaThread tid;
+            detail::MetaProcess pid;
+
+            constexpr EventMeta(const LogLevel lvl, const std::source_location& loc) noexcept
+                : level{lvl},
+                  location{loc} {
+            }
+        };
+
+        /**
+         * @brief Apply pre-captured metadata to ring buffer slot (minimal critical path)
+         */
+        constexpr static void apply_meta(LogEvent& event, const EventMeta& meta) noexcept {
+            event.level           = meta.level;
+            event.location        = meta.location;
+            event.time_point      = meta.time_point;
+            event.tid             = meta.tid;
+            event.pid             = meta.pid;
+            event.shutdown_signal = false;
+        }
 
         /**
          * @brief Consumer thread loop - processes events and dispatches to sinks

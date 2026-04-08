@@ -1,7 +1,5 @@
 
-#include <chrono>
 #include <demiplane/scroll>
-#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -26,8 +24,8 @@ public:
         expected_messages.emplace_back(mk_message(i++));
         EXPECT_EQ(i, 6);
 
-        // Wait for async logger to process
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // Shutdown drains all strand work before returning
+        get_logger()->shutdown();
 
         const std::string output = testing::internal::GetCapturedStdout();
         for (const auto& msg : expected_messages) {
@@ -60,7 +58,7 @@ TEST(LoggerProviderTest, FormatStyleLogging) {
     LOG_DIRECT_FMT_INF(logger, "User {} has {} items", username, count);
     LOG_DIRECT_FMT_DBG(logger, "Debug message with value {}", 123);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    logger->shutdown();
 
     const std::string output = testing::internal::GetCapturedStdout();
     EXPECT_TRUE(output.find("alice") != std::string::npos);
@@ -86,7 +84,7 @@ TEST(LoggerProviderTest, OverloadedMacros) {
     // Test format style (1+ args)
     LOG_DIRECT_FMT_INF(logger, "Format style message {}", 123);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    logger->shutdown();
 
     const std::string output = testing::internal::GetCapturedStdout();
     EXPECT_TRUE(output.find("Stream style message") != std::string::npos);

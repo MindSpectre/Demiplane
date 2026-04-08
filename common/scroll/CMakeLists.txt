@@ -98,6 +98,8 @@ target_link_libraries(${DMP_SCROLL}.Logger
         PUBLIC
         ${DMP_SCROLL}.Sink.Console
         ${DMP_SCROLL}.Sink.File
+        Boost::asio
+        Boost::system
 )
 ##############################################################################
 

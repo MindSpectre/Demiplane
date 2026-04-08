@@ -1,6 +1,5 @@
 #pragma once
 
-#include <source_location>
 #include <string>
 
 #include <entry_interface.hpp>
@@ -25,24 +24,10 @@ namespace demiplane::scroll {
         detail::MetaThread tid;
         detail::MetaProcess pid;
 
-        // Cached string representations (avoid repeated formatting)
-
         // Shutdown signal for graceful consumer thread termination
         bool shutdown_signal = false;
 
         LogEvent() = default;
-
-        /**
-         * @brief Construct LogEvent with metadata captured from current thread
-         * @param lvl Log level
-         * @param msg Formatted message
-         * @param loc Source location
-         */
-        LogEvent(const LogLevel lvl, std::string msg, const std::source_location& loc = std::source_location::current())
-            : level{lvl},
-              message{std::move(msg)},
-              location{loc} {
-        }
     };
 
     /**
@@ -57,7 +42,7 @@ namespace demiplane::scroll {
      *
      * Usage:
      *   auto entry = make_entry_from_event<DetailedEntry>(event);
-     *   std::cout << entry.to_string();
+     *   entry.format_into(buffer);
      */
     template <class EntryT>
     EntryT make_entry_from_event(const LogEvent& event) {

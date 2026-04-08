@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "sequence.hpp"
+#include "shared/constants.hpp"
 #include "wait_strategies/wait_strategy.hpp"
 
 namespace demiplane::multithread {
@@ -74,7 +75,7 @@ namespace demiplane::multithread {
      * @tparam BufferSize Size of ring buffer (must be power of 2)
      */
     template <std::size_t BufferSize>
-    class MultiProducerSequencer {
+    class StaticMultiProducerSequencer {
         static_assert(std::has_single_bit(BufferSize), "BufferSize must be a power of 2");
 
     public:
@@ -88,8 +89,8 @@ namespace demiplane::multithread {
          * Note: With -1 initial value, first claimed sequence is 0.
          * Gating sequence also starts at -1, representing "nothing consumed yet".
          */
-        explicit MultiProducerSequencer(std::unique_ptr<WaitStrategy> wait_strategy,
-                                        const std::int64_t initial_cursor = -1)
+        explicit StaticMultiProducerSequencer(std::unique_ptr<WaitStrategy> wait_strategy,
+                                              const std::int64_t initial_cursor = -1)
             : cursor_{initial_cursor},
               gating_sequence_{initial_cursor},
               wait_strategy_{std::move(wait_strategy)} {
@@ -157,9 +158,21 @@ namespace demiplane::multithread {
                     std::int64_t gating_seq = cached_gating_seq;
 
                     // Spin until consumer advances enough
+                    std::int16_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        std::this_thread::yield();
+                        if (++spin_count < SPIN_BEFORE_YIELD) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+                            _mm_pause();
+#elif defined(__aarch64__)
+                            asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
+                        } else {
+                            std::this_thread::yield();
+                            spin_count = 0;
+                        }
                     }
                 }
 
@@ -191,8 +204,8 @@ namespace demiplane::multithread {
          * ```
          */
         [[nodiscard]] std::int64_t try_next() noexcept {
-            std::int64_t current = cursor_.get();
-            const std::int64_t next    = current + 1;
+            std::int64_t current    = cursor_.get();
+            const std::int64_t next = current + 1;
 
             // Check backpressure
             if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(BufferSize);
@@ -236,9 +249,21 @@ namespace demiplane::multithread {
                 if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(BufferSize);
                     wrap_point > cached_gating_seq) {
                     std::int64_t gating_seq = cached_gating_seq;
+                    std::int16_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        std::this_thread::yield();
+                        if (++spin_count < SPIN_BEFORE_YIELD) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+                            _mm_pause();
+#elif defined(__aarch64__)
+                            asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
+                        } else {
+                            std::this_thread::yield();
+                            spin_count = 0;
+                        }
                     }
                 }
             } while (!cursor_.compare_and_set(current, next));

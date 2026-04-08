@@ -14,10 +14,12 @@ namespace demiplane::scroll {
             : EntryBase(lvl, msg, MetaNone{}) {
         }
 
-        [[nodiscard]] std::string to_string() const override {
-            std::ostringstream formatter;
-            formatter << log_level_to_string(level_) << " " << message_ << "\n";
-            return formatter.str();
+        void format_into(std::string& out) const override {
+            out.clear();
+            out.append(log_level_to_string(level_));
+            out.push_back(' ');
+            out.append(message_);
+            out.push_back('\n');
         }
         static bool comp(const LightEntry& lhs, const LightEntry& rhs) {
             gears::unused_value(lhs, rhs);

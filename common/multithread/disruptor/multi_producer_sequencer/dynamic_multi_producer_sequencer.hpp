@@ -6,7 +6,10 @@
 #include <thread>
 #include <vector>
 
+#include <immintrin.h>
+
 #include "sequence.hpp"
+#include "shared/constants.hpp"
 #include "wait_strategies/wait_strategy.hpp"
 
 namespace demiplane::multithread {
@@ -155,10 +158,22 @@ namespace demiplane::multithread {
                     // Consumer hasn't caught up - we'd overwrite data
                     std::int64_t gating_seq = cached_gating_seq;
 
-                    // Spin until consumer advances enough
+                    // Spin-pause before falling back to yield (avoids syscall overhead)
+                    std::uint16_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        std::this_thread::yield();
+                        if (++spin_count < SPIN_BEFORE_YIELD) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+                            _mm_pause();
+#elif defined(__aarch64__)
+                            asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
+                        } else {
+                            std::this_thread::yield();
+                            spin_count = 0;
+                        }
                     }
                 }
 
@@ -235,9 +250,21 @@ namespace demiplane::multithread {
                 if (const std::int64_t wrap_point = next - static_cast<std::int64_t>(buffer_size_);
                     wrap_point > cached_gating_seq) {
                     std::int64_t gating_seq = cached_gating_seq;
+                    std::int32_t spin_count = 0;
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
-                        std::this_thread::yield();
+                        if (++spin_count < SPIN_BEFORE_YIELD) {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+                            _mm_pause();
+#elif defined(__aarch64__)
+                            asm volatile("yield" ::: "memory");
+#else
+// no-op
+#endif
+                        } else {
+                            std::this_thread::yield();
+                            spin_count = 0;
+                        }
                     }
                 }
             } while (!cursor_.compare_and_set(current, next));
@@ -380,6 +407,22 @@ namespace demiplane::multithread {
          */
         void update_gating_sequence(const std::int64_t sequence) noexcept {
             gating_sequence_.set(sequence);
+        }
+
+        /**
+         * @brief Wait for a sequence to become available using the configured wait strategy
+         * @param sequence Sequence to wait for
+         * @return Highest available sequence (>= sequence)
+         */
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence) const {
+            return wait_strategy_->wait_for(sequence, cursor_);
+        }
+
+        /**
+         * @brief Signal waiting consumers (e.g., for shutdown)
+         */
+        void signal_all() const noexcept {
+            wait_strategy_->signal_all();
         }
 
         /**

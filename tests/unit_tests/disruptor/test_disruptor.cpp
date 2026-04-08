@@ -109,23 +109,23 @@ TEST_F(DisruptorTest, SequenceCacheLineAlignment) {
  * RING BUFFER TESTS - Power-of-2 circular buffer
  *============================================================================*/
 
-TEST_F(DisruptorTest, RingBufferPowerOf2Sizing) {
+TEST_F(DisruptorTest, StaticRingBufferPowerOf2Sizing) {
     // These should compile (power of 2)
-    RingBuffer<int, 4> tiny_buffer;
-    RingBuffer<int, 1024> buffer;
-    RingBuffer<int, 16384> large_buffer;
+    StaticRingBuffer<int, 4> tiny_buffer;
+    StaticRingBuffer<int, 1024> buffer;
+    StaticRingBuffer<int, 16384> large_buffer;
 
     EXPECT_EQ(tiny_buffer.capacity(), 4);
     EXPECT_EQ(buffer.capacity(), 1024);
     EXPECT_EQ(large_buffer.capacity(), 16384);
 
     // This would fail to compile (not power of 2):
-    // RingBuffer<int, 1000> bad_buffer;  // Compile error!
+    // StaticRingBuffer<int, 1000> bad_buffer;  // Compile error!
 }
 
-TEST_F(DisruptorTest, RingBufferIndexWrapping) {
+TEST_F(DisruptorTest, StaticRingBufferIndexWrapping) {
     constexpr size_t SIZE = 8;
-    RingBuffer<int, SIZE> buffer;
+    StaticRingBuffer<int, SIZE> buffer;
 
     // Test wrapping behavior
     for (std::int64_t seq = 0; seq < 100; ++seq) {
@@ -143,8 +143,8 @@ TEST_F(DisruptorTest, RingBufferIndexWrapping) {
     EXPECT_EQ(buffer[99], 99);  // seq 99 % 8 = 3
 }
 
-TEST_F(DisruptorTest, RingBufferSequentialAccess) {
-    RingBuffer<int, 16> buffer;
+TEST_F(DisruptorTest, StaticRingBufferSequentialAccess) {
+    StaticRingBuffer<int, 16> buffer;
 
     // Write sequential data
     for (std::int64_t i = 0; i < 16; ++i) {
@@ -157,8 +157,8 @@ TEST_F(DisruptorTest, RingBufferSequentialAccess) {
     }
 }
 
-TEST_F(DisruptorTest, RingBufferGetVsOperator) {
-    RingBuffer<int, 8> buffer;
+TEST_F(DisruptorTest, StaticRingBufferGetVsOperator) {
+    StaticRingBuffer<int, 8> buffer;
 
     buffer.get(5) = 100;
     EXPECT_EQ(buffer[5], 100);
@@ -230,7 +230,7 @@ TEST_F(DisruptorTest, BlockingWaitStrategyWithSignal) {
  *============================================================================*/
 
 TEST_F(DisruptorTest, DisruptorSingleClaim) {
-    Disruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     EXPECT_EQ(disruptor.sequencer().get_cursor(), -1);  // Initial state (nothing claimed yet)
 
@@ -245,7 +245,7 @@ TEST_F(DisruptorTest, DisruptorSingleClaim) {
 }
 
 TEST_F(DisruptorTest, DisruptorBatchClaim) {
-    Disruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     const std::int64_t first = disruptor.sequencer().next_batch(5);
     EXPECT_EQ(first, 0);
@@ -257,7 +257,7 @@ TEST_F(DisruptorTest, DisruptorBatchClaim) {
 }
 
 TEST_F(DisruptorTest, DisruptorPublishAndAvailability) {
-    Disruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     const std::int64_t seq = disruptor.sequencer().next();
     EXPECT_FALSE(disruptor.sequencer().is_available(seq));  // Not published yet
@@ -274,7 +274,7 @@ TEST_F(DisruptorTest, DisruptorGapDetection) {
      * - Thread B publishes seq 1 FIRST
      * - Consumer should NOT see seq 1 until seq 0 is published
      */
-    Disruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     const std::int64_t seq0 = disruptor.sequencer().next();  // 0
     const std::int64_t seq1 = disruptor.sequencer().next();  // 1
@@ -306,7 +306,7 @@ TEST_F(DisruptorTest, DisruptorBackpressure) {
      * until consumer advances gating sequence
      */
     constexpr size_t BUFFER_SIZE = 8;
-    Disruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     // Fill the buffer (claim 8 sequences)
     for (size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -338,7 +338,7 @@ TEST_F(DisruptorTest, DisruptorBackpressure) {
 
 TEST_F(DisruptorTest, DisruptorRemainingCapacity) {
     constexpr size_t BUFFER_SIZE = 16;
-    Disruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     // Initially, full capacity available
     EXPECT_EQ(disruptor.sequencer().remaining_capacity(), BUFFER_SIZE);
@@ -380,7 +380,7 @@ TEST_F(DisruptorTest, MultiThreadedStrictOrdering) {
     constexpr int ENTRIES_PER_PRODUCER = 1000;
     constexpr int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    Disruptor<TestEntry, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<TestEntry, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     std::atomic<bool> start{false};
     std::atomic<int> ready_count{0};
@@ -501,7 +501,7 @@ TEST_F(DisruptorTest, MultiThreadedHighContention) {
     constexpr int ENTRIES_PER_PRODUCER = 500;
     constexpr int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    Disruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     std::barrier sync_point{NUM_PRODUCERS + 1};  // +1 for consumer
     std::vector<std::int64_t> consumed;
@@ -562,7 +562,7 @@ TEST_F(DisruptorTest, TryNextNonBlocking) {
      * Test non-blocking try_next() behavior
      */
     constexpr size_t BUFFER_SIZE = 4;
-    Disruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    StaticDisruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
 
     // Fill buffer
     for (size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -586,7 +586,7 @@ TEST_F(DisruptorTest, TryNextNonBlocking) {
  * DYNAMIC DISRUPTOR TESTS - Runtime-sized version
  *============================================================================*/
 
-TEST_F(DynamicDisruptorTest, DynamicRingBufferSizing) {
+TEST_F(DynamicDisruptorTest, DynamicStaticRingBufferSizing) {
     // Runtime-sized buffers
     DynamicRingBuffer<int> small_buffer{256};
     DynamicRingBuffer<int> medium_buffer{1024};
@@ -597,7 +597,7 @@ TEST_F(DynamicDisruptorTest, DynamicRingBufferSizing) {
     EXPECT_EQ(large_buffer.capacity(), 8192);
 }
 
-TEST_F(DynamicDisruptorTest, DynamicRingBufferIndexWrapping) {
+TEST_F(DynamicDisruptorTest, DynamicStaticRingBufferIndexWrapping) {
     const size_t SIZE = 8;
     DynamicRingBuffer<int> buffer{SIZE};
 

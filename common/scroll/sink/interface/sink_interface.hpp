@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "log_event.hpp"
 
 namespace demiplane::scroll {
@@ -10,9 +13,9 @@ namespace demiplane::scroll {
      * Each sink implementation chooses its EntryType for formatting.
      *
      * Design:
-     * - Logger stores vector<unique_ptr<Sink>>
+     * - Logger stores vector<shared_ptr<Sink>>
      * - ConsoleSink<DetailedEntry>, FileSink<LightEntry> both inherit from Sink
-     * - Consumer thread calls process() with LogEvent
+     * - Consumer dispatches batches to sink strands via process_batch()
      * - Sink converts LogEvent → EntryType → formatted output
      */
     class Sink {
@@ -20,15 +23,23 @@ namespace demiplane::scroll {
         virtual ~Sink() = default;
 
         /**
-         * @brief Process a log event
+         * @brief Process a single log event
          * @param event Raw log event with all metadata
-         *
-         * Called by consumer thread. Sink should:
-         * 1. Check should_log(event.level)
-         * 2. Convert LogEvent → EntryType via make_entry_from_event
-         * 3. Format and output entry.to_string()
          */
         virtual void process(const LogEvent& event) = 0;
+
+        /**
+         * @brief Process a batch of log events
+         * @param batch Shared ownership of the event batch
+         *
+         * Default: iterates and calls process() per event.
+         * Override for batch-optimized I/O (e.g., batch network sends).
+         */
+        virtual void process_batch(const std::shared_ptr<std::vector<LogEvent>>& batch) {
+            for (const auto& event : *batch) {
+                process(event);
+            }
+        }
 
         /**
          * @brief Flush any buffered data

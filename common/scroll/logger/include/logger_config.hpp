@@ -1,5 +1,7 @@
 #pragma once
 
+#include <thread>
+
 #include <gears_class_traits.hpp>
 #include <json/value.h>
 
@@ -44,6 +46,12 @@ namespace demiplane::scroll {
         }
 
         template <typename Self>
+        constexpr auto&& pool_size(this Self&& self, const std::size_t pool_size) noexcept {
+            self.pool_size_ = pool_size;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
         constexpr auto&& finalize(this Self&& self) {
             self.validate();
             return std::forward<Self>(self);
@@ -56,6 +64,11 @@ namespace demiplane::scroll {
         [[nodiscard]] constexpr WaitStrategy get_wait_strategy() const noexcept {
             return wait_strategy_;
         }
+
+        [[nodiscard]] constexpr std::size_t get_pool_size() const noexcept {
+            return pool_size_;
+        }
+
     protected:
         [[nodiscard]] Json::Value wrapped_serialize() const override {
             throw std::logic_error("Not implemented");
@@ -66,6 +79,7 @@ namespace demiplane::scroll {
         }
     private:
         std::size_t ring_buffer_size_ = BufferCapacity::Medium;
+        std::size_t pool_size_        = std::thread::hardware_concurrency();
 
         WaitStrategy wait_strategy_ = WaitStrategy::Yielding;
     };

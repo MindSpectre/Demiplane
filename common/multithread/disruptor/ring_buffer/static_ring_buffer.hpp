@@ -57,7 +57,7 @@ namespace demiplane::multithread {
      * @tparam BufferSize Size of buffer (MUST be power of 2)
      */
     template <typename T, std::size_t BufferSize>
-    class RingBuffer {
+    class StaticRingBuffer {
         static_assert(std::has_single_bit(BufferSize), "BufferSize must be a power of 2");
     public:
         /**
@@ -73,7 +73,7 @@ namespace demiplane::multithread {
         /**
          * @brief Default constructor - value-initializes all elements
          */
-        RingBuffer() noexcept {
+        StaticRingBuffer() noexcept {
             buffer_.fill(T{});
         }
 
@@ -170,8 +170,8 @@ namespace demiplane::multithread {
     };
 
     // Compile-time verification examples
-    static_assert(RingBuffer<int, 1024>::capacity() == 1024, "Capacity must match BufferSize");
-    static_assert(RingBuffer<int, 1024>::INDEX_MASK == 1023, "Mask must be BufferSize - 1");
+    static_assert(StaticRingBuffer<int, 1024>::capacity() == 1024, "Capacity must match BufferSize");
+    static_assert(StaticRingBuffer<int, 1024>::INDEX_MASK == 1023, "Mask must be BufferSize - 1");
 
     // This will cause compile error (not power of 2):
     // RingBuffer<int, 1000> bad_buffer;  // Error: 1000 is not power of 2

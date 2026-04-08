@@ -12,5 +12,16 @@
     "jsoncpp",
     "gtest",
     "libpq"
-  ]
+  ],
+  "default-features": [
+    "abseil-benchmarks"
+  ],
+  "features": {
+    "abseil-benchmarks": {
+      "description": "Abseil logging benchmarks for comparative profiling",
+      "dependencies": [
+        "abseil"
+      ]
+    }
+  }
 }

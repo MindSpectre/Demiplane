@@ -5,7 +5,8 @@
 #include <string>
 #include <string_view>
 
-#include <json/value.h>
+#include <config_interface.hpp>
+#include <json/json.hpp>
 
 #include "tools/postgres_connection_tools.hpp"
 
@@ -18,7 +19,7 @@ namespace demiplane::db::postgres {
      * Suitable for simple executor creation.
      *
      * Usage:
-     *   auto creds = ConnectionCredentials{}
+     *   auto creds = ConnectionCredentials::Builder{}
      *       .host("localhost")
      *       .port(5432)
      *       .dbname("mydb")
@@ -28,10 +29,10 @@ namespace demiplane::db::postgres {
      *
      *   PGconn* conn = PQconnectdb(creds.to_connection_string().c_str());
      */
-    class ConnectionCredentials final : public gears::ConfigInterface<ConnectionCredentials, Json::Value> {
-    public:
-        constexpr ConnectionCredentials() = default;
+    class ConnectionConfig;
 
+    class ConnectionCredentials final : public serialization::ConfigInterface<ConnectionCredentials, Json::Value> {
+    public:
         template <gears::IsStringLike StringTp1,
                   gears::IsStringLike StringTp2,
                   gears::IsStringLike StringTp3,
@@ -67,44 +68,6 @@ namespace demiplane::db::postgres {
                     throw std::invalid_argument("Invalid port number");
                 }
             }
-        }
-
-        // ============== Fluent Setters ==============
-
-        template <typename Self>
-        constexpr auto&& host(this Self&& self, std::string value) noexcept {
-            self.host_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& port(this Self&& self, std::string value) noexcept {
-            self.port_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& port(this Self&& self, const std::uint16_t value) noexcept {
-            self.port_ = std::to_string(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& dbname(this Self&& self, std::string value) noexcept {
-            self.dbname_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& user(this Self&& self, std::string value) noexcept {
-            self.user_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& password(this Self&& self, std::string value) noexcept {
-            self.password_ = std::move(value);
-            return std::forward<Self>(self);
         }
 
         // ============== Getters ==============
@@ -167,16 +130,88 @@ namespace demiplane::db::postgres {
                    password_ == other.password_;
         }
 
-    protected:
-        [[nodiscard]] Json::Value wrapped_serialize() const override;
-        void wrapped_deserialize(const Json::Value& config) override;
+        // ============== Field Descriptors ==============
+
+        static constexpr auto fields() {
+            return std::tuple{
+                serialization::Field<&ConnectionCredentials::host_, "host">{},
+                serialization::Field<&ConnectionCredentials::port_, "port">{},
+                serialization::Field<&ConnectionCredentials::dbname_, "dbname">{},
+                serialization::Field<&ConnectionCredentials::user_, "user">{},
+                serialization::
+                    Field<&ConnectionCredentials::password_, "password", serialization::FieldPolicy::Secret>{},
+            };
+        }
+
+        class Builder;
 
     private:
+        friend class ConfigInterface;
+        friend class ConnectionConfig;
+        constexpr ConnectionCredentials() = default;
+
         std::string host_ = "localhost";
         std::string port_ = "5432";
         std::string dbname_;
         std::string user_;
         std::string password_;
+    };
+
+    class ConnectionCredentials::Builder {
+    public:
+        Builder() = default;
+        explicit Builder(const ConnectionCredentials& existing)
+            : config_{existing} {
+        }
+        explicit Builder(ConnectionCredentials&& existing)
+            : config_{std::move(existing)} {
+        }
+
+        template <typename Self>
+        constexpr auto&& host(this Self&& self, std::string value) noexcept {
+            self.config_.host_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& port(this Self&& self, std::string value) noexcept {
+            self.config_.port_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& port(this Self&& self, const std::uint16_t value) noexcept {
+            self.config_.port_ = std::to_string(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& dbname(this Self&& self, std::string value) noexcept {
+            self.config_.dbname_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& user(this Self&& self, std::string value) noexcept {
+            self.config_.user_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& password(this Self&& self, std::string value) noexcept {
+            self.config_.password_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        [[nodiscard]] ConnectionCredentials finalize() && {
+            config_.validate();
+            return std::move(config_);
+        }
+
+    private:
+        friend class ConnectionCredentials;
+        friend class ConfigInterface;
+        ConnectionCredentials config_;
     };
 
 }  // namespace demiplane::db::postgres

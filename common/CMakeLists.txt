@@ -4,6 +4,8 @@ set(DMP_COMMON ${PROJECT_NAME}.Common)
 
 add_subdirectory(gears)
 
+add_subdirectory(serialization)
+
 add_subdirectory(crypto)
 
 add_subdirectory(multithread)

@@ -19,6 +19,7 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Session.Cylinder
         ${DMP_DATABASE_POSTGRESQL}.Errors
         ${DMP_DATABASE}.Base.Errors
         Demiplane::Common::Gears
+        Demiplane::Common::Serialization
         Demiplane::Common::Multithread
         PostgreSQL::PostgreSQL
 )

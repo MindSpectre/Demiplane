@@ -22,8 +22,8 @@ namespace {
 
     auto make_logger() {
         return std::make_unique<demiplane::scroll::Logger>(
-            demiplane::scroll::LoggerConfig{}
-                .wait_strategy<demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin>()
+            demiplane::scroll::LoggerConfig::Builder{}
+                .wait_strategy(demiplane::scroll::LoggerConfig::WaitStrategy::BusySpin)
                 .ring_buffer_size(demiplane::scroll::LoggerConfig::BufferCapacity::Medium)
                 .finalize());
     }
@@ -42,7 +42,7 @@ int main() {
         std::filesystem::remove("scroll_contention_8t.log");
 
         demiplane::scroll::FileSinkConfig sink_config =
-            demiplane::scroll::FileSinkConfig{}
+            demiplane::scroll::FileSinkConfig::Builder{}
                 .threshold(demiplane::scroll::LogLevel::Debug)
                 .file("scroll_contention_8t.log")
                 .add_time_to_filename(false)
@@ -67,7 +67,7 @@ int main() {
         std::filesystem::remove("scroll_baseline_1t.log");
 
         demiplane::scroll::FileSinkConfig sink_config =
-            demiplane::scroll::FileSinkConfig{}
+            demiplane::scroll::FileSinkConfig::Builder{}
                 .threshold(demiplane::scroll::LogLevel::Debug)
                 .file("scroll_baseline_1t.log")
                 .add_time_to_filename(false)
@@ -120,7 +120,7 @@ int main() {
 
         auto make_file_sink = [](const std::string& path) {
             return std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(
-                demiplane::scroll::FileSinkConfig{}
+                demiplane::scroll::FileSinkConfig::Builder{}
                     .threshold(demiplane::scroll::LogLevel::Debug)
                     .file(path)
                     .add_time_to_filename(false)
@@ -146,7 +146,7 @@ int main() {
         std::filesystem::remove("scroll_e2e_8t.log");
 
         auto file_sink = std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(
-            demiplane::scroll::FileSinkConfig{}
+            demiplane::scroll::FileSinkConfig::Builder{}
                 .threshold(demiplane::scroll::LogLevel::Debug)
                 .file("scroll_e2e_8t.log")
                 .add_time_to_filename(false)
@@ -173,7 +173,7 @@ int main() {
 
         auto make_file_sink = [](const std::string& path) {
             return std::make_shared<demiplane::scroll::FileSink<demiplane::scroll::DetailedEntry>>(
-                demiplane::scroll::FileSinkConfig{}
+                demiplane::scroll::FileSinkConfig::Builder{}
                     .threshold(demiplane::scroll::LogLevel::Debug)
                     .file(path)
                     .add_time_to_filename(false)

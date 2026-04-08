@@ -76,8 +76,11 @@ namespace demiplane::scroll {
     public:
         explicit TestLoggerProvider() {
             auto logger = std::make_shared<Logger>();
-            logger->add_sink(std::make_shared<ConsoleSink<DetailedEntry>>(
-                ConsoleSinkConfig{}.threshold(LogLevel::Debug).enable_colors(true).flush_each_entry(true)));
+            logger->add_sink(std::make_shared<ConsoleSink<DetailedEntry>>(ConsoleSinkConfig::Builder{}
+                                                                              .threshold(LogLevel::Debug)
+                                                                              .enable_colors(true)
+                                                                              .flush_each_entry(true)
+                                                                              .finalize()));
             set_logger(std::move(logger));
         }
     };

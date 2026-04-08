@@ -44,7 +44,7 @@ TEST(LoggerProviderTest, StreamStyleLogging) {
 TEST(LoggerProviderTest, FormatStyleLogging) {
     const auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
-        demiplane::scroll::ConsoleSinkConfig{}
+        demiplane::scroll::ConsoleSinkConfig::Builder{}
             .threshold(demiplane::scroll::LogLevel::Debug)
             .enable_colors(false)
             .flush_each_entry(true)
@@ -69,7 +69,7 @@ TEST(LoggerProviderTest, FormatStyleLogging) {
 TEST(LoggerProviderTest, OverloadedMacros) {
     const auto logger = std::make_shared<demiplane::scroll::Logger>();
     logger->add_sink(std::make_unique<demiplane::scroll::ConsoleSink<demiplane::scroll::LightEntry>>(
-        demiplane::scroll::ConsoleSinkConfig{}
+        demiplane::scroll::ConsoleSinkConfig::Builder{}
             .threshold(demiplane::scroll::LogLevel::Debug)
             .enable_colors(false)
             .flush_each_entry(true)

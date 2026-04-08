@@ -64,6 +64,7 @@ target_include_directories(${DMP_SCROLL}.Sink.File PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Sink.File PUBLIC
         ${DMP_SCROLL}.Sink.Interface
+        Demiplane::Common::Serialization
 )
 ##############################################################################
 
@@ -79,6 +80,7 @@ target_include_directories(${DMP_SCROLL}.Sink.Console PUBLIC
 target_link_libraries(${DMP_SCROLL}.Sink.Console PUBLIC
         ${DMP_SCROLL}.Sink.Interface
         ${DMP_SCROLL}.Colors
+        Demiplane::Common::Serialization
 )
 ##############################################################################
 
@@ -98,6 +100,7 @@ target_link_libraries(${DMP_SCROLL}.Logger
         PUBLIC
         ${DMP_SCROLL}.Sink.Console
         ${DMP_SCROLL}.Sink.File
+        Demiplane::Common::Serialization
         Boost::asio
         Boost::system
 )

@@ -33,7 +33,7 @@ namespace demiplane::scroll {
     public:
         template <typename ConsoleSinkConfigTp = ConsoleSinkConfig>
             requires std::constructible_from<ConsoleSinkConfig, ConsoleSinkConfigTp>
-        explicit ConsoleSink(ConsoleSinkConfigTp&& cfg = {}) noexcept
+        explicit ConsoleSink(ConsoleSinkConfigTp&& cfg) noexcept
             : config_{std::forward<ConsoleSinkConfigTp>(cfg)} {
         }
 
@@ -48,29 +48,29 @@ namespace demiplane::scroll {
 
             std::lock_guard lock{mutex_};
 
-            if (config_.is_enable_colors()) {
-                *config_.get_output() << colorize_by_level(format_buffer_, entry.level());
+            if (config_.enable_colors()) {
+                *config_.output() << colorize_by_level(format_buffer_, entry.level());
             } else {
-                *config_.get_output() << format_buffer_;
+                *config_.output() << format_buffer_;
             }
 
-            if (config_.is_flush_each_entry()) {
-                config_.get_output()->flush();
+            if (config_.flush_each_entry()) {
+                config_.output()->flush();
             }
         }
 
         void flush() override {
             std::lock_guard lock{mutex_};
-            config_.get_output()->flush();
+            config_.output()->flush();
         }
 
         [[nodiscard]] bool should_log(LogLevel lvl) const noexcept override {
-            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.get_threshold());
+            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.threshold());
         }
 
-        // Allow runtime config changes
-        constexpr ConsoleSinkConfig& config() noexcept {
-            return config_;
+        // Allow runtime config replacement
+        void set_config(ConsoleSinkConfig cfg) noexcept {
+            config_ = std::move(cfg);
         }
 
         [[nodiscard]] constexpr const ConsoleSinkConfig& config() const noexcept {

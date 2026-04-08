@@ -15,15 +15,14 @@ using namespace std::chrono_literals;
 // ============== Test Helpers ==============
 
 static ConnectionConfig make_test_config() {
-    auto credentials = ConnectionCredentials{}
+    auto credentials = ConnectionCredentials::Builder{}
                            .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
                            .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
                            .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
                            .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                           .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
-    ConnectionConfig config{std::move(credentials)};
-    config.ssl_mode(SslMode::DISABLE).validate();
-    return config;
+                           .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                           .finalize();
+    return ConnectionConfig::Builder{}.credentials(std::move(credentials)).ssl_mode(SslMode::DISABLE).finalize();
 }
 
 // Helper to run an async coroutine to completion in tests
@@ -61,23 +60,20 @@ auto run_async(boost::asio::io_context& io, CoroFunc&& func) {
 class CylinderConfigTest : public ::testing::Test {};
 
 TEST_F(CylinderConfigTest, ValidateAcceptsValidConfig) {
-    auto cfg = CylinderConfig{}.capacity(16).min_connections(2);
+    auto cfg = CylinderConfig::Builder{}.capacity(16).min_connections(2).finalize();
     EXPECT_NO_THROW(cfg.validate());
 }
 
 TEST_F(CylinderConfigTest, ValidateRejectsZeroCapacity) {
-    auto cfg = CylinderConfig{}.capacity(0);
-    EXPECT_THROW(cfg.validate(), std::invalid_argument);
+    EXPECT_THROW((void)CylinderConfig::Builder{}.capacity(0).finalize(), std::invalid_argument);
 }
 
 TEST_F(CylinderConfigTest, ValidateRejectsNonPowerOfTwo) {
-    auto cfg = CylinderConfig{}.capacity(10);
-    EXPECT_THROW(cfg.validate(), std::invalid_argument);
+    EXPECT_THROW((void)CylinderConfig::Builder{}.capacity(10).finalize(), std::invalid_argument);
 }
 
 TEST_F(CylinderConfigTest, ValidateRejectsMinConnectionsExceedCapacity) {
-    auto cfg = CylinderConfig{}.capacity(4).min_connections(8);
-    EXPECT_THROW(cfg.validate(), std::invalid_argument);
+    EXPECT_THROW((void)CylinderConfig::Builder{}.capacity(4).min_connections(8).finalize(), std::invalid_argument);
 }
 
 TEST_F(CylinderConfigTest, FactoryMethodsProduceValidConfigs) {
@@ -115,8 +111,9 @@ protected:
         }
         PQfinish(probe);
 
-        session_ = std::make_unique<Session>(make_test_config(),
-                                             CylinderConfig{}.capacity(4).min_connections(1).health_check_interval(2s));
+        session_ = std::make_unique<Session>(
+            make_test_config(),
+            CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
         // Create test table via with_sync
         auto exec   = session_->with_sync();

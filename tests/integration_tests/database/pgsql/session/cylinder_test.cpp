@@ -15,15 +15,14 @@ using namespace std::chrono_literals;
 // ============== Test Helpers ==============
 
 static ConnectionConfig make_test_config() {
-    auto credentials = ConnectionCredentials{}
+    auto credentials = ConnectionCredentials::Builder{}
                            .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
                            .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
                            .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
                            .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                           .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
-    ConnectionConfig config{std::move(credentials)};
-    config.ssl_mode(SslMode::DISABLE).validate();
-    return config;
+                           .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                           .finalize();
+    return ConnectionConfig::Builder{}.credentials(std::move(credentials)).ssl_mode(SslMode::DISABLE).finalize();
 }
 
 // ============== Test Fixture ==============
@@ -49,7 +48,8 @@ protected:
 
 TEST_F(CylinderTest, MultipleSyncExecutorsRunQueriesAndRelease) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(2).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     // Acquire 3 executors simultaneously from a capacity-4 pool
     {
@@ -90,7 +90,8 @@ TEST_F(CylinderTest, MultipleSyncExecutorsRunQueriesAndRelease) {
 
 TEST_F(CylinderTest, PoolExhaustionReturnsInvalidExecutor) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(2).min_connections(1).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
 
     // Exhaust the pool (capacity=2)
     auto exec1 = session.with_sync();
@@ -119,7 +120,8 @@ TEST_F(CylinderTest, PoolExhaustionReturnsInvalidExecutor) {
 
 TEST_F(CylinderTest, ShutdownPreventsNewAcquisitions) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(1).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     // Verify session works before shutdown
     {
@@ -142,7 +144,8 @@ TEST_F(CylinderTest, ShutdownPreventsNewAcquisitions) {
 
 TEST_F(CylinderTest, ExecutorLifecycleScopeReleasesSlot) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(1).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     const auto free_before = session.cylinder_free_count();
 
@@ -175,7 +178,8 @@ TEST_F(CylinderTest, ExecutorLifecycleScopeReleasesSlot) {
 
 TEST_F(CylinderTest, SessionStatsAccuracy) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(2).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     // Capacity is always 4
     EXPECT_EQ(session.cylinder_capacity(), 4u);
@@ -212,7 +216,8 @@ TEST_F(CylinderTest, SessionStatsAccuracy) {
 
 TEST_F(CylinderTest, DoubleShutdownIdempotent) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(1).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     // First shutdown
     EXPECT_NO_THROW(session.shutdown());
@@ -227,7 +232,8 @@ TEST_F(CylinderTest, DoubleShutdownIdempotent) {
 
 TEST_F(CylinderTest, ConcurrentAsyncQueriesComplete) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(2).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     boost::asio::io_context ioc;
 
@@ -262,7 +268,8 @@ TEST_F(CylinderTest, ConcurrentAsyncQueriesComplete) {
 
 TEST_F(CylinderTest, ConcurrentSyncExecutorsFromMultipleThreads) {
     auto session =
-        Session{make_test_config(), CylinderConfig{}.capacity(4).min_connections(2).health_check_interval(2s)};
+        Session{make_test_config(),
+                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     constexpr int kThreads = 4;
     std::vector<std::thread> threads;

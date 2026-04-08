@@ -16,15 +16,14 @@ using namespace std::chrono_literals;
 // ============== Test Helpers ==============
 
 static ConnectionConfig make_test_config() {
-    auto credentials = ConnectionCredentials{}
+    auto credentials = ConnectionCredentials::Builder{}
                            .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
                            .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
                            .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
                            .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                           .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
-    ConnectionConfig config{std::move(credentials)};
-    config.ssl_mode(SslMode::DISABLE).validate();
-    return config;
+                           .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                           .finalize();
+    return ConnectionConfig::Builder{}.credentials(std::move(credentials)).ssl_mode(SslMode::DISABLE).finalize();
 }
 
 // ============== Savepoint Tests ==============
@@ -43,8 +42,9 @@ protected:
         }
         PQfinish(probe);
 
-        session_ = std::make_unique<Session>(make_test_config(),
-                                             CylinderConfig{}.capacity(4).min_connections(1).health_check_interval(2s));
+        session_ = std::make_unique<Session>(
+            make_test_config(),
+            CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
         // Create test table
         auto exec   = session_->with_sync();

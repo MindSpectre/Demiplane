@@ -8,8 +8,8 @@
 #include <string_view>
 #include <utility>
 
-#include <gears_class_traits.hpp>
-#include <json/value.h>
+#include <config_interface.hpp>
+#include <json/json.hpp>
 
 #include "credentials/postgres_connection_credentials.hpp"
 #include "tools/postgres_connection_tools.hpp"
@@ -29,7 +29,7 @@ namespace demiplane::db::postgres {
      * Suitable for Session class with LMAX disruptor pool.
      *
      * Usage:
-     *   auto config = ConnectionConfig{}
+     *   auto config = ConnectionConfig::Builder{}
      *       .host("db.example.com")
      *       .port(5432)
      *       .dbname("production")
@@ -41,10 +41,8 @@ namespace demiplane::db::postgres {
      *       .role(NodeRole::PRIMARY)
      *       .finalize();
      */
-    class ConnectionConfig final : public gears::ConfigInterface<ConnectionConfig, Json::Value> {
+    class ConnectionConfig final : public serialization::ConfigInterface<ConnectionConfig, Json::Value> {
     public:
-        constexpr ConnectionConfig() = default;
-
         explicit constexpr ConnectionConfig(ConnectionCredentials credentials) noexcept
             : credentials_{std::move(credentials)} {
         }
@@ -75,186 +73,6 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] constexpr const ConnectionCredentials& credentials() const noexcept {
             return credentials_;
-        }
-
-        [[nodiscard]] constexpr ConnectionCredentials& credentials() noexcept {
-            return credentials_;
-        }
-
-        // ============== Fluent Setters for Credentials (Proxied) ==============
-
-        template <typename Self>
-        constexpr auto&& host(this Self&& self, std::string value) noexcept {
-            self.credentials_ = std::move(self.credentials_).host(std::move(value));
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& port(this Self&& self, std::string value) noexcept {
-            self.credentials_ = std::move(self.credentials_).port(std::move(value));
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& port(this Self&& self, std::uint16_t value) noexcept {
-            self.credentials_ = std::move(self.credentials_).port(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& dbname(this Self&& self, std::string value) noexcept {
-            self.credentials_ = std::move(self.credentials_).dbname(std::move(value));
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& user(this Self&& self, std::string value) noexcept {
-            self.credentials_ = std::move(self.credentials_).user(std::move(value));
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& password(this Self&& self, std::string value) noexcept {
-            self.credentials_ = std::move(self.credentials_).password(std::move(value));
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& credentials(this Self&& self, ConnectionCredentials creds) noexcept {
-            self.credentials_ = std::move(creds);
-            return std::forward<Self>(self);
-        }
-
-        // ============== Fluent Setters for Node Configuration ==============
-
-        template <typename Self>
-        constexpr auto&& role(this Self&& self, NodeRole value) noexcept {
-            self.role_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& priority(this Self&& self, int value) noexcept {
-            self.priority_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& cluster_name(this Self&& self, std::string value) noexcept {
-            self.cluster_name_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        // ============== Fluent Setters for Timeouts ==============
-
-        template <typename Self>
-        constexpr auto&& connect_timeout(this Self&& self, std::chrono::seconds value) noexcept {
-            self.connect_timeout_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& statement_timeout(this Self&& self, std::chrono::seconds value) noexcept {
-            self.statement_timeout_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& idle_in_transaction_timeout(this Self&& self, std::chrono::seconds value) noexcept {
-            self.idle_in_transaction_timeout_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& lock_timeout(this Self&& self, std::chrono::seconds value) noexcept {
-            self.lock_timeout_ = value;
-            return std::forward<Self>(self);
-        }
-
-        // ============== Fluent Setters for SSL/TLS ==============
-
-        template <typename Self>
-        constexpr auto&& ssl_mode(this Self&& self, SslMode value) noexcept {
-            self.ssl_mode_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& ssl_cert(this Self&& self, std::string value) noexcept {
-            self.ssl_cert_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& ssl_key(this Self&& self, std::string value) noexcept {
-            self.ssl_key_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& ssl_root_cert(this Self&& self, std::string value) noexcept {
-            self.ssl_root_cert_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        // ============== Fluent Setters for Protocol ==============
-
-        template <typename Self>
-        constexpr auto&& binary_protocol(this Self&& self, bool value) noexcept {
-            self.binary_protocol_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& auto_prepare(this Self&& self, bool value) noexcept {
-            self.auto_prepare_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& pipeline_mode(this Self&& self, bool value) noexcept {
-            self.pipeline_mode_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& application_name(this Self&& self, std::string value) noexcept {
-            self.application_name_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& search_path(this Self&& self, std::string value) noexcept {
-            self.search_path_ = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        // ============== Fluent Setters for Performance ==============
-
-        template <typename Self>
-        constexpr auto&& work_mem_mb(this Self&& self, std::size_t value) noexcept {
-            self.work_mem_mb_ = value;
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& jit(this Self&& self, bool value) noexcept {
-            self.jit_ = value;
-            return std::forward<Self>(self);
-        }
-
-        // ============== Fluent Setters for Extra Options ==============
-
-        template <typename Self>
-        constexpr auto&& extra_option(this Self&& self, std::string key, std::string value) noexcept {
-            self.extra_options_[std::move(key)] = std::move(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-        constexpr auto&& extra_options(this Self&& self, std::map<std::string, std::string> options) noexcept {
-            self.extra_options_ = std::move(options);
-            return std::forward<Self>(self);
         }
 
         // ============== Getters ==============
@@ -382,41 +200,52 @@ namespace demiplane::db::postgres {
             return result;
         }
 
-        // ============== Factory Methods ==============
+        // ============== Factory Methods (defined after Builder) ==============
 
-        [[nodiscard]] constexpr static ConnectionConfig local_dev() {
-            return ConnectionConfig{}
-                .host("localhost")
-                .port(5432)
-                .ssl_mode(SslMode::DISABLE)
-                .connect_timeout(std::chrono::seconds{5});
+        [[nodiscard]] static ConnectionConfig local_dev();
+        [[nodiscard]] static ConnectionConfig testing();
+        [[nodiscard]] static ConnectionConfig production();
+
+        // ============== Field Descriptors ==============
+
+        static constexpr auto fields() {
+            return std::tuple{
+                // Nested config (auto-serializes via HasFields overload)
+                serialization::Field<&ConnectionConfig::credentials_, "credentials">{},
+                // Node configuration
+                serialization::Field<&ConnectionConfig::role_, "role">{},
+                serialization::Field<&ConnectionConfig::priority_, "priority">{},
+                serialization::Field<&ConnectionConfig::cluster_name_, "cluster_name">{},
+                // Timeouts
+                serialization::Field<&ConnectionConfig::connect_timeout_, "connect_timeout">{},
+                serialization::Field<&ConnectionConfig::statement_timeout_, "statement_timeout">{},
+                serialization::Field<&ConnectionConfig::idle_in_transaction_timeout_, "idle_in_transaction_timeout">{},
+                serialization::Field<&ConnectionConfig::lock_timeout_, "lock_timeout">{},
+                // SSL/TLS
+                serialization::Field<&ConnectionConfig::ssl_mode_, "ssl_mode">{},
+                serialization::Field<&ConnectionConfig::ssl_cert_, "ssl_cert">{},
+                serialization::Field<&ConnectionConfig::ssl_key_, "ssl_key">{},
+                serialization::Field<&ConnectionConfig::ssl_root_cert_, "ssl_root_cert">{},
+                // Protocol
+                serialization::Field<&ConnectionConfig::binary_protocol_, "binary_protocol">{},
+                serialization::Field<&ConnectionConfig::auto_prepare_, "auto_prepare">{},
+                serialization::Field<&ConnectionConfig::pipeline_mode_, "pipeline_mode">{},
+                serialization::Field<&ConnectionConfig::application_name_, "application_name">{},
+                serialization::Field<&ConnectionConfig::search_path_, "search_path">{},
+                // Performance
+                serialization::Field<&ConnectionConfig::work_mem_mb_, "work_mem_mb">{},
+                serialization::Field<&ConnectionConfig::jit_, "jit">{},
+                // Extra options
+                serialization::Field<&ConnectionConfig::extra_options_, "extra_options">{},
+            };
         }
 
-        [[nodiscard]] constexpr static ConnectionConfig testing() {
-            return ConnectionConfig{}
-                .host("localhost")
-                .port(5433)
-                .dbname("test_db")
-                .user("test_user")
-                .password("test_password")
-                .ssl_mode(SslMode::DISABLE)
-                .connect_timeout(std::chrono::seconds{10});
-        }
-
-        [[nodiscard]] constexpr static ConnectionConfig production() {
-            return ConnectionConfig{}
-                .ssl_mode(SslMode::VERIFY_FULL)
-                .connect_timeout(std::chrono::seconds{30})
-                .statement_timeout(std::chrono::seconds{60})
-                .pipeline_mode(true)
-                .jit(true);
-        }
-
-    protected:
-        [[nodiscard]] Json::Value wrapped_serialize() const override;
-        void wrapped_deserialize(const Json::Value& config) override;
+        class Builder;
 
     private:
+        friend class ConfigInterface;
+        constexpr ConnectionConfig() = default;
+
         ConnectionCredentials credentials_;
 
         // Node configuration
@@ -450,5 +279,255 @@ namespace demiplane::db::postgres {
         // Additional libpq options
         std::map<std::string, std::string> extra_options_;
     };
+
+    class ConnectionConfig::Builder {
+    public:
+        Builder() = default;
+        explicit Builder(const ConnectionConfig& existing) : config_{existing} {}
+        explicit Builder(ConnectionConfig&& existing) : config_{std::move(existing)} {}
+
+        // ============== Credential Setters (Proxied) ==============
+
+        template <typename Self>
+        constexpr auto&& credentials(this Self&& self, ConnectionCredentials creds) noexcept {
+            self.config_.credentials_ = std::move(creds);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& host(this Self&& self, std::string value) noexcept {
+            self.config_.credentials_ = ConnectionCredentials{std::move(value),
+                                                              std::string{self.config_.credentials_.port()},
+                                                              std::string{self.config_.credentials_.dbname()},
+                                                              std::string{self.config_.credentials_.user()},
+                                                              std::string{self.config_.credentials_.password()}};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& port(this Self&& self, std::string value) noexcept {
+            self.config_.credentials_ = ConnectionCredentials{std::string{self.config_.credentials_.host()},
+                                                              std::move(value),
+                                                              std::string{self.config_.credentials_.dbname()},
+                                                              std::string{self.config_.credentials_.user()},
+                                                              std::string{self.config_.credentials_.password()}};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& port(this Self&& self, const std::uint16_t value) noexcept {
+            self.config_.credentials_ = ConnectionCredentials{std::string{self.config_.credentials_.host()},
+                                                              std::to_string(value),
+                                                              std::string{self.config_.credentials_.dbname()},
+                                                              std::string{self.config_.credentials_.user()},
+                                                              std::string{self.config_.credentials_.password()}};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& dbname(this Self&& self, std::string value) noexcept {
+            self.config_.credentials_ = ConnectionCredentials{std::string{self.config_.credentials_.host()},
+                                                              std::string{self.config_.credentials_.port()},
+                                                              std::move(value),
+                                                              std::string{self.config_.credentials_.user()},
+                                                              std::string{self.config_.credentials_.password()}};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& user(this Self&& self, std::string value) noexcept {
+            self.config_.credentials_ = ConnectionCredentials{std::string{self.config_.credentials_.host()},
+                                                              std::string{self.config_.credentials_.port()},
+                                                              std::string{self.config_.credentials_.dbname()},
+                                                              std::move(value),
+                                                              std::string{self.config_.credentials_.password()}};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& password(this Self&& self, std::string value) noexcept {
+            self.config_.credentials_ = ConnectionCredentials{std::string{self.config_.credentials_.host()},
+                                                              std::string{self.config_.credentials_.port()},
+                                                              std::string{self.config_.credentials_.dbname()},
+                                                              std::string{self.config_.credentials_.user()},
+                                                              std::move(value)};
+            return std::forward<Self>(self);
+        }
+
+        // ============== Node Configuration Setters ==============
+
+        template <typename Self>
+        constexpr auto&& role(this Self&& self, NodeRole value) noexcept {
+            self.config_.role_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& priority(this Self&& self, int value) noexcept {
+            self.config_.priority_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& cluster_name(this Self&& self, std::string value) noexcept {
+            self.config_.cluster_name_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        // ============== Timeout Setters ==============
+
+        template <typename Self>
+        constexpr auto&& connect_timeout(this Self&& self, std::chrono::seconds value) noexcept {
+            self.config_.connect_timeout_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& statement_timeout(this Self&& self, std::chrono::seconds value) noexcept {
+            self.config_.statement_timeout_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& idle_in_transaction_timeout(this Self&& self, std::chrono::seconds value) noexcept {
+            self.config_.idle_in_transaction_timeout_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& lock_timeout(this Self&& self, std::chrono::seconds value) noexcept {
+            self.config_.lock_timeout_ = value;
+            return std::forward<Self>(self);
+        }
+
+        // ============== SSL/TLS Setters ==============
+
+        template <typename Self>
+        constexpr auto&& ssl_mode(this Self&& self, SslMode value) noexcept {
+            self.config_.ssl_mode_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& ssl_cert(this Self&& self, std::string value) noexcept {
+            self.config_.ssl_cert_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& ssl_key(this Self&& self, std::string value) noexcept {
+            self.config_.ssl_key_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& ssl_root_cert(this Self&& self, std::string value) noexcept {
+            self.config_.ssl_root_cert_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        // ============== Protocol Setters ==============
+
+        template <typename Self>
+        constexpr auto&& binary_protocol(this Self&& self, bool value) noexcept {
+            self.config_.binary_protocol_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& auto_prepare(this Self&& self, bool value) noexcept {
+            self.config_.auto_prepare_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& pipeline_mode(this Self&& self, bool value) noexcept {
+            self.config_.pipeline_mode_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& application_name(this Self&& self, std::string value) noexcept {
+            self.config_.application_name_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& search_path(this Self&& self, std::string value) noexcept {
+            self.config_.search_path_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        // ============== Performance Setters ==============
+
+        template <typename Self>
+        constexpr auto&& work_mem_mb(this Self&& self, std::size_t value) noexcept {
+            self.config_.work_mem_mb_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& jit(this Self&& self, bool value) noexcept {
+            self.config_.jit_ = value;
+            return std::forward<Self>(self);
+        }
+
+        // ============== Extra Options Setters ==============
+
+        template <typename Self>
+        constexpr auto&& extra_option(this Self&& self, std::string key, std::string value) noexcept {
+            self.config_.extra_options_[std::move(key)] = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& extra_options(this Self&& self, std::map<std::string, std::string> options) noexcept {
+            self.config_.extra_options_ = std::move(options);
+            return std::forward<Self>(self);
+        }
+
+        [[nodiscard]] ConnectionConfig finalize() && {
+            config_.validate();
+            return std::move(config_);
+        }
+
+    private:
+        friend class ConnectionConfig;
+        friend class ConfigInterface;
+        ConnectionConfig config_;
+    };
+
+    // ============== ConnectionConfig Factory Method Definitions ==============
+
+    inline ConnectionConfig ConnectionConfig::local_dev() {
+        return Builder{}
+            .host("localhost")
+            .port(static_cast<std::uint16_t>(5432))
+            .ssl_mode(SslMode::DISABLE)
+            .connect_timeout(std::chrono::seconds{5})
+            .finalize();
+    }
+
+    inline ConnectionConfig ConnectionConfig::testing() {
+        return Builder{}
+            .host("localhost")
+            .port(static_cast<std::uint16_t>(5433))
+            .dbname("test_db")
+            .user("test_user")
+            .password("test_password")
+            .ssl_mode(SslMode::DISABLE)
+            .connect_timeout(std::chrono::seconds{10})
+            .finalize();
+    }
+
+    inline ConnectionConfig ConnectionConfig::production() {
+        return Builder{}
+            .ssl_mode(SslMode::VERIFY_FULL)
+            .connect_timeout(std::chrono::seconds{30})
+            .statement_timeout(std::chrono::seconds{60})
+            .pipeline_mode(true)
+            .jit(true)
+            .finalize();
+    }
 
 }  // namespace demiplane::db::postgres

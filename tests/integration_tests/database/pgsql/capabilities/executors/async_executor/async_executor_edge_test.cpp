@@ -16,12 +16,13 @@ class AsyncExecutorEdgeTest : public ::testing::Test {
 protected:
     void SetUp() override {
         const auto credentials =
-            ConnectionCredentials{}
+            ConnectionCredentials::Builder{}
                 .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
                 .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
                 .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
                 .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
+                .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                .finalize();
 
         conn_ = PQconnectdb(credentials.to_connection_string().c_str());
 
@@ -158,12 +159,13 @@ TEST_F(AsyncExecutorEdgeTest, MoveConstruction) {
 TEST_F(AsyncExecutorEdgeTest, MoveAssignmentCleanup) {
     // Create a second connection for a second executor
     const auto credentials =
-        ConnectionCredentials{}
+        ConnectionCredentials::Builder{}
             .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
             .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
             .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
             .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-            .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
+            .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+            .finalize();
 
     PGconn* conn2 = PQconnectdb(credentials.to_connection_string().c_str());
     ASSERT_EQ(PQstatus(conn2), CONNECTION_OK) << "Failed to create second connection";

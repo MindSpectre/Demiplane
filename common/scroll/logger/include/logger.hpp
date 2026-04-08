@@ -63,8 +63,9 @@ namespace demiplane::scroll {
          * The executor's thread pool runs sink processing. Multiple loggers
          * can share the same executor (e.g., with HTTP/DB components).
          */
-        constexpr explicit Logger(boost::asio::any_io_executor executor, const LoggerConfig& cfg = {})
-            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
+        constexpr explicit Logger(boost::asio::any_io_executor executor,
+                                  const LoggerConfig& cfg = LoggerConfig::Builder{}.finalize())
+            : disruptor_{cfg.ring_buffer_size(), create_wait_strategy(cfg.wait_strategy())},
               executor_{std::move(executor)} {
             running_.store(true, std::memory_order_release);
             consumer_thread_ = std::jthread([this] { consumer_loop(); });
@@ -75,9 +76,9 @@ namespace demiplane::scroll {
          *
          * Creates an internal asio::thread_pool sized by LoggerConfig::pool_size.
          */
-        constexpr explicit Logger(const LoggerConfig& cfg = {})
-            : disruptor_{cfg.get_ring_buffer_size(), create_wait_strategy(cfg.get_wait_strategy())},
-              owned_pool_{std::in_place, cfg.get_pool_size()},
+        constexpr explicit Logger(const LoggerConfig& cfg = LoggerConfig::Builder{}.finalize())
+            : disruptor_{cfg.ring_buffer_size(), create_wait_strategy(cfg.wait_strategy())},
+              owned_pool_{std::in_place, cfg.pool_size()},
               executor_{owned_pool_->get_executor()} {
             running_.store(true, std::memory_order_release);
             consumer_thread_ = std::jthread([this] { consumer_loop(); });

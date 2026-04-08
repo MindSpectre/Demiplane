@@ -16,12 +16,13 @@ protected:
     void SetUp() override {
         // Get connection parameters from environment or use defaults (matching docker-compose.test.yml)
         const auto credentials =
-            ConnectionCredentials{}
+            ConnectionCredentials::Builder{}
                 .host(demiplane::gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
                 .port(demiplane::gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
                 .dbname(demiplane::gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
                 .user(demiplane::gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
+                .password(demiplane::gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                .finalize();
 
         // Connect to database
         conn_ = PQconnectdb(credentials.to_connection_string().c_str());

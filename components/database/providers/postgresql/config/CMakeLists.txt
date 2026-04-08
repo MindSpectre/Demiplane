@@ -17,6 +17,7 @@ target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Config
         PUBLIC
         ${DMP_DATABASE_POSTGRESQL}.Registries
         Demiplane::Common::Gears
+        Demiplane::Common::Serialization
         JsonCpp::JsonCpp
 )
 ##############################################################################

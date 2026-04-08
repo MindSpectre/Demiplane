@@ -42,38 +42,6 @@ namespace demiplane::gears {
         using From = InterfaceBundle<Interfaces<T>...>;
     };
 
-    template <typename Derived, typename SerializeStruct>
-    class ConfigInterface {
-    public:
-        virtual ~ConfigInterface()    = default;
-        constexpr virtual void validate() const = 0;
-
-        // Finalize with validation - returns Derived by value
-        Derived finalize() && {
-            validate();
-            return std::move(static_cast<Derived&>(*this));
-        }
-        Derived finalize() & {
-            validate();
-            return static_cast<Derived&>(*this);
-        }
-        // Serialization - use the SerializeStruct template param
-        [[nodiscard]] SerializeStruct serialize() const {
-            validate();
-            return wrapped_serialize();
-        }
-
-        void deserialize(const SerializeStruct& config) {
-            validate();
-            wrapped_deserialize(config);
-        }
-        // Static deserialization enforcement via static_assert in constructor
-    protected:
-        [[nodiscard]] virtual SerializeStruct wrapped_serialize() const = 0;
-
-        virtual void wrapped_deserialize(const SerializeStruct& config) = 0;
-    };
-
     template <typename T>
     struct TypePrinter;
 }  // namespace demiplane::gears

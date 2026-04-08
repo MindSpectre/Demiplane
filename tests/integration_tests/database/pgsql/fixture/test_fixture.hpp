@@ -59,7 +59,7 @@ namespace demiplane::test {
 
             nexus::instance().register_singleton<scroll::ConsoleSink<scroll::DetailedEntry>>([] {
                 return std::make_shared<scroll::ConsoleSink<scroll::DetailedEntry>>(
-                    scroll::ConsoleSinkConfig{}.flush_each_entry(true).threshold(scroll::TRC).finalize());
+                    scroll::ConsoleSinkConfig::Builder{}.flush_each_entry(true).threshold(scroll::TRC).finalize());
             });
 
             nexus::instance().register_singleton<scroll::Logger>([] {
@@ -73,12 +73,13 @@ namespace demiplane::test {
 
         // Connect to PostgreSQL using environment variables
         void ConnectToDatabase() {
-            const auto credentials = db::postgres::ConnectionCredentials{}
+            const auto credentials = db::postgres::ConnectionCredentials::Builder{}
                                          .host(gears::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
                                          .port(gears::value_or(std::getenv("POSTGRES_PORT"), "5433"))
                                          .dbname(gears::value_or(std::getenv("POSTGRES_DB"), "test_db"))
                                          .user(gears::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                                         .password(gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"));
+                                         .password(gears::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                                         .finalize();
 
             conn_ = PQconnectdb(credentials.to_connection_string().c_str());
 

@@ -6,9 +6,9 @@
 
 namespace demiplane::db::postgres {
 
-    Session::Session(ConnectionConfig connection_config, CylinderConfig cylinder_config)
-        : cylinder_{std::move(connection_config), std::move(cylinder_config)},
-          janitor_{cylinder_} {
+    Session::Session(ConnectionConfig connection_config, PoolConfig pool_config)
+        : pool_{std::move(connection_config), std::move(pool_config)},
+          janitor_{pool_} {
         COMPONENT_LOG_INF() << "Session created";
     }
 
@@ -19,16 +19,16 @@ namespace demiplane::db::postgres {
 
     SyncExecutor Session::with_sync() {
         COMPONENT_LOG_ENTER_FUNCTION();
-        auto* slot = cylinder_.acquire_slot();
+        auto* slot = pool_.acquire_slot();
         if (!slot) {
             return SyncExecutor{nullptr};
         }
         return SyncExecutor{*slot};
     }
 
-    AsyncExecutor Session::with_async(executor_type exec) {
+    AsyncExecutor Session::with_async(boost::asio::any_io_executor exec) {
         COMPONENT_LOG_ENTER_FUNCTION();
-        auto* slot = cylinder_.acquire_slot();
+        auto* slot = pool_.acquire_slot();
         if (!slot) {
             return AsyncExecutor{nullptr, std::move(exec)};
         }
@@ -38,29 +38,29 @@ namespace demiplane::db::postgres {
     void Session::shutdown() {
         COMPONENT_LOG_ENTER_FUNCTION();
         janitor_.stop();
-        cylinder_.shutdown();
+        pool_.shutdown();
         COMPONENT_LOG_LEAVE_FUNCTION();
     }
 
-    std::size_t Session::cylinder_capacity() const noexcept {
-        return cylinder_.capacity();
+    std::size_t Session::pool_capacity() const noexcept {
+        return pool_.capacity();
     }
 
-    std::size_t Session::cylinder_active_count() const noexcept {
-        return cylinder_.active_count();
+    std::size_t Session::pool_active_count() const noexcept {
+        return pool_.active_count();
     }
 
-    std::size_t Session::cylinder_free_count() const noexcept {
-        return cylinder_.free_count();
+    std::size_t Session::pool_free_count() const noexcept {
+        return pool_.free_count();
     }
 
     bool Session::is_shutdown() const noexcept {
-        return cylinder_.is_shutdown();
+        return pool_.is_shutdown();
     }
 
     gears::Outcome<Transaction, ErrorContext> Session::begin_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
-        auto* slot = cylinder_.acquire_slot();
+        auto* slot = pool_.acquire_slot();
         if (!slot) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
@@ -69,7 +69,7 @@ namespace demiplane::db::postgres {
 
     gears::Outcome<AutoTransaction, ErrorContext> Session::begin_auto_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
-        auto* slot = cylinder_.acquire_slot();
+        auto* slot = pool_.acquire_slot();
         if (!slot) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }

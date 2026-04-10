@@ -1,23 +1,18 @@
-#include "cylinder_connection.hpp"
+#include "connection_pool.hpp"
 
 #include <postgres_errors.hpp>
 
 namespace demiplane::db::postgres {
 
-    ConnectionCylinder::ConnectionCylinder(ConnectionConfig connection_config, CylinderConfig cylinder_config)
+    ConnectionPool::ConnectionPool(ConnectionConfig connection_config, PoolConfig pool_config)
         : connection_config_{std::move(connection_config)},
-          cylinder_config_{std::move(cylinder_config)},
-          mask_{cylinder_config_.capacity() - 1},
-          slots_(cylinder_config_.capacity()) {
-        cylinder_config_.validate();
-
-        // Set cleanup_sql on each slot (string_view into config's string)
-        for (auto& slot : slots_) {
-            slot.cleanup_sql = cylinder_config_.cleanup_sql();
-        }
+          pool_config_{std::move(pool_config)},
+          mask_{pool_config_.capacity() - 1},
+          slots_(pool_config_.capacity()) {
+        pool_config_.validate();
 
         // Eagerly create min_connections
-        for (std::size_t i = 0; i < cylinder_config_.min_connections(); ++i) {
+        for (std::size_t i = 0; i < pool_config_.min_connections(); ++i) {
             slots_[i].conn = create_connection();
             if (slots_[i].conn) {
                 slots_[i].status.store(SlotStatus::FREE, std::memory_order_release);
@@ -27,7 +22,7 @@ namespace demiplane::db::postgres {
         }
     }
 
-    ConnectionCylinder::~ConnectionCylinder() {
+    ConnectionPool::~ConnectionPool() {
         shutdown();  // ensure flag set
 
         // Unconditional termination: close ALL connections
@@ -39,13 +34,13 @@ namespace demiplane::db::postgres {
         }
     }
 
-    ConnectionSlot* ConnectionCylinder::acquire_slot() noexcept {
+    ConnectionSlot* ConnectionPool::acquire_slot() noexcept {
         if (shutdown_.load(std::memory_order_acquire)) {
             return nullptr;
         }
 
         const auto start = static_cast<std::size_t>(hint_cursor_.get_volatile());
-        const auto cap   = cylinder_config_.capacity();
+        const auto cap   = pool_config_.capacity();
 
         // First pass: look for FREE slots
         for (std::size_t i = 0; i < cap; ++i) {
@@ -72,16 +67,16 @@ namespace demiplane::db::postgres {
             }
         }
 
-        return nullptr;  // Cylinder exhausted
+        return nullptr;  // Pool exhausted
     }
 
-    void ConnectionCylinder::shutdown() {
+    void ConnectionPool::shutdown() {
         if (shutdown_.exchange(true, std::memory_order_acq_rel)) {
             return;  // Already shut down
         }
 
         // Graceful: close idle connections, skip borrowed ones
-        for (std::size_t i = 0; i < cylinder_config_.capacity(); ++i) {
+        for (std::size_t i = 0; i < pool_config_.capacity(); ++i) {
             if (const auto status = slots_[i].status.load(std::memory_order_acquire);
                 status == SlotStatus::USED || status == SlotStatus::WAITING) {
                 continue;  // Still borrowed — executor will call slot->reset()
@@ -96,13 +91,13 @@ namespace demiplane::db::postgres {
 
     // ============== Stats ==============
 
-    std::size_t ConnectionCylinder::capacity() const noexcept {
-        return cylinder_config_.capacity();
+    std::size_t ConnectionPool::capacity() const noexcept {
+        return pool_config_.capacity();
     }
 
-    std::size_t ConnectionCylinder::active_count() const noexcept {
+    std::size_t ConnectionPool::active_count() const noexcept {
         std::size_t count = 0;
-        for (std::size_t i = 0; i < cylinder_config_.capacity(); ++i) {
+        for (std::size_t i = 0; i < pool_config_.capacity(); ++i) {
             if (const auto s = slots_[i].status.load(std::memory_order_relaxed);
                 s == SlotStatus::USED || s == SlotStatus::WAITING) {
                 ++count;
@@ -111,9 +106,9 @@ namespace demiplane::db::postgres {
         return count;
     }
 
-    std::size_t ConnectionCylinder::free_count() const noexcept {
+    std::size_t ConnectionPool::free_count() const noexcept {
         std::size_t count = 0;
-        for (std::size_t i = 0; i < cylinder_config_.capacity(); ++i) {
+        for (std::size_t i = 0; i < pool_config_.capacity(); ++i) {
             if (slots_[i].status.load(std::memory_order_relaxed) == SlotStatus::FREE) {
                 ++count;
             }
@@ -121,25 +116,25 @@ namespace demiplane::db::postgres {
         return count;
     }
 
-    bool ConnectionCylinder::is_shutdown() const noexcept {
+    bool ConnectionPool::is_shutdown() const noexcept {
         return shutdown_.load(std::memory_order_acquire);
     }
 
     // ============== Internal Access ==============
 
-    std::vector<ConnectionSlot>& ConnectionCylinder::slots() noexcept {
+    std::vector<ConnectionSlot>& ConnectionPool::slots() noexcept {
         return slots_;
     }
 
-    const ConnectionConfig& ConnectionCylinder::connection_config() const noexcept {
+    const ConnectionConfig& ConnectionPool::connection_config() const noexcept {
         return connection_config_;
     }
 
-    const CylinderConfig& ConnectionCylinder::cylinder_config() const noexcept {
-        return cylinder_config_;
+    const PoolConfig& ConnectionPool::pool_config() const noexcept {
+        return pool_config_;
     }
 
-    PGconn* ConnectionCylinder::create_connection() const {
+    PGconn* ConnectionPool::create_connection() const {
         const auto conn_string = connection_config_.to_connection_string();
         PGconn* conn           = PQconnectdb(conn_string.c_str());
 

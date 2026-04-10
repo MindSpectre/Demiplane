@@ -4,11 +4,9 @@
 
 #include <boost/asio/redirect_error.hpp>
 
-namespace asio = boost::asio;
-
 namespace demiplane::db::postgres {
 
-    AsyncExecutor::AsyncExecutor(PGconn* conn, executor_type executor)
+    AsyncExecutor::AsyncExecutor(PGconn* conn, boost::asio::any_io_executor executor)
         : conn_{conn},
           executor_{std::move(executor)} {
         if (!conn_) {
@@ -17,7 +15,7 @@ namespace demiplane::db::postgres {
         setup_connection();
     }
 
-    AsyncExecutor::AsyncExecutor(ConnectionSlot& slot, executor_type executor)
+    AsyncExecutor::AsyncExecutor(ConnectionSlot& slot, boost::asio::any_io_executor executor)
         : conn_{slot.conn},
           executor_{std::move(executor)},
           slot_{&slot} {
@@ -25,24 +23,6 @@ namespace demiplane::db::postgres {
             return;  // empty state — valid() returns false
         }
         setup_connection();
-    }
-
-    void AsyncExecutor::setup_connection() {
-        if (const auto ec = check_connection(conn_); !ec.is_success()) {
-            throw std::runtime_error("AsyncExecutor: " + extract_connection_error(conn_).format());
-        }
-
-        if (PQsetnonblocking(conn_, 1) != 0) {
-            throw std::runtime_error("AsyncExecutor: failed to set non-blocking mode - " +
-                                     std::string(PQerrorMessage(conn_)));
-        }
-
-        cached_socket_fd_ = PQsocket(conn_);
-        if (cached_socket_fd_ < 0) {
-            throw std::runtime_error("AsyncExecutor: invalid socket descriptor");
-        }
-
-        socket_ = std::make_unique<asio::posix::stream_descriptor>(executor_, cached_socket_fd_);
     }
 
     AsyncExecutor::~AsyncExecutor() {
@@ -77,6 +57,24 @@ namespace demiplane::db::postgres {
             slot_             = std::exchange(other.slot_, nullptr);
         }
         return *this;
+    }
+
+    void AsyncExecutor::setup_connection() {
+        if (const auto ec = check_connection(conn_); !ec.is_success()) {
+            throw std::runtime_error("AsyncExecutor: " + extract_connection_error(conn_).format());
+        }
+
+        if (PQsetnonblocking(conn_, 1) != 0) {
+            throw std::runtime_error("AsyncExecutor: failed to set non-blocking mode - " +
+                                     std::string(PQerrorMessage(conn_)));
+        }
+
+        cached_socket_fd_ = PQsocket(conn_);
+        if (cached_socket_fd_ < 0) {
+            throw std::runtime_error("AsyncExecutor: invalid socket descriptor");
+        }
+
+        socket_ = std::make_unique<boost::asio::posix::stream_descriptor>(executor_, cached_socket_fd_);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -117,7 +115,7 @@ namespace demiplane::db::postgres {
     // Public execute overloads (non-template)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+    boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
     AsyncExecutor::execute(const CompiledDynamicQuery& query) const {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ctx{ErrorCode{ClientErrorCode::SyntaxError}};
@@ -136,8 +134,8 @@ namespace demiplane::db::postgres {
     // Core implementation
     // ─────────────────────────────────────────────────────────────────────────────
 
-    asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>> AsyncExecutor::execute_impl(const char* query,
-                                                                                           const Params* params) const {
+    boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>
+    AsyncExecutor::execute_impl(const char* query, const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
         COMPONENT_LOG_TRC() << SCROLL_PARAMS(query, params);
         // 1. Validate executor state
@@ -186,7 +184,7 @@ namespace demiplane::db::postgres {
     // Async primitives
     // ─────────────────────────────────────────────────────────────────────────────
 
-    asio::awaitable<std::optional<ErrorContext>> AsyncExecutor::async_flush() const {
+    boost::asio::awaitable<std::optional<ErrorContext>> AsyncExecutor::async_flush() const {
         while (true) {
             const int flush_result = PQflush(conn_);
 
@@ -201,8 +199,8 @@ namespace demiplane::db::postgres {
 
             // Need to wait for socket writable
             boost::system::error_code ec;
-            co_await socket_->async_wait(asio::posix::stream_descriptor::wait_write,
-                                         asio::redirect_error(asio::use_awaitable, ec));
+            co_await socket_->async_wait(boost::asio::posix::stream_descriptor::wait_write,
+                                         redirect_error(boost::asio::use_awaitable, ec));
 
             if (ec) {
                 ErrorContext ctx{ErrorCode{ServerErrorCode::RuntimeError}};
@@ -213,11 +211,11 @@ namespace demiplane::db::postgres {
         }
     }
 
-    asio::awaitable<std::optional<ErrorContext>> AsyncExecutor::async_consume_until_ready() const {
+    boost::asio::awaitable<std::optional<ErrorContext>> AsyncExecutor::async_consume_until_ready() const {
         while (true) {
             boost::system::error_code ec;
-            co_await socket_->async_wait(asio::posix::stream_descriptor::wait_read,
-                                         redirect_error(asio::use_awaitable, ec));
+            co_await socket_->async_wait(boost::asio::posix::stream_descriptor::wait_read,
+                                         redirect_error(boost::asio::use_awaitable, ec));
 
             if (ec) {
                 ErrorContext ctx{ErrorCode{ServerErrorCode::RuntimeError}};

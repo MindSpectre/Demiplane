@@ -8,12 +8,20 @@ namespace demiplane::db::postgres {
 
     class AutoTransaction : public gears::NonCopyable {
     public:
-        using executor_type = boost::asio::any_io_executor;
+        /**
+         * @brief Set cleanup SQL to run when this transaction releases the slot
+         * @param query Predefined cleanup query
+         */
+        template <typename Self>
+        auto&& do_cleanup(this Self&& self, CleanupQuery query) noexcept {
+            self.tx_.do_cleanup(query);
+            return std::forward<Self>(self);
+        }
 
         [[nodiscard]] gears::Outcome<void, ErrorContext> commit();
 
         [[nodiscard]] SyncExecutor with_sync() const;
-        [[nodiscard]] AsyncExecutor with_async(executor_type exec) const;
+        [[nodiscard]] AsyncExecutor with_async(boost::asio::any_io_executor exec) const;
 
         [[nodiscard]] gears::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
 

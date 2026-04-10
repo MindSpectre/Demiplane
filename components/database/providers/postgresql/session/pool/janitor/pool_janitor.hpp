@@ -2,12 +2,12 @@
 
 #include <thread>
 
-#include "../connection/cylinder_connection.hpp"
+#include "../connection/connection_pool.hpp"
 
 namespace demiplane::db::postgres {
 
     /**
-     * @brief Background health monitor for the connection cylinder
+     * @brief Background health monitor for the connection pool
      *
      * Periodically sweeps the ring buffer to:
      *   - Replace DEAD connections with fresh ones
@@ -17,10 +17,10 @@ namespace demiplane::db::postgres {
      * Uses std::jthread with stop_token for immediate cancellation
      * without spinning or sleeping through the full interval.
      */
-    class CylinderJanitor : gears::Immutable {
+    class PoolJanitor : gears::Immutable {
     public:
-        explicit CylinderJanitor(ConnectionCylinder& cylinder);
-        ~CylinderJanitor();
+        explicit PoolJanitor(ConnectionPool& pool);
+        ~PoolJanitor();
 
         void stop();
 
@@ -28,7 +28,7 @@ namespace demiplane::db::postgres {
         void run(const std::stop_token& token) const;
         void sweep(const std::stop_token& token) const;
 
-        ConnectionCylinder& cylinder_;
+        ConnectionPool& pool_;
         std::jthread thread_;
     };
 

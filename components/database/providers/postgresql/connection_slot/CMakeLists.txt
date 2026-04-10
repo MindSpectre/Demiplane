@@ -1,5 +1,5 @@
 ##############################################################################
-# PostgreSql Connection Slot (INTERFACE — shared by executors and cylinder)
+# PostgreSql Connection Slot (INTERFACE — shared by executors and pool)
 ##############################################################################
 add_library(${DMP_DATABASE_POSTGRESQL}.ConnectionSlot INTERFACE
         connection_slot.hpp

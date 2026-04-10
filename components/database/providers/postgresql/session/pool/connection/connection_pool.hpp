@@ -9,28 +9,28 @@
 #include <postgres_connection_config.hpp>
 #include <sequence.hpp>
 
-#include "../config/cylinder_config.hpp"
+#include "../config/pool_config.hpp"
 
 namespace demiplane::db::postgres {
 
     /**
-     * @brief Lock-free connection cylinder using a disruptor-inspired ring buffer
+     * @brief Lock-free connection pool using a disruptor-inspired ring buffer
      *
      * Manages a fixed-size ring buffer of PGconn* connections. Acquire uses
      * a CAS scan from a hint cursor for O(1) amortized borrowing. Slot reset
      * is the executor's responsibility via ConnectionSlot::reset().
      *
      * INACTIVE slots are lazily promoted to FREE on first acquire that
-     * finds no FREE slot. The cylinder does not grow dynamically.
+     * finds no FREE slot. The pool does not grow dynamically.
      */
-    class ConnectionCylinder : gears::Immutable {
+    class ConnectionPool : gears::Immutable {
     public:
-        ConnectionCylinder(ConnectionConfig connection_config, CylinderConfig cylinder_config);
-        ~ConnectionCylinder();
+        ConnectionPool(ConnectionConfig connection_config, PoolConfig pool_config);
+        ~ConnectionPool();
 
         /**
-         * @brief Acquire a connection slot from the cylinder (lock-free)
-         * @return ConnectionSlot* on success, nullptr if cylinder exhausted
+         * @brief Acquire a connection slot from the pool (lock-free)
+         * @return ConnectionSlot* on success, nullptr if pool exhausted
          *
          * Scans from hint_cursor_ using CAS on FREE slots.
          * Lazily initializes INACTIVE slots when no FREE slot is found.
@@ -56,7 +56,7 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] std::vector<ConnectionSlot>& slots() noexcept;
         [[nodiscard]] const ConnectionConfig& connection_config() const noexcept;
-        [[nodiscard]] const CylinderConfig& cylinder_config() const noexcept;
+        [[nodiscard]] const PoolConfig& pool_config() const noexcept;
 
         /**
          * @brief Create a new PGconn* using the stored connection config
@@ -66,7 +66,7 @@ namespace demiplane::db::postgres {
 
     private:
         ConnectionConfig connection_config_;
-        CylinderConfig cylinder_config_;
+        PoolConfig pool_config_;
         std::size_t mask_;
 
         std::vector<ConnectionSlot> slots_;

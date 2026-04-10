@@ -6,19 +6,19 @@
 #include <postgres_errors.hpp>
 #include <postgres_transaction.hpp>
 
-#include "cylinder/cylinder.hpp"
+#include "pool/pool.hpp"
 
 namespace demiplane::db::postgres {
 
     /**
-     * @brief PostgreSQL session owning a connection cylinder and background janitor
+     * @brief PostgreSQL session owning a connection pool and background janitor
      *
      * The Session is the primary entry point for database operations.
-     * Each with_sync() / with_async() call acquires a slot from the cylinder
+     * Each with_sync() / with_async() call acquires a slot from the pool
      * and returns a slot-aware executor that resets the slot on destruction.
      *
      * Usage:
-     *   auto session = Session(conn_config, cylinder_config);
+     *   auto session = Session(conn_config, pool_config);
      *
      *   // Synchronous
      *   auto result = session.with_sync().execute("SELECT 1");
@@ -28,9 +28,7 @@ namespace demiplane::db::postgres {
      */
     class Session : gears::Immutable {
     public:
-        using executor_type = boost::asio::any_io_executor;
-
-        Session(ConnectionConfig connection_config, CylinderConfig cylinder_config);
+        Session(ConnectionConfig connection_config, PoolConfig pool_config);
         ~Session();
 
         /**
@@ -44,10 +42,10 @@ namespace demiplane::db::postgres {
          * @param exec Boost.Asio executor for async I/O
          * @return AsyncExecutor that auto-releases its slot on destruction
          */
-        [[nodiscard]] AsyncExecutor with_async(executor_type exec);
+        [[nodiscard]] AsyncExecutor with_async(boost::asio::any_io_executor exec);
 
         /**
-         * @brief Shutdown the session: stop janitor, drain cylinder
+         * @brief Shutdown the session: stop janitor, drain pool
          */
         void shutdown();
 
@@ -58,19 +56,19 @@ namespace demiplane::db::postgres {
         [[nodiscard]] gears::Outcome<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts = {});
 
-        // ============== Cylinder Stats ==============
+        // ============== Pool Stats ==============
 
-        [[nodiscard]] std::size_t cylinder_capacity() const noexcept;
+        [[nodiscard]] std::size_t pool_capacity() const noexcept;
 
-        [[nodiscard]] std::size_t cylinder_active_count() const noexcept;
+        [[nodiscard]] std::size_t pool_active_count() const noexcept;
 
-        [[nodiscard]] std::size_t cylinder_free_count() const noexcept;
+        [[nodiscard]] std::size_t pool_free_count() const noexcept;
 
         [[nodiscard]] bool is_shutdown() const noexcept;
 
     private:
-        ConnectionCylinder cylinder_;
-        CylinderJanitor janitor_;
+        ConnectionPool pool_;
+        PoolJanitor janitor_;
     };
 
     static_assert(CapabilityProvider<Session>);

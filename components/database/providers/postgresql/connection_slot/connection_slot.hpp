@@ -1,8 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <cstdint>
-#include <string_view>
 
 #include <gears_class_traits.hpp>
 #include <libpq-fe.h>
@@ -10,10 +8,41 @@
 namespace demiplane::db::postgres {
 
     /**
-     * @brief Status of a connection slot in the cylinder ring buffer
+     * @brief Predefined cleanup SQL statements for connection reset
+     *
+     * Each variant maps to a PostgreSQL session-reset command.
+     * Use with do_cleanup() on executors/transactions to declare
+     * what cleanup the slot needs when returned to the pool.
+     */
+    enum class CleanupQuery : std::uint8_t {
+        None,           // No cleanup (stateless reads)
+        ResetAll,       // "RESET ALL" — GUC parameters only
+        DeallocateAll,  // "DEALLOCATE ALL" — prepared statements only
+        DiscardTemp,    // "DISCARD TEMP" — temp tables/sequences
+        DiscardAll,     // "DISCARD ALL" — full session reset (most expensive)
+    };
+
+    [[nodiscard]] constexpr const char* to_sql(const CleanupQuery query) noexcept {
+        switch (query) {
+            case CleanupQuery::None:
+                return nullptr;
+            case CleanupQuery::ResetAll:
+                return "RESET ALL";
+            case CleanupQuery::DeallocateAll:
+                return "DEALLOCATE ALL";
+            case CleanupQuery::DiscardTemp:
+                return "DISCARD TEMP";
+            case CleanupQuery::DiscardAll:
+                return "DISCARD ALL";
+        }
+        return nullptr;
+    }
+
+    /**
+     * @brief Status of a connection slot in the pool ring buffer
      *
      * Transitions:
-     *   INACTIVE --(cylinder init/grow)--> FREE
+     *   INACTIVE --(pool init/grow)--> FREE
      *   FREE     --(acquire CAS)---------> USED
      *   USED     --(executor dtor/reset)--> FREE
      *   USED     --(async chain)---------> WAITING --(chain done)--> FREE
@@ -46,7 +75,7 @@ namespace demiplane::db::postgres {
     }
 
     /**
-     * @brief A single slot in the connection cylinder ring buffer
+     * @brief A single slot in the connection pool ring buffer
      *
      * Each slot is cache-line padded to prevent false sharing between
      * threads contending on adjacent slots during CAS acquire operations.
@@ -58,7 +87,7 @@ namespace demiplane::db::postgres {
     struct alignas(64) ConnectionSlot : gears::Immutable {
         PGconn* conn                   = nullptr;
         std::atomic<SlotStatus> status = SlotStatus::INACTIVE;
-        const char* cleanup_sql        = nullptr;  // set from CylinderConfig during init
+        const char* cleanup_sql        = nullptr;  // set from PoolConfig during init
 
         ConnectionSlot() noexcept = default;
 
@@ -81,12 +110,13 @@ namespace demiplane::db::postgres {
                 PGresult* res = PQexec(conn, cleanup_sql);
                 const bool ok = res && PQresultStatus(res) == PGRES_COMMAND_OK;
                 PQclear(res);
+                cleanup_sql = nullptr;  // purge — next borrower sets its own via do_cleanup()
 
                 if (!ok) {
                     status.store(SlotStatus::DEAD, std::memory_order_release);
                     return;
                 }
-            }  // TODO: what we should do if we need to reset but we have invalid statemenet
+            }
 
             status.store(SlotStatus::FREE, std::memory_order_release);
         }

@@ -20,7 +20,7 @@ namespace demiplane::db::postgres {
      *
      * Provides co_await-able query execution using libpq's async API
      * integrated with Boost.Asio. Designed for exclusive connection access
-     * (typically acquired from a cylinder).
+     * (typically acquired from a pool).
      *
      * When constructed with a ConnectionSlot, resets the slot on destruction,
      * eliminating the need for a separate scoped wrapper.
@@ -36,8 +36,6 @@ namespace demiplane::db::postgres {
      */
     class AsyncExecutor : gears::NonCopyable {
     public:
-        using executor_type = boost::asio::any_io_executor;
-
         /**
          * @brief Construct executor with exclusive connection access (standalone)
          * @param conn PostgreSQL connection (caller retains ownership)
@@ -46,14 +44,14 @@ namespace demiplane::db::postgres {
          * If conn is nullptr, the executor is in empty state (valid() returns false).
          * Otherwise sets connection to non-blocking mode.
          */
-        explicit AsyncExecutor(PGconn* conn, executor_type executor);
+        explicit AsyncExecutor(PGconn* conn, boost::asio::any_io_executor executor);
 
         /**
-         * @brief Construct executor from a cylinder slot (cylinder-managed)
-         * @param slot Connection slot acquired from the cylinder
+         * @brief Construct executor from a pool slot (pool-managed)
+         * @param slot Connection slot acquired from the pool
          * @param executor Asio executor for async operations
          */
-        AsyncExecutor(ConnectionSlot& slot, executor_type executor);
+        AsyncExecutor(ConnectionSlot& slot, boost::asio::any_io_executor executor);
 
         ~AsyncExecutor();
 
@@ -68,6 +66,19 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] explicit operator bool() const noexcept {
             return valid();
+        }
+
+        /**
+         * @brief Set cleanup SQL to run when this executor releases the slot
+         * @param query Predefined cleanup query
+         * @return *this for chaining: session->with_async(exec).do_cleanup(CleanupQuery::DeallocateAll)
+         */
+        template <typename Self>
+        constexpr auto&& do_cleanup(this Self&& self, const CleanupQuery query) noexcept {
+            if (self.slot_) {
+                self.slot_->cleanup_sql = to_sql(query);
+            }
+            return std::forward<Self>(self);
         }
         /**
          * @brief Execute simple query
@@ -159,17 +170,17 @@ namespace demiplane::db::postgres {
         execute(const CompiledDynamicQuery& query) const;
 
         // Accessors
-        [[nodiscard]] executor_type get_executor() const noexcept {
+        [[nodiscard]] constexpr boost::asio::any_io_executor get_executor() const noexcept {
             return executor_;
         }
 
-        [[nodiscard]] PGconn* native_handle() const noexcept {
+        [[nodiscard]] constexpr PGconn* native_handle() const noexcept {
             return conn_;
         }
 
     private:
         PGconn* conn_;
-        executor_type executor_;
+        boost::asio::any_io_executor executor_;
         std::unique_ptr<boost::asio::posix::stream_descriptor> socket_;
         std::int32_t cached_socket_fd_ = -1;
         ConnectionSlot* slot_          = nullptr;

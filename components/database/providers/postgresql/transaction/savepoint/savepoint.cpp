@@ -4,15 +4,8 @@
 
 #include <postgres_sync_executor.hpp>
 
-#include "log_macros.hpp"
 
 namespace demiplane::db::postgres {
-
-    Savepoint::Savepoint(PGconn* conn, std::string name)
-        : conn_{conn},
-          name_{std::move(name)} {
-        COMPONENT_LOG_INF() << "Savepoint '" << name_ << "' created";
-    }
 
     Savepoint::~Savepoint() {
         if (active_) {
@@ -57,13 +50,6 @@ namespace demiplane::db::postgres {
             active_ = false;
         }
         return result;
-    }
-
-    std::string_view Savepoint::name() const noexcept {
-        return name_;
-    }
-    bool Savepoint::is_active() const noexcept {
-        return active_;
     }
 
     gears::Outcome<void, ErrorContext> Savepoint::execute_control(const std::string& sql) const {

@@ -10,12 +10,6 @@
 
 namespace demiplane::db::postgres {
 
-    Transaction::Transaction(ConnectionSlot& slot, const TransactionOptions opts)
-        : slot_{&slot},
-          options_{opts} {
-        COMPONENT_LOG_INF() << "Transaction created";
-    }
-
     Transaction::~Transaction() {
         if (slot_) {
             if (status_ == TransactionStatus::ACTIVE) {
@@ -94,7 +88,7 @@ namespace demiplane::db::postgres {
         return SyncExecutor{slot_->conn};
     }
 
-    AsyncExecutor Transaction::with_async(executor_type exec) const {
+    AsyncExecutor Transaction::with_async(boost::asio::any_io_executor exec) const {
         if (status_ != TransactionStatus::ACTIVE) {
             return AsyncExecutor{nullptr, std::move(exec)};
         }
@@ -118,17 +112,11 @@ namespace demiplane::db::postgres {
         return Savepoint{slot_->conn, std::move(name)};
     }
 
-    TransactionStatus Transaction::status() const noexcept {
-        return status_;
-    }
-    bool Transaction::is_active() const noexcept {
-        return status_ == TransactionStatus::ACTIVE;
-    }
-    bool Transaction::is_finished() const noexcept {
-        return status_ == TransactionStatus::COMMITTED || status_ == TransactionStatus::ROLLED_BACK;
-    }
-    PGconn* Transaction::native_handle() const noexcept {
-        return slot_ ? slot_->conn : nullptr;
+
+    Transaction::Transaction(ConnectionSlot& slot, const TransactionOptions opts)
+        : slot_{&slot},
+          options_{opts} {
+        COMPONENT_LOG_INF() << "Transaction created";
     }
 
     gears::Outcome<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {

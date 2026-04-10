@@ -14,8 +14,8 @@ add_integration_test(
 )
 
 add_integration_test(
-        ${INTEGRATION_POSTGRESQL_TESTS}.Cylinder
-        cylinder_test.cpp
+        ${INTEGRATION_POSTGRESQL_TESTS}.Pool
+        pool_test.cpp
         LINK_LIBS
         Demiplane::Component::Database::PostgreSQL
         ${TEST_LIBS}

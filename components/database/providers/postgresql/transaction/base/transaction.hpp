@@ -1,6 +1,7 @@
 #pragma once
 
 #include <capability_provider.hpp>
+#include <connection_slot.hpp>
 #include <gears_class_traits.hpp>
 
 #include "options/transaction_options.hpp"
@@ -8,18 +9,29 @@
 
 namespace demiplane::db::postgres {
 
-    struct ConnectionSlot;
     class Session;
     class Savepoint;
 
     class Transaction : gears::NonCopyable {
     public:
-        using executor_type = boost::asio::any_io_executor;
-
         ~Transaction();
 
         Transaction(Transaction&& other) noexcept;
         Transaction& operator=(Transaction&& other) noexcept;
+
+        // ============== Cleanup ==============
+
+        /**
+         * @brief Set cleanup SQL to run when this transaction releases the slot
+         * @param query Predefined cleanup query
+         */
+        template <typename Self>
+        constexpr auto&& do_cleanup(this Self&& self, const CleanupQuery query) noexcept {
+            if (self.slot_) {
+                self.slot_->cleanup_sql = to_sql(query);
+            }
+            return std::forward<Self>(self);
+        }
 
         // ============== Lifecycle Control (sync) ==============
 
@@ -30,7 +42,7 @@ namespace demiplane::db::postgres {
         // ============== Capability Provision ==============
 
         [[nodiscard]] SyncExecutor with_sync() const;
-        [[nodiscard]] AsyncExecutor with_async(executor_type exec) const;
+        [[nodiscard]] AsyncExecutor with_async(boost::asio::any_io_executor exec) const;
 
         // ============== Savepoints ==============
 
@@ -38,10 +50,21 @@ namespace demiplane::db::postgres {
 
         // ============== Introspection ==============
 
-        [[nodiscard]] TransactionStatus status() const noexcept;
-        [[nodiscard]] bool is_active() const noexcept;
-        [[nodiscard]] bool is_finished() const noexcept;
-        [[nodiscard]] PGconn* native_handle() const noexcept;
+        [[nodiscard]] constexpr TransactionStatus status() const noexcept {
+            return status_;
+        }
+
+        [[nodiscard]] constexpr bool is_active() const noexcept {
+            return status_ == TransactionStatus::ACTIVE;
+        }
+
+        [[nodiscard]] constexpr bool is_finished() const noexcept {
+            return status_ == TransactionStatus::COMMITTED || status_ == TransactionStatus::ROLLED_BACK;
+        }
+
+        [[nodiscard]] constexpr PGconn* native_handle() const noexcept {
+            return slot_ ? slot_->conn : nullptr;
+        }
 
     private:
         friend class Session;

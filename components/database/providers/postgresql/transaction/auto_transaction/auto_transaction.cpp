@@ -16,7 +16,7 @@ namespace demiplane::db::postgres {
         return tx_.with_sync();
     }
 
-    AsyncExecutor AutoTransaction::with_async(executor_type exec) const {
+    AsyncExecutor AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
         return tx_.with_async(std::move(exec));
     }
 

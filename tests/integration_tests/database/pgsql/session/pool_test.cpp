@@ -1,5 +1,5 @@
-// PostgreSQL Cylinder Integration Tests
-// Tests cylinder pool behavior: multi-executor, exhaustion, shutdown, stats, concurrency
+// PostgreSQL Pool Integration Tests
+// Tests connection pool behavior: multi-executor, exhaustion, shutdown, stats, concurrency
 
 #include <thread>
 #include <vector>
@@ -27,7 +27,7 @@ static ConnectionConfig make_test_config() {
 
 // ============== Test Fixture ==============
 
-class CylinderTest : public ::testing::Test {
+class PoolTest : public ::testing::Test {
 protected:
     void SetUp() override {
         const auto conn_string = make_test_config().to_connection_string();
@@ -46,10 +46,9 @@ protected:
 
 // ============== MultipleSyncExecutors ==============
 
-TEST_F(CylinderTest, MultipleSyncExecutorsRunQueriesAndRelease) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     // Acquire 3 executors simultaneously from a capacity-4 pool
     {
@@ -88,10 +87,9 @@ TEST_F(CylinderTest, MultipleSyncExecutorsRunQueriesAndRelease) {
 
 // ============== PoolExhaustion ==============
 
-TEST_F(CylinderTest, PoolExhaustionReturnsInvalidExecutor) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
 
     // Exhaust the pool (capacity=2)
     auto exec1 = session.with_sync();
@@ -104,7 +102,7 @@ TEST_F(CylinderTest, PoolExhaustionReturnsInvalidExecutor) {
     EXPECT_FALSE(exec3.valid());
 
     // Release one executor by moving it out of scope
-    { auto released = std::move(exec1); }
+    { [[maybe_unused]] auto released = std::move(exec1); }
 
     // Now acquire should succeed again
     auto exec4 = session.with_sync();
@@ -118,10 +116,9 @@ TEST_F(CylinderTest, PoolExhaustionReturnsInvalidExecutor) {
 
 // ============== SessionShutdown ==============
 
-TEST_F(CylinderTest, ShutdownPreventsNewAcquisitions) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     // Verify session works before shutdown
     {
@@ -142,12 +139,11 @@ TEST_F(CylinderTest, ShutdownPreventsNewAcquisitions) {
 
 // ============== ExecutorLifecycleScope ==============
 
-TEST_F(CylinderTest, ExecutorLifecycleScopeReleasesSlot) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
-    const auto free_before = session.cylinder_free_count();
+    const auto free_before = session.pool_free_count();
 
     // Inner scope: acquire and use an executor
     {
@@ -155,12 +151,12 @@ TEST_F(CylinderTest, ExecutorLifecycleScopeReleasesSlot) {
         ASSERT_TRUE(exec.valid());
 
         // Free count should have decreased
-        EXPECT_LT(session.cylinder_free_count(), free_before + session.cylinder_capacity());
+        EXPECT_LT(session.pool_free_count(), free_before + session.pool_capacity());
 
         auto result = exec.execute("SELECT pg_backend_pid()");
         ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
     }
-    // Executor destroyed — slot returned to cylinder
+    // Executor destroyed — slot returned to pool
 
     // Session recovers: can acquire again and execute queries
     auto exec = session.with_sync();
@@ -169,24 +165,23 @@ TEST_F(CylinderTest, ExecutorLifecycleScopeReleasesSlot) {
     ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
 
     // Free count should be restored (minus the one we just acquired)
-    EXPECT_GE(session.cylinder_free_count() + 1, free_before);
+    EXPECT_GE(session.pool_free_count() + 1, free_before);
 
     session.shutdown();
 }
 
 // ============== SessionStatsAccuracy ==============
 
-TEST_F(CylinderTest, SessionStatsAccuracy) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, SessionStatsAccuracy) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     // Capacity is always 4
-    EXPECT_EQ(session.cylinder_capacity(), 4u);
+    EXPECT_EQ(session.pool_capacity(), 4u);
 
     // Before any acquisitions: active should be 0
-    const auto active_before = session.cylinder_active_count();
-    const auto free_before   = session.cylinder_free_count();
+    const auto active_before = session.pool_active_count();
+    const auto free_before   = session.pool_free_count();
     EXPECT_EQ(active_before, 0u);
     EXPECT_GT(free_before, 0u);
 
@@ -197,27 +192,26 @@ TEST_F(CylinderTest, SessionStatsAccuracy) {
     ASSERT_TRUE(exec2.valid());
 
     // During: active count should have increased by 2
-    EXPECT_EQ(session.cylinder_active_count(), active_before + 2);
+    EXPECT_EQ(session.pool_active_count(), active_before + 2);
 
     // Free count should have decreased
-    EXPECT_LT(session.cylinder_free_count(), free_before);
+    EXPECT_LT(session.pool_free_count(), free_before);
 
     // Release executors
-    { auto released1 = std::move(exec1); }
-    { auto released2 = std::move(exec2); }
+    { [[maybe_unused]] auto released1 = std::move(exec1); }
+    { [[maybe_unused]] auto released2 = std::move(exec2); }
 
     // After release: active count should be back to initial
-    EXPECT_EQ(session.cylinder_active_count(), active_before);
+    EXPECT_EQ(session.pool_active_count(), active_before);
 
     session.shutdown();
 }
 
 // ============== DoubleShutdownIdempotent ==============
 
-TEST_F(CylinderTest, DoubleShutdownIdempotent) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, DoubleShutdownIdempotent) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     // First shutdown
     EXPECT_NO_THROW(session.shutdown());
@@ -230,10 +224,9 @@ TEST_F(CylinderTest, DoubleShutdownIdempotent) {
 
 // ============== ConcurrentAsyncQueries ==============
 
-TEST_F(CylinderTest, ConcurrentAsyncQueriesComplete) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     boost::asio::io_context ioc;
 
@@ -245,9 +238,9 @@ TEST_F(CylinderTest, ConcurrentAsyncQueriesComplete) {
         boost::asio::co_spawn(
             ioc,
             [&session, &ioc, &success_count, &completion_count, i]() -> boost::asio::awaitable<void> {
-                auto exec   = session.with_async(ioc.get_executor());
-                auto result = co_await exec.execute("SELECT $1::integer AS n", i);
-                if (result.is_success() && result.value().get<int>(0, 0) == i) {
+                const auto exec = session.with_async(ioc.get_executor());
+                if (auto result = co_await exec.execute("SELECT $1::integer AS n", i);
+                    result.is_success() && result.value().get<int>(0, 0) == i) {
                     ++success_count;
                 }
                 ++completion_count;
@@ -266,10 +259,9 @@ TEST_F(CylinderTest, ConcurrentAsyncQueriesComplete) {
 
 // ============== ConcurrentSyncFromThreads ==============
 
-TEST_F(CylinderTest, ConcurrentSyncExecutorsFromMultipleThreads) {
-    auto session =
-        Session{make_test_config(),
-                CylinderConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, ConcurrentSyncExecutorsFromMultipleThreads) {
+    auto session = Session{make_test_config(),
+                           PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     constexpr int kThreads = 4;
     std::vector<std::thread> threads;
@@ -278,12 +270,12 @@ TEST_F(CylinderTest, ConcurrentSyncExecutorsFromMultipleThreads) {
     threads.reserve(kThreads);
     for (int i = 0; i < kThreads; ++i) {
         threads.emplace_back([&session, &success_count, i] {
-            auto exec = session.with_sync();
+            const auto exec = session.with_sync();
             if (!exec.valid()) {
                 return;
             }
-            auto result = exec.execute("SELECT $1::integer AS n", i);
-            if (result.is_success() && result.value().get<int>(0, 0) == i) {
+            if (auto result = exec.execute("SELECT $1::integer AS n", i);
+                result.is_success() && result.value().get<int>(0, 0) == i) {
                 ++success_count;
             }
         });

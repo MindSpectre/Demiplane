@@ -32,8 +32,8 @@ namespace demiplane::db::postgres {
         explicit SyncExecutor(PGconn* conn) noexcept;
 
         /**
-         * @brief Construct a sync executor from a cylinder slot (cylinder-managed)
-         * @param slot Connection slot acquired from the cylinder
+         * @brief Construct a sync executor from a pool slot (pool-managed)
+         * @param slot Connection slot acquired from the pool
          */
         explicit SyncExecutor(ConnectionSlot& slot) noexcept;
 
@@ -50,6 +50,19 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] explicit operator bool() const noexcept {
             return valid();
+        }
+
+        /**
+         * @brief Set cleanup SQL to run when this executor releases the slot
+         * @param query Predefined cleanup query
+         * @return *this for chaining: session->with_sync().do_cleanup(CleanupQuery::DeallocateAll)
+         */
+        template <typename Self>
+        constexpr auto&& do_cleanup(this Self&& self, const CleanupQuery query) noexcept {
+            if (self.slot_) {
+                self.slot_->cleanup_sql = to_sql(query);
+            }
+            return std::forward<Self>(self);
         }
 
         /**

@@ -42,7 +42,7 @@ protected:
 
         session_ = std::make_unique<Session>(
             make_test_config(),
-            CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
+            PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
         // Create test table
         auto exec   = session_->with_sync();
@@ -60,7 +60,7 @@ protected:
 
     void TearDown() override {
         if (session_) {
-            auto exec               = session_->with_sync();
+            const auto exec         = session_->with_sync();
             [[maybe_unused]] auto _ = exec.execute("DROP TABLE IF EXISTS tx_test CASCADE");
             session_->shutdown();
         }
@@ -113,7 +113,7 @@ TEST_F(TransactionLifecycleTest, BeginRollbackDiscardsData) {
 }
 
 TEST_F(TransactionLifecycleTest, DestructorReleasesSlotWithoutCommit) {
-    const auto free_before = session_->cylinder_free_count();
+    const auto free_before = session_->pool_free_count();
 
     {
         auto tx_result = session_->begin_transaction();
@@ -128,8 +128,8 @@ TEST_F(TransactionLifecycleTest, DestructorReleasesSlotWithoutCommit) {
         // tx destroyed here without commit or explicit rollback
     }
 
-    // Slot should be freed back to cylinder
-    EXPECT_GE(session_->cylinder_free_count(), free_before);
+    // Slot should be freed back to pool
+    EXPECT_GE(session_->pool_free_count(), free_before);
 
     // Data should not persist (connection reset via DISCARD ALL or implicit rollback)
     auto exec   = session_->with_sync();
@@ -187,10 +187,10 @@ TEST_F(TransactionLifecycleTest, DoubleCommitReturnsError) {
 TEST_F(TransactionLifecycleTest, WithSyncOnIdleTransactionReturnsInvalidExecutor) {
     auto tx_result = session_->begin_transaction();
     ASSERT_TRUE(tx_result.is_success()) << tx_result.error<ErrorContext>().format();
-    auto tx = std::move(tx_result.value());
+    const auto tx = std::move(tx_result.value());
 
     // Transaction is IDLE, with_sync should return invalid executor
-    auto exec = tx.with_sync();
+    const auto exec = tx.with_sync();
     EXPECT_FALSE(exec.valid());
 }
 
@@ -201,7 +201,7 @@ TEST_F(TransactionLifecycleTest, WithSyncOnActiveTransactionReturnsValidExecutor
 
     ASSERT_TRUE(tx.begin().is_success());
 
-    auto exec = tx.with_sync();
+    const auto exec = tx.with_sync();
     EXPECT_TRUE(exec.valid());
 }
 

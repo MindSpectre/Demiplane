@@ -44,7 +44,7 @@ protected:
 
         session_ = std::make_unique<Session>(
             make_test_config(),
-            CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
+            PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
         // Create test table
         auto exec   = session_->with_sync();
@@ -62,7 +62,7 @@ protected:
 
     void TearDown() override {
         if (session_) {
-            auto exec               = session_->with_sync();
+            const auto exec         = session_->with_sync();
             [[maybe_unused]] auto _ = exec.execute("DROP TABLE IF EXISTS sp_test CASCADE");
             session_->shutdown();
         }

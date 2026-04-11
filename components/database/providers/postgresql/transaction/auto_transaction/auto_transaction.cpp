@@ -12,11 +12,11 @@ namespace demiplane::db::postgres {
         return tx_.commit();
     }
 
-    SyncExecutor AutoTransaction::with_sync() const {
+    gears::Outcome<SyncExecutor, ErrorContext> AutoTransaction::with_sync() const {
         return tx_.with_sync();
     }
 
-    AsyncExecutor AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
+    gears::Outcome<AsyncExecutor, ErrorContext> AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
         return tx_.with_async(std::move(exec));
     }
 

@@ -41,8 +41,8 @@ namespace demiplane::db::postgres {
 
         // ============== Capability Provision ==============
 
-        [[nodiscard]] SyncExecutor with_sync() const;
-        [[nodiscard]] AsyncExecutor with_async(boost::asio::any_io_executor exec) const;
+        [[nodiscard]] gears::Outcome<SyncExecutor, ErrorContext> with_sync() const;
+        [[nodiscard]] gears::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
 
         // ============== Savepoints ==============
 

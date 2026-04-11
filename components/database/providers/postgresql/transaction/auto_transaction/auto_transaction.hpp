@@ -20,8 +20,8 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] gears::Outcome<void, ErrorContext> commit();
 
-        [[nodiscard]] SyncExecutor with_sync() const;
-        [[nodiscard]] AsyncExecutor with_async(boost::asio::any_io_executor exec) const;
+        [[nodiscard]] gears::Outcome<SyncExecutor, ErrorContext> with_sync() const;
+        [[nodiscard]] gears::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
 
         [[nodiscard]] gears::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
 

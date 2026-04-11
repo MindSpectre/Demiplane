@@ -17,20 +17,20 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_INF() << "Session destroyed";
     }
 
-    SyncExecutor Session::with_sync() {
+    gears::Outcome<SyncExecutor, ErrorContext> Session::with_sync() {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto* slot = pool_.acquire_slot();
         if (!slot) {
-            return SyncExecutor{nullptr};
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return SyncExecutor{*slot};
     }
 
-    AsyncExecutor Session::with_async(boost::asio::any_io_executor exec) {
+    gears::Outcome<AsyncExecutor, ErrorContext> Session::with_async(boost::asio::any_io_executor exec) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto* slot = pool_.acquire_slot();
         if (!slot) {
-            return AsyncExecutor{nullptr, std::move(exec)};
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return AsyncExecutor{*slot, std::move(exec)};
     }

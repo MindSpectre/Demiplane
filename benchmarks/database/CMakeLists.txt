@@ -18,6 +18,7 @@ if (benchmark_FOUND AND libpqxx_FOUND)
             benchmark::benchmark_main
             PostgreSQL::PostgreSQL
             Boost::headers
+            Demiplane::Common::Gears
     )
 
     add_subdirectory(simple)

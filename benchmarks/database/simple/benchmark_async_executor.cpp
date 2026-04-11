@@ -88,7 +88,7 @@ namespace {
             }
         }
 
-        for (auto _ : state) {
+        for (GEARS_UNUSED_VAR : state) {
             std::latch done{static_cast<std::ptrdiff_t>(concurrency)};
 
             for (std::size_t i = 0; i < concurrency; ++i) {

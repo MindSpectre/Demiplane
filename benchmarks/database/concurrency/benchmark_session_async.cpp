@@ -124,7 +124,7 @@ namespace {
                             const auto id = dist(rng);
 
                             const auto start   = std::chrono::steady_clock::now();
-                            auto exec          = session_->with_async(co_await boost::asio::this_coro::executor);
+                            auto exec        = session_->with_async(co_await boost::asio::this_coro::executor).value();
                             auto result        = co_await exec.execute(std::string{bench::pg::BENCH_QUERY}, id);
                             const auto elapsed = std::chrono::steady_clock::now() - start;
 

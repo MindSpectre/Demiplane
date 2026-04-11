@@ -81,16 +81,16 @@ namespace demiplane::db::postgres {
         return result;
     }
 
-    SyncExecutor Transaction::with_sync() const {
+    gears::Outcome<SyncExecutor, ErrorContext> Transaction::with_sync() const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return SyncExecutor{nullptr};
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         return SyncExecutor{slot_->conn};
     }
 
-    AsyncExecutor Transaction::with_async(boost::asio::any_io_executor exec) const {
+    gears::Outcome<AsyncExecutor, ErrorContext> Transaction::with_async(boost::asio::any_io_executor exec) const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return AsyncExecutor{nullptr, std::move(exec)};
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         return AsyncExecutor{slot_->conn, std::move(exec)};
     }

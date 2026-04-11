@@ -8,6 +8,7 @@
 #define CONCAT(A, B) CONCAT_IMPL(A, B)
 #define CONCAT_IMPL(A, B) A##B
 
+#define GEARS_UNUSED_VAR [[maybe_unused]] auto __unused_var__
 
 #define GEARS_UNREACHABLE(TYPE, TEXT)                                                                                  \
     static_assert(demiplane::gears::dependent_false_v<TYPE>, TEXT);                                                    \

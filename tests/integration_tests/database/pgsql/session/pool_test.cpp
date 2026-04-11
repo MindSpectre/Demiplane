@@ -52,9 +52,9 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
 
     // Acquire 3 executors simultaneously from a capacity-4 pool
     {
-        auto exec1 = session.with_sync();
-        auto exec2 = session.with_sync();
-        auto exec3 = session.with_sync();
+        auto exec1 = session.with_sync().value();
+        auto exec2 = session.with_sync().value();
+        auto exec3 = session.with_sync().value();
 
         ASSERT_TRUE(exec1.valid());
         ASSERT_TRUE(exec2.valid());
@@ -76,7 +76,7 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
     // All 3 executors destroyed — slots returned
 
     // Session is still usable after releasing all executors
-    auto exec = session.with_sync();
+    auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 42 AS answer");
     ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
@@ -92,20 +92,20 @@ TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
                            PoolConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
 
     // Exhaust the pool (capacity=2)
-    auto exec1 = session.with_sync();
-    auto exec2 = session.with_sync();
+    auto exec1 = session.with_sync().value();
+    auto exec2 = session.with_sync().value();
     ASSERT_TRUE(exec1.valid());
     ASSERT_TRUE(exec2.valid());
 
     // 3rd acquire should fail — pool exhausted
-    auto exec3 = session.with_sync();
-    EXPECT_FALSE(exec3.valid());
+    auto result3 = session.with_sync();
+    EXPECT_FALSE(result3.is_success());
 
     // Release one executor by moving it out of scope
     { [[maybe_unused]] auto released = std::move(exec1); }
 
     // Now acquire should succeed again
-    auto exec4 = session.with_sync();
+    auto exec4 = session.with_sync().value();
     EXPECT_TRUE(exec4.valid());
 
     auto result = exec4.execute("SELECT 1");
@@ -122,7 +122,7 @@ TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
 
     // Verify session works before shutdown
     {
-        auto exec = session.with_sync();
+        auto exec = session.with_sync().value();
         ASSERT_TRUE(exec.valid());
         auto result = exec.execute("SELECT 1");
         ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
@@ -132,9 +132,9 @@ TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
     session.shutdown();
     EXPECT_TRUE(session.is_shutdown());
 
-    // New acquisitions should return invalid executors
-    auto exec = session.with_sync();
-    EXPECT_FALSE(exec.valid());
+    // New acquisitions should fail after shutdown
+    auto result = session.with_sync();
+    EXPECT_FALSE(result.is_success());
 }
 
 // ============== ExecutorLifecycleScope ==============
@@ -147,7 +147,7 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
 
     // Inner scope: acquire and use an executor
     {
-        auto exec = session.with_sync();
+        auto exec = session.with_sync().value();
         ASSERT_TRUE(exec.valid());
 
         // Free count should have decreased
@@ -159,7 +159,7 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
     // Executor destroyed — slot returned to pool
 
     // Session recovers: can acquire again and execute queries
-    auto exec = session.with_sync();
+    auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 1");
     ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
@@ -186,8 +186,8 @@ TEST_F(PoolTest, SessionStatsAccuracy) {
     EXPECT_GT(free_before, 0u);
 
     // Acquire two executors
-    auto exec1 = session.with_sync();
-    auto exec2 = session.with_sync();
+    auto exec1 = session.with_sync().value();
+    auto exec2 = session.with_sync().value();
     ASSERT_TRUE(exec1.valid());
     ASSERT_TRUE(exec2.valid());
 
@@ -238,7 +238,7 @@ TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
         boost::asio::co_spawn(
             ioc,
             [&session, &ioc, &success_count, &completion_count, i]() -> boost::asio::awaitable<void> {
-                const auto exec = session.with_async(ioc.get_executor());
+                auto exec = session.with_async(ioc.get_executor()).value();
                 if (auto result = co_await exec.execute("SELECT $1::integer AS n", i);
                     result.is_success() && result.value().get<int>(0, 0) == i) {
                     ++success_count;
@@ -270,10 +270,11 @@ TEST_F(PoolTest, ConcurrentSyncExecutorsFromMultipleThreads) {
     threads.reserve(kThreads);
     for (int i = 0; i < kThreads; ++i) {
         threads.emplace_back([&session, &success_count, i] {
-            const auto exec = session.with_sync();
-            if (!exec.valid()) {
+            auto outcome = session.with_sync();
+            if (!outcome.is_success()) {
                 return;
             }
+            auto exec = std::move(outcome).value();
             if (auto result = exec.execute("SELECT $1::integer AS n", i);
                 result.is_success() && result.value().get<int>(0, 0) == i) {
                 ++success_count;

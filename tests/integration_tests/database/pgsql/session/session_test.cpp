@@ -116,7 +116,7 @@ protected:
             PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
         // Create test table via with_sync
-        auto exec   = session_->with_sync();
+        auto exec   = session_->with_sync().value();
         auto result = exec.execute(R"(
             CREATE TABLE IF NOT EXISTS session_test_users (
                 id SERIAL PRIMARY KEY,
@@ -132,8 +132,8 @@ protected:
 
     void TearDown() override {
         if (session_) {
-            const auto exec         = session_->with_sync();
-            [[maybe_unused]] auto _ = exec.execute("DROP TABLE IF EXISTS session_test_users CASCADE");
+            auto exec        = session_->with_sync().value();
+            GEARS_UNUSED_VAR = exec.execute("DROP TABLE IF EXISTS session_test_users CASCADE");
             session_->shutdown();
         }
     }
@@ -145,8 +145,8 @@ protected:
 // ============== with_sync() Tests ==============
 
 TEST_F(SessionTest, WithSyncExecutesSimpleQuery) {
-    const auto exec = session_->with_sync();
-    auto result     = exec.execute("SELECT 1 AS n");
+    auto exec   = session_->with_sync().value();
+    auto result = exec.execute("SELECT 1 AS n");
 
     ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
     EXPECT_EQ(result.value().rows(), 1);
@@ -154,12 +154,12 @@ TEST_F(SessionTest, WithSyncExecutesSimpleQuery) {
 
 TEST_F(SessionTest, WithSyncInsertsAndSelects) {
     {
-        auto exec   = session_->with_sync();
+        auto exec   = session_->with_sync().value();
         auto result = exec.execute("INSERT INTO session_test_users (name, value) VALUES ('Alice', 42)");
         ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
     }
 
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto result = exec.execute("SELECT name, value FROM session_test_users WHERE name = 'Alice'");
 
     ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
@@ -169,7 +169,7 @@ TEST_F(SessionTest, WithSyncInsertsAndSelects) {
 }
 
 TEST_F(SessionTest, WithSyncVariadicParameters) {
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto result = exec.execute("INSERT INTO session_test_users (name, value) VALUES ($1, $2)", std::string{"Bob"}, 99);
 
     ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
@@ -180,8 +180,8 @@ TEST_F(SessionTest, WithSyncVariadicParameters) {
 }
 
 TEST_F(SessionTest, WithSyncReturnsErrorOnBadQuery) {
-    const auto exec = session_->with_sync();
-    auto result     = exec.execute("SELCT 1");  // typo
+    auto exec   = session_->with_sync().value();
+    auto result = exec.execute("SELCT 1");  // typo
 
     ASSERT_FALSE(result.is_success());
     EXPECT_EQ(result.error<ErrorContext>().sqlstate.substr(0, 2), "42");
@@ -191,7 +191,7 @@ TEST_F(SessionTest, WithSyncReleasesConnectionAfterScope) {
     const auto free_before = session_->pool_free_count();
 
     {
-        const auto exec   = session_->with_sync();
+        auto exec         = session_->with_sync().value();
         const auto result = exec.execute("SELECT 1");
         ASSERT_TRUE(result.is_success());
         // Connection is USED inside this scope
@@ -203,7 +203,7 @@ TEST_F(SessionTest, WithSyncReleasesConnectionAfterScope) {
 
 TEST_F(SessionTest, WithSyncMultipleSequentialCalls) {
     for (int i = 0; i < 5; ++i) {
-        auto exec   = session_->with_sync();
+        auto exec   = session_->with_sync().value();
         auto result = exec.execute("SELECT $1::integer AS n", i);
         ASSERT_TRUE(result.is_success()) << "Iteration " << i << " failed: " << result.error<ErrorContext>().format();
         EXPECT_EQ(result.value().get<int>(0, 0), i);
@@ -215,7 +215,7 @@ TEST_F(SessionTest, WithSyncMultipleSequentialCalls) {
 TEST_F(SessionTest, WithAsyncExecutesSimpleQuery) {
     auto result =
         run_async(io_, [this]() -> boost::asio::awaitable<demiplane::gears::Outcome<ResultBlock, ErrorContext>> {
-            const auto exec = session_->with_async(io_.get_executor());
+            auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute("SELECT 42 AS answer");
         });
 
@@ -228,7 +228,7 @@ TEST_F(SessionTest, WithAsyncInsertsAndSelects) {
     // Insert via async
     auto insert_result =
         run_async(io_, [this]() -> boost::asio::awaitable<demiplane::gears::Outcome<ResultBlock, ErrorContext>> {
-            const auto exec = session_->with_async(io_.get_executor());
+            auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute(
                 "INSERT INTO session_test_users (name, value) VALUES ($1, $2)", std::string{"Charlie"}, 7);
         });
@@ -236,8 +236,8 @@ TEST_F(SessionTest, WithAsyncInsertsAndSelects) {
     ASSERT_TRUE(insert_result->is_success()) << insert_result->error<ErrorContext>().format();
 
     // Select via sync to verify
-    const auto exec = session_->with_sync();
-    auto select     = exec.execute("SELECT value FROM session_test_users WHERE name = 'Charlie'");
+    auto exec   = session_->with_sync().value();
+    auto select = exec.execute("SELECT value FROM session_test_users WHERE name = 'Charlie'");
     ASSERT_TRUE(select.is_success());
     EXPECT_EQ(select.value().get<int>(0, 0), 7);
 }
@@ -245,7 +245,7 @@ TEST_F(SessionTest, WithAsyncInsertsAndSelects) {
 TEST_F(SessionTest, WithAsyncReturnsErrorOnBadQuery) {
     auto result =
         run_async(io_, [this]() -> boost::asio::awaitable<demiplane::gears::Outcome<ResultBlock, ErrorContext>> {
-            const auto exec = session_->with_async(io_.get_executor());
+            auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute("INVALID SYNTAX !!!");
         });
 
@@ -258,7 +258,7 @@ TEST_F(SessionTest, WithAsyncReleasesConnectionAfterScope) {
     const auto free_before = session_->pool_free_count();
 
     run_async(io_, [this]() -> boost::asio::awaitable<demiplane::gears::Outcome<ResultBlock, ErrorContext>> {
-        const auto exec = session_->with_async(io_.get_executor());
+        auto exec = session_->with_async(io_.get_executor()).value();
         // exec holds connection during co_await
         co_return co_await exec.execute("SELECT 1");
     });
@@ -272,7 +272,7 @@ TEST_F(SessionTest, WithAsyncMultipleSequentialCalls) {
         const auto n = i;
         auto result =
             run_async(io_, [this, n]() -> boost::asio::awaitable<demiplane::gears::Outcome<ResultBlock, ErrorContext>> {
-                const auto exec = session_->with_async(io_.get_executor());
+                auto exec = session_->with_async(io_.get_executor()).value();
                 co_return co_await exec.execute("SELECT $1::integer AS n", n);
             });
 
@@ -295,27 +295,27 @@ TEST_F(SessionTest, PoolFreeCountIsPositive) {
 TEST_F(SessionTest, ActiveCountIncreasesWhileConnectionHeld) {
     const auto active_before = session_->pool_active_count();
 
-    const auto exec          = session_->with_sync();
+    auto exec                = session_->with_sync().value();
     const auto active_during = session_->pool_active_count();
 
     EXPECT_GT(active_during, active_before);
 
     // Verify it decrements after scope (exec destructor)
-    [[maybe_unused]] auto _ = exec.execute("SELECT 1");  // ensure exec is used so it's not optimised away
+    GEARS_UNUSED_VAR = exec.execute("SELECT 1");  // ensure exec is used so it's not optimised away
 }
 
 // ============== Pool Exhaustion Test ==============
 
 TEST_F(SessionTest, SyncExecutorIsInvalidWhenPoolExhausted) {
     // Capacity is 4; hold 4 connections, 5th should get nullptr
-    [[maybe_unused]] auto exec1 = session_->with_sync();
-    [[maybe_unused]] auto exec2 = session_->with_sync();
-    [[maybe_unused]] auto exec3 = session_->with_sync();
-    [[maybe_unused]] auto exec4 = session_->with_sync();
+    [[maybe_unused]] auto exec1 = session_->with_sync().value();
+    [[maybe_unused]] auto exec2 = session_->with_sync().value();
+    [[maybe_unused]] auto exec3 = session_->with_sync().value();
+    [[maybe_unused]] auto exec4 = session_->with_sync().value();
 
     // Pool fully exhausted (all 4 slots USED)
     const auto exec5 = session_->with_sync();
-    EXPECT_FALSE(exec5.valid());
+    EXPECT_FALSE(exec5.is_success());
 
     // After releasing one, next acquire should succeed
 }
@@ -330,7 +330,7 @@ TEST_F(SessionTest, ConcurrentSyncExecutorsOnSeparateConnections) {
     threads.reserve(kThreads);
     for (int i = 0; i < kThreads; ++i) {
         threads.emplace_back([&] {
-            const auto exec = session_->with_sync();
+            auto exec = session_->with_sync().value();
             if (const auto result = exec.execute("SELECT pg_sleep(0.01), pg_backend_pid() AS pid");
                 result.is_success()) {
                 ++success_count;
@@ -359,7 +359,7 @@ TEST_F(SessionTest, ShutdownMarksPoolAsShutdown) {
 TEST_F(SessionTest, AcquireAfterShutdownReturnsInvalidExecutor) {
     session_->shutdown();
     const auto exec = session_->with_sync();
-    EXPECT_FALSE(exec.valid());
+    EXPECT_FALSE(exec.is_success());
 }
 
 TEST_F(SessionTest, ShutdownIsIdempotent) {
@@ -373,7 +373,7 @@ TEST_F(SessionTest, ShutdownIsIdempotent) {
 TEST_F(SessionTest, ConnectionIsCleanedAfterRelease) {
     // Set a session-local variable, release connection, then check it's gone
     {
-        auto exec = session_->with_sync();
+        auto exec = session_->with_sync().value();
 
         // Set a temporary table (wiped by DISCARD ALL)
         auto result = exec.execute("CREATE TEMP TABLE _session_marker (x INT)");
@@ -382,7 +382,7 @@ TEST_F(SessionTest, ConnectionIsCleanedAfterRelease) {
     // After release, slot reset sends DISCARD ALL -- temp table is gone
 
     // Acquire a NEW connection from pool (may be different slot or same cleaned slot)
-    auto exec = session_->with_sync();
+    auto exec = session_->with_sync().value();
     // If the pool returned the same cleaned connection, the temp table must not exist
     // Query succeeds (0 rows) or fails with schema-not-found -- either way _session_marker is gone
     if (auto result = exec.execute("SELECT 1 FROM pg_temp.pg_class WHERE relname = '_session_marker'");

@@ -9,7 +9,7 @@ namespace demiplane::db::postgres {
 
     Savepoint::~Savepoint() {
         if (active_) {
-            [[maybe_unused]] auto _ = release();
+            GEARS_UNUSED_VAR = release();
         }
     }
 
@@ -22,7 +22,7 @@ namespace demiplane::db::postgres {
     Savepoint& Savepoint::operator=(Savepoint&& other) noexcept {
         if (this != &other) {
             if (active_) {
-                [[maybe_unused]] auto _ = release();
+                GEARS_UNUSED_VAR = release();
             }
             conn_   = std::exchange(other.conn_, nullptr);
             name_   = std::move(other.name_);

@@ -33,16 +33,16 @@ namespace demiplane::db::postgres {
 
         /**
          * @brief Get a synchronous executor with an acquired connection
-         * @return SyncExecutor that auto-releases its slot on destruction
+         * @return SyncExecutor on success, ErrorContext on pool exhaustion
          */
-        [[nodiscard]] SyncExecutor with_sync();
+        [[nodiscard]] gears::Outcome<SyncExecutor, ErrorContext> with_sync();
 
         /**
          * @brief Get an asynchronous executor with an acquired connection
          * @param exec Boost.Asio executor for async I/O
-         * @return AsyncExecutor that auto-releases its slot on destruction
+         * @return AsyncExecutor on success, ErrorContext on pool exhaustion
          */
-        [[nodiscard]] AsyncExecutor with_async(boost::asio::any_io_executor exec);
+        [[nodiscard]] gears::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec);
 
         /**
          * @brief Shutdown the session: stop janitor, drain pool

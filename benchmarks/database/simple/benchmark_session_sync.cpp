@@ -19,22 +19,6 @@ namespace {
     using demiplane::db::postgres::Session;
     using demiplane::db::postgres::SslMode;
 
-    ConnectionConfig make_connection_config() {
-        const char* host     = std::getenv("POSTGRES_HOST") ? std::getenv("POSTGRES_HOST") : "localhost";
-        const char* port     = std::getenv("POSTGRES_PORT") ? std::getenv("POSTGRES_PORT") : "5433";
-        const char* dbname   = std::getenv("POSTGRES_DB") ? std::getenv("POSTGRES_DB") : "test_db";
-        const char* user     = std::getenv("POSTGRES_USER") ? std::getenv("POSTGRES_USER") : "test_user";
-        const char* password = std::getenv("POSTGRES_PASSWORD") ? std::getenv("POSTGRES_PASSWORD") : "test_password";
-
-        return ConnectionConfig::Builder{}
-            .host(host)
-            .port(std::string{port})
-            .dbname(dbname)
-            .user(user)
-            .password(password)
-            .ssl_mode(SslMode::DISABLE)
-            .finalize();
-    }
 
     PoolConfig make_pool_config(std::size_t capacity) {
         return PoolConfig::Builder{}.capacity(capacity).min_connections(capacity).finalize();
@@ -50,7 +34,7 @@ namespace {
             }
 
             const auto concurrency = static_cast<std::size_t>(state.range(0));
-            session_               = std::make_unique<Session>(make_connection_config(), make_pool_config(concurrency));
+            session_ = std::make_unique<Session>(ConnectionConfig::testing(), make_pool_config(concurrency));
         }
 
         void TearDown(const benchmark::State& /*state*/) override {
@@ -81,7 +65,7 @@ namespace {
         boost::asio::thread_pool pool{concurrency};
         std::vector<bench::pg::LatencyCollector> collectors(concurrency);
 
-        for (auto _ : state) {
+        for (GEARS_UNUSED_VAR : state) {
             std::latch done{static_cast<std::ptrdiff_t>(concurrency)};
 
             for (std::size_t i = 0; i < concurrency; ++i) {
@@ -93,7 +77,7 @@ namespace {
                         const auto id = dist(rng);
 
                         bench::pg::timed_op(collectors[i], [&] {
-                            auto exec   = session_->with_sync();
+                            auto exec   = session_->with_sync().value();
                             auto result = exec.execute(bench::pg::BENCH_QUERY, id);
                             benchmark::DoNotOptimize(result);
                         });

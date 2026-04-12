@@ -320,6 +320,111 @@ TEST_F(SessionTest, SyncExecutorIsInvalidWhenPoolExhausted) {
     // After releasing one, next acquire should succeed
 }
 
+// ============== Timeout Overload Tests ==============
+
+TEST_F(SessionTest, WithSyncTimeoutSucceedsWhenSlotImmediatelyAvailable) {
+    // Pool is idle — the first acquire should succeed on attempt 0 (before any sleep)
+    const auto start   = std::chrono::steady_clock::now();
+    auto exec          = session_->with_sync(10s);
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    ASSERT_TRUE(exec.is_success());
+    // 10 sleeps of 1s would take ~10s; success path must be under 1s
+    EXPECT_LT(elapsed, 1s);
+}
+
+TEST_F(SessionTest, WithSyncTimeoutReturnsErrorAfterFullBudget) {
+    // Exhaust all 4 slots
+    [[maybe_unused]] auto e1 = session_->with_sync().value();
+    [[maybe_unused]] auto e2 = session_->with_sync().value();
+    [[maybe_unused]] auto e3 = session_->with_sync().value();
+    [[maybe_unused]] auto e4 = session_->with_sync().value();
+
+    // With pool fully exhausted, a bounded timeout must return PoolExhausted
+    const auto start   = std::chrono::steady_clock::now();
+    const auto result  = session_->with_sync(200ms);
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    EXPECT_FALSE(result.is_success());
+    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+    // Full budget should elapse: 10 × 20ms = 200ms, allow jitter
+    EXPECT_GE(elapsed, 180ms);
+    EXPECT_LT(elapsed, 400ms);
+}
+
+TEST_F(SessionTest, WithSyncTimeoutAcquiresSlotReleasedDuringWait) {
+    // Hold all 4 slots upfront
+    auto e1 = session_->with_sync().value();
+    auto e2 = session_->with_sync().value();
+    auto e3 = session_->with_sync().value();
+    auto e4 = session_->with_sync().value();
+
+    // Release e1 from a background thread after ~100ms
+    std::thread releaser{[&e1] {
+        std::this_thread::sleep_for(100ms);
+        { [[maybe_unused]] auto moved = std::move(e1); }  // destructor frees the slot
+    }};
+
+    // Main thread waits up to 2s — should acquire within ~200ms (2nd retry at 200ms)
+    const auto start   = std::chrono::steady_clock::now();
+    const auto result  = session_->with_sync(2s);
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    releaser.join();
+
+    ASSERT_TRUE(result.is_success());
+    EXPECT_LT(elapsed, 500ms) << "waiter should pick up the slot shortly after release";
+    EXPECT_GE(elapsed, 100ms) << "waiter must wait at least for the release";
+}
+
+TEST_F(SessionTest, BeginTransactionTimeoutReturnsErrorWhenExhausted) {
+    [[maybe_unused]] auto e1 = session_->with_sync().value();
+    [[maybe_unused]] auto e2 = session_->with_sync().value();
+    [[maybe_unused]] auto e3 = session_->with_sync().value();
+    [[maybe_unused]] auto e4 = session_->with_sync().value();
+
+    const auto result = session_->begin_transaction(TransactionOptions{}, 100ms);
+    EXPECT_FALSE(result.is_success());
+    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+}
+
+TEST_F(SessionTest, BeginAutoTransactionTimeoutReturnsErrorWhenExhausted) {
+    [[maybe_unused]] auto e1 = session_->with_sync().value();
+    [[maybe_unused]] auto e2 = session_->with_sync().value();
+    [[maybe_unused]] auto e3 = session_->with_sync().value();
+    [[maybe_unused]] auto e4 = session_->with_sync().value();
+
+    const auto result = session_->begin_auto_transaction(TransactionOptions{}, 100ms);
+    EXPECT_FALSE(result.is_success());
+    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+}
+
+TEST_F(SessionTest, WithAsyncTimeoutReturnsErrorWhenExhausted) {
+    [[maybe_unused]] auto e1 = session_->with_sync().value();
+    [[maybe_unused]] auto e2 = session_->with_sync().value();
+    [[maybe_unused]] auto e3 = session_->with_sync().value();
+    [[maybe_unused]] auto e4 = session_->with_sync().value();
+
+    const auto result = session_->with_async(io_.get_executor(), 100ms);
+    EXPECT_FALSE(result.is_success());
+    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+}
+
+TEST_F(SessionTest, WithSyncZeroTimeoutBehavesLikeImmediate) {
+    [[maybe_unused]] auto e1 = session_->with_sync().value();
+    [[maybe_unused]] auto e2 = session_->with_sync().value();
+    [[maybe_unused]] auto e3 = session_->with_sync().value();
+    [[maybe_unused]] auto e4 = session_->with_sync().value();
+
+    // Zero duration must short-circuit to acquire_slot() and return immediately
+    const auto start   = std::chrono::steady_clock::now();
+    const auto result  = session_->with_sync(std::chrono::milliseconds::zero());
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    EXPECT_FALSE(result.is_success());
+    EXPECT_LT(elapsed, 20ms) << "zero timeout must not sleep";
+}
+
 // ============== Concurrent Access Test ==============
 
 TEST_F(SessionTest, ConcurrentSyncExecutorsOnSeparateConnections) {

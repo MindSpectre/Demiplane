@@ -4,60 +4,60 @@
 ##############################################################################
 
 # ─── 1. libpq (control group) ────────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Simple.LibPQ
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Simple.LibPQ
         benchmark_libpq.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Simple.LibPQ
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Simple.LibPQ
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
 )
 
 # ─── 2. pqxx ─────────────────────────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Simple.Pqxx
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Simple.Pqxx
         benchmark_pqxx.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Simple.Pqxx
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Simple.Pqxx
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         libpqxx::pqxx
 )
 
 # ─── 3. SyncExecutor ─────────────────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Simple.SyncExecutor
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Simple.SyncExecutor
         benchmark_sync_executor.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Simple.SyncExecutor
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Simple.SyncExecutor
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         Demiplane::Component::Database::PostgreSQL
 )
 
 # ─── 4. AsyncExecutor ────────────────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Simple.AsyncExecutor
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Simple.AsyncExecutor
         benchmark_async_executor.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Simple.AsyncExecutor
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Simple.AsyncExecutor
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         Demiplane::Component::Database::PostgreSQL
 )
 
 # ─── 5. Session (sync) ───────────────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Simple.SessionSync
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Simple.SessionSync
         benchmark_session_sync.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Simple.SessionSync
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Simple.SessionSync
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         Demiplane::Component::Database::PostgreSQL
 )
 
 # ─── 6. Session (async) ──────────────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Simple.SessionAsync
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Simple.SessionAsync
         benchmark_session_async.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Simple.SessionAsync
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Simple.SessionAsync
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         Demiplane::Component::Database::PostgreSQL
 )

@@ -26,9 +26,28 @@ namespace demiplane::db::postgres {
         return SyncExecutor{*slot};
     }
 
+    gears::Outcome<SyncExecutor, ErrorContext> Session::with_sync(std::chrono::steady_clock::duration timeout) {
+        COMPONENT_LOG_ENTER_FUNCTION();
+        auto* slot = pool_.acquire_slot_wait(timeout);
+        if (!slot) {
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+        }
+        return SyncExecutor{*slot};
+    }
+
     gears::Outcome<AsyncExecutor, ErrorContext> Session::with_async(boost::asio::any_io_executor exec) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto* slot = pool_.acquire_slot();
+        if (!slot) {
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+        }
+        return AsyncExecutor{*slot, std::move(exec)};
+    }
+
+    gears::Outcome<AsyncExecutor, ErrorContext> Session::with_async(boost::asio::any_io_executor exec,
+                                                                    std::chrono::steady_clock::duration timeout) {
+        COMPONENT_LOG_ENTER_FUNCTION();
+        auto* slot = pool_.acquire_slot_wait(timeout);
         if (!slot) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
@@ -67,9 +86,35 @@ namespace demiplane::db::postgres {
         return Transaction{*slot, opts};
     }
 
+    gears::Outcome<Transaction, ErrorContext> Session::begin_transaction(const TransactionOptions opts,
+                                                                         std::chrono::steady_clock::duration timeout) {
+        COMPONENT_LOG_ENTER_FUNCTION();
+        auto* slot = pool_.acquire_slot_wait(timeout);
+        if (!slot) {
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+        }
+        return Transaction{*slot, opts};
+    }
+
     gears::Outcome<AutoTransaction, ErrorContext> Session::begin_auto_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto* slot = pool_.acquire_slot();
+        if (!slot) {
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+        }
+
+        Transaction tx{*slot, opts};
+        if (auto begin_result = tx.begin(); !begin_result.is_success()) {
+            return gears::Err(begin_result.error<ErrorContext>());
+        }
+
+        return AutoTransaction{std::move(tx)};
+    }
+
+    gears::Outcome<AutoTransaction, ErrorContext>
+    Session::begin_auto_transaction(const TransactionOptions opts, std::chrono::steady_clock::duration timeout) {
+        COMPONENT_LOG_ENTER_FUNCTION();
+        auto* slot = pool_.acquire_slot_wait(timeout);
         if (!slot) {
             return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }

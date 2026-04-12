@@ -1,10 +1,14 @@
 #include <latch>
 #include <memory>
 #include <random>
+#include <thread>
+#include <vector>
 
 #include <benchmark/benchmark.h>
-#include <boost/asio/post.hpp>
-#include <boost/asio/thread_pool.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/io_context.hpp>
 #include <postgres_session.hpp>
 
 #include "bench_config.hpp"
@@ -19,12 +23,11 @@ namespace {
     using demiplane::db::postgres::Session;
     using demiplane::db::postgres::SslMode;
 
-
     PoolConfig make_pool_config(std::size_t capacity) {
         return PoolConfig::Builder{}.capacity(capacity).min_connections(capacity).finalize();
     }
 
-    class SessionFixture : public benchmark::Fixture {
+    class SessionAsyncFixture : public benchmark::Fixture {
     public:
         void SetUp(const benchmark::State& state) override {
             auto* conn = bench::pg::connect();
@@ -53,7 +56,7 @@ namespace {
         std::unique_ptr<Session> session_;
     };
 
-    BENCHMARK_DEFINE_F(SessionFixture, BM_Session)(benchmark::State& state) {
+    BENCHMARK_DEFINE_F(SessionAsyncFixture, BM_SessionAsync)(benchmark::State& state) {
         if (!session_) {
             state.SkipWithError("Failed to create session");
             return;
@@ -62,35 +65,57 @@ namespace {
         const auto concurrency      = static_cast<std::size_t>(state.range(0));
         const auto queries_per_task = bench::pg::QUERIES_PER_TASK;
 
-        boost::asio::thread_pool pool{concurrency};
         std::vector<bench::pg::LatencyCollector> collectors(concurrency);
 
+        // io_context with N threads — matches connection count for fair comparison
+        boost::asio::io_context io;
+        auto work_guard = boost::asio::make_work_guard(io);
+
+        std::vector<std::thread> io_threads;
+        io_threads.reserve(concurrency);
+        for (std::size_t i = 0; i < concurrency; ++i) {
+            io_threads.emplace_back([&io] { io.run(); });
+        }
+
         for (GEARS_UNUSED_VAR : state) {
+            for (auto& c : collectors) {
+                c.clear();
+            }
             std::latch done{static_cast<std::ptrdiff_t>(concurrency)};
 
             for (std::size_t i = 0; i < concurrency; ++i) {
-                boost::asio::post(pool, [&, i] {
-                    thread_local std::mt19937 rng{std::random_device{}()};
-                    std::uniform_int_distribution<int> dist{1, bench::pg::MAX_ID};
+                boost::asio::co_spawn(
+                    io,
+                    [&, i]() -> boost::asio::awaitable<void> {
+                        thread_local std::mt19937 rng{std::random_device{}()};
+                        std::uniform_int_distribution<int> dist{1, bench::pg::MAX_ID};
 
-                    for (int q = 0; q < queries_per_task; ++q) {
-                        const auto id = dist(rng);
+                        for (int q = 0; q < queries_per_task; ++q) {
+                            const auto id = dist(rng);
 
-                        bench::pg::timed_op(collectors[i], [&] {
-                            auto exec   = session_->with_sync().value();
-                            auto result = exec.execute(bench::pg::BENCH_QUERY, id);
+                            const auto start = std::chrono::steady_clock::now();
+                            auto exec        = session_->with_async(co_await boost::asio::this_coro::executor).value();
+                            auto result      = co_await exec.execute(std::string{bench::pg::BENCH_QUERY}, id);
+                            const auto elapsed = std::chrono::steady_clock::now() - start;
+
                             benchmark::DoNotOptimize(result);
-                        });
-                    }
+                            collectors[i].record(std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed));
+                        }
 
-                    done.count_down();
-                });
+                        done.count_down();
+                    },
+                    boost::asio::detached);
             }
 
             done.wait();
         }
 
-        pool.join();
+        // Shutdown
+        work_guard.reset();
+        io.stop();
+        for (auto& t : io_threads) {
+            t.join();
+        }
 
         // Report metrics
         state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()) * static_cast<std::int64_t>(concurrency) *
@@ -98,7 +123,7 @@ namespace {
         bench::pg::merge_latency(state, collectors);
     }
 
-    BENCHMARK_REGISTER_F(SessionFixture, BM_Session)->Apply(bench::pg::add_concurrency_args)->UseRealTime();
+    BENCHMARK_REGISTER_F(SessionAsyncFixture, BM_SessionAsync)->Apply(bench::pg::add_concurrency_args)->UseRealTime();
 
 }  // namespace
 

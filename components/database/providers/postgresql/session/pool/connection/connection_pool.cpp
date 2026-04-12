@@ -1,5 +1,7 @@
 #include "connection_pool.hpp"
 
+#include <thread>
+
 #include <postgres_errors.hpp>
 
 namespace demiplane::db::postgres {
@@ -9,8 +11,6 @@ namespace demiplane::db::postgres {
           pool_config_{std::move(pool_config)},
           mask_{pool_config_.capacity() - 1},
           slots_(pool_config_.capacity()) {
-        pool_config_.validate();
-
         // Eagerly create min_connections
         for (std::size_t i = 0; i < pool_config_.min_connections(); ++i) {
             slots_[i].conn = create_connection();
@@ -68,6 +68,32 @@ namespace demiplane::db::postgres {
         }
 
         return nullptr;  // Pool exhausted
+    }
+
+    ConnectionSlot* ConnectionPool::acquire_slot_wait(std::chrono::steady_clock::duration timeout) noexcept {
+        // Immediate attempt — success path is zero-cost, matches acquire_slot()
+        if (auto* slot = acquire_slot(); slot != nullptr) {
+            return slot;
+        }
+
+        // Non-positive timeout: no waiting, report exhaustion immediately
+        if (timeout <= std::chrono::steady_clock::duration::zero()) {
+            return nullptr;
+        }
+
+        // Divide the budget into 10 equal intervals and retry after each sleep.
+        // No condition variables, no waiter queue — pure spin with sleep backoff.
+        const auto interval = timeout / 10;
+        for (int attempt = 0; attempt < 10; ++attempt) {
+            if (shutdown_.load(std::memory_order_acquire)) {
+                return nullptr;
+            }
+            std::this_thread::sleep_for(interval);
+            if (auto* slot = acquire_slot(); slot != nullptr) {
+                return slot;
+            }
+        }
+        return nullptr;
     }
 
     void ConnectionPool::shutdown() {

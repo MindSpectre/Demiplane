@@ -5,6 +5,7 @@
 #include <benchmark/benchmark.h>
 #include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
+#include <gears_macros.hpp>
 #include <libpq-fe.h>
 #include <postgres_sync_executor.hpp>
 
@@ -60,7 +61,10 @@ namespace {
         boost::asio::thread_pool pool{concurrency};
         std::vector<bench::pg::LatencyCollector> collectors(concurrency);
 
-        for (auto _ : state) {
+        for (GEARS_UNUSED_VAR : state) {
+            for (auto& c : collectors) {
+                c.clear();
+            }
             std::latch done{static_cast<std::ptrdiff_t>(concurrency)};
 
             for (std::size_t i = 0; i < concurrency; ++i) {

@@ -27,6 +27,8 @@ namespace demiplane::db::postgres {
           status_{std::exchange(other.status_, TransactionStatus::FAILED)} {
     }
 
+    // Move-assignment preserves status by design: the caller is responsible
+    // for committing or rolling back before overwriting an active transaction.
     Transaction& Transaction::operator=(Transaction&& other) noexcept {
         if (this != &other) {
             if (slot_) {

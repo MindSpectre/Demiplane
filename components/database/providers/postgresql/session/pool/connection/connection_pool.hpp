@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <vector>
 
@@ -36,6 +37,18 @@ namespace demiplane::db::postgres {
          * Lazily initializes INACTIVE slots when no FREE slot is found.
          */
         [[nodiscard]] ConnectionSlot* acquire_slot() noexcept;
+
+        /**
+         * @brief Acquire a slot, retrying up to 10 times across the timeout budget
+         * @param timeout Total duration to wait. Zero or negative returns immediately.
+         * @return ConnectionSlot* on success, nullptr if the full budget elapses
+         *
+         * Divides the timeout into 10 equal intervals. Sleeps for timeout/10, then
+         * calls acquire_slot(). Returns the first slot obtained, or nullptr after
+         * 10 failed retries. Uses no condition variables, mutexes, or notifications —
+         * the only synchronization primitive is sleep_for.
+         */
+        [[nodiscard]] ConnectionSlot* acquire_slot_wait(std::chrono::steady_clock::duration timeout) noexcept;
 
         /**
          * @brief Graceful shutdown: close idle connections, prevent new acquisitions

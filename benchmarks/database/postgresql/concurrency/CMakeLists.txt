@@ -4,21 +4,21 @@
 ##############################################################################
 
 # ─── Session Async (coroutines on io_context) ─────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Concurrency.SessionAsync
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Concurrency.SessionAsync
         benchmark_session_async.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Concurrency.SessionAsync
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Concurrency.SessionAsync
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         Demiplane::Component::Database::PostgreSQL
 )
 
 # ─── pqxx (tasks on thread_pool) ─────────────────────────────────────
-add_executable(${DMP_BENCHMARKS}.Database.Concurrency.Pqxx
+add_executable(${DMP_BENCHMARKS_POSTGRESQL}.Concurrency.Pqxx
         benchmark_pqxx.cpp
 )
-target_link_libraries(${DMP_BENCHMARKS}.Database.Concurrency.Pqxx
+target_link_libraries(${DMP_BENCHMARKS_POSTGRESQL}.Concurrency.Pqxx
         PRIVATE
-        bench_pg_common
+        ${DMP_BENCHMARKS_POSTGRESQL}.Common
         libpqxx::pqxx
 )

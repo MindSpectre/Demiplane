@@ -20,6 +20,10 @@ namespace bench::pg {
             samples.push_back(ns);
         }
 
+        void clear() noexcept {
+            samples.clear();
+        }
+
         void report_to(benchmark::State& state) const {
             if (samples.empty()) {
                 return;

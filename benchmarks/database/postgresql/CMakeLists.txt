@@ -22,8 +22,7 @@ if (benchmark_FOUND AND libpqxx_FOUND)
             Demiplane::Common::Gears
     )
 
-    add_subdirectory(simple)
-    add_subdirectory(concurrency)
+    add_subdirectory(concurrency_scenarios)
 
 else ()
     if (NOT benchmark_FOUND)

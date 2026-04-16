@@ -31,7 +31,7 @@ target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Asyn
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Async PUBLIC
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared
-        ${DMP_DATABASE_POSTGRESQL}.ConnectionSlot
+        ${DMP_DATABASE_POSTGRESQL}.ConnectionHolder
         Boost::asio
 )
 ##############################################################################
@@ -50,6 +50,6 @@ target_include_directories(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync
 
 target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Sync PUBLIC
         ${DMP_DATABASE_POSTGRESQL}.Capabilities.Executor.Shared
-        ${DMP_DATABASE_POSTGRESQL}.ConnectionSlot
+        ${DMP_DATABASE_POSTGRESQL}.ConnectionHolder
 )
 ##############################################################################

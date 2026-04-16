@@ -15,10 +15,12 @@ namespace demiplane::db::postgres {
         setup_connection();
     }
 
-    AsyncExecutor::AsyncExecutor(ConnectionSlot& slot, boost::asio::any_io_executor executor)
-        : conn_{slot.conn},
-          executor_{std::move(executor)},
-          slot_{&slot} {
+    AsyncExecutor::AsyncExecutor(std::weak_ptr<ConnectionHolder> holder, boost::asio::any_io_executor executor)
+        : executor_{std::move(executor)},
+          holder_{std::move(holder)} {
+        if (auto live = holder_.lock()) {
+            conn_ = live->conn();
+        }
         if (!conn_) {
             return;  // empty state — valid() returns false
         }
@@ -29,8 +31,8 @@ namespace demiplane::db::postgres {
         if (socket_ && socket_->is_open()) {
             socket_->release();
         }
-        if (slot_) {
-            slot_->reset();
+        if (auto live = holder_.lock()) {
+            live->reset();
         }
     }
 
@@ -39,7 +41,8 @@ namespace demiplane::db::postgres {
           executor_{std::move(other.executor_)},
           socket_{std::move(other.socket_)},
           cached_socket_fd_{std::exchange(other.cached_socket_fd_, -1)},
-          slot_{std::exchange(other.slot_, nullptr)} {
+          holder_{std::move(other.holder_)} {
+        other.holder_.reset();
     }
 
     AsyncExecutor& AsyncExecutor::operator=(AsyncExecutor&& other) noexcept {
@@ -47,14 +50,15 @@ namespace demiplane::db::postgres {
             if (socket_ && socket_->is_open()) {
                 socket_->release();
             }
-            if (slot_) {
-                slot_->reset();
+            if (auto live = holder_.lock()) {
+                live->reset();
             }
             conn_             = std::exchange(other.conn_, nullptr);
             executor_         = std::move(other.executor_);
             socket_           = std::move(other.socket_);
             cached_socket_fd_ = std::exchange(other.cached_socket_fd_, -1);
-            slot_             = std::exchange(other.slot_, nullptr);
+            holder_           = std::move(other.holder_);
+            other.holder_.reset();
         }
         return *this;
     }

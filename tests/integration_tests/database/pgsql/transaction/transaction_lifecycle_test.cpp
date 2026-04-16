@@ -40,7 +40,7 @@ protected:
         }
         PQfinish(probe);
 
-        session_ = std::make_unique<Session>(
+        session_ = std::make_unique<LockFreeSession>(
             make_test_config(),
             PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
@@ -66,7 +66,7 @@ protected:
         }
     }
 
-    std::unique_ptr<Session> session_;
+    std::unique_ptr<LockFreeSession> session_;
 };
 
 // ============== Manual Transaction Tests ==============

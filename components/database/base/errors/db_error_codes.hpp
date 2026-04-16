@@ -40,6 +40,7 @@ namespace demiplane::db {
         NoActiveTransaction = 304,
         PoolExhausted       = 310,
         PoolShutdown        = 311,
+        WaitTimeout         = 312,
     };
 
     /**
@@ -394,6 +395,8 @@ namespace demiplane::db {
                 return "PoolExhausted";
             case ClientErrorCode::PoolShutdown:
                 return "PoolShutdown";
+            case ClientErrorCode::WaitTimeout:
+                return "WaitTimeout";
         }
         std::unreachable();
     }
@@ -571,6 +574,8 @@ namespace demiplane::db {
                 return "Connection pool exhausted, no available connections";
             case ClientErrorCode::PoolShutdown:
                 return "Connection pool has been shut down";
+            case ClientErrorCode::WaitTimeout:
+                return "Timed wait on a blocking pool expired before a connection became available";
         }
         std::unreachable();
     }

@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
+
 #include <capability_provider.hpp>
-#include <connection_slot.hpp>
+#include <connection_holder.hpp>
 #include <gears_class_traits.hpp>
 
 #include "options/transaction_options.hpp"
@@ -9,7 +11,8 @@
 
 namespace demiplane::db::postgres {
 
-    class Session;
+    class LockFreeSession;
+    class BlockingSession;
     class Savepoint;
 
     class Transaction : gears::NonCopyable {
@@ -27,8 +30,8 @@ namespace demiplane::db::postgres {
          */
         template <typename Self>
         constexpr auto&& do_cleanup(this Self&& self, const CleanupQuery query) noexcept {
-            if (self.slot_) {
-                self.slot_->cleanup_sql = to_sql(query);
+            if (auto live = self.holder_.lock()) {
+                live->set_cleanup(query);
             }
             return std::forward<Self>(self);
         }
@@ -63,16 +66,18 @@ namespace demiplane::db::postgres {
         }
 
         [[nodiscard]] constexpr PGconn* native_handle() const noexcept {
-            return slot_ ? slot_->conn : nullptr;
+            return conn_;
         }
 
     private:
-        friend class Session;
-        Transaction(ConnectionSlot& slot, TransactionOptions opts);
+        friend class LockFreeSession;
+        friend class BlockingSession;
+        Transaction(std::weak_ptr<ConnectionHolder> holder, TransactionOptions opts);
 
         [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
 
-        ConnectionSlot* slot_;
+        std::weak_ptr<ConnectionHolder> holder_;
+        PGconn* conn_ = nullptr;
         TransactionOptions options_;
         TransactionStatus status_ = TransactionStatus::IDLE;
     };

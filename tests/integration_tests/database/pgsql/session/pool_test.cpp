@@ -47,8 +47,8 @@ protected:
 // ============== MultipleSyncExecutors ==============
 
 TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
-    auto session = Session{make_test_config(),
-                           PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+    auto session = LockFreeSession{
+        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     // Acquire 3 executors simultaneously from a capacity-4 pool
     {
@@ -75,7 +75,7 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
     }
     // All 3 executors destroyed — slots returned
 
-    // Session is still usable after releasing all executors
+    // LockFreeSession is still usable after releasing all executors
     auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 42 AS answer");
@@ -88,8 +88,8 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
 // ============== PoolExhaustion ==============
 
 TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
-    auto session = Session{make_test_config(),
-                           PoolConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
+    auto session = LockFreeSession{
+        make_test_config(), PoolConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
 
     // Exhaust the pool (capacity=2)
     auto exec1 = session.with_sync().value();
@@ -114,11 +114,11 @@ TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
     session.shutdown();
 }
 
-// ============== SessionShutdown ==============
+// ============== LockFreeSessionShutdown ==============
 
 TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
-    auto session = Session{make_test_config(),
-                           PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+    auto session = LockFreeSession{
+        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     // Verify session works before shutdown
     {
@@ -140,8 +140,7 @@ TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
 // ============== ExecutorLifecycleScope ==============
 
 TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
-    auto session = Session{make_test_config(),
-                           PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+    auto session = LockFreeSession{make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     const auto free_before = session.pool_free_count();
 
@@ -158,7 +157,7 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
     }
     // Executor destroyed — slot returned to pool
 
-    // Session recovers: can acquire again and execute queries
+    // LockFreeSession recovers: can acquire again and execute queries
     auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 1");
@@ -170,11 +169,11 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
     session.shutdown();
 }
 
-// ============== SessionStatsAccuracy ==============
+// ============== LockFreeSessionStatsAccuracy ==============
 
-TEST_F(PoolTest, SessionStatsAccuracy) {
-    auto session = Session{make_test_config(),
-                           PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, LockFreeSessionStatsAccuracy) {
+    auto session = LockFreeSession{
+        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     // Capacity is always 4
     EXPECT_EQ(session.pool_capacity(), 4u);
@@ -210,7 +209,7 @@ TEST_F(PoolTest, SessionStatsAccuracy) {
 // ============== DoubleShutdownIdempotent ==============
 
 TEST_F(PoolTest, DoubleShutdownIdempotent) {
-    auto session = Session{make_test_config(),
+    auto session = LockFreeSession{make_test_config(),
                            PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
 
     // First shutdown
@@ -225,7 +224,7 @@ TEST_F(PoolTest, DoubleShutdownIdempotent) {
 // ============== ConcurrentAsyncQueries ==============
 
 TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
-    auto session = Session{make_test_config(),
+    auto session = LockFreeSession{make_test_config(),
                            PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     boost::asio::io_context ioc;
@@ -260,7 +259,7 @@ TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
 // ============== ConcurrentSyncFromThreads ==============
 
 TEST_F(PoolTest, ConcurrentSyncExecutorsFromMultipleThreads) {
-    auto session = Session{make_test_config(),
+    auto session = LockFreeSession{make_test_config(),
                            PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
 
     constexpr int kThreads = 4;

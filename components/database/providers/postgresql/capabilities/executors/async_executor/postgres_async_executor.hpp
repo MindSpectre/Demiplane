@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <utility>
 
 #include <boost/asio.hpp>
@@ -7,7 +8,7 @@
 #include <boost/asio/posix/stream_descriptor.hpp>
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
-#include <connection_slot.hpp>
+#include <connection_holder.hpp>
 #include <executor_concept.hpp>
 #include <gears_concepts.hpp>
 #include <postgres_params.hpp>
@@ -47,11 +48,11 @@ namespace demiplane::db::postgres {
         explicit AsyncExecutor(PGconn* conn, boost::asio::any_io_executor executor);
 
         /**
-         * @brief Construct executor from a pool slot (pool-managed)
-         * @param slot Connection slot acquired from the pool
+         * @brief Construct executor from a pool-managed connection holder
+         * @param holder Weak reference to a ConnectionHolder owned by the pool.
          * @param executor Asio executor for async operations
          */
-        AsyncExecutor(ConnectionSlot& slot, boost::asio::any_io_executor executor);
+        AsyncExecutor(std::weak_ptr<ConnectionHolder> holder, boost::asio::any_io_executor executor);
 
         ~AsyncExecutor();
 
@@ -75,8 +76,8 @@ namespace demiplane::db::postgres {
          */
         template <typename Self>
         constexpr auto&& do_cleanup(this Self&& self, const CleanupQuery query) noexcept {
-            if (self.slot_) {
-                self.slot_->cleanup_sql = to_sql(query);
+            if (auto live = self.holder_.lock()) {
+                live->set_cleanup(query);
             }
             return std::forward<Self>(self);
         }
@@ -179,11 +180,11 @@ namespace demiplane::db::postgres {
         }
 
     private:
-        PGconn* conn_;
+        PGconn* conn_ = nullptr;
         boost::asio::any_io_executor executor_;
         std::unique_ptr<boost::asio::posix::stream_descriptor> socket_;
         std::int32_t cached_socket_fd_ = -1;
-        ConnectionSlot* slot_          = nullptr;
+        std::weak_ptr<ConnectionHolder> holder_;
 
         // Core implementation
         [[nodiscard]] boost::asio::awaitable<gears::Outcome<ResultBlock, ErrorContext>>

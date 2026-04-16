@@ -30,7 +30,8 @@ namespace demiplane::db::postgres {
         [[nodiscard]] bool is_finished() const noexcept;
 
     private:
-        friend class Session;
+        friend class LockFreeSession;
+        friend class BlockingSession;
         explicit AutoTransaction(Transaction tx);
 
         Transaction tx_;

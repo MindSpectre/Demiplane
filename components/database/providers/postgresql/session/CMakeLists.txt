@@ -1,18 +1,13 @@
-add_subdirectory(pool)
+add_subdirectory(shared)
+add_subdirectory(free_lock)
+add_subdirectory(blocking)
 
-##############################################################################
-# PostgreSql Session
-##############################################################################
-add_library(${DMP_DATABASE_POSTGRESQL}.Session STATIC
-        postgres_session.hpp
-        postgres_session.cpp
-)
-target_include_directories(${DMP_DATABASE_POSTGRESQL}.Session PUBLIC
+add_combined_library(${DMP_DATABASE_POSTGRESQL}.Session
+        DIRECTORIES
         ${CMAKE_CURRENT_SOURCE_DIR}
+        SOURCES
+        postgres_session.hpp
+        LIBRARIES
+        ${DMP_DATABASE_POSTGRESQL}.Session.FreeLock
+        ${DMP_DATABASE_POSTGRESQL}.Session.Blocking
 )
-target_link_libraries(${DMP_DATABASE_POSTGRESQL}.Session
-        PUBLIC
-        ${DMP_DATABASE_POSTGRESQL}.Session.Pool
-        ${DMP_DATABASE_POSTGRESQL}.Transaction
-)
-##############################################################################

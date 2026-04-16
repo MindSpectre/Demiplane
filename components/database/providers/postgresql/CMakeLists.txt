@@ -14,7 +14,7 @@ add_subdirectory(result)
 
 add_subdirectory(config)
 
-add_subdirectory(connection_slot)
+add_subdirectory(connection_holder)
 
 add_subdirectory(capabilities)
 

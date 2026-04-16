@@ -6,29 +6,33 @@ namespace demiplane::db::postgres {
         : conn_{conn} {
     }
 
-    SyncExecutor::SyncExecutor(ConnectionSlot& slot) noexcept
-        : conn_{slot.conn},
-          slot_{&slot} {
+    SyncExecutor::SyncExecutor(std::weak_ptr<ConnectionHolder> holder) noexcept
+        : holder_{std::move(holder)} {
+        if (auto live = holder_.lock()) {
+            conn_ = live->conn();
+        }
     }
 
     SyncExecutor::~SyncExecutor() {
-        if (slot_) {
-            slot_->reset();
+        if (auto live = holder_.lock()) {
+            live->reset();
         }
     }
 
     SyncExecutor::SyncExecutor(SyncExecutor&& other) noexcept
         : conn_{std::exchange(other.conn_, nullptr)},
-          slot_{std::exchange(other.slot_, nullptr)} {
+          holder_{std::move(other.holder_)} {
+        other.holder_.reset();
     }
 
     SyncExecutor& SyncExecutor::operator=(SyncExecutor&& other) noexcept {
         if (this != &other) {
-            if (slot_) {
-                slot_->reset();
+            if (auto live = holder_.lock()) {
+                live->reset();
             }
-            conn_ = std::exchange(other.conn_, nullptr);
-            slot_ = std::exchange(other.slot_, nullptr);
+            conn_   = std::exchange(other.conn_, nullptr);
+            holder_ = std::move(other.holder_);
+            other.holder_.reset();
         }
         return *this;
     }

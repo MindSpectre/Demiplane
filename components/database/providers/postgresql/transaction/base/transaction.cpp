@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include <connection_slot.hpp>
+#include <connection_holder.hpp>
 #include <savepoint/savepoint.hpp>
 
 #include "detail/identifier_validation.hpp"
@@ -10,37 +10,35 @@
 
 namespace demiplane::db::postgres {
 
-    Transaction::Transaction(ConnectionSlot& slot, const TransactionOptions opts)
-        : slot_{&slot},
-          options_{opts} {
-        COMPONENT_LOG_INF() << "Transaction created";
-    }
-
     Transaction::~Transaction() {
-        if (slot_) {
+        if (auto live = holder_.lock()) {
             if (status_ == TransactionStatus::ACTIVE) {
                 COMPONENT_LOG_WRN() << "Transaction destroyed while still active — performing safety-net ROLLBACK";
-                PQclear(PQexec(slot_->conn, "ROLLBACK"));
+                PQclear(PQexec(conn_, "ROLLBACK"));
             }
-            slot_->reset();
-            COMPONENT_LOG_INF() << "Transaction destroyed, slot released";
+            live->reset();
+            COMPONENT_LOG_INF() << "Transaction destroyed, holder released";
         }
     }
 
     Transaction::Transaction(Transaction&& other) noexcept
-        : slot_{std::exchange(other.slot_, nullptr)},
+        : holder_{std::move(other.holder_)},
+          conn_{std::exchange(other.conn_, nullptr)},
           options_{other.options_},
           status_{std::exchange(other.status_, TransactionStatus::FAILED)} {
+        other.holder_.reset();
     }
 
     Transaction& Transaction::operator=(Transaction&& other) noexcept {
         if (this != &other) {
-            if (slot_) {
-                slot_->reset();
+            if (auto live = holder_.lock()) {
+                live->reset();
             }
-            slot_    = std::exchange(other.slot_, nullptr);
+            holder_  = std::move(other.holder_);
+            conn_    = std::exchange(other.conn_, nullptr);
             options_ = other.options_;
             status_  = std::exchange(other.status_, TransactionStatus::FAILED);
+            other.holder_.reset();
         }
         return *this;
     }
@@ -87,18 +85,18 @@ namespace demiplane::db::postgres {
         return result;
     }
 
-    SyncExecutor Transaction::with_sync() const {
+    gears::Outcome<SyncExecutor, ErrorContext> Transaction::with_sync() const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return SyncExecutor{nullptr};
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
-        return SyncExecutor{slot_->conn};
+        return SyncExecutor{conn_};
     }
 
-    AsyncExecutor Transaction::with_async(executor_type exec) const {
+    gears::Outcome<AsyncExecutor, ErrorContext> Transaction::with_async(boost::asio::any_io_executor exec) const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return AsyncExecutor{nullptr, std::move(exec)};
+            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
-        return AsyncExecutor{slot_->conn, std::move(exec)};
+        return AsyncExecutor{conn_, std::move(exec)};
     }
 
     gears::Outcome<Savepoint, ErrorContext> Transaction::savepoint(std::string name) const {
@@ -115,25 +113,22 @@ namespace demiplane::db::postgres {
         if (auto result = execute_control(sql); !result.is_success()) {
             return gears::Err(result.error<ErrorContext>());
         }
-        return Savepoint{slot_->conn, std::move(name)};
+        return Savepoint{conn_, std::move(name)};
     }
 
-    TransactionStatus Transaction::status() const noexcept {
-        return status_;
-    }
-    bool Transaction::is_active() const noexcept {
-        return status_ == TransactionStatus::ACTIVE;
-    }
-    bool Transaction::is_finished() const noexcept {
-        return status_ == TransactionStatus::COMMITTED || status_ == TransactionStatus::ROLLED_BACK;
-    }
-    PGconn* Transaction::native_handle() const noexcept {
-        return slot_ ? slot_->conn : nullptr;
+
+    Transaction::Transaction(std::weak_ptr<ConnectionHolder> holder, const TransactionOptions opts)
+        : holder_{std::move(holder)},
+          options_{opts} {
+        if (auto live = holder_.lock()) {
+            conn_ = live->conn();
+        }
+        COMPONENT_LOG_INF() << "Transaction created";
     }
 
     gears::Outcome<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {
-        const SyncExecutor exec{slot_->conn};
-        if (auto result = exec.execute(sql); !result.is_success()) {
+        const SyncExecutor inner{conn_};
+        if (auto result = inner.execute(sql); !result.is_success()) {
             return gears::Err(result.error<ErrorContext>());
         }
         return gears::Ok();

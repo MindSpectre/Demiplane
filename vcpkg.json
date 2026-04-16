@@ -14,13 +14,21 @@
     "libpq"
   ],
   "default-features": [
-    "abseil-benchmarks"
+    "abseil-benchmarks",
+    "pg-benchmarks"
   ],
   "features": {
     "abseil-benchmarks": {
       "description": "Abseil logging benchmarks for comparative profiling",
       "dependencies": [
         "abseil"
+      ]
+    },
+    "pg-benchmarks": {
+      "description": "PostgreSQL client overhead benchmarks",
+      "dependencies": [
+        "benchmark",
+        "libpqxx"
       ]
     }
   }

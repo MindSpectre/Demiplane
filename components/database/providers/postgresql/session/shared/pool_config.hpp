@@ -12,29 +12,29 @@
 namespace demiplane::db::postgres {
 
     /**
-     * @brief Configuration for the connection cylinder
+     * @brief Configuration for the connection pool
      *
-     * Controls cylinder sizing, connection timeouts, health check intervals,
+     * Controls pool sizing, connection timeouts, health check intervals,
      * and cleanup behavior. Capacity must be a power of 2 for efficient
      * ring buffer masking.
      *
      * Usage:
-     *   auto cfg = CylinderConfig::Builder{}
+     *   auto cfg = PoolConfig::Builder{}
      *       .capacity(16)
      *       .min_connections(2)
      *       .connect_timeout(std::chrono::seconds{5})
      *       .finalize();
      */
-    class CylinderConfig final : public serialization::ConfigInterface<CylinderConfig, Json::Value> {
+    class PoolConfig final : public serialization::ConfigInterface<PoolConfig, Json::Value> {
     public:
         // ============== ConfigInterface Implementation ==============
 
         constexpr void validate() const override {
             if (capacity_ == 0) {
-                throw std::invalid_argument("Cylinder capacity must be greater than 0");
+                throw std::invalid_argument("Pool capacity must be greater than 0");
             }
             if ((capacity_ & (capacity_ - 1)) != 0) {
-                throw std::invalid_argument("Cylinder capacity must be a power of 2");
+                throw std::invalid_argument("Pool capacity must be a power of 2");
             }
             if (min_connections_ > capacity_) {
                 throw std::invalid_argument("min_connections cannot exceed capacity");
@@ -70,21 +70,21 @@ namespace demiplane::db::postgres {
 
         // ============== Factory Methods (defined after Builder) ==============
 
-        [[nodiscard]] static CylinderConfig minimal();
-        [[nodiscard]] static CylinderConfig standard();
-        [[nodiscard]] static CylinderConfig high_performance();
+        [[nodiscard]] static PoolConfig minimal();
+        [[nodiscard]] static PoolConfig standard();
+        [[nodiscard]] static PoolConfig high_performance();
 
         // ============== Field Descriptors ==============
 
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&CylinderConfig::capacity_, "capacity">{},
-                serialization::Field<&CylinderConfig::min_connections_, "min_connections">{},
-                serialization::Field<&CylinderConfig::connect_timeout_, "connect_timeout">{},
-                serialization::Field<&CylinderConfig::idle_timeout_, "idle_timeout">{},
-                serialization::Field<&CylinderConfig::health_check_interval_, "health_check_interval">{},
-                serialization::Field<&CylinderConfig::max_lifetime_, "max_lifetime">{},
-                serialization::Field<&CylinderConfig::cleanup_sql_, "cleanup_sql">{},
+                serialization::Field<&PoolConfig::capacity_, "capacity">{},
+                serialization::Field<&PoolConfig::min_connections_, "min_connections">{},
+                serialization::Field<&PoolConfig::connect_timeout_, "connect_timeout">{},
+                serialization::Field<&PoolConfig::idle_timeout_, "idle_timeout">{},
+                serialization::Field<&PoolConfig::health_check_interval_, "health_check_interval">{},
+                serialization::Field<&PoolConfig::max_lifetime_, "max_lifetime">{},
+                serialization::Field<&PoolConfig::cleanup_sql_, "cleanup_sql">{},
             };
         }
 
@@ -92,7 +92,7 @@ namespace demiplane::db::postgres {
 
     private:
         friend class ConfigInterface;
-        constexpr CylinderConfig() = default;
+        constexpr PoolConfig() = default;
 
         std::size_t capacity_        = 16;
         std::size_t min_connections_ = 2;
@@ -102,16 +102,16 @@ namespace demiplane::db::postgres {
         std::chrono::seconds health_check_interval_ = std::chrono::seconds{30};
         std::chrono::seconds max_lifetime_          = std::chrono::seconds{3600};
 
-        std::string cleanup_sql_ = "DISCARD ALL";
+        std::string cleanup_sql_;
     };
 
-    class CylinderConfig::Builder {
+    class PoolConfig::Builder {
     public:
         Builder() = default;
-        explicit Builder(const CylinderConfig& existing)
+        explicit Builder(const PoolConfig& existing)
             : config_{existing} {
         }
-        explicit Builder(CylinderConfig&& existing)
+        explicit Builder(PoolConfig&& existing)
             : config_{std::move(existing)} {
         }
 
@@ -157,28 +157,28 @@ namespace demiplane::db::postgres {
             return std::forward<Self>(self);
         }
 
-        [[nodiscard]] CylinderConfig finalize() && {
+        [[nodiscard]] PoolConfig finalize() && {
             config_.validate();
             return std::move(config_);
         }
 
     private:
-        friend class CylinderConfig;
+        friend class PoolConfig;
         friend class ConfigInterface;
-        CylinderConfig config_;
+        PoolConfig config_;
     };
 
-    // ============== CylinderConfig Factory Method Definitions ==============
+    // ============== PoolConfig Factory Method Definitions ==============
 
-    inline CylinderConfig CylinderConfig::minimal() {
+    inline PoolConfig PoolConfig::minimal() {
         return Builder{}.capacity(2).min_connections(1).finalize();
     }
 
-    inline CylinderConfig CylinderConfig::standard() {
+    inline PoolConfig PoolConfig::standard() {
         return Builder{}.finalize();
     }
 
-    inline CylinderConfig CylinderConfig::high_performance() {
+    inline PoolConfig PoolConfig::high_performance() {
         return Builder{}.capacity(64).min_connections(8).health_check_interval(std::chrono::seconds{15}).finalize();
     }
 

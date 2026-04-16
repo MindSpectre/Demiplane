@@ -1,12 +1,8 @@
 ##############################################################################
-# Benchmark Raw String vs Compiled Query
+#
 ##############################################################################
-add_executable(${DMP_BENCHMARKS}.Database.RawVsCompiled
-        raw_vs_compiled_benchmark.cpp
-)
-target_link_libraries(${DMP_BENCHMARKS}.Database.RawVsCompiled
-        PRIVATE
-        Demiplane::Common::Chrono
-        Demiplane::Component::Database::PostgreSQL
-)
+if (BUILD_POSTGRESQL)
+    message("Benchmarks for PostgreSQL will be built")
+    add_subdirectory(postgresql)
+endif ()
 ##############################################################################

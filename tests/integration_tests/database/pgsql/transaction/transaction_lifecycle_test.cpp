@@ -40,12 +40,12 @@ protected:
         }
         PQfinish(probe);
 
-        session_ = std::make_unique<Session>(
+        session_ = std::make_unique<LockFreeSession>(
             make_test_config(),
-            CylinderConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
+            PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize());
 
         // Create test table
-        auto exec   = session_->with_sync();
+        auto exec   = session_->with_sync().value();
         auto result = exec.execute(R"(
             CREATE TABLE IF NOT EXISTS tx_test (
                 id SERIAL PRIMARY KEY,
@@ -60,13 +60,13 @@ protected:
 
     void TearDown() override {
         if (session_) {
-            auto exec               = session_->with_sync();
-            [[maybe_unused]] auto _ = exec.execute("DROP TABLE IF EXISTS tx_test CASCADE");
+            const auto exec  = session_->with_sync().value();
+            GEARS_UNUSED_VAR = exec.execute("DROP TABLE IF EXISTS tx_test CASCADE");
             session_->shutdown();
         }
     }
 
-    std::unique_ptr<Session> session_;
+    std::unique_ptr<LockFreeSession> session_;
 };
 
 // ============== Manual Transaction Tests ==============
@@ -79,13 +79,13 @@ TEST_F(TransactionLifecycleTest, BeginCommitPersistsData) {
 
     ASSERT_TRUE(tx.begin().is_success());
 
-    auto insert = tx.with_sync().execute("INSERT INTO tx_test (name) VALUES ('committed_row')");
+    auto insert = tx.with_sync().value().execute("INSERT INTO tx_test (name) VALUES ('committed_row')");
     ASSERT_TRUE(insert.is_success()) << insert.error<ErrorContext>().format();
 
     ASSERT_TRUE(tx.commit().is_success());
 
     // Verify data persisted via session
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT name FROM tx_test WHERE name = 'committed_row'");
     ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
     EXPECT_EQ(select.value().rows(), 1);
@@ -100,20 +100,20 @@ TEST_F(TransactionLifecycleTest, BeginRollbackDiscardsData) {
 
     ASSERT_TRUE(tx.begin().is_success());
 
-    auto insert = tx.with_sync().execute("INSERT INTO tx_test (name) VALUES ('rolled_back_row')");
+    auto insert = tx.with_sync().value().execute("INSERT INTO tx_test (name) VALUES ('rolled_back_row')");
     ASSERT_TRUE(insert.is_success()) << insert.error<ErrorContext>().format();
 
     ASSERT_TRUE(tx.rollback().is_success());
 
     // Verify data is absent
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT name FROM tx_test WHERE name = 'rolled_back_row'");
     ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
     EXPECT_EQ(select.value().rows(), 0);
 }
 
 TEST_F(TransactionLifecycleTest, DestructorReleasesSlotWithoutCommit) {
-    const auto free_before = session_->cylinder_free_count();
+    const auto free_before = session_->pool_free_count();
 
     {
         auto tx_result = session_->begin_transaction();
@@ -122,17 +122,17 @@ TEST_F(TransactionLifecycleTest, DestructorReleasesSlotWithoutCommit) {
 
         ASSERT_TRUE(tx.begin().is_success());
 
-        auto insert = tx.with_sync().execute("INSERT INTO tx_test (name) VALUES ('orphaned_row')");
+        auto insert = tx.with_sync().value().execute("INSERT INTO tx_test (name) VALUES ('orphaned_row')");
         ASSERT_TRUE(insert.is_success()) << insert.error<ErrorContext>().format();
 
         // tx destroyed here without commit or explicit rollback
     }
 
-    // Slot should be freed back to cylinder
-    EXPECT_GE(session_->cylinder_free_count(), free_before);
+    // Slot should be freed back to pool
+    EXPECT_GE(session_->pool_free_count(), free_before);
 
     // Data should not persist (connection reset via DISCARD ALL or implicit rollback)
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT name FROM tx_test WHERE name = 'orphaned_row'");
     ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
     EXPECT_EQ(select.value().rows(), 0);
@@ -187,11 +187,11 @@ TEST_F(TransactionLifecycleTest, DoubleCommitReturnsError) {
 TEST_F(TransactionLifecycleTest, WithSyncOnIdleTransactionReturnsInvalidExecutor) {
     auto tx_result = session_->begin_transaction();
     ASSERT_TRUE(tx_result.is_success()) << tx_result.error<ErrorContext>().format();
-    auto tx = std::move(tx_result.value());
+    const auto tx = std::move(tx_result.value());
 
-    // Transaction is IDLE, with_sync should return invalid executor
-    auto exec = tx.with_sync();
-    EXPECT_FALSE(exec.valid());
+    // Transaction is IDLE, with_sync should return error
+    const auto result = tx.with_sync();
+    EXPECT_FALSE(result.is_success());
 }
 
 TEST_F(TransactionLifecycleTest, WithSyncOnActiveTransactionReturnsValidExecutor) {
@@ -201,8 +201,8 @@ TEST_F(TransactionLifecycleTest, WithSyncOnActiveTransactionReturnsValidExecutor
 
     ASSERT_TRUE(tx.begin().is_success());
 
-    auto exec = tx.with_sync();
-    EXPECT_TRUE(exec.valid());
+    const auto result = tx.with_sync();
+    EXPECT_TRUE(result.is_success());
 }
 
 TEST_F(TransactionLifecycleTest, MultipleQueriesInSameTransaction) {
@@ -214,20 +214,20 @@ TEST_F(TransactionLifecycleTest, MultipleQueriesInSameTransaction) {
 
     // Insert 3 rows
     for (int i = 1; i <= 3; ++i) {
-        auto insert =
-            tx.with_sync().execute("INSERT INTO tx_test (name) VALUES ($1)", std::string{"row_" + std::to_string(i)});
+        auto insert = tx.with_sync().value().execute("INSERT INTO tx_test (name) VALUES ($1)",
+                                                     std::string{"row_" + std::to_string(i)});
         ASSERT_TRUE(insert.is_success()) << "Insert " << i << " failed: " << insert.error<ErrorContext>().format();
     }
 
     // Verify count within transaction
-    auto count = tx.with_sync().execute("SELECT COUNT(*) FROM tx_test");
+    auto count = tx.with_sync().value().execute("SELECT COUNT(*) FROM tx_test");
     ASSERT_TRUE(count.is_success()) << count.error<ErrorContext>().format();
     EXPECT_EQ(count.value().get<int>(0, 0), 3);
 
     ASSERT_TRUE(tx.commit().is_success());
 
     // Verify count after commit via session
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT COUNT(*) FROM tx_test");
     ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
     EXPECT_EQ(select.value().get<int>(0, 0), 3);
@@ -253,13 +253,13 @@ TEST_F(TransactionLifecycleTest, AutoTransactionCommitPersistsData) {
     ASSERT_TRUE(auto_result.is_success()) << auto_result.error<ErrorContext>().format();
     auto atx = std::move(auto_result.value());
 
-    auto insert = atx.with_sync().execute("INSERT INTO tx_test (name) VALUES ('auto_committed')");
+    auto insert = atx.with_sync().value().execute("INSERT INTO tx_test (name) VALUES ('auto_committed')");
     ASSERT_TRUE(insert.is_success()) << insert.error<ErrorContext>().format();
 
     ASSERT_TRUE(atx.commit().is_success());
 
     // Verify data persisted
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT name FROM tx_test WHERE name = 'auto_committed'");
     ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
     EXPECT_EQ(select.value().rows(), 1);
@@ -272,14 +272,14 @@ TEST_F(TransactionLifecycleTest, AutoTransactionDestructorImplicitRollback) {
         ASSERT_TRUE(auto_result.is_success()) << auto_result.error<ErrorContext>().format();
         auto atx = std::move(auto_result.value());
 
-        auto insert = atx.with_sync().execute("INSERT INTO tx_test (name) VALUES ('auto_orphaned')");
+        auto insert = atx.with_sync().value().execute("INSERT INTO tx_test (name) VALUES ('auto_orphaned')");
         ASSERT_TRUE(insert.is_success()) << insert.error<ErrorContext>().format();
 
         // atx destroyed here without commit -- implicit rollback via slot reset
     }
 
     // Verify data is absent
-    auto exec   = session_->with_sync();
+    auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT name FROM tx_test WHERE name = 'auto_orphaned'");
     ASSERT_TRUE(select.is_success()) << select.error<ErrorContext>().format();
     EXPECT_EQ(select.value().rows(), 0);

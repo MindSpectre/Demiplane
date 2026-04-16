@@ -20,7 +20,13 @@ namespace demiplane::scroll {
 
         out.push_back(' ');
         out.append(level_cstr());
-        out.append(" [");
+        out.append(" [tid ");
+        out.append(tid_str);
+#ifndef __linux__
+        out.append(", pid ");
+        out.append(pid_str);
+#endif
+        out.append("] [");
 
         const char* fname = location.file_name();
         if (const char* last_slash = std::strrchr(fname, '/')) {
@@ -31,10 +37,6 @@ namespace demiplane::scroll {
         out.push_back(':');
         append_number(out, location.line());
 
-        out.append("] [tid ");
-        out.append(tid_str);
-        out.append(", pid ");
-        out.append(pid_str);
         out.append("] ");
         out.append(message_);
         out.push_back('\n');

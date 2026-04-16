@@ -1,5 +1,6 @@
 #include <demiplane/gears>
 #include <demiplane/scroll>
+#include <limits>
 
 #include <gtest/gtest.h>
 
@@ -54,6 +55,9 @@ TEST(TestEntries, DetailedEntry) {
         check_level(output, INF);
         check_location_meta(output, loc);
     });
+#ifdef __linux__
+    EXPECT_LE(entry.tid, static_cast<uint64_t>(std::numeric_limits<int32_t>::max()));
+#endif
 }
 
 TEST(TestEntries, LightEntry) {

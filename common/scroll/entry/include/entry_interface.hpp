@@ -1,9 +1,15 @@
 #pragma once
+#include <cinttypes>
 #include <cstring>
 #include <demiplane/chrono>
 #include <demiplane/gears>
 #include <source_location>
 #include <thread>
+
+#if defined(__linux__)
+    #include <sys/syscall.h>
+    #include <unistd.h>
+#endif
 
 #include "log_level.hpp"
 
@@ -24,6 +30,18 @@ namespace demiplane::scroll::detail {
         }
     };
 
+    [[nodiscard]] inline uint64_t capture_kernel_tid() noexcept {
+#if defined(__linux__)
+    #if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30))
+        return static_cast<uint64_t>(::gettid());
+    #else
+        return static_cast<uint64_t>(::syscall(SYS_gettid));
+    #endif
+#else
+        return std::hash<std::thread::id>{}(std::this_thread::get_id());
+#endif
+    }
+
     struct ThreadLocalCache {
         uint64_t tid;
         int32_t pid;
@@ -31,9 +49,9 @@ namespace demiplane::scroll::detail {
         char pid_str[16]{};
 
         ThreadLocalCache() noexcept {
-            tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+            tid = capture_kernel_tid();
             pid = getpid();
-            snprintf(tid_str, sizeof(tid_str), "%lu", tid);
+            snprintf(tid_str, sizeof(tid_str), "%" PRIu64, tid);
             snprintf(pid_str, sizeof(pid_str), "%d", pid);
         }
     };

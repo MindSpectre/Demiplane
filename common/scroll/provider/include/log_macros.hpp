@@ -2,7 +2,6 @@
 
 #include <gears_macros.hpp>
 
-#include "logger_provider.hpp"
 namespace demiplane::scroll {
     // Dummy stream for disabled logging
     class DummyStream {
@@ -112,6 +111,60 @@ namespace demiplane::scroll {
     #define LOG_FAT_DISPATCH_TRUE(...) LOG_FAT_FMT(__VA_ARGS__)
     #define LOG_FAT(...) CONCAT(LOG_FAT_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
+    // ========== ONCE GUARDS ==========
+    // Each expansion site gets its own static flag via the lambda
+    #define SCROLL_ONCE_GUARD_                                                                                         \
+        []() -> bool {                                                                                                 \
+            static bool f_ = false;                                                                                    \
+            return !std::exchange(f_, true);                                                                           \
+        }()
+
+    #define SCROLL_ATOMIC_ONCE_GUARD_                                                                                  \
+        []() -> bool {                                                                                                 \
+            static std::atomic<bool> f_{false};                                                                        \
+            return !f_.exchange(true, std::memory_order_relaxed);                                                      \
+        }()
+
+    // ========== LOG_*_ONCE (static bool guard) ==========
+    #define LOG_TRC_ONCE(...)                                                                                          \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        LOG_TRC(__VA_ARGS__)
+    #define LOG_DBG_ONCE(...)                                                                                          \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        LOG_DBG(__VA_ARGS__)
+    #define LOG_INF_ONCE(...)                                                                                          \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        LOG_INF(__VA_ARGS__)
+    #define LOG_WRN_ONCE(...)                                                                                          \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        LOG_WRN(__VA_ARGS__)
+    #define LOG_ERR_ONCE(...)                                                                                          \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        LOG_ERR(__VA_ARGS__)
+    #define LOG_FAT_ONCE(...)                                                                                          \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        LOG_FAT(__VA_ARGS__)
+
+    // ========== LOG_*_ATOMIC_ONCE (std::atomic<bool> guard) ==========
+    #define LOG_TRC_ATOMIC_ONCE(...)                                                                                   \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        LOG_TRC(__VA_ARGS__)
+    #define LOG_DBG_ATOMIC_ONCE(...)                                                                                   \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        LOG_DBG(__VA_ARGS__)
+    #define LOG_INF_ATOMIC_ONCE(...)                                                                                   \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        LOG_INF(__VA_ARGS__)
+    #define LOG_WRN_ATOMIC_ONCE(...)                                                                                   \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        LOG_WRN(__VA_ARGS__)
+    #define LOG_ERR_ATOMIC_ONCE(...)                                                                                   \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        LOG_ERR(__VA_ARGS__)
+    #define LOG_FAT_ATOMIC_ONCE(...)                                                                                   \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        LOG_FAT(__VA_ARGS__)
+
 #else
    // Disabled logging - all macros become no-ops
     #define LOG_TRC(...) ::demiplane::scroll::DummyStream()
@@ -120,6 +173,20 @@ namespace demiplane::scroll {
     #define LOG_WRN(...) ::demiplane::scroll::DummyStream()
     #define LOG_ERR(...) ::demiplane::scroll::DummyStream()
     #define LOG_FAT(...) ::demiplane::scroll::DummyStream()
+
+    #define LOG_TRC_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_DBG_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_INF_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_WRN_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_ERR_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_FAT_ONCE(...) ::demiplane::scroll::DummyStream()
+
+    #define LOG_TRC_ATOMIC_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_DBG_ATOMIC_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_INF_ATOMIC_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_WRN_ATOMIC_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_ERR_ATOMIC_ONCE(...) ::demiplane::scroll::DummyStream()
+    #define LOG_FAT_ATOMIC_ONCE(...) ::demiplane::scroll::DummyStream()
 #endif
 
 // ============================================================================
@@ -190,9 +257,28 @@ namespace demiplane::scroll {
     #define COMPONENT_LOG_FAT() LOG_DIRECT_STREAM_FAT(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_ENTER_FUNCTION() COMPONENT_LOG_INF() << "Entering function " << __func__
     #define COMPONENT_LOG_LEAVE_FUNCTION() COMPONENT_LOG_INF() << "Leaving function " << __func__
+
+    // ========== COMPONENT_LOG_*_ONCE (static bool guard) ==========
+    #define COMPONENT_LOG_TRC_ONCE()                                                                                   \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        COMPONENT_LOG_TRC()
+    #define COMPONENT_LOG_DBG_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_DBG()
+    #define COMPONENT_LOG_INF_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_INF()
+    #define COMPONENT_LOG_WRN_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_WRN()
+    #define COMPONENT_LOG_ERR_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_ERR()
+    #define COMPONENT_LOG_FAT_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_FAT()
+
+    // ========== COMPONENT_LOG_*_ATOMIC_ONCE (std::atomic<bool> guard) ==========
+    #define COMPONENT_LOG_TRC_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_TRC()
+    #define COMPONENT_LOG_DBG_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_DBG()
+    #define COMPONENT_LOG_INF_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_INF()
+    #define COMPONENT_LOG_WRN_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_WRN()
+    #define COMPONENT_LOG_ERR_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_ERR()
+    #define COMPONENT_LOG_FAT_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_FAT()
 #else
     // When component logging is disabled, use scroll's dummy implementations
     #define COMPONENT_LOG(level, message) ((void)0)
+    #define COMPONENT_LOG_TRC() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_DBG() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_INF() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_WRN() ::demiplane::scroll::DummyStream()
@@ -200,4 +286,18 @@ namespace demiplane::scroll {
     #define COMPONENT_LOG_FAT() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_ENTER_FUNCTION() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_LEAVE_FUNCTION() ::demiplane::scroll::DummyStream()
+
+    #define COMPONENT_LOG_TRC_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_DBG_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_INF_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_WRN_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_ERR_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_FAT_ONCE() ::demiplane::scroll::DummyStream()
+
+    #define COMPONENT_LOG_TRC_ATOMIC_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_DBG_ATOMIC_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_INF_ATOMIC_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_WRN_ATOMIC_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_ERR_ATOMIC_ONCE() ::demiplane::scroll::DummyStream()
+    #define COMPONENT_LOG_FAT_ATOMIC_ONCE() ::demiplane::scroll::DummyStream()
 #endif

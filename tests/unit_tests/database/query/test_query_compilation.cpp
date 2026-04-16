@@ -78,8 +78,8 @@ static constexpr auto o_amount  = orders.column<"amount">();
 static constexpr auto o_status  = orders.column<"status">();
 
 [[maybe_unused]] static constexpr auto cm_id = comments.column<"id">();
-static constexpr auto cm_post_id = comments.column<"post_id">();
-static constexpr auto cm_body    = comments.column<"body">();
+static constexpr auto cm_post_id             = comments.column<"post_id">();
+static constexpr auto cm_body                = comments.column<"body">();
 
 // =============================================================================
 // 1. Table type traits

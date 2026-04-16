@@ -1,11 +1,12 @@
 #pragma once
 
 #include <demiplane/scroll>
+#include <memory>
 #include <utility>
 
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
-#include <connection_slot.hpp>
+#include <connection_holder.hpp>
 #include <executor_concept.hpp>
 #include <gears_concepts.hpp>
 #include <postgres_params.hpp>
@@ -32,10 +33,12 @@ namespace demiplane::db::postgres {
         explicit SyncExecutor(PGconn* conn) noexcept;
 
         /**
-         * @brief Construct a sync executor from a cylinder slot (cylinder-managed)
-         * @param slot Connection slot acquired from the cylinder
+         * @brief Construct a sync executor from a pool-managed connection holder
+         * @param holder Weak reference to a ConnectionHolder owned by the pool.
+         *               The holder is locked once at construction to cache the
+         *               underlying PGconn for the executor's lifetime.
          */
-        explicit SyncExecutor(ConnectionSlot& slot) noexcept;
+        explicit SyncExecutor(std::weak_ptr<ConnectionHolder> holder) noexcept;
 
         ~SyncExecutor();
 
@@ -50,6 +53,19 @@ namespace demiplane::db::postgres {
 
         [[nodiscard]] explicit operator bool() const noexcept {
             return valid();
+        }
+
+        /**
+         * @brief Set cleanup SQL to run when this executor releases the slot
+         * @param query Predefined cleanup query
+         * @return *this for chaining: session->with_sync().do_cleanup(CleanupQuery::DeallocateAll)
+         */
+        template <typename Self>
+        constexpr auto&& do_cleanup(this Self&& self, const CleanupQuery query) noexcept {
+            if (auto live = self.holder_.lock()) {
+                live->set_cleanup(query);
+            }
+            return std::forward<Self>(self);
         }
 
         /**
@@ -151,8 +167,8 @@ namespace demiplane::db::postgres {
         [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
                                                                              const Params* params) const;
 
-        PGconn* conn_;
-        ConnectionSlot* slot_ = nullptr;
+        PGconn* conn_ = nullptr;
+        std::weak_ptr<ConnectionHolder> holder_;
     };
 
     static_assert(IsExecutor<SyncExecutor>);

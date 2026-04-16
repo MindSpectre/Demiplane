@@ -4,7 +4,6 @@
 add_library(${DMP_DATABASE_POSTGRESQL}.Transaction STATIC
         status/transaction_status.hpp
         options/transaction_options.hpp
-        options/transaction_options.cpp
         base/transaction.hpp
         base/transaction.cpp
         auto_transaction/auto_transaction.hpp

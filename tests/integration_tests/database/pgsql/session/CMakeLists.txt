@@ -4,7 +4,7 @@
 
 add_integration_test(
         ${INTEGRATION_POSTGRESQL_TESTS}.Session
-        session_test.cpp
+        lock_free_session_test.cpp
         LINK_LIBS
         Demiplane::Component::Database::PostgreSQL
         ${TEST_LIBS}
@@ -14,12 +14,23 @@ add_integration_test(
 )
 
 add_integration_test(
-        ${INTEGRATION_POSTGRESQL_TESTS}.Cylinder
-        cylinder_test.cpp
+        ${INTEGRATION_POSTGRESQL_TESTS}.Pool
+        pool_test.cpp
         LINK_LIBS
         Demiplane::Component::Database::PostgreSQL
         ${TEST_LIBS}
         Boost::asio
+        LABELS "pgsql"
+        ENVIRONMENT ${PGSQL_TEST_ENV}
+)
+
+add_integration_test(
+        ${INTEGRATION_POSTGRESQL_TESTS}.BlockingSession
+        blocking_session_test.cpp
+        LINK_LIBS
+        Demiplane.Component.Database.Providers.PostgreSQL.Session.Blocking
+        Demiplane::Component::Database::PostgreSQL
+        ${TEST_LIBS}
         LABELS "pgsql"
         ENVIRONMENT ${PGSQL_TEST_ENV}
 )

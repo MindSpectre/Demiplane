@@ -4,6 +4,7 @@
 
 #include <config_interface.hpp>
 #include <json/json.hpp>
+#include <prefix_filter.hpp>
 #include <sink_interface.hpp>
 
 namespace demiplane::scroll {
@@ -14,11 +15,13 @@ namespace demiplane::scroll {
         constexpr ConsoleSinkConfig(const LogLevel threshold,
                                     const bool enable_colors,
                                     const bool flush_each_entry,
-                                    std::ostream* const output) noexcept
+                                    std::ostream* const output,
+                                    PrefixFilter prefix_filter = {}) noexcept
             : threshold_{threshold},
               enable_colors_{enable_colors},
               flush_each_entry_{flush_each_entry},
-              output_{output} {
+              output_{output},
+              prefix_filter_{std::move(prefix_filter)} {
         }
 
         constexpr void validate() const override {
@@ -37,6 +40,9 @@ namespace demiplane::scroll {
         [[nodiscard]] constexpr std::ostream* output() const noexcept {
             return output_;
         }
+        [[nodiscard]] constexpr const PrefixFilter& prefix_filter() const noexcept {
+            return prefix_filter_;
+        }
 
         static constexpr auto fields() {
             return std::tuple{
@@ -44,6 +50,8 @@ namespace demiplane::scroll {
                 serialization::Field<&ConsoleSinkConfig::enable_colors_, "enable_colors">{},
                 serialization::Field<&ConsoleSinkConfig::flush_each_entry_, "flush_each_entry">{},
                 serialization::Field<&ConsoleSinkConfig::output_, "output", serialization::FieldPolicy::Excluded>{},
+                serialization::
+                    Field<&ConsoleSinkConfig::prefix_filter_, "prefix_filter", serialization::FieldPolicy::Excluded>{},
             };
         }
 
@@ -57,6 +65,7 @@ namespace demiplane::scroll {
         bool enable_colors_    = true;
         bool flush_each_entry_ = false;
         std::ostream* output_  = &std::cout;
+        PrefixFilter prefix_filter_{};
     };
 
     class ConsoleSinkConfig::Builder {
@@ -90,6 +99,12 @@ namespace demiplane::scroll {
         template <typename Self>
         constexpr auto&& output(this Self&& self, std::ostream* value) noexcept {
             self.config_.output_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& prefix_filter(this Self&& self, PrefixFilter value) noexcept {
+            self.config_.prefix_filter_ = std::move(value);
             return std::forward<Self>(self);
         }
 

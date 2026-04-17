@@ -1,5 +1,6 @@
 #pragma once
 
+#include <demiplane/scroll>
 #include <memory>
 #include <utility>
 
@@ -180,6 +181,8 @@ namespace demiplane::db::postgres {
         }
 
     private:
+        SCROLL_COMPONENT_PREFIX("AsyncExecutor");
+
         PGconn* conn_ = nullptr;
         boost::asio::any_io_executor executor_;
         std::unique_ptr<boost::asio::posix::stream_descriptor> socket_;

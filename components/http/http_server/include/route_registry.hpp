@@ -1,6 +1,7 @@
 #pragma once
 
 #include <demiplane/nexus>
+#include <demiplane/scroll>
 #include <memory>
 #include <regex>
 #include <string>
@@ -48,6 +49,8 @@ namespace demiplane::http {
         RouteRegistry& operator=(const RouteRegistry& other);
 
     private:
+        SCROLL_COMPONENT_PREFIX("RouteRegistry");
+
         boost::unordered::unordered_flat_map<std::string, ContextHandler> exact_routes_;
         std::vector<RouteInfo> parametric_routes_;
 

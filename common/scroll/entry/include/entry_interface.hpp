@@ -6,9 +6,15 @@
 #include <source_location>
 #include <thread>
 
+#include <gears_strings.hpp>
+
+
 #if defined(__linux__)
-    #include <sys/syscall.h>
-    #include <unistd.h>
+    #if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30))
+        #include <unistd.h>
+    #else
+        #include <sys/syscall.h>
+    #endif
 #endif
 
 #include "log_level.hpp"
@@ -27,6 +33,14 @@ namespace demiplane::scroll::detail {
 
         explicit constexpr MetaSource(const std::source_location& loc) noexcept
             : location{loc} {
+        }
+    };
+
+    struct MetaPrefix {
+        gears::InlineString<31> prefix;
+        MetaPrefix() = default;
+        explicit MetaPrefix(const std::string_view sv) noexcept {
+            prefix.assign(sv);
         }
     };
 

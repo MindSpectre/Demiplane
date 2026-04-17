@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <demiplane/scroll>
 
 #include <boost/asio/awaitable.hpp>
 #include <capability_provider.hpp>
@@ -75,6 +76,8 @@ namespace demiplane::db::postgres {
         [[nodiscard]] bool is_shutdown() const noexcept;
 
     private:
+        SCROLL_COMPONENT_PREFIX("BlockingSession");
+
         BlockingPool pool_;
     };
 

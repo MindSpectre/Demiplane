@@ -1,5 +1,6 @@
 #pragma once
 
+#include <demiplane/scroll>
 #include <memory>
 
 #include <capability_provider.hpp>
@@ -72,14 +73,17 @@ namespace demiplane::db::postgres {
     private:
         friend class LockFreeSession;
         friend class BlockingSession;
-        Transaction(std::weak_ptr<ConnectionHolder> holder, TransactionOptions opts);
 
-        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
+        SCROLL_COMPONENT_PREFIX("Transaction");
 
         std::weak_ptr<ConnectionHolder> holder_;
         PGconn* conn_ = nullptr;
         TransactionOptions options_;
         TransactionStatus status_ = TransactionStatus::IDLE;
+
+        Transaction(std::weak_ptr<ConnectionHolder> holder, TransactionOptions opts);
+
+        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
     };
 
     static_assert(CapabilityProvider<Transaction>);

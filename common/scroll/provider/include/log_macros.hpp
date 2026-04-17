@@ -1,6 +1,9 @@
 #pragma once
 
+#include <string_view>
+
 #include <gears_macros.hpp>
+#include <gears_strings.hpp>
 
 namespace demiplane::scroll {
     // Dummy stream for disabled logging
@@ -14,105 +17,112 @@ namespace demiplane::scroll {
 }  // namespace demiplane::scroll
 
 // ============================================================================
-// Macro overloading utilities (using C++20 __VA_OPT__)
+// Declares a class-scope prefix for COMPONENT_LOG_*.
+//
+// Usage inside a class body:
+//     class Server {
+//     private:
+//         SCROLL_COMPONENT_PREFIX("Server");
+//         ...
+//     };
+//
+// The IIFE initializer runs at compile time; oversized names trigger the
+// consteval-throw path in InlineString::assign → compile error.
 // ============================================================================
-
-// Override HAS_ARGS to properly detect empty arguments using __VA_OPT__
-
+#define SCROLL_COMPONENT_PREFIX(name)                                                                                  \
+    static constexpr ::demiplane::gears::InlineString<31> _dmp_scroll_class_prefix = [] {                              \
+        ::demiplane::gears::InlineString<31> s;                                                                        \
+        s.assign(::std::string_view{name});                                                                            \
+        return s;                                                                                                      \
+    }()
 
 // ============================================================================
-// Overloaded macros: LOG_DBG() uses stream, LOG_DBG("fmt", ...) uses format
+// Sets the prefix on a LoggerProvider-derived object from inside its
+// constructor body. Runtime call — overflow silently truncates.
 // ============================================================================
+#define SCROLL_SET_LOGGER_PREFIX(name) this->set_prefix(::std::string_view{name})
 
 #ifdef DMP_ENABLE_LOGGING
-    /**
-     * @brief Log with format string and arguments OR stream operators
-     *
-     * Usage:
-     *   LOG_INF("User {} logged in from {}", username, ip_address);  // Format style
-     *   LOG_INF() << "User " << username << " logged in";            // Stream style
-     */
-
-    // ========== TRACE ==========
+   // ========== LOG_* (LoggerProvider path) ==========
     #define LOG_TRC_STREAM()                                                                                           \
-        this->get_logger()->stream(::demiplane::scroll::LogLevel::Trace,               \
-                                                                   std::source_location::current())
-
+        this->get_logger()->stream(                                                                                    \
+            ::demiplane::scroll::LogLevel::Trace, this->prefix().view(), std::source_location::current())
     #define LOG_TRC_FMT(fmt, ...)                                                                                      \
-        this->get_logger()->log(                                                       \
-            ::demiplane::scroll::LogLevel::Trace, fmt, std::source_location::current(), __VA_ARGS__)
-
+        this->get_logger()->log(::demiplane::scroll::LogLevel::Trace,                                                  \
+                                this->prefix().view(),                                                                 \
+                                std::source_location::current(),                                                       \
+                                fmt,                                                                                   \
+                                __VA_ARGS__)
     #define LOG_TRC_DISPATCH_() LOG_TRC_STREAM()
     #define LOG_TRC_DISPATCH_TRUE(...) LOG_TRC_FMT(__VA_ARGS__)
     #define LOG_TRC(...) CONCAT(LOG_TRC_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
-    // ========== DEBUG ==========
     #define LOG_DBG_STREAM()                                                                                           \
-        this->get_logger()->stream(::demiplane::scroll::LogLevel::Debug,               \
-                                                                   std::source_location::current())
-
+        this->get_logger()->stream(                                                                                    \
+            ::demiplane::scroll::LogLevel::Debug, this->prefix().view(), std::source_location::current())
     #define LOG_DBG_FMT(fmt, ...)                                                                                      \
-        this->get_logger()->log(                                                       \
-            ::demiplane::scroll::LogLevel::Debug, fmt, std::source_location::current(), __VA_ARGS__)
-
+        this->get_logger()->log(::demiplane::scroll::LogLevel::Debug,                                                  \
+                                this->prefix().view(),                                                                 \
+                                std::source_location::current(),                                                       \
+                                fmt,                                                                                   \
+                                __VA_ARGS__)
     #define LOG_DBG_DISPATCH_() LOG_DBG_STREAM()
     #define LOG_DBG_DISPATCH_TRUE(...) LOG_DBG_FMT(__VA_ARGS__)
     #define LOG_DBG(...) CONCAT(LOG_DBG_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
-    // ========== INFO ==========
     #define LOG_INF_STREAM()                                                                                           \
-        this->get_logger()->stream(::demiplane::scroll::LogLevel::Info,                \
-                                                                   std::source_location::current())
-
+        this->get_logger()->stream(                                                                                    \
+            ::demiplane::scroll::LogLevel::Info, this->prefix().view(), std::source_location::current())
     #define LOG_INF_FMT(fmt, ...)                                                                                      \
-        this->get_logger()->log(                                                       \
-            ::demiplane::scroll::LogLevel::Info, fmt, std::source_location::current(), __VA_ARGS__)
-
+        this->get_logger()->log(::demiplane::scroll::LogLevel::Info,                                                   \
+                                this->prefix().view(),                                                                 \
+                                std::source_location::current(),                                                       \
+                                fmt,                                                                                   \
+                                __VA_ARGS__)
     #define LOG_INF_DISPATCH_() LOG_INF_STREAM()
     #define LOG_INF_DISPATCH_TRUE(...) LOG_INF_FMT(__VA_ARGS__)
     #define LOG_INF(...) CONCAT(LOG_INF_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
-    // ========== WARNING ==========
     #define LOG_WRN_STREAM()                                                                                           \
-        this->get_logger()->stream(::demiplane::scroll::LogLevel::Warning,             \
-                                                                   std::source_location::current())
-
+        this->get_logger()->stream(                                                                                    \
+            ::demiplane::scroll::LogLevel::Warning, this->prefix().view(), std::source_location::current())
     #define LOG_WRN_FMT(fmt, ...)                                                                                      \
-        this->get_logger()->log(                                                       \
-            ::demiplane::scroll::LogLevel::Warning, fmt, std::source_location::current(), __VA_ARGS__)
-
+        this->get_logger()->log(::demiplane::scroll::LogLevel::Warning,                                                \
+                                this->prefix().view(),                                                                 \
+                                std::source_location::current(),                                                       \
+                                fmt,                                                                                   \
+                                __VA_ARGS__)
     #define LOG_WRN_DISPATCH_() LOG_WRN_STREAM()
     #define LOG_WRN_DISPATCH_TRUE(...) LOG_WRN_FMT(__VA_ARGS__)
     #define LOG_WRN(...) CONCAT(LOG_WRN_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
-    // ========== ERROR ==========
     #define LOG_ERR_STREAM()                                                                                           \
-        this->get_logger()->stream(::demiplane::scroll::LogLevel::Error,               \
-                                                                   std::source_location::current())
-
+        this->get_logger()->stream(                                                                                    \
+            ::demiplane::scroll::LogLevel::Error, this->prefix().view(), std::source_location::current())
     #define LOG_ERR_FMT(fmt, ...)                                                                                      \
-        this->get_logger()->log(                                                       \
-            ::demiplane::scroll::LogLevel::Error, fmt, std::source_location::current(), __VA_ARGS__)
-
+        this->get_logger()->log(::demiplane::scroll::LogLevel::Error,                                                  \
+                                this->prefix().view(),                                                                 \
+                                std::source_location::current(),                                                       \
+                                fmt,                                                                                   \
+                                __VA_ARGS__)
     #define LOG_ERR_DISPATCH_() LOG_ERR_STREAM()
     #define LOG_ERR_DISPATCH_TRUE(...) LOG_ERR_FMT(__VA_ARGS__)
     #define LOG_ERR(...) CONCAT(LOG_ERR_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
-    // ========== FATAL ==========
     #define LOG_FAT_STREAM()                                                                                           \
-        this->get_logger()->stream(::demiplane::scroll::LogLevel::Fatal,               \
-                                                                   std::source_location::current())
-
+        this->get_logger()->stream(                                                                                    \
+            ::demiplane::scroll::LogLevel::Fatal, this->prefix().view(), std::source_location::current())
     #define LOG_FAT_FMT(fmt, ...)                                                                                      \
-        this->get_logger()->log(                                                       \
-            ::demiplane::scroll::LogLevel::Fatal, fmt, std::source_location::current(), __VA_ARGS__)
-
+        this->get_logger()->log(::demiplane::scroll::LogLevel::Fatal,                                                  \
+                                this->prefix().view(),                                                                 \
+                                std::source_location::current(),                                                       \
+                                fmt,                                                                                   \
+                                __VA_ARGS__)
     #define LOG_FAT_DISPATCH_() LOG_FAT_STREAM()
     #define LOG_FAT_DISPATCH_TRUE(...) LOG_FAT_FMT(__VA_ARGS__)
     #define LOG_FAT(...) CONCAT(LOG_FAT_DISPATCH_, HAS_ARGS(__VA_ARGS__))(__VA_ARGS__)
 
     // ========== ONCE GUARDS ==========
-    // Each expansion site gets its own static flag via the lambda
     #define SCROLL_ONCE_GUARD_                                                                                         \
         []() -> bool {                                                                                                 \
             static bool f_ = false;                                                                                    \
@@ -125,7 +135,6 @@ namespace demiplane::scroll {
             return !f_.exchange(true, std::memory_order_relaxed);                                                      \
         }()
 
-    // ========== LOG_*_ONCE (static bool guard) ==========
     #define LOG_TRC_ONCE(...)                                                                                          \
         if (SCROLL_ONCE_GUARD_)                                                                                        \
         LOG_TRC(__VA_ARGS__)
@@ -145,7 +154,6 @@ namespace demiplane::scroll {
         if (SCROLL_ONCE_GUARD_)                                                                                        \
         LOG_FAT(__VA_ARGS__)
 
-    // ========== LOG_*_ATOMIC_ONCE (std::atomic<bool> guard) ==========
     #define LOG_TRC_ATOMIC_ONCE(...)                                                                                   \
         if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
         LOG_TRC(__VA_ARGS__)
@@ -166,7 +174,6 @@ namespace demiplane::scroll {
         LOG_FAT(__VA_ARGS__)
 
 #else
-   // Disabled logging - all macros become no-ops
     #define LOG_TRC(...) ::demiplane::scroll::DummyStream()
     #define LOG_DBG(...) ::demiplane::scroll::DummyStream()
     #define LOG_INF(...) ::demiplane::scroll::DummyStream()
@@ -190,93 +197,119 @@ namespace demiplane::scroll {
 #endif
 
 // ============================================================================
-// Direct logger macros (for custom logger instances) TODO: make it looks like LOG_DIRECT_TRC wihout FMT or STREAM
+// LOG_DIRECT_* — explicit prefix parameter. Used by test code and rare
+// non-LoggerProvider call sites.
 // ============================================================================
-
 #ifdef DMP_ENABLE_LOGGING
-    /**
-     * @brief Log to a specific logger instance (not global)
-     *
-     * Usage:
-     *   Logger* my_logger = get_logger();
-     *   LOG_DIRECT_FMT_INF(my_logger, "User {} connected", user_id);
-     *   LOG_DIRECT_STREAM_DBG(my_logger) << "Debug info: " << data;
-     */
-    #define LOG_DIRECT_FMT(logger_ptr, level, fmt, ...)                                                                    \
-        (logger_ptr)->log(level, fmt, std::source_location::current(), __VA_ARGS__)
+    #define LOG_DIRECT_FMT(logger_ptr, level, prefix, fmt, ...)                                                        \
+        (logger_ptr)->log(level, prefix, std::source_location::current(), fmt, __VA_ARGS__)
 
-    #define SLOG_DIRECT_FMT(logger_ptr, level) (logger_ptr)->stream(level, std::source_location::current())
+    #define SLOG_DIRECT_FMT(logger_ptr, level, prefix)                                                                 \
+        (logger_ptr)->stream(level, prefix, std::source_location::current())
 
-    // Convenience wrappers
-    #define LOG_DIRECT_FMT_TRC(logger_ptr, fmt, ...)                                                                       \
-        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Trace, fmt, __VA_ARGS__)
-    #define LOG_DIRECT_FMT_DBG(logger_ptr, fmt, ...)                                                                       \
-        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Debug, fmt, __VA_ARGS__)
-    #define LOG_DIRECT_FMT_INF(logger_ptr, fmt, ...)                                                                       \
-        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Info, fmt, __VA_ARGS__)
-    #define LOG_DIRECT_FMT_WRN(logger_ptr, fmt, ...)                                                                       \
-        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Warning, fmt, __VA_ARGS__)
-    #define LOG_DIRECT_FMT_ERR(logger_ptr, fmt, ...)                                                                       \
-        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Error, fmt, __VA_ARGS__)
-    #define LOG_DIRECT_FMT_FAT(logger_ptr, fmt, ...)                                                                       \
-        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Fatal, fmt, __VA_ARGS__)
+    #define LOG_DIRECT_FMT_TRC(logger_ptr, prefix, fmt, ...)                                                           \
+        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Trace, prefix, fmt, __VA_ARGS__)
+    #define LOG_DIRECT_FMT_DBG(logger_ptr, prefix, fmt, ...)                                                           \
+        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Debug, prefix, fmt, __VA_ARGS__)
+    #define LOG_DIRECT_FMT_INF(logger_ptr, prefix, fmt, ...)                                                           \
+        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Info, prefix, fmt, __VA_ARGS__)
+    #define LOG_DIRECT_FMT_WRN(logger_ptr, prefix, fmt, ...)                                                           \
+        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Warning, prefix, fmt, __VA_ARGS__)
+    #define LOG_DIRECT_FMT_ERR(logger_ptr, prefix, fmt, ...)                                                           \
+        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Error, prefix, fmt, __VA_ARGS__)
+    #define LOG_DIRECT_FMT_FAT(logger_ptr, prefix, fmt, ...)                                                           \
+        LOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Fatal, prefix, fmt, __VA_ARGS__)
 
-    #define LOG_DIRECT_STREAM_TRC(logger_ptr) SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Trace)
-    #define LOG_DIRECT_STREAM_DBG(logger_ptr) SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Debug)
-    #define LOG_DIRECT_STREAM_INF(logger_ptr) SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Info)
-    #define LOG_DIRECT_STREAM_WRN(logger_ptr) SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Warning)
-    #define LOG_DIRECT_STREAM_ERR(logger_ptr) SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Error)
-    #define LOG_DIRECT_STREAM_FAT(logger_ptr) SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Fatal)
+    #define LOG_DIRECT_STREAM_TRC(logger_ptr, prefix)                                                                  \
+        SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Trace, prefix)
+    #define LOG_DIRECT_STREAM_DBG(logger_ptr, prefix)                                                                  \
+        SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Debug, prefix)
+    #define LOG_DIRECT_STREAM_INF(logger_ptr, prefix)                                                                  \
+        SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Info, prefix)
+    #define LOG_DIRECT_STREAM_WRN(logger_ptr, prefix)                                                                  \
+        SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Warning, prefix)
+    #define LOG_DIRECT_STREAM_ERR(logger_ptr, prefix)                                                                  \
+        SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Error, prefix)
+    #define LOG_DIRECT_STREAM_FAT(logger_ptr, prefix)                                                                  \
+        SLOG_DIRECT_FMT(logger_ptr, ::demiplane::scroll::LogLevel::Fatal, prefix)
 #else
-    #define LOG_DIRECT_FMT(logger_ptr, level, fmt, ...) ((void)0)
-    #define SLOG_DIRECT_FMT(logger_ptr, level) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_FMT(logger_ptr, level, prefix, fmt, ...) ((void)0)
+    #define SLOG_DIRECT_FMT(logger_ptr, level, prefix) ::demiplane::scroll::DummyStream()
 
-    #define LOG_DIRECT_FMT_TRC(logger_ptr, fmt, ...) ((void)0)
-    #define LOG_DIRECT_FMT_DBG(logger_ptr, fmt, ...) ((void)0)
-    #define LOG_DIRECT_FMT_INF(logger_ptr, fmt, ...) ((void)0)
-    #define LOG_DIRECT_FMT_WRN(logger_ptr, fmt, ...) ((void)0)
-    #define LOG_DIRECT_FMT_ERR(logger_ptr, fmt, ...) ((void)0)
-    #define LOG_DIRECT_FMT_FAT(logger_ptr, fmt, ...) ((void)0)
+    #define LOG_DIRECT_FMT_TRC(logger_ptr, prefix, fmt, ...) ((void)0)
+    #define LOG_DIRECT_FMT_DBG(logger_ptr, prefix, fmt, ...) ((void)0)
+    #define LOG_DIRECT_FMT_INF(logger_ptr, prefix, fmt, ...) ((void)0)
+    #define LOG_DIRECT_FMT_WRN(logger_ptr, prefix, fmt, ...) ((void)0)
+    #define LOG_DIRECT_FMT_ERR(logger_ptr, prefix, fmt, ...) ((void)0)
+    #define LOG_DIRECT_FMT_FAT(logger_ptr, prefix, fmt, ...) ((void)0)
 
-    #define LOG_DIRECT_STREAM_TRC(logger_ptr) ::demiplane::scroll::DummyStream()
-    #define LOG_DIRECT_STREAM_DBG(logger_ptr) ::demiplane::scroll::DummyStream()
-    #define LOG_DIRECT_STREAM_INF(logger_ptr) ::demiplane::scroll::DummyStream()
-    #define LOG_DIRECT_STREAM_WRN(logger_ptr) ::demiplane::scroll::DummyStream()
-    #define LOG_DIRECT_STREAM_ERR(logger_ptr) ::demiplane::scroll::DummyStream()
-    #define LOG_DIRECT_STREAM_FAT(logger_ptr) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_STREAM_TRC(logger_ptr, prefix) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_STREAM_DBG(logger_ptr, prefix) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_STREAM_INF(logger_ptr, prefix) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_STREAM_WRN(logger_ptr, prefix) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_STREAM_ERR(logger_ptr, prefix) ::demiplane::scroll::DummyStream()
+    #define LOG_DIRECT_STREAM_FAT(logger_ptr, prefix) ::demiplane::scroll::DummyStream()
 #endif
 
+// ============================================================================
+// COMPONENT_LOG_* — prefix sourced from a class-scope `_dmp_scroll_class_prefix`
+// declared by SCROLL_COMPONENT_PREFIX. Usable only inside class member functions.
+// ============================================================================
 #ifdef DMP_COMPONENT_LOGGING
+    #define COMPONENT_LOG_TRC()                                                                                        \
+        LOG_DIRECT_STREAM_TRC(::demiplane::scroll::ComponentLoggerManager::get(), _dmp_scroll_class_prefix.view())
+    #define COMPONENT_LOG_DBG()                                                                                        \
+        LOG_DIRECT_STREAM_DBG(::demiplane::scroll::ComponentLoggerManager::get(), _dmp_scroll_class_prefix.view())
+    #define COMPONENT_LOG_INF()                                                                                        \
+        LOG_DIRECT_STREAM_INF(::demiplane::scroll::ComponentLoggerManager::get(), _dmp_scroll_class_prefix.view())
+    #define COMPONENT_LOG_WRN()                                                                                        \
+        LOG_DIRECT_STREAM_WRN(::demiplane::scroll::ComponentLoggerManager::get(), _dmp_scroll_class_prefix.view())
+    #define COMPONENT_LOG_ERR()                                                                                        \
+        LOG_DIRECT_STREAM_ERR(::demiplane::scroll::ComponentLoggerManager::get(), _dmp_scroll_class_prefix.view())
+    #define COMPONENT_LOG_FAT()                                                                                        \
+        LOG_DIRECT_STREAM_FAT(::demiplane::scroll::ComponentLoggerManager::get(), _dmp_scroll_class_prefix.view())
 
-    // Stream-based logging
-    #define COMPONENT_LOG_TRC() LOG_DIRECT_STREAM_TRC(::demiplane::scroll::ComponentLoggerManager::get())
-    #define COMPONENT_LOG_DBG() LOG_DIRECT_STREAM_DBG(::demiplane::scroll::ComponentLoggerManager::get())
-    #define COMPONENT_LOG_INF() LOG_DIRECT_STREAM_INF(::demiplane::scroll::ComponentLoggerManager::get())
-    #define COMPONENT_LOG_WRN() LOG_DIRECT_STREAM_WRN(::demiplane::scroll::ComponentLoggerManager::get())
-    #define COMPONENT_LOG_ERR() LOG_DIRECT_STREAM_ERR(::demiplane::scroll::ComponentLoggerManager::get())
-    #define COMPONENT_LOG_FAT() LOG_DIRECT_STREAM_FAT(::demiplane::scroll::ComponentLoggerManager::get())
     #define COMPONENT_LOG_ENTER_FUNCTION() COMPONENT_LOG_INF() << "Entering function " << __func__
     #define COMPONENT_LOG_LEAVE_FUNCTION() COMPONENT_LOG_INF() << "Leaving function " << __func__
 
-    // ========== COMPONENT_LOG_*_ONCE (static bool guard) ==========
     #define COMPONENT_LOG_TRC_ONCE()                                                                                   \
         if (SCROLL_ONCE_GUARD_)                                                                                        \
         COMPONENT_LOG_TRC()
-    #define COMPONENT_LOG_DBG_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_DBG()
-    #define COMPONENT_LOG_INF_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_INF()
-    #define COMPONENT_LOG_WRN_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_WRN()
-    #define COMPONENT_LOG_ERR_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_ERR()
-    #define COMPONENT_LOG_FAT_ONCE() if (SCROLL_ONCE_GUARD_) COMPONENT_LOG_FAT()
+    #define COMPONENT_LOG_DBG_ONCE()                                                                                   \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        COMPONENT_LOG_DBG()
+    #define COMPONENT_LOG_INF_ONCE()                                                                                   \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        COMPONENT_LOG_INF()
+    #define COMPONENT_LOG_WRN_ONCE()                                                                                   \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        COMPONENT_LOG_WRN()
+    #define COMPONENT_LOG_ERR_ONCE()                                                                                   \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        COMPONENT_LOG_ERR()
+    #define COMPONENT_LOG_FAT_ONCE()                                                                                   \
+        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        COMPONENT_LOG_FAT()
 
-    // ========== COMPONENT_LOG_*_ATOMIC_ONCE (std::atomic<bool> guard) ==========
-    #define COMPONENT_LOG_TRC_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_TRC()
-    #define COMPONENT_LOG_DBG_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_DBG()
-    #define COMPONENT_LOG_INF_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_INF()
-    #define COMPONENT_LOG_WRN_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_WRN()
-    #define COMPONENT_LOG_ERR_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_ERR()
-    #define COMPONENT_LOG_FAT_ATOMIC_ONCE() if (SCROLL_ATOMIC_ONCE_GUARD_) COMPONENT_LOG_FAT()
+    #define COMPONENT_LOG_TRC_ATOMIC_ONCE()                                                                            \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        COMPONENT_LOG_TRC()
+    #define COMPONENT_LOG_DBG_ATOMIC_ONCE()                                                                            \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        COMPONENT_LOG_DBG()
+    #define COMPONENT_LOG_INF_ATOMIC_ONCE()                                                                            \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        COMPONENT_LOG_INF()
+    #define COMPONENT_LOG_WRN_ATOMIC_ONCE()                                                                            \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        COMPONENT_LOG_WRN()
+    #define COMPONENT_LOG_ERR_ATOMIC_ONCE()                                                                            \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        COMPONENT_LOG_ERR()
+    #define COMPONENT_LOG_FAT_ATOMIC_ONCE()                                                                            \
+        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        COMPONENT_LOG_FAT()
 #else
-    // When component logging is disabled, use scroll's dummy implementations
     #define COMPONENT_LOG(level, message) ((void)0)
     #define COMPONENT_LOG_TRC() ::demiplane::scroll::DummyStream()
     #define COMPONENT_LOG_DBG() ::demiplane::scroll::DummyStream()

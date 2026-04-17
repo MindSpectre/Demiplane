@@ -6,6 +6,7 @@
 
 #include <config_interface.hpp>
 #include <json/json.hpp>
+#include <prefix_filter.hpp>
 #include <sink_interface.hpp>
 
 namespace demiplane::scroll {
@@ -19,14 +20,16 @@ namespace demiplane::scroll {
                                  std::string time_format_in_file_name,
                                  const bool rotate_file,
                                  const std::uint64_t max_file_size,
-                                 const bool flush_each_entry) noexcept
+                                 const bool flush_each_entry,
+                                 PrefixFilter prefix_filter = {}) noexcept
             : threshold_{threshold},
               file_{std::move(file)},
               add_time_to_filename_{add_time_to_filename},
               time_format_in_file_name_{std::move(time_format_in_file_name)},
               rotate_file_{rotate_file},
               max_file_size_{max_file_size},
-              flush_each_entry_{flush_each_entry} {
+              flush_each_entry_{flush_each_entry},
+              prefix_filter_{std::move(prefix_filter)} {
         }
 
         constexpr void validate() const override {
@@ -65,6 +68,9 @@ namespace demiplane::scroll {
         [[nodiscard]] constexpr bool rotate_file() const noexcept {
             return rotate_file_;
         }
+        [[nodiscard]] const PrefixFilter& prefix_filter() const noexcept {
+            return prefix_filter_;
+        }
 
         static constexpr auto fields() {
             return std::tuple{
@@ -75,6 +81,8 @@ namespace demiplane::scroll {
                 serialization::Field<&FileSinkConfig::rotate_file_, "rotate_file">{},
                 serialization::Field<&FileSinkConfig::max_file_size_, "max_file_size">{},
                 serialization::Field<&FileSinkConfig::flush_each_entry_, "flush_each_entry">{},
+                serialization::
+                    Field<&FileSinkConfig::prefix_filter_, "prefix_filter", serialization::FieldPolicy::Excluded>{},
             };
         }
 
@@ -92,6 +100,7 @@ namespace demiplane::scroll {
         bool rotate_file_            = true;
         std::uint64_t max_file_size_ = gears::literals::operator""_mb(100);
         bool flush_each_entry_       = false;
+        PrefixFilter prefix_filter_{};
     };
 
     class FileSinkConfig::Builder {
@@ -143,6 +152,12 @@ namespace demiplane::scroll {
         template <typename Self>
         constexpr auto&& rotation(this Self&& self, const bool value) noexcept {
             self.config_.rotate_file_ = value;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+        constexpr auto&& prefix_filter(this Self&& self, PrefixFilter value) noexcept {
+            self.config_.prefix_filter_ = std::move(value);
             return std::forward<Self>(self);
         }
 

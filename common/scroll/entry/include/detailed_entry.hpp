@@ -5,8 +5,11 @@
 #include "entry_interface.hpp"
 
 namespace demiplane::scroll {
-    class DetailedEntry final
-        : public detail::EntryBase<detail::MetaTimePoint, detail::MetaSource, detail::MetaThread, detail::MetaProcess> {
+    class DetailedEntry final : public detail::EntryBase<detail::MetaTimePoint,
+                                                         detail::MetaSource,
+                                                         detail::MetaThread,
+                                                         detail::MetaProcess,
+                                                         detail::MetaPrefix> {
     public:
         using EntryBase::EntryBase;
 
@@ -24,6 +27,6 @@ namespace demiplane::scroll {
     // Traits for the new fast entry
     template <>
     struct detail::entry_traits<DetailedEntry> {
-        using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess>;
+        using wants = gears::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess, MetaPrefix>;
     };
 }  // namespace demiplane::scroll

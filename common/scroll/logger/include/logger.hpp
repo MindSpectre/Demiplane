@@ -14,6 +14,7 @@
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/thread_pool.hpp>
+#include <gears_strings.hpp>
 
 #include "logger_config.hpp"
 #include "sink_interface.hpp"
@@ -100,46 +101,45 @@ namespace demiplane::scroll {
         }
 
         /**
-         * @brief Log with format string (C++20 std::format)
-         * @tparam Args Argument types
+         * @brief Log with format string (C++20 std::format) + prefix
          * @param lvl Log level
+         * @param prefix Logger / class prefix; empty if none
+         * @param loc Source location
          * @param fmt Format string
-         * @param loc Source location (auto-captured)
          * @param args Arguments to format
-         *
-         * Usage:
-         *   logger.log(LogLevel::Info, "User {} has {} items", username, count);
          */
         template <typename... Args>
-        constexpr void
-        log(const LogLevel lvl, std::format_string<Args...> fmt, const std::source_location& loc, Args&&... args) {
+        constexpr void log(const LogLevel lvl,
+                           const std::string_view prefix,
+                           const std::source_location& loc,
+                           std::format_string<Args...> fmt,
+                           Args&&... args) {
             // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
-            // This TL buffer is safe as long as format→swap is non-interruptible.
             thread_local std::string tl_msg_buf;
             tl_msg_buf.clear();
             std::format_to(std::back_inserter(tl_msg_buf), fmt, std::forward<Args>(args)...);
             const auto meta = EventMeta{lvl, loc};
 
-            // Critical path: claim → swap → publish (minimal time holding slot)
             const std::int64_t seq = disruptor_.sequencer().next();
             auto& event            = disruptor_.ring_buffer()[seq];
 
             event.message.swap(tl_msg_buf);
+            event.prefix.assign(prefix);
             apply_meta(event, meta);
 
             disruptor_.sequencer().publish(seq);
+            // TODO(scroll/logger): formatted-message cost is paid even when all
+            // sinks filter the event out. Consider moving format to sinks
+            // (requires type-erased args) or querying sink filters before format.
         }
 
         /**
-         * @brief Log with simple message (no formatting)
-         * @param lvl Log level
-         * @param msg Message
-         * @param loc Source location (auto-captured)
+         * @brief Log with a simple message + prefix
          */
         constexpr void log(const LogLevel lvl,
+                           const std::string_view prefix,
                            const std::string_view msg,
                            const std::source_location& loc = std::source_location::current()) {
-            // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
             thread_local std::string tl_msg_buf;
             tl_msg_buf.clear();
             tl_msg_buf.append(msg);
@@ -149,27 +149,40 @@ namespace demiplane::scroll {
             auto& event            = disruptor_.ring_buffer()[seq];
 
             event.message.swap(tl_msg_buf);
+            event.prefix.assign(prefix);
             apply_meta(event, meta);
 
             disruptor_.sequencer().publish(seq);
         }
 
         /**
-         * @brief Stream-based logging proxy
+         * @brief Shorthand: log with simple message, no prefix.
          *
-         * Accumulates stream operations and publishes on destruction.
-         *
-         * Usage:
-         *   logger.stream(LogLevel::Info) << "User " << username << " logged in";
+         * Kept permanently for callers that don't care about prefix (tests,
+         * utility code). Forwards to the prefix-aware overload with empty prefix.
+         */
+        constexpr void log(const LogLevel lvl,
+                           const std::string_view msg,
+                           const std::source_location& loc = std::source_location::current()) {
+            log(lvl, std::string_view{}, msg, loc);
+        }
+
+        /**
+         * @brief Stream-based logging proxy carrying level + prefix + source location
          */
         class StreamProxy {
         public:
             template <typename SourceLocationTp = std::source_location>
                 requires std::is_same_v<std::remove_cvref_t<SourceLocationTp>, std::source_location>
-            constexpr StreamProxy(Logger* logger, const LogLevel lvl, SourceLocationTp&& loc) noexcept
+            constexpr StreamProxy(Logger* logger,
+                                  const LogLevel lvl,
+                                  const std::string_view prefix,
+                                  SourceLocationTp&& loc) noexcept
                 : logger_{logger},
                   level_{lvl},
-                  loc_{std::forward<SourceLocationTp>(loc)} {
+                  loc_{std::forward<SourceLocationTp>(loc)},
+                  prefix_{} {
+                prefix_.assign(prefix);
             }
 
             template <typename T>
@@ -179,7 +192,6 @@ namespace demiplane::scroll {
             }
 
             constexpr ~StreamProxy() noexcept {
-                // COROUTINE SAFETY: No suspension points allowed between tl_msg_buf usage and swap.
                 thread_local std::string tl_msg_buf;
                 tl_msg_buf.clear();
                 tl_msg_buf.append(stream_.view());
@@ -189,6 +201,7 @@ namespace demiplane::scroll {
                 auto& event            = logger_->disruptor_.ring_buffer()[seq];
 
                 event.message.swap(tl_msg_buf);
+                event.prefix.assign(prefix_.view());
                 apply_meta(event, meta);
 
                 logger_->disruptor_.sequencer().publish(seq);
@@ -198,13 +211,15 @@ namespace demiplane::scroll {
             Logger* logger_;
             LogLevel level_;
             std::source_location loc_;
+            gears::InlineString<31> prefix_;
             std::ostringstream stream_;
         };
 
         template <typename SourceLocationTp = std::source_location>
             requires std::is_same_v<std::remove_cvref_t<SourceLocationTp>, std::source_location>
-        constexpr StreamProxy stream(const LogLevel lvl, SourceLocationTp loc = std::source_location::current()) {
-            return StreamProxy{this, lvl, std::forward<SourceLocationTp>(loc)};
+        constexpr StreamProxy
+        stream(const LogLevel lvl, std::string_view prefix, SourceLocationTp loc = std::source_location::current()) {
+            return StreamProxy{this, lvl, prefix, std::forward<SourceLocationTp>(loc)};
         }
 
         /**

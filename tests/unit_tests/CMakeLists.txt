@@ -56,6 +56,8 @@ add_unit_test(${UNIT_TESTING_TARGET}.Scroll
         scroll/logger/file_sink_test.cpp
         scroll/logger/console_sink_test.cpp
         scroll/logger/logger_ordering_test.cpp
+        scroll/prefix_filter_test.cpp
+        scroll/prefix_integration_test.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Scroll
         PRIVATE
@@ -98,6 +100,19 @@ add_unit_test(${UNIT_TESTING_TARGET}.Gears.Result.Outcome
         gears/test_outcome.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Gears.Result.Outcome
+        PRIVATE
+        Demiplane::Common::Gears
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test Gears InlineString
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Gears.Strings.InlineString
+        gears/test_inline_string.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Gears.Strings.InlineString
         PRIVATE
         Demiplane::Common::Gears
         ${TEST_LIBS}

@@ -3,6 +3,7 @@
 #include <string>
 
 #include <entry_interface.hpp>
+#include <gears_strings.hpp>  // for gears::InlineString
 
 namespace demiplane::scroll {
     /**
@@ -16,7 +17,8 @@ namespace demiplane::scroll {
     struct LogEvent {
         // Core data
         LogLevel level = LogLevel::Debug;
-        std::string message;  // Already formatted with std::format or stream
+        gears::InlineString<31> prefix{};  // owning class-name/prefix; empty if none
+        std::string message;               // Already formatted with std::format or stream
 
         // Metadata (captured in producer thread - correct TID/PID)
         detail::MetaSource location;
@@ -47,7 +49,8 @@ namespace demiplane::scroll {
     template <class EntryT>
     EntryT make_entry_from_event(const LogEvent& event) {
         // Build tuple with all available metadata from LogEvent
-        auto available = std::tuple{event.time_point, event.location, event.tid, event.pid};
+        auto available =
+            std::tuple{event.time_point, event.location, event.tid, event.pid, detail::MetaPrefix{event.prefix.view()}};
 
         // Use entry_traits to extract only what EntryT wants
         using want_types = detail::entry_traits<EntryT>::wants;

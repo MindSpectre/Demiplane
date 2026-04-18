@@ -31,7 +31,7 @@ namespace demiplane::db {
     public:
         static constexpr std::size_t N = sizeof...(FieldSchemas);
 
-        [[nodiscard]] explicit constexpr StaticTable(const Providers provider = Providers::None) noexcept
+        [[nodiscard]] constexpr explicit StaticTable(const Providers provider = Providers::None) noexcept
             : provider_{provider} {
         }
 

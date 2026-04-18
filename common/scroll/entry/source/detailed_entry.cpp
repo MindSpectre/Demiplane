@@ -14,7 +14,7 @@ namespace {
 namespace demiplane::scroll {
     void DetailedEntry::format_into(std::string& out) const {
         out.clear();
-        out.reserve(128 + message_.size());
+        out.reserve(160 + message_.size());
 
         chrono::UTCClock::format_time_iso_ms(time_point, out);
 
@@ -26,8 +26,18 @@ namespace demiplane::scroll {
         out.append(", pid ");
         out.append(pid_str);
 #endif
-        out.append("] [");
+        out.append("] ");
 
+        if (!prefix.empty()) {
+            out.push_back('[');
+            out.append(prefix.view());
+            out.push_back(':');
+            const char* fn = location.function_name();
+            out.append(fn != nullptr ? fn : "?");
+            out.append("] ");
+        }
+
+        out.push_back('[');
         const char* fname = location.file_name();
         if (const char* last_slash = std::strrchr(fname, '/')) {
             fname = last_slash + 1;

@@ -43,7 +43,7 @@ namespace demiplane::db::postgres {
      */
     class ConnectionConfig final : public serialization::ConfigInterface<ConnectionConfig, Json::Value> {
     public:
-        explicit constexpr ConnectionConfig(ConnectionCredentials credentials) noexcept
+        constexpr explicit ConnectionConfig(ConnectionCredentials credentials) noexcept
             : credentials_{std::move(credentials)} {
         }
 

@@ -2,6 +2,7 @@
 
 #include <demiplane/gears>
 #include <demiplane/nexus>
+#include <demiplane/scroll>
 #include <memory>
 
 #include "aliases.hpp"
@@ -143,6 +144,8 @@ namespace demiplane::http {
         }
 
     private:
+        SCROLL_COMPONENT_PREFIX("HttpController");
+
         RouteRegistry registry_;
 
         // Binding helpers for member functions

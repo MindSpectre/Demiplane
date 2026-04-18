@@ -164,11 +164,13 @@ namespace demiplane::db::postgres {
         }
 
     private:
-        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
-                                                                             const Params* params) const;
+        SCROLL_COMPONENT_PREFIX("SyncExecutor");
 
         PGconn* conn_ = nullptr;
         std::weak_ptr<ConnectionHolder> holder_;
+
+        [[nodiscard]] gears::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
+                                                                             const Params* params) const;
     };
 
     static_assert(IsExecutor<SyncExecutor>);

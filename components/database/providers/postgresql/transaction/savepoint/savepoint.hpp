@@ -29,17 +29,21 @@ namespace demiplane::db::postgres {
 
     private:
         friend class Transaction;
-        Savepoint(PGconn* conn, std::string name)
-            : conn_{conn},
-              name_{std::move(name)} {
-            COMPONENT_LOG_INF() << "Savepoint '" << name_ << "' created";
-        }
 
-        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
+        SCROLL_COMPONENT_PREFIX("Savepoint");
 
         PGconn* conn_;
         std::string name_;
         bool active_ = true;
+
+        template <gears::IsStringLike StringTp>
+        constexpr Savepoint(PGconn* conn, StringTp&& name)
+            : conn_{conn},
+              name_{std::forward<StringTp>(name)} {
+            COMPONENT_LOG_INF() << "Savepoint '" << name_ << "' created";
+        }
+
+        [[nodiscard]] gears::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
     };
 
 }  // namespace demiplane::db::postgres

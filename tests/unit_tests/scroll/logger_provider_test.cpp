@@ -55,8 +55,8 @@ TEST(LoggerProviderTest, FormatStyleLogging) {
     std::string username = "alice";
     int count            = 42;
 
-    LOG_DIRECT_FMT_INF(logger, "User {} has {} items", username, count);
-    LOG_DIRECT_FMT_DBG(logger, "Debug message with value {}", 123);
+    LOG_DIRECT_FMT_INF(logger, "", "User {} has {} items", username, count);
+    LOG_DIRECT_FMT_DBG(logger, "", "Debug message with value {}", 123);
 
     logger->shutdown();
 
@@ -79,10 +79,10 @@ TEST(LoggerProviderTest, OverloadedMacros) {
     testing::internal::CaptureStdout();
 
     // Test stream style (0 args)
-    LOG_DIRECT_STREAM_INF(logger) << "Stream style message";
+    LOG_DIRECT_STREAM_INF(logger, "") << "Stream style message";
 
     // Test format style (1+ args)
-    LOG_DIRECT_FMT_INF(logger, "Format style message {}", 123);
+    LOG_DIRECT_FMT_INF(logger, "", "Format style message {}", 123);
 
     logger->shutdown();
 

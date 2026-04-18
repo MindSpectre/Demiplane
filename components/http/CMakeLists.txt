@@ -40,7 +40,6 @@ target_link_libraries(${DMP_HTTP}.Handler
         Boost::asio
         JsonCpp::JsonCpp
         Demiplane::Common::Nexus
-        PRIVATE
         Demiplane::Common::Scroll
 )
 ##############################################################################

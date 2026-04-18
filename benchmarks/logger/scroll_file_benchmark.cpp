@@ -12,7 +12,8 @@ namespace {
         }
         void flush() override {
         }
-        [[nodiscard]] bool should_log(demiplane::scroll::LogLevel /*lvl*/) const noexcept override {
+        [[nodiscard]] bool should_log(demiplane::scroll::LogLevel /*lvl*/,
+                                      std::string_view /*prefix*/) const noexcept override {
             return true;
         }
     };
@@ -56,7 +57,8 @@ int main() {
         logger->add_sink(file_sink);
 
         auto result = bench::run_threaded_benchmark(bench::CONTENTION_THREADS, bench::ITERATIONS_PER_THREAD, [&] {
-            logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding);
+            logger->log(
+                demiplane::scroll::LogLevel::Debug, std::string_view{}, std::source_location::current(), "{}", padding);
         });
         logger->shutdown();
         bench::print_results(result, "Scroll", "8-Thread Contention");
@@ -81,7 +83,8 @@ int main() {
         logger->add_sink(file_sink);
 
         auto result = bench::run_threaded_benchmark(bench::BASELINE_THREADS, bench::ITERATIONS_PER_THREAD, [&] {
-            logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding);
+            logger->log(
+                demiplane::scroll::LogLevel::Debug, std::string_view{}, std::source_location::current(), "{}", padding);
         });
         logger->shutdown();
         bench::print_results(result, "Scroll", "1-Thread Baseline");
@@ -94,7 +97,8 @@ int main() {
         logger->add_sink(null_sink);
 
         auto result = bench::run_threaded_benchmark(bench::CONTENTION_THREADS, bench::ITERATIONS_PER_THREAD, [&] {
-            logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding);
+            logger->log(
+                demiplane::scroll::LogLevel::Debug, std::string_view{}, std::source_location::current(), "{}", padding);
         });
         logger->shutdown();
         bench::print_results(result, "Scroll", "8-Thread NullSink");
@@ -107,7 +111,8 @@ int main() {
         logger->add_sink(null_sink);
 
         auto result = bench::run_threaded_benchmark(bench::BASELINE_THREADS, bench::ITERATIONS_PER_THREAD, [&] {
-            logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding);
+            logger->log(
+                demiplane::scroll::LogLevel::Debug, std::string_view{}, std::source_location::current(), "{}", padding);
         });
         logger->shutdown();
         bench::print_results(result, "Scroll", "1-Thread NullSink");
@@ -135,7 +140,8 @@ int main() {
         logger->add_sink(make_file_sink("scroll_dual_b.log"));
 
         auto result = bench::run_threaded_benchmark(bench::CONTENTION_THREADS, bench::ITERATIONS_PER_THREAD, [&] {
-            logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding);
+            logger->log(
+                demiplane::scroll::LogLevel::Debug, std::string_view{}, std::source_location::current(), "{}", padding);
         });
         logger->shutdown();
         bench::print_results(result, "Scroll", "8-Thread Dual FileSink");
@@ -161,7 +167,13 @@ int main() {
         auto result = bench::run_threaded_benchmark_e2e(
             bench::CONTENTION_THREADS,
             bench::ITERATIONS_PER_THREAD,
-            [&] { logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding); },
+            [&] {
+                logger->log(demiplane::scroll::LogLevel::Debug,
+                            std::string_view{},
+                            std::source_location::current(),
+                            "{}",
+                            padding);
+            },
             [&] { logger->shutdown(); });
         bench::print_results(result, "Scroll", "8-Thread E2E (incl. shutdown)");
     }
@@ -190,7 +202,13 @@ int main() {
         auto result = bench::run_threaded_benchmark_e2e(
             bench::CONTENTION_THREADS,
             bench::ITERATIONS_PER_THREAD,
-            [&] { logger->log(demiplane::scroll::LogLevel::Debug, "{}", std::source_location::current(), padding); },
+            [&] {
+                logger->log(demiplane::scroll::LogLevel::Debug,
+                            std::string_view{},
+                            std::source_location::current(),
+                            "{}",
+                            padding);
+            },
             [&] { logger->shutdown(); });
         bench::print_results(result, "Scroll", "8-Thread Dual E2E (incl. shutdown)");
     }

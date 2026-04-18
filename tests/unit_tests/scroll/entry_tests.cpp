@@ -104,3 +104,41 @@ TEST(TestEntries, MakeEntryFromEvent) {
     EXPECT_TRUE(light_output.find("Test message from event") != std::string::npos);
     EXPECT_TRUE(light_output.find("INF") != std::string::npos);
 }
+
+TEST(TestEntries, DetailedEntryRendersPrefixAndFunction) {
+    LogEvent event;
+    event.level   = INF;
+    event.message = "with prefix";
+    event.prefix.assign(std::string_view{"MyClass"});
+    event.location        = detail::MetaSource{std::source_location::current()};
+    event.time_point      = detail::MetaTimePoint{};
+    event.tid             = detail::MetaThread{};
+    event.pid             = detail::MetaProcess{};
+    event.shutdown_signal = false;
+
+    auto entry = make_entry_from_event<DetailedEntry>(event);
+    std::string output;
+    entry.format_into(output);
+
+    EXPECT_NE(output.find("[MyClass:"), std::string::npos) << "prefix:function segment missing: " << output;
+    EXPECT_NE(output.find("with prefix"), std::string::npos);
+}
+
+TEST(TestEntries, DetailedEntryOmitsSegmentWhenPrefixEmpty) {
+    LogEvent event;
+    event.level           = INF;
+    event.message         = "no prefix";
+    event.location        = detail::MetaSource{std::source_location::current()};
+    event.time_point      = detail::MetaTimePoint{};
+    event.tid             = detail::MetaThread{};
+    event.pid             = detail::MetaProcess{};
+    event.shutdown_signal = false;
+
+    auto entry = make_entry_from_event<DetailedEntry>(event);
+    std::string output;
+    entry.format_into(output);
+
+    // Should not contain a [:name] style segment near the start
+    EXPECT_EQ(output.find("[:"), std::string::npos) << output;
+    EXPECT_NE(output.find("no prefix"), std::string::npos);
+}

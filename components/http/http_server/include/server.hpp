@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <demiplane/nexus>
+#include <demiplane/scroll>
 #include <memory>
 #include <vector>
 
@@ -49,6 +50,8 @@ namespace demiplane::http {
         void stop();
 
     private:
+        SCROLL_COMPONENT_PREFIX("Server");
+
         mutable boost::asio::io_context ioc_;
         std::size_t thread_count_;
         RouteRegistry registry_;  // Single registry for all routes

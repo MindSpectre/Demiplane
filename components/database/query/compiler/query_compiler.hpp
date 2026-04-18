@@ -83,5 +83,8 @@ namespace demiplane::db {
             }
             std::unreachable();
         }
+
+    private:
+        SCROLL_COMPONENT_PREFIX("QueryCompiler");
     };
 }  // namespace demiplane::db

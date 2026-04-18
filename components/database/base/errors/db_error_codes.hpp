@@ -168,7 +168,7 @@ namespace demiplane::db {
         /**
          * @brief Construct from fatal error code
          */
-        explicit constexpr ErrorCode(FatalErrorCode code) noexcept
+        constexpr explicit ErrorCode(FatalErrorCode code) noexcept
             : category_(Category::Fatal),
               code_(static_cast<uint16_t>(code)) {
         }

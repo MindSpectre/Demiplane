@@ -60,7 +60,7 @@ namespace demiplane::scroll {
                 case PrefixFilterMode::Denylist:
                     return !set_.contains(prefix);
             }
-            return true;  // unreachable — defensive default
+            std::unreachable();
         }
 
         [[nodiscard]] constexpr PrefixFilterMode mode() const noexcept {

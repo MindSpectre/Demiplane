@@ -1,9 +1,6 @@
 #pragma once
 
-#include <string_view>
-
 #include <gears_macros.hpp>
-#include <gears_strings.hpp>
 
 namespace demiplane::scroll {
     // Dummy stream for disabled logging
@@ -30,8 +27,8 @@ namespace demiplane::scroll {
 // consteval-throw path in InlineString::assign → compile error.
 // ============================================================================
 #define SCROLL_COMPONENT_PREFIX(name)                                                                                  \
-    static constexpr ::demiplane::gears::InlineString<31> _dmp_scroll_class_prefix = [] {                              \
-        ::demiplane::gears::InlineString<31> s;                                                                        \
+    static constexpr ::demiplane::scroll::PrefixNameStorage _dmp_scroll_class_prefix = [] {                            \
+        ::demiplane::scroll::PrefixNameStorage s;                                                                      \
         s.assign(::std::string_view{name});                                                                            \
         return s;                                                                                                      \
     }()

@@ -3,7 +3,6 @@
 #include <string>
 
 #include <entry_interface.hpp>
-#include <gears_strings.hpp>  // for gears::InlineString
 
 namespace demiplane::scroll {
     /**
@@ -17,8 +16,8 @@ namespace demiplane::scroll {
     struct LogEvent {
         // Core data
         LogLevel level = LogLevel::Debug;
-        gears::InlineString<31> prefix{};  // owning class-name/prefix; empty if none
-        std::string message;               // Already formatted with std::format or stream
+        PrefixNameStorage prefix{};  // owning class-name/prefix; empty if none
+        std::string message;         // Already formatted with std::format or stream
 
         // Metadata (captured in producer thread - correct TID/PID)
         detail::MetaSource location;

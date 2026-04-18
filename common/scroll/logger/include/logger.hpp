@@ -14,7 +14,6 @@
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/thread_pool.hpp>
-#include <gears_strings.hpp>
 
 #include "logger_config.hpp"
 #include "sink_interface.hpp"
@@ -182,7 +181,7 @@ namespace demiplane::scroll {
                   level_{lvl},
                   loc_{std::forward<SourceLocationTp>(loc)},
                   prefix_{} {
-                prefix_.assign(prefix);
+                prefix_.assign(prefix);  // runtime: truncates silently at PrefixNameStorage capacity
             }
 
             template <typename T>
@@ -211,7 +210,7 @@ namespace demiplane::scroll {
             Logger* logger_;
             LogLevel level_;
             std::source_location loc_;
-            gears::InlineString<31> prefix_;
+            PrefixNameStorage prefix_;
             std::ostringstream stream_;
         };
 

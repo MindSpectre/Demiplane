@@ -3,8 +3,6 @@
 #include <memory>
 #include <string_view>
 
-#include <gears_strings.hpp>
-
 #include "console_sink.hpp"
 #include "detailed_entry.hpp"
 #include "file_sink.hpp"
@@ -18,6 +16,11 @@ namespace demiplane::scroll {
      *
      * The @p prefix_ is a class-name / subsystem label rendered into log output
      * and usable by per-sink `PrefixFilter` for allow/deny routing.
+     *
+     * Prefix overflow: values longer than `PrefixNameStorage` capacity are
+     * silently truncated at runtime (see `PrefixNameStorage` docs). Prefer
+     * `SCROLL_COMPONENT_PREFIX` for literal names — it catches overflow at
+     * compile time.
      *
      * Thread safety: @ref set_prefix is NOT thread-safe. Callers must set the
      * prefix during construction before the object is visible to other threads.
@@ -47,7 +50,7 @@ namespace demiplane::scroll {
             return logger_.get();
         }
 
-        [[nodiscard]] constexpr const gears::InlineString<31>& prefix() const noexcept {
+        [[nodiscard]] constexpr const PrefixNameStorage& prefix() const noexcept {
             return prefix_;
         }
 
@@ -56,13 +59,14 @@ namespace demiplane::scroll {
         }
 
         /// @note NOT thread-safe — see class docs.
+        /// @note Oversized @p prefix is silently truncated at runtime.
         constexpr void set_prefix(const std::string_view prefix) noexcept {
             prefix_.assign(prefix);
         }
 
     private:
         std::shared_ptr<Logger> logger_;
-        gears::InlineString<31> prefix_;
+        PrefixNameStorage prefix_;
     };
 
     /**

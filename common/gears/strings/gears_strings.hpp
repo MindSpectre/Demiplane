@@ -5,8 +5,8 @@
 #include <string_view>
 
 namespace demiplane::gears {
-    template <std::size_t N>
 
+    template <std::size_t N>
     struct FixedString {
         char data[N] = {};
 
@@ -93,7 +93,7 @@ namespace demiplane::gears {
             return {data_, size_};
         }
 
-        [[nodiscard]] explicit constexpr operator std::string_view() const noexcept {
+        [[nodiscard]] constexpr explicit operator std::string_view() const noexcept {
             return view();
         }
 

@@ -44,13 +44,10 @@ namespace demiplane::scroll {
         }
 
         void process(const LogEvent& event) override {
-            if (!should_log(event.level)) {
+            if (!should_log(event.level, event.prefix.view())) {
                 return;
             }
 
-            // Convert LogEvent → EntryType using existing factory pattern
-
-            // Lock only for the actual write (supports multiple loggers sharing this sink)
             {
                 auto entry = make_entry_from_event<EntryType>(event);
                 entry.format_into(format_buffer_);
@@ -62,7 +59,6 @@ namespace demiplane::scroll {
                 }
             }
 
-            // Check if rotation needed (outside lock to minimize contention)
             if (should_rotate()) {
                 rotate_log();
             }
@@ -73,8 +69,9 @@ namespace demiplane::scroll {
             file_stream_.flush();
         }
 
-        [[nodiscard]] bool should_log(LogLevel lvl) const noexcept override {
-            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.threshold());
+        [[nodiscard]] bool should_log(LogLevel lvl, const std::string_view prefix) const noexcept override {
+            return static_cast<int8_t>(lvl) >= static_cast<int8_t>(config_.threshold()) &&
+                   config_.prefix_filter().accepts(prefix);
         }
 
         void set_config(FileSinkConfig cfg) noexcept {

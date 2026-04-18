@@ -20,7 +20,7 @@ namespace {
         void flush() override {
         }
 
-        [[nodiscard]] bool should_log(demiplane::scroll::LogLevel) const noexcept override {
+        [[nodiscard]] bool should_log(demiplane::scroll::LogLevel, std::string_view) const noexcept override {
             return true;
         }
 
@@ -63,8 +63,9 @@ TEST(LoggerOrderingTest, DisruptorMaintainsSequenceOrder) {
             for (size_t i = 0; i < ENTRIES_PER_THREAD; ++i) {
                 // Use a dummy counter just for content, not for ordering verification
                 logger.log(demiplane::scroll::LogLevel::Info,
-                           "SEQ {}",
+                           std::string_view{},
                            std::source_location::current(),
+                           "SEQ {}",
                            ENTRIES_PER_THREAD * t + i);
             }
         });
@@ -113,7 +114,11 @@ TEST(LoggerOrderingTest, SequenceBasedLoggingIsStrictlyOrdered) {
                 int64_t seq = global_sequence.fetch_add(1, std::memory_order_seq_cst);
 
                 // Log with that sequence - now there's a happens-before relationship
-                logger.log(demiplane::scroll::LogLevel::Info, "SEQ {}", std::source_location::current(), seq);
+                logger.log(demiplane::scroll::LogLevel::Info,
+                           std::string_view{},
+                           std::source_location::current(),
+                           "SEQ {}",
+                           seq);
             }
         });
     }
@@ -165,7 +170,11 @@ TEST(LoggerOrderingTest, FileSinkPreservesConsumerOrder) {
         threads.emplace_back([&logger, &sequence]() {
             for (size_t i = 0; i < ENTRIES_PER_THREAD; ++i) {
                 int64_t seq = sequence.fetch_add(1, std::memory_order_seq_cst);
-                logger.log(demiplane::scroll::LogLevel::Info, "SEQ {}", std::source_location::current(), seq);
+                logger.log(demiplane::scroll::LogLevel::Info,
+                           std::string_view{},
+                           std::source_location::current(),
+                           "SEQ {}",
+                           seq);
             }
         });
     }
@@ -220,7 +229,11 @@ TEST(LoggerOrderingTest, HighContentionNoCorruption) {
         threads.emplace_back([&logger, &sequence]() {
             for (size_t i = 0; i < ENTRIES_PER_THREAD; ++i) {
                 int64_t seq = sequence.fetch_add(1, std::memory_order_seq_cst);
-                logger.log(demiplane::scroll::LogLevel::Info, "SEQ {}", std::source_location::current(), seq);
+                logger.log(demiplane::scroll::LogLevel::Info,
+                           std::string_view{},
+                           std::source_location::current(),
+                           "SEQ {}",
+                           seq);
                 // No sleep - maximum contention
             }
         });

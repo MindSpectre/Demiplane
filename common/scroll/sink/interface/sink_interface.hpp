@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include "log_event.hpp"
@@ -54,10 +55,11 @@ namespace demiplane::scroll {
         /**
          * @brief Check if this sink should process this log level
          * @param lvl Log level to check
+         * @param prefix Prefix of the message to check
          * @return true if sink will process this level
          *
          * Used for early filtering before calling process().
          */
-        [[nodiscard]] virtual bool should_log(LogLevel lvl) const noexcept = 0;
+        [[nodiscard]] virtual bool should_log(LogLevel lvl, std::string_view prefix) const noexcept = 0;
     };
 }  // namespace demiplane::scroll

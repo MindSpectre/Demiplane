@@ -5,8 +5,8 @@
 #include <string_view>
 
 namespace demiplane::gears {
-    template <std::size_t N>
 
+    template <std::size_t N>
     struct FixedString {
         char data[N] = {};
 
@@ -65,11 +65,35 @@ namespace demiplane::gears {
             return *this;
         }
 
+        /// Replace contents with @p sv. At runtime, truncates silently if
+        /// @p sv exceeds Capacity. At consteval, throws on overflow — which is
+        /// a compile error, providing compile-time size checking for literal
+        /// sources.
+        constexpr InlineString& assign(std::string_view sv) {
+            if consteval {
+                if (sv.size() > Capacity) {
+                    throw std::out_of_range("InlineString: assign exceeds capacity");
+                }
+            }
+            const std::size_t n = std::min(sv.size(), Capacity);
+            for (std::size_t i = 0; i < n; ++i) {
+                data_[i] = sv[i];
+            }
+            data_[n] = '\0';
+            size_    = n;
+            return *this;
+        }
+
+        constexpr void clear() noexcept {
+            size_    = 0;
+            data_[0] = '\0';
+        }
+
         [[nodiscard]] constexpr std::string_view view() const noexcept {
             return {data_, size_};
         }
 
-        [[nodiscard]] explicit constexpr operator std::string_view() const noexcept {
+        [[nodiscard]] constexpr explicit operator std::string_view() const noexcept {
             return view();
         }
 

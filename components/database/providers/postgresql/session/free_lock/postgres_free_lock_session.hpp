@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <demiplane/scroll>
 
 #include <capability_provider.hpp>
 #include <gears_class_traits.hpp>
@@ -110,6 +111,8 @@ namespace demiplane::db::postgres {
         [[nodiscard]] bool is_shutdown() const noexcept;
 
     private:
+        SCROLL_COMPONENT_PREFIX("LockFreeSession");
+
         ConnectionPool pool_;
         PoolJanitor janitor_;
     };

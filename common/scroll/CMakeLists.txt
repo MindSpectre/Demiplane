@@ -41,6 +41,7 @@ target_link_libraries(${DMP_SCROLL}.Entry PUBLIC
 add_library(${DMP_SCROLL}.Sink.Interface INTERFACE
         sink/interface/sink_interface.hpp
         sink/interface/log_event.hpp
+        sink/interface/prefix_filter.hpp
 )
 
 target_include_directories(${DMP_SCROLL}.Sink.Interface INTERFACE

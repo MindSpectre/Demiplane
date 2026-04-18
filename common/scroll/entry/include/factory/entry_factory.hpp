@@ -14,6 +14,8 @@ namespace demiplane::scroll {
                                     // Uses cached values
                                     detail::MetaProcess{},
                                     // Uses cached values
+                                    detail::MetaPrefix{},
+                                    // Empty by default; prefix is set via make_entry_from_event
                                     std::forward<Extra>(extra)...};
 
         using want_types = detail::entry_traits<EntryT>::wants;

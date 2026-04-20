@@ -10,6 +10,8 @@ add_subdirectory(crypto)
 
 add_subdirectory(multithread)
 
+add_subdirectory(ink)
+
 add_subdirectory(scroll)
 
 add_subdirectory(3rdparty)

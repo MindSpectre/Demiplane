@@ -10,7 +10,7 @@
 
 #include "colors.hpp"
 #include "glyphs.hpp"
-#include "separators.hpp"
+#include "layout.hpp"
 
 namespace demiplane::ink {
 

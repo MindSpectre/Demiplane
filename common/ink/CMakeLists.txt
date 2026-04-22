@@ -4,7 +4,7 @@ set(DMP_INK ${DMP_COMMON}.Ink)
 # Ink Base - colors, glyphs, separators
 ##############################################################################
 add_library(${DMP_INK}.Base INTERFACE
-        base/separators.hpp
+        base/layout.hpp
         base/colors.hpp
         base/glyphs.hpp
 )

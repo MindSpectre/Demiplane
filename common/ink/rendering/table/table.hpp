@@ -13,7 +13,7 @@
 #include <gears_concepts.hpp>
 
 #include "colors.hpp"
-#include "separators.hpp"
+#include "layout.hpp"
 
 namespace demiplane::ink {
 
@@ -169,7 +169,9 @@ namespace demiplane::ink {
 
         template <typename Self, gears::IsStringLike... Args>
         [[nodiscard]] constexpr auto&& headers(this Self&& self, Args&&... names) {
-            (self.headers_.emplace_back(names), ...);
+            self.headers_.clear();
+            self.headers_.reserve(sizeof...(Args));
+            (self.headers_.emplace_back(std::forward<Args>(names)), ...);
             self.cells_.resize(self.headers_.size());
             return std::forward<Self>(self);
         }

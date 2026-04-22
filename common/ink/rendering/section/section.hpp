@@ -11,7 +11,7 @@
 #include <gears_concepts.hpp>
 
 #include "colors.hpp"
-#include "separators.hpp"
+#include "layout.hpp"
 
 namespace demiplane::ink {
 

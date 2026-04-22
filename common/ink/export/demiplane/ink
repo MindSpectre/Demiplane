@@ -2,7 +2,7 @@
 
 #include "glyphs.hpp"
 #include "colors.hpp"
-#include "separators.hpp"
+#include "layout.hpp"
 #include "table.hpp"
 #include "section.hpp"
 #include "box.hpp"

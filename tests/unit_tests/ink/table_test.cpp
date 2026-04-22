@@ -154,3 +154,44 @@ TEST(InkTable, MinWidthAppliesFloorPerColumn) {
         "+-------+-------+";
     EXPECT_EQ(got, expected);
 }
+
+TEST(InkTable, ColumnAlignRightPadsCellsRight) {
+    const auto got = ink::table()
+                         .headers("name", "throughput")
+                         .add_row("insert", 42)
+                         .add_row("select_by_pk", 1234567)
+                         .column_align(1, ink::Align::Right)
+                         .render();
+
+    // Column widths: name = max(4, 6, 12) = 12, throughput = max(10, 2, 7) = 10.
+    // Headers always left-aligned. Column 0 (name) uses default Left. Column 1 uses Right.
+    constexpr std::string_view expected =
+        "+--------------+------------+\n"
+        "| name         | throughput |\n"
+        "+--------------+------------+\n"
+        "| insert       |         42 |\n"
+        "+--------------+------------+\n"
+        "| select_by_pk |    1234567 |\n"
+        "+--------------+------------+";
+    EXPECT_EQ(got, expected);
+}
+
+TEST(InkTable, DefaultAlignAppliesToAllDataCells) {
+    const auto got = ink::table()
+                         .headers("a", "b")
+                         .add_row(1, 22)
+                         .add_row(333, 4)
+                         .align(ink::Align::Right)
+                         .render();
+
+    // Column widths: a = 3, b = 2. Headers remain left-aligned; cells right.
+    constexpr std::string_view expected =
+        "+-----+----+\n"
+        "| a   | b  |\n"
+        "+-----+----+\n"
+        "|   1 | 22 |\n"
+        "+-----+----+\n"
+        "| 333 |  4 |\n"
+        "+-----+----+";
+    EXPECT_EQ(got, expected);
+}

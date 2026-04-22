@@ -2,7 +2,7 @@
 
 #include <mutex>
 
-#include <colors.hpp>
+#include <../../../../ink/base/colors.hpp>
 
 #include "console_sink_config.hpp"
 

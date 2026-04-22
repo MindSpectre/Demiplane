@@ -70,7 +70,7 @@ target_include_directories(${DMP_SCROLL}.Sink.Console PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Sink.Console PUBLIC
         ${DMP_SCROLL}.Sink.Interface
-        ${DMP_COMMON}.Ink.Colors
+        ${DMP_COMMON}.Ink
         Demiplane::Common::Serialization
 )
 ##############################################################################

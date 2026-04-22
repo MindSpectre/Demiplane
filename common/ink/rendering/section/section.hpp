@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <cstddef>
 #include <format>
 #include <ranges>
@@ -9,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <gears_concepts.hpp>
+
 #include "colors.hpp"
 #include "separators.hpp"
 
@@ -16,16 +17,15 @@ namespace demiplane::ink {
 
     class Section {
     public:
-        constexpr explicit Section(std::string title) noexcept
-            : title_{std::move(title)} {
+        template <gears::IsStringLike TitleTp>
+        constexpr explicit Section(TitleTp&& title) noexcept
+            : title_{std::forward<TitleTp>(title)} {
         }
 
-        template <typename Self, typename LabelTp, typename ValueTp>
-            requires std::convertible_to<LabelTp, std::string_view> &&
-                     std::formattable<std::remove_cvref_t<ValueTp>, char>
+        template <typename Self, gears::IsStringLike LabelTp, typename ValueTp>
+            requires std::formattable<std::remove_cvref_t<ValueTp>, char>
         [[nodiscard]] constexpr auto&& row(this Self&& self, LabelTp&& label, ValueTp&& value) {
-            self.rows_.emplace_back(std::string{std::string_view{std::forward<LabelTp>(label)}},
-                                    std::format("{}", std::forward<ValueTp>(value)));
+            self.rows_.emplace_back(std::forward<LabelTp>(label), std::format("{}", std::forward<ValueTp>(value)));
             return std::forward<Self>(self);
         }
 
@@ -53,6 +53,15 @@ namespace demiplane::ink {
             return std::forward<Self>(self);
         }
 
+        // Align values inside the value column. Default Align::Left preserves legacy output
+        // (no padding, no trailing whitespace). Align::Right / Align::Center pad every emitted
+        // value line to the widest value's visible width.
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& value_align(this Self&& self, const Align a) noexcept {
+            self.value_align_ = a;
+            return std::forward<Self>(self);
+        }
+
         [[nodiscard]] constexpr std::string render() const {
             return render_impl();
         }
@@ -63,6 +72,7 @@ namespace demiplane::ink {
         std::size_t indent_         = 2;
         std::string_view separator_ = "  ";  // spaces after the colon; default two
         bool terminate_             = false;
+        Align value_align_          = Align::Left;
         std::vector<std::pair<std::string, std::string>> rows_{};
 
         [[nodiscard]] std::string render_impl() const {
@@ -85,6 +95,16 @@ namespace demiplane::ink {
             const std::size_t value_col = indent_ + max_label + 1 + separator_.size();
             const std::string continuation(value_col, ' ');
 
+            // For non-Left alignment, precompute the widest value-line so we can pad each line.
+            std::size_t max_value_vw = 0;
+            if (value_align_ != Align::Left) {
+                for (const auto& value : rows_ | std::views::values) {
+                    for (const auto line : detail::lines(value)) {
+                        max_value_vw = std::max(max_value_vw, detail::visible_width(line));
+                    }
+                }
+            }
+
             for (const auto& [label, value] : rows_) {
                 if (!out.empty()) {
                     out.push_back('\n');
@@ -101,7 +121,11 @@ namespace demiplane::ink {
                         out.push_back('\n');
                         out.append(continuation);
                     }
-                    out.append(value_lines[i]);
+                    if (value_align_ == Align::Left) {
+                        out.append(value_lines[i]);
+                    } else {
+                        out.append(pad(value_lines[i], max_value_vw, value_align_));
+                    }
                 }
             }
 
@@ -112,8 +136,9 @@ namespace demiplane::ink {
         }
     };
 
-    [[nodiscard]] constexpr Section section(std::string title) {
-        return Section{std::move(title)};
+    template <gears::IsStringLike TitleTp>
+    [[nodiscard]] constexpr Section section(TitleTp&& title) {
+        return Section{std::forward<TitleTp>(title)};
     }
 
 }  // namespace demiplane::ink

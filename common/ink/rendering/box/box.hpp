@@ -6,21 +6,24 @@
 #include <string_view>
 #include <utility>
 
+#include <gears_concepts.hpp>
+
 #include "colors.hpp"
+#include "glyphs.hpp"
 #include "separators.hpp"
-#include "table.hpp"  // pulls in border::Glyphs + ascii/unicode constants
 
 namespace demiplane::ink {
 
     class Box {
     public:
-        constexpr explicit Box(std::string body) noexcept
-            : body_{std::move(body)} {
+        template <gears::IsStringLike BodyTp>
+        constexpr explicit Box(BodyTp&& body) noexcept
+            : body_{std::forward<BodyTp>(body)} {
         }
 
-        template <typename Self>
-        [[nodiscard]] constexpr auto&& title(this Self&& self, std::string t) {
-            self.title_ = std::move(t);
+        template <typename Self, gears::IsStringLike StringTp>
+        [[nodiscard]] constexpr auto&& title(this Self&& self, StringTp&& title) {
+            self.title_ = std::forward<StringTp>(title);
             return std::forward<Self>(self);
         }
 
@@ -55,7 +58,7 @@ namespace demiplane::ink {
     private:
         std::string body_;
         std::string title_{};
-        const border::Glyphs* glyphs_ = &border::ascii;
+        const border::Glyphs* glyphs_ = &border::ascii;  // static link, safe
         std::string_view border_style_{};
         std::size_t padding_ = 1;
         bool terminate_      = false;
@@ -70,7 +73,17 @@ namespace demiplane::ink {
             const std::size_t min_inner_for_title = title_.empty() ? 0 : title_vw + 2 /*spaces*/ + 2 /*min dashes*/;
             const std::size_t span                = std::max(inner + 2 * padding_, min_inner_for_title);
 
-            const auto& g = *glyphs_;
+            const auto& [horizontal,
+                         vertical,
+                         top_left,
+                         top_right,
+                         bottom_left,
+                         bottom_right,
+                         tee_top,
+                         tee_bottom,
+                         tee_left,
+                         tee_right,
+                         cross] = *glyphs_;
 
             auto wrap_border = [&](std::string s) -> std::string {
                 return border_style_.empty() ? std::move(s) : colors::colorize(border_style_, s);
@@ -79,14 +92,14 @@ namespace demiplane::ink {
             auto horizontal_run = [&](const std::size_t count) {
                 std::string run;
                 for (std::size_t i = 0; i < count; ++i) {
-                    run.append(g.horizontal);
+                    run.append(horizontal);
                 }
                 return run;
             };
 
             // Top border (optionally embedding title).
             std::string top;
-            top.append(g.top_left);
+            top.append(top_left);
             if (title_.empty()) {
                 top.append(horizontal_run(span));
             } else {
@@ -99,7 +112,7 @@ namespace demiplane::ink {
                 top.push_back(' ');
                 top.append(horizontal_run(right));
             }
-            top.append(g.top_right);
+            top.append(top_right);
 
             std::string out;
             out.append(wrap_border(std::move(top)));
@@ -107,19 +120,19 @@ namespace demiplane::ink {
 
             const std::string pad_spaces(padding_, ' ');
             for (const auto line : body_lines) {
-                out.append(wrap_border(std::string{g.vertical}));
+                out.append(wrap_border(std::string{vertical}));
                 out.append(pad_spaces);
                 out.append(line);
                 out.append(span - 2 * padding_ - detail::visible_width(line), ' ');
                 out.append(pad_spaces);
-                out.append(wrap_border(std::string{g.vertical}));
+                out.append(wrap_border(std::string{vertical}));
                 out.push_back('\n');
             }
 
             std::string bottom;
-            bottom.append(g.bottom_left);
+            bottom.append(bottom_left);
             bottom.append(horizontal_run(span));
-            bottom.append(g.bottom_right);
+            bottom.append(bottom_right);
             out.append(wrap_border(std::move(bottom)));
 
             if (terminate_) {
@@ -129,8 +142,9 @@ namespace demiplane::ink {
         }
     };
 
-    [[nodiscard]] constexpr Box box(std::string body) {
-        return Box{std::move(body)};
+    template <gears::IsStringLike BodyTp>
+    [[nodiscard]] constexpr Box box(BodyTp&& body) {
+        return Box{std::forward<BodyTp>(body)};
     }
 
 }  // namespace demiplane::ink

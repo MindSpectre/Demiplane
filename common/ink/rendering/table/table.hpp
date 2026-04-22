@@ -10,65 +10,29 @@
 #include <utility>
 #include <vector>
 
+#include <gears_concepts.hpp>
+
 #include "colors.hpp"
 #include "separators.hpp"
 
 namespace demiplane::ink {
-
-    namespace border {
-
-        struct Glyphs {
-            std::string_view horizontal;
-            std::string_view vertical;
-            std::string_view top_left;
-            std::string_view top_right;
-            std::string_view bottom_left;
-            std::string_view bottom_right;
-            std::string_view tee_top;
-            std::string_view tee_bottom;
-            std::string_view tee_left;
-            std::string_view tee_right;
-            std::string_view cross;
-        };
-
-        static constexpr Glyphs ascii{
-            .horizontal   = "-",
-            .vertical     = "|",
-            .top_left     = "+",
-            .top_right    = "+",
-            .bottom_left  = "+",
-            .bottom_right = "+",
-            .tee_top      = "+",
-            .tee_bottom   = "+",
-            .tee_left     = "+",
-            .tee_right    = "+",
-            .cross        = "+",
-        };
-
-        static constexpr Glyphs unicode{
-            .horizontal   = "\xE2\x94\x80",  // ─
-            .vertical     = "\xE2\x94\x82",  // │
-            .top_left     = "\xE2\x94\x8C",  // ┌
-            .top_right    = "\xE2\x94\x90",  // ┐
-            .bottom_left  = "\xE2\x94\x94",  // └
-            .bottom_right = "\xE2\x94\x98",  // ┘
-            .tee_top      = "\xE2\x94\xAC",  // ┬
-            .tee_bottom   = "\xE2\x94\xB4",  // ┴
-            .tee_left     = "\xE2\x94\x9C",  // ├
-            .tee_right    = "\xE2\x94\xA4",  // ┤
-            .cross        = "\xE2\x94\xBC",  // ┼
-        };
-
-    }  // namespace border
 
     namespace detail {
 
         struct TableRenderOptions {
             const border::Glyphs* glyphs = &border::ascii;
             std::string_view header_style_prefix{};
-            std::size_t min_width = 0;
-            bool terminate        = false;
+            std::size_t min_width    = 0;
+            bool terminate           = false;
+            Align default_cell_align = Align::Left;
+            // Sparse per-column alignment overrides: index c -> alignment.
+            // Indexes with no entry (or beyond size()) fall back to default_cell_align.
+            std::vector<Align> column_aligns{};
         };
+
+        [[nodiscard]] constexpr Align cell_align_for(const TableRenderOptions& opts, const std::size_t c) noexcept {
+            return c < opts.column_aligns.size() ? opts.column_aligns[c] : opts.default_cell_align;
+        }
 
         [[nodiscard]] constexpr std::string render_table(const std::vector<std::string>& headers,
                                                          const std::vector<std::vector<std::string>>& cells_cm,
@@ -132,12 +96,13 @@ namespace demiplane::ink {
                 out.push_back('\n');
             };
 
-            auto emit_cell_line = [&](std::string& out, const std::string_view text, const std::size_t width) {
-                out.append(vertical);
-                out.push_back(' ');
-                out.append(pad(text, width));
-                out.push_back(' ');
-            };
+            auto emit_cell_line =
+                [&](std::string& out, const std::string_view text, const std::size_t width, const Align a) {
+                    out.append(vertical);
+                    out.push_back(' ');
+                    out.append(pad(text, width, a));
+                    out.push_back(' ');
+                };
 
             std::string out;
 
@@ -153,7 +118,7 @@ namespace demiplane::ink {
                         out.append(colors::colorize(opts.header_style_prefix, pad(header_text, col_widths[c])));
                         out.push_back(' ');
                     } else {
-                        emit_cell_line(out, header_text, col_widths[c]);
+                        emit_cell_line(out, header_text, col_widths[c], Align::Left);
                     }
                 }
                 out.append(vertical);
@@ -177,7 +142,7 @@ namespace demiplane::ink {
                     for (std::size_t c = 0; c < col_count; ++c) {
                         const std::string_view line =
                             line_idx < split_cells[c].size() ? split_cells[c][line_idx] : std::string_view{};
-                        emit_cell_line(out, line, col_widths[c]);
+                        emit_cell_line(out, line, col_widths[c], cell_align_for(opts, c));
                     }
                     out.append(vertical);
                     out.push_back('\n');
@@ -202,10 +167,9 @@ namespace demiplane::ink {
     public:
         constexpr Table() noexcept = default;
 
-        template <typename Self, typename... Args>
-            requires(std::convertible_to<Args, std::string_view> && ...)
+        template <typename Self, gears::IsStringLike... Args>
         [[nodiscard]] constexpr auto&& headers(this Self&& self, Args&&... names) {
-            (self.headers_.emplace_back(std::string_view{names}), ...);
+            (self.headers_.emplace_back(names), ...);
             self.cells_.resize(self.headers_.size());
             return std::forward<Self>(self);
         }
@@ -247,6 +211,23 @@ namespace demiplane::ink {
             return std::forward<Self>(self);
         }
 
+        // Default alignment applied to every data cell (headers always render left-aligned).
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& align(this Self&& self, const Align a) noexcept {
+            self.opts_.default_cell_align = a;
+            return std::forward<Self>(self);
+        }
+
+        // Per-column alignment override. Index is 0-based over the columns declared via headers(...).
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& column_align(this Self&& self, const std::size_t index, const Align a) {
+            if (self.opts_.column_aligns.size() <= index) {
+                self.opts_.column_aligns.resize(index + 1, self.opts_.default_cell_align);
+            }
+            self.opts_.column_aligns[index] = a;
+            return std::forward<Self>(self);
+        }
+
         [[nodiscard]] std::string render() const {
             return render_table(headers_, cells_, opts_);
         }
@@ -267,14 +248,16 @@ namespace demiplane::ink {
             : range_{&range} {
         }
 
-        template <typename Self, typename Fn>
+        template <typename Self, gears::IsStringLike StringTp, typename Fn>
             requires std::invocable<Fn&, const value_type&>
-        [[nodiscard]] constexpr auto&& column(this Self&& self, std::string name, Fn fn) {
+        [[nodiscard]] constexpr auto&& column(this Self&& self, StringTp&& name, Fn fn) {
             using Result = std::invoke_result_t<Fn&, const value_type&>;
             static_assert(std::formattable<std::remove_cvref_t<Result>, char>,
                           "ink::Table::column — lambda's return type must satisfy std::formattable<T, char>");
-            self.headers_.emplace_back(std::move(name));
+            self.headers_.emplace_back(std::forward<StringTp>(name));
             std::vector<std::string> column_cells;
+            column_cells.reserve(
+                static_cast<std::size_t>(std::distance(std::begin(*self.range_), std::end(*self.range_))));
             for (const auto& row : *self.range_) {
                 column_cells.emplace_back(std::format("{}", fn(row)));
             }
@@ -303,6 +286,23 @@ namespace demiplane::ink {
         template <typename Self>
         [[nodiscard]] constexpr auto&& terminate(this Self&& self, const bool on = true) noexcept {
             self.opts_.terminate = on;
+            return std::forward<Self>(self);
+        }
+
+        // Default alignment applied to every data cell (headers always render left-aligned).
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& align(this Self&& self, const Align a) noexcept {
+            self.opts_.default_cell_align = a;
+            return std::forward<Self>(self);
+        }
+
+        // Per-column alignment override. Index is 0-based over the columns declared via column(...).
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& column_align(this Self&& self, const std::size_t index, const Align a) {
+            if (self.opts_.column_aligns.size() <= index) {
+                self.opts_.column_aligns.resize(index + 1, self.opts_.default_cell_align);
+            }
+            self.opts_.column_aligns[index] = a;
             return std::forward<Self>(self);
         }
 

@@ -14,18 +14,26 @@ namespace demiplane::ink {
     namespace detail {
 
         // Count display columns in s, skipping SGR escape sequences
-        // (\033[ … m). Every other byte counts as width 1 — accurate for
-        // ASCII + ANSI styling, intentionally not accurate for multi-byte
-        // UTF-8 or East-Asian wide chars (see design Section 3).
+        // (\033[ … m) and UTF-8 continuation bytes (10xxxxxx). Each non-continuation
+        // byte counts as one column — accurate for ASCII, ANSI-styled text, and
+        // Basic-Multilingual-Plane UTF-8 (em-dash, bullets, smart quotes, etc.).
+        // Still a coarse approximation for East-Asian wide characters (should be 2)
+        // and combining marks (should be 0); those edge cases remain out of scope.
         [[nodiscard]] constexpr std::size_t visible_width(const std::string_view s) noexcept {
             std::size_t w = 0;
             for (std::size_t i = 0; i < s.size(); ++i) {
-                if (s[i] == '\033' && i + 1 < s.size() && s[i + 1] == '[') {
+                const auto c = static_cast<unsigned char>(s[i]);
+                if (c == '\033' && i + 1 < s.size() && s[i + 1] == '[') {
                     i += 2;
                     while (i < s.size() && s[i] != 'm') {
                         ++i;
                     }
                     // loop's ++i will advance past the 'm'; fall through
+                    continue;
+                }
+                if ((c & 0xC0) == 0x80) {
+                    // UTF-8 continuation byte — part of a multi-byte code point whose
+                    // leading byte already contributed one column.
                     continue;
                 }
                 ++w;

@@ -7,6 +7,7 @@ add_executable(${DMP_BENCHMARKS}.Multithread.Disruptor
 target_link_libraries(${DMP_BENCHMARKS}.Multithread.Disruptor
         PRIVATE
         Demiplane::Common::Multithread
+        Demiplane::Common::Ink
 )
 add_compile_options(${DMP_BENCHMARK}.Multithread.Disruptor
     -O3

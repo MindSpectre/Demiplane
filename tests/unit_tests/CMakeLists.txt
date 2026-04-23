@@ -47,6 +47,25 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
 
 
 ##############################################################################
+# Test Ink (unit)
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Ink
+        ink/main.cpp
+        ink/colors_test.cpp
+        ink/separators_test.cpp
+        ink/table_test.cpp
+        ink/section_test.cpp
+        ink/box_test.cpp
+        ink/composition_test.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Ink
+        PRIVATE
+        Demiplane::Common::Ink
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
 # Test scroll
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Scroll

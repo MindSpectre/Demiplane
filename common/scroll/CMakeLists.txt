@@ -1,16 +1,6 @@
 set(DMP_SCROLL ${DMP_COMMON}.Scroll)
 
 ##############################################################################
-# Scroll Colors
-##############################################################################
-add_library(${DMP_SCROLL}.Colors INTERFACE
-        colors/colors.hpp
-)
-target_include_directories(${DMP_SCROLL}.Colors INTERFACE colors)
-
-##############################################################################
-
-##############################################################################
 # Scroll Entry
 ##############################################################################
 add_library(${DMP_SCROLL}.Entry STATIC
@@ -80,7 +70,7 @@ target_include_directories(${DMP_SCROLL}.Sink.Console PUBLIC
 )
 target_link_libraries(${DMP_SCROLL}.Sink.Console PUBLIC
         ${DMP_SCROLL}.Sink.Interface
-        ${DMP_SCROLL}.Colors
+        ${DMP_COMMON}.Ink
         Demiplane::Common::Serialization
 )
 ##############################################################################

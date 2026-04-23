@@ -1,7 +1,9 @@
 #include <atomic>
 #include <barrier>
-#include <iomanip>
+#include <demiplane/ink>
+#include <format>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <disruptor.hpp>
@@ -77,22 +79,26 @@ void static_disruptor_baseline_test() {
     const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
     const double throughput  = TOTAL_ENTRIES / elapsed_sec;
 
-    std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║  Static Disruptor - One-at-a-time     ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Producers:         " << std::setw(18) << NUM_PRODUCERS << "  ║\n";
-    std::cout << "║ Consumers:         " << std::setw(18) << 1 << "  ║\n";
-    std::cout << "║ Entries/producer:  " << std::setw(18) << ENTRIES_PER_PRODUCER << "  ║\n";
-    std::cout << "║ Total entries:     " << std::setw(18) << TOTAL_ENTRIES << "  ║\n";
-    std::cout << "║ Buffer size:       " << std::setw(18) << BUFFER_SIZE << "  ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Elapsed time:      " << std::fixed << std::setprecision(3) << std::setw(13) << elapsed_sec
-              << " s    ║\n";
-    std::cout << "║ Throughput:        " << std::fixed << std::setprecision(0) << std::setw(10) << throughput
-              << " ops/s ║\n";
-    std::cout << "║ Avg latency:       " << std::fixed << std::setprecision(2) << std::setw(13)
-              << (elapsed_sec * 1e9 / TOTAL_ENTRIES) << " ns   ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
+    const std::string body = demiplane::ink::section("")
+                                 .row("Producers", NUM_PRODUCERS)
+                                 .row("Consumers", 1)
+                                 .row("Entries/producer", ENTRIES_PER_PRODUCER)
+                                 .row("Total entries", TOTAL_ENTRIES)
+                                 .row("Buffer size", BUFFER_SIZE)
+                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                 .row("Avg latency", std::format("{:.2f} ns", elapsed_sec * 1e9 / TOTAL_ENTRIES))
+                                 .indent_size(1)
+                                 .value_align(demiplane::ink::Align::Right)
+                                 .render();
+
+    std::cout << '\n'
+              << demiplane::ink::box(body)
+                     .title("Static Disruptor — One-at-a-time")
+                     .border(demiplane::ink::border::unicode)
+                     .border_style(demiplane::ink::colors::bold_magenta)
+                     .terminate()
+                     .render();
 }
 
 /*==============================================================================
@@ -174,23 +180,27 @@ void static_disruptor_batched_test() {
     const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
     const double throughput  = TOTAL_ENTRIES / elapsed_sec;
 
-    std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║  Static Disruptor - Batched (16)       ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Producers:         " << std::setw(18) << NUM_PRODUCERS << "  ║\n";
-    std::cout << "║ Consumers:         " << std::setw(18) << 1 << "  ║\n";
-    std::cout << "║ Batch size:        " << std::setw(18) << BATCH_SIZE << "  ║\n";
-    std::cout << "║ Entries/producer:  " << std::setw(18) << ENTRIES_PER_PRODUCER << "  ║\n";
-    std::cout << "║ Total entries:     " << std::setw(18) << TOTAL_ENTRIES << "  ║\n";
-    std::cout << "║ Buffer size:       " << std::setw(18) << BUFFER_SIZE << "  ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Elapsed time:      " << std::fixed << std::setprecision(3) << std::setw(13) << elapsed_sec
-              << " s    ║\n";
-    std::cout << "║ Throughput:        " << std::fixed << std::setprecision(0) << std::setw(10) << throughput
-              << " ops/s ║\n";
-    std::cout << "║ Avg latency:       " << std::fixed << std::setprecision(2) << std::setw(13)
-              << (elapsed_sec * 1e9 / TOTAL_ENTRIES) << " ns   ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
+    const std::string body = demiplane::ink::section("")
+                                 .row("Producers", NUM_PRODUCERS)
+                                 .row("Consumers", 1)
+                                 .row("Batch size", BATCH_SIZE)
+                                 .row("Entries/producer", ENTRIES_PER_PRODUCER)
+                                 .row("Total entries", TOTAL_ENTRIES)
+                                 .row("Buffer size", BUFFER_SIZE)
+                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                 .row("Avg latency", std::format("{:.2f} ns", elapsed_sec * 1e9 / TOTAL_ENTRIES))
+                                 .indent_size(1)
+                                 .value_align(demiplane::ink::Align::Right)
+                                 .render();
+
+    std::cout << '\n'
+              << demiplane::ink::box(body)
+                     .title("Static Disruptor — Batched (16)")
+                     .border(demiplane::ink::border::unicode)
+                     .border_style(demiplane::ink::colors::bold_magenta)
+                     .terminate()
+                     .render();
 }
 
 /*==============================================================================
@@ -263,22 +273,26 @@ void dynamic_disruptor_baseline_test() {
     const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
     const double throughput  = TOTAL_ENTRIES / elapsed_sec;
 
-    std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║ Dynamic Disruptor - One-at-a-time     ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Producers:         " << std::setw(18) << NUM_PRODUCERS << "  ║\n";
-    std::cout << "║ Consumers:         " << std::setw(18) << 1 << "  ║\n";
-    std::cout << "║ Entries/producer:  " << std::setw(18) << ENTRIES_PER_PRODUCER << "  ║\n";
-    std::cout << "║ Total entries:     " << std::setw(18) << TOTAL_ENTRIES << "  ║\n";
-    std::cout << "║ Buffer size:       " << std::setw(18) << BUFFER_SIZE << "  ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Elapsed time:      " << std::fixed << std::setprecision(3) << std::setw(13) << elapsed_sec
-              << " s    ║\n";
-    std::cout << "║ Throughput:        " << std::fixed << std::setprecision(0) << std::setw(10) << throughput
-              << " ops/s ║\n";
-    std::cout << "║ Avg latency:       " << std::fixed << std::setprecision(2) << std::setw(13)
-              << (elapsed_sec * 1e9 / TOTAL_ENTRIES) << " ns   ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
+    const std::string body = demiplane::ink::section("")
+                                 .row("Producers", NUM_PRODUCERS)
+                                 .row("Consumers", 1)
+                                 .row("Entries/producer", ENTRIES_PER_PRODUCER)
+                                 .row("Total entries", TOTAL_ENTRIES)
+                                 .row("Buffer size", BUFFER_SIZE)
+                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                 .row("Avg latency", std::format("{:.2f} ns", elapsed_sec * 1e9 / TOTAL_ENTRIES))
+                                 .indent_size(1)
+                                 .value_align(demiplane::ink::Align::Right)
+                                 .render();
+
+    std::cout << '\n'
+              << demiplane::ink::box(body)
+                     .title("Dynamic Disruptor — One-at-a-time")
+                     .border(demiplane::ink::border::unicode)
+                     .border_style(demiplane::ink::colors::bold_magenta)
+                     .terminate()
+                     .render();
 }
 
 /*==============================================================================
@@ -361,48 +375,58 @@ void dynamic_disruptor_batched_test() {
     const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
     const double throughput  = TOTAL_ENTRIES / elapsed_sec;
 
-    std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║ Dynamic Disruptor - Batched (16)       ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Producers:         " << std::setw(18) << NUM_PRODUCERS << "  ║\n";
-    std::cout << "║ Consumers:         " << std::setw(18) << 1 << "  ║\n";
-    std::cout << "║ Batch size:        " << std::setw(18) << BATCH_SIZE << "  ║\n";
-    std::cout << "║ Entries/producer:  " << std::setw(18) << ENTRIES_PER_PRODUCER << "  ║\n";
-    std::cout << "║ Total entries:     " << std::setw(18) << TOTAL_ENTRIES << "  ║\n";
-    std::cout << "║ Buffer size:       " << std::setw(18) << BUFFER_SIZE << "  ║\n";
-    std::cout << "╠════════════════════════════════════════╣\n";
-    std::cout << "║ Elapsed time:      " << std::fixed << std::setprecision(3) << std::setw(13) << elapsed_sec
-              << " s    ║\n";
-    std::cout << "║ Throughput:        " << std::fixed << std::setprecision(0) << std::setw(10) << throughput
-              << " ops/s ║\n";
-    std::cout << "║ Avg latency:       " << std::fixed << std::setprecision(2) << std::setw(13)
-              << (elapsed_sec * 1e9 / TOTAL_ENTRIES) << " ns   ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
+    const std::string body = demiplane::ink::section("")
+                                 .row("Producers", NUM_PRODUCERS)
+                                 .row("Consumers", 1)
+                                 .row("Batch size", BATCH_SIZE)
+                                 .row("Entries/producer", ENTRIES_PER_PRODUCER)
+                                 .row("Total entries", TOTAL_ENTRIES)
+                                 .row("Buffer size", BUFFER_SIZE)
+                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                 .row("Avg latency", std::format("{:.2f} ns", elapsed_sec * 1e9 / TOTAL_ENTRIES))
+                                 .indent_size(1)
+                                 .value_align(demiplane::ink::Align::Right)
+                                 .render();
+
+    std::cout << '\n'
+              << demiplane::ink::box(body)
+                     .title("Dynamic Disruptor — Batched (16)")
+                     .border(demiplane::ink::border::unicode)
+                     .border_style(demiplane::ink::colors::bold_magenta)
+                     .terminate()
+                     .render();
 }
 
 
+namespace {
+    void print_group_header(std::string_view title) {
+        std::cout << '\n'
+                  << demiplane::ink::colors::colorize(demiplane::ink::colors::bold_yellow, std::string{title}) << '\n';
+    }
+}  // namespace
+
 int main() {
-    std::cout << "╔════════════════════════════════════════╗\n";
-    std::cout << "║   Disruptor Performance Benchmarks     ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
+    std::cout << demiplane::ink::box("Disruptor Performance Benchmarks")
+                     .border(demiplane::ink::border::unicode)
+                     .border_style(demiplane::ink::colors::bold_cyan)
+                     .terminate()
+                     .render();
 
-    std::cout << "\n═══════════════════════════════════════════\n";
-    std::cout << "  STATIC DISRUPTOR (Compile-time sized)  \n";
-    std::cout << "═══════════════════════════════════════════\n";
-
+    print_group_header("  STATIC DISRUPTOR (Compile-time sized)");
     static_disruptor_baseline_test();
     static_disruptor_batched_test();
 
-    std::cout << "\n═══════════════════════════════════════════\n";
-    std::cout << "  DYNAMIC DISRUPTOR (Runtime sized)      \n";
-    std::cout << "═══════════════════════════════════════════\n";
-
+    print_group_header("  DYNAMIC DISRUPTOR (Runtime sized)");
     dynamic_disruptor_baseline_test();
     dynamic_disruptor_batched_test();
 
-    std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║         Benchmarks Complete!           ║\n";
-    std::cout << "╚════════════════════════════════════════╝\n";
+    std::cout << '\n'
+              << demiplane::ink::box("Benchmarks Complete!")
+                     .border(demiplane::ink::border::unicode)
+                     .border_style(demiplane::ink::colors::bold_green)
+                     .terminate()
+                     .render();
 
     return 0;
 }

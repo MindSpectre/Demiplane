@@ -89,7 +89,7 @@ namespace demiplane::scroll {
          * @return Colorized text with ANSI codes
          */
         [[nodiscard]] static std::string colorize_by_level(const std::string_view text, const LogLevel lvl) {
-            using namespace colors;
+            using namespace demiplane::ink::colors;
 
             switch (lvl) {
                 case LogLevel::Trace:

@@ -2,8 +2,10 @@
 
 #include <barrier>
 #include <chrono>
-#include <iomanip>
+#include <demiplane/ink>
+#include <format>
 #include <iostream>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -46,27 +48,27 @@ namespace bench {
         const double min_sec = static_cast<double>(min_time.count()) / 1e9;
         const double max_sec = static_cast<double>(max_time.count()) / 1e9;
 
-        std::cout << "\n"
-                     "╔════════════════════════════════════════════════╗\n";
-        std::cout << "║  " << prefix << ": " << std::setw(static_cast<int>(43 - prefix.size())) << std::left << title
-                  << " ║\n";
-        std::cout << "╠════════════════════════════════════════════════╣\n";
-        std::cout << std::right;
-        std::cout << "║ Threads:           " << std::setw(26) << result.thread_count << "  ║\n";
-        std::cout << "║ Iterations/thread: " << std::setw(26) << result.iterations << "  ║\n";
-        std::cout << "║ Target record:     " << std::setw(22) << "~256 bytes" << "  ║\n";
-        std::cout << "╠════════════════════════════════════════════════╣\n";
-        std::cout << "║ Wall-clock time:   " << std::setw(20) << std::fixed << std::setprecision(3) << wall_sec << "s"
-                  << "     ║\n";
-        std::cout << "║ Throughput:        " << std::setw(20) << std::fixed << std::setprecision(0)
-                  << result.entries_per_second << " ops/s" << " ║\n";
-        std::cout << "║ Avg thread time:   " << std::setw(20) << std::fixed << std::setprecision(3) << avg_sec << "s"
-                  << "     ║\n";
-        std::cout << "║ Min thread time:   " << std::setw(20) << std::fixed << std::setprecision(3) << min_sec << "s"
-                  << "     ║\n";
-        std::cout << "║ Max thread time:   " << std::setw(20) << std::fixed << std::setprecision(3) << max_sec << "s"
-                  << "     ║\n";
-        std::cout << "╚════════════════════════════════════════════════╝\n";
+        const std::string body = demiplane::ink::section("")
+                                     .row("Threads", result.thread_count)
+                                     .row("Iterations/thread", result.iterations)
+                                     .row("Target record", "~256 bytes")
+                                     .row("Wall-clock", std::format("{:.3f} s", wall_sec))
+                                     .row("Throughput", std::format("{:.0f} ops/s", result.entries_per_second))
+                                     .row("Avg thread time", std::format("{:.3f} s", avg_sec))
+                                     .row("Min thread time", std::format("{:.3f} s", min_sec))
+                                     .row("Max thread time", std::format("{:.3f} s", max_sec))
+                                     .indent_size(1)
+                                     .value_align(demiplane::ink::Align::Right)
+                                     .render();
+
+        std::cout << '\n'
+                  << demiplane::ink::box(body)
+                         .title(std::format("{}: {}", prefix, title))
+                         .border(demiplane::ink::border::unicode)
+                         .border_style(demiplane::ink::colors::bold_cyan)
+                         .padding(1)
+                         .terminate()
+                         .render();
     }
 
     /**

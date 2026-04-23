@@ -10,6 +10,7 @@ target_link_libraries(${DMP_BENCHMARKS}.Scroll.FileBenchmark
         Demiplane::Common::Scroll
         Demiplane::Common::Nexus
         Demiplane::Common::Math
+        Demiplane::Common::Ink
 )
 
 ##############################################################################
@@ -30,6 +31,7 @@ if (absl_FOUND)
             absl::log_initialize
             absl::log_globals
             Demiplane::Common::Gears
+            Demiplane::Common::Ink
     )
 else ()
     message(STATUS "Abseil not found — skipping Abseil benchmarks (enable vcpkg feature 'abseil-benchmarks')")

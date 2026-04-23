@@ -241,13 +241,17 @@ namespace demiplane::ink {
     };
 
     /// Table built from a range of structs with column accessors.
-    template <typename RangeTp>
+    template <typename RangeT>
+        requires std::ranges::range<RangeT>
     class TableFromRange {
     public:
-        using value_type = std::remove_cvref_t<decltype(*std::begin(std::declval<const RangeTp&>()))>;
+        using value_type = std::remove_cvref_t<decltype(*std::begin(std::declval<const RangeT&>()))>;
 
-        constexpr explicit TableFromRange(const RangeTp& range) noexcept
-            : range_{&range} {
+        template <typename RangeTp>
+            requires std::is_same_v<std::remove_cvref_t<RangeT>, std::remove_cvref_t<RangeTp>> &&
+                     (!std::is_same_v<std::remove_cvref_t<RangeTp>, TableFromRange>)
+        constexpr explicit TableFromRange(RangeTp&& range) noexcept
+            : range_{std::forward<RangeTp>(range)} {
         }
 
         template <typename Self, gears::IsStringLike StringTp, typename Fn>
@@ -259,8 +263,8 @@ namespace demiplane::ink {
             self.headers_.emplace_back(std::forward<StringTp>(name));
             std::vector<std::string> column_cells;
             column_cells.reserve(
-                static_cast<std::size_t>(std::distance(std::begin(*self.range_), std::end(*self.range_))));
-            for (const auto& row : *self.range_) {
+                static_cast<std::size_t>(std::distance(std::begin(self.range_), std::end(self.range_))));
+            for (const auto& row : self.range_) {
                 column_cells.emplace_back(std::format("{}", fn(row)));
             }
             self.cells_.emplace_back(std::move(column_cells));
@@ -313,19 +317,25 @@ namespace demiplane::ink {
         }
 
     private:
-        const RangeTp* range_;
+        RangeT range_;
         std::vector<std::string> headers_{};
         std::vector<std::vector<std::string>> cells_{};
         detail::TableRenderOptions opts_{};
     };
 
+
     [[nodiscard]] constexpr Table table() noexcept {
         return {};
     }
 
+    // Lvalues → hold a reference (zero-copy, caller owns lifetime).
+    // Rvalues → hold by value (owned, no dangling risk).
     template <typename RangeTp>
-    [[nodiscard]] constexpr TableFromRange<RangeTp> table(const RangeTp& range) noexcept {
-        return TableFromRange<RangeTp>{range};
+        requires std::ranges::range<RangeTp>
+    [[nodiscard]] constexpr auto table(RangeTp&& range) noexcept {
+        using Held = std::conditional_t<std::is_lvalue_reference_v<RangeTp>, RangeTp, std::remove_cvref_t<RangeTp>>;
+        return TableFromRange<Held>{std::forward<RangeTp>(range)};
     }
+
 
 }  // namespace demiplane::ink

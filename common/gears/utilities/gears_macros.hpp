@@ -10,6 +10,14 @@
 
 #define GEARS_UNUSED_VAR [[maybe_unused]] auto _unused_var_
 
+/**
+ * @def GEARS_UNREACHABLE(TYPE, TEXT)
+ * @brief Mark an `if constexpr` branch as unreachable.
+ *
+ * Expands to a `static_assert(dependent_false_v<TYPE>, TEXT)` followed by
+ * `std::unreachable()`, so the assert fires only when the branch is actually
+ * instantiated for `TYPE`.
+ */
 #define GEARS_UNREACHABLE(TYPE, TEXT)                                                                                  \
     static_assert(demiplane::gears::dependent_false_v<TYPE>, TEXT);                                                    \
     std::unreachable();

@@ -16,6 +16,11 @@ namespace demiplane::gears {
     template <typename T>
     inline constexpr bool always_true_v = always_true<T>::value;
 
+    /**
+     * @brief True iff `T` is a specialization of the class template `Template`.
+     *
+     * Example: `is_specialization_of_v<std::vector<int>, std::vector>` is `true`.
+     */
     template <typename, template <class...> class>
     struct is_specialization_of : std::false_type {};
 
@@ -26,6 +31,13 @@ namespace demiplane::gears {
     inline constexpr bool is_specialization_of_v = is_specialization_of<ClassWithTemplate, BaseClass>::value;
 
 
+    /**
+     * @brief True iff `Derived` inherits from some specialization of `BaseTemplate`,
+     *        but is not itself such a specialization.
+     *
+     * Useful for catching CRTP-style descendants while excluding the base
+     * template itself from the match.
+     */
     template <typename Derived, template <typename...> class BaseTemplate>
     struct derived_from_specialization_of {
     private:
@@ -79,13 +91,16 @@ namespace demiplane::gears {
     template <class...>
     struct type_list {};
 
-    // ── pick<T>() → std::get<T>(tuple) wrapper ────────────────────────
+    /// Wrapper around `std::get<T>(tuple)` — extract the element of type `T`.
     template <class T, class Tuple>
     decltype(auto) pick(Tuple&& t) {
         return std::get<T>(std::forward<Tuple>(t));
     }
 
-    // ── turn a type_list<Ts…> into a tuple of objects from `tuple` ───
+    /**
+     * @brief Project a `type_list<Ts...>` against a tuple, returning a tuple
+     *        of references (or values) to the matching elements in list order.
+     */
     template <class List, class Tuple>
     struct make_arg_tuple;
 
@@ -95,25 +110,29 @@ namespace demiplane::gears {
             return std::tuple<decltype(pick<Ts>(tup))...>(pick<Ts>(tup)...);
         }
     };
-    // Generic function to extract any type T from arguments using existing gears::pick
+
+    /// Extract the argument of type `T` from a forwarded parameter pack.
     template <typename T, typename... Args>
     decltype(auto) get_arg(Args&&... args) {
         auto args_tuple = std::forward_as_tuple(args...);
         return gears::pick<T>(args_tuple);
     }
 
-    // Check if arguments contain type T
+    /// True iff some argument's decayed type equals `T`.
     template <typename T, typename... Args>
     constexpr bool has_arg_type() {
         return (std::is_same_v<std::remove_cvref_t<Args>, T> || ...);
     }
+
+    /// True iff some argument's exact (cv/ref-qualified) type equals `T`.
     template <typename T, typename... Args>
     constexpr bool has_exact_arg_type() {
         return (std::is_same_v<Args, T> || ...);
     }
 
-    // Helper for overloaded visitor pattern
-    template<class... Ts>
+    /// Aggregates a set of callables into one overload set — the standard
+    /// `std::visit` helper. Used with the deduction guide below.
+    template <class... Ts>
     struct overloaded : Ts... {
         using Ts::operator()...;
     };

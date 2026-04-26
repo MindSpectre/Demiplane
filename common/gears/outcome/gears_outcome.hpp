@@ -8,7 +8,8 @@
 #include "gears_templates.hpp"
 
 namespace demiplane::gears {
-    // Error wrapper for implicit construction
+    /// Disambiguation tag — wraps an error value so `Outcome<T, Es...>` can be
+    /// implicitly constructed from `Err(...)` even when `T` shares the type.
     template <typename E>
     struct ErrorTag {
         E error;
@@ -17,13 +18,13 @@ namespace demiplane::gears {
         }
     };
 
-    // Helper to deduce error type
+    /// Build an `ErrorTag` with the decayed type of `e` deduced.
     template <typename E>
     constexpr ErrorTag<std::decay_t<E>> Err(E&& e) {
         return ErrorTag<std::decay_t<E>>{std::forward<E>(e)};
     }
 
-    // Success wrapper for implicit construction
+    /// Disambiguation tag — symmetric to `ErrorTag`, signalling a success value.
     template <typename T>
     struct SuccessTag {
         T value;
@@ -32,16 +33,26 @@ namespace demiplane::gears {
         }
     };
 
+    /// Build a `SuccessTag` with the decayed type of `v` deduced.
     template <typename T>
     constexpr SuccessTag<std::decay_t<T>> Ok(T&& v) {
         return SuccessTag<std::decay_t<T>>{std::forward<T>(v)};
     }
 
+    /// Tag for a void-success outcome (`Outcome<void, Es...>`).
     constexpr std::monostate Ok() {
         return {};
     }
 
 
+    /**
+     * @brief Sum type holding either a value of `T` or one of the listed `Errors`.
+     *
+     * Hot-path result type used in place of exceptions. Provides bool-conversion
+     * for branching, `value()`/`error<E>()` accessors, and monadic combinators
+     * (`and_then`, `or_else`, `transform`, `visit`) that propagate the error
+     * variant unchanged when the outcome is in an error state.
+     */
     template <typename T, typename... Errors>
     class Outcome {
     public:
@@ -182,7 +193,14 @@ namespace demiplane::gears {
             return std::move(std::get<E>(value_));
         }
 
-        // Monadic operations - and_then
+        /**
+         * @brief If success, invoke `f(value)` and return its `Outcome` result.
+         *        If error, propagate the existing error into a `Result`-typed
+         *        outcome without invoking `f`.
+         *
+         * `f` must itself return an `Outcome` whose error variant can absorb
+         * every error type held by `*this`.
+         */
         template <typename F>
             requires std::invocable<F, T&>
         constexpr auto and_then(F&& f) & -> std::invoke_result_t<F, T&> {
@@ -232,7 +250,12 @@ namespace demiplane::gears {
             return result;
         }
 
-        // or_else - execute function if error
+        /**
+         * @brief If error, invoke `f()` and return its result; otherwise
+         *        re-wrap the existing success value into the result type.
+         *
+         * Mirror image of `and_then` — recovery hook for error states.
+         */
         template <typename F>
             requires std::invocable<F>
         constexpr auto or_else(F&& f) & -> std::invoke_result_t<F> {
@@ -264,7 +287,13 @@ namespace demiplane::gears {
             return Result{std::move(*this).value()};
         }
 
-        // transform - map over success value
+        /**
+         * @brief Apply `f` to the success value, returning an
+         *        `Outcome<invoke_result_t<F>, Errors...>`. Error states are
+         *        forwarded through unchanged.
+         *
+         * Unlike `and_then`, `f` returns a plain value, not an `Outcome`.
+         */
         template <typename F>
             requires std::invocable<F, T&>
         constexpr auto transform(F&& f) & {
@@ -314,7 +343,10 @@ namespace demiplane::gears {
             return result;
         }
 
-        // Visit pattern for exhaustive matching
+        /**
+         * @brief Exhaustively match the held alternative against the supplied
+         *        callables. Equivalent to `std::visit(overloaded{fs...}, ...)`.
+         */
         template <typename... Fs>
         constexpr decltype(auto) visit(Fs&&... fs) & {
             return std::visit(overloaded{std::forward<Fs>(fs)...}, value_);
@@ -335,7 +367,8 @@ namespace demiplane::gears {
     };
 
 
-    // Void specialization
+    /// `void`-value specialization — success is signalled by `std::monostate`,
+    /// errors are stored exactly as in the primary template.
     template <typename... Errors>
     class Outcome<void, Errors...> {
     public:
@@ -553,9 +586,17 @@ namespace demiplane::gears {
         struct SimplifyTuple<std::tuple<T>> {
             using type = T;
         };
-    }
+    }  // namespace detail
 
-    // Combine multiple outcomes - returns first error or combined success values
+    /**
+     * @brief Combine several `Outcome`s in declaration order, short-circuiting
+     *        on the first error encountered.
+     *
+     * On all-success, returns an `Outcome` whose value is the combined success
+     * payload: a tuple of every non-`void` value (or the bare value if exactly
+     * one outcome carries one, or `void` if none do). The error type is taken
+     * from the first input; callers must therefore use compatible error types.
+     */
     template <typename... Outcomes>
         requires (sizeof...(Outcomes) > 0)
     constexpr auto combine_outcomes(const Outcomes&... outcomes) {

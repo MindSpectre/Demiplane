@@ -31,6 +31,8 @@ namespace demiplane::gears {
         }
     }  // namespace literals
 
+    /// Compile-time type-name string for the common arithmetic / string types,
+    /// falling back to `typeid(T).name()` (compiler-mangled) for everything else.
     template <typename T>
     constexpr const char* get_type_name() {
         if constexpr (std::is_same_v<T, int>)
@@ -51,6 +53,7 @@ namespace demiplane::gears {
             return typeid(T).name();  // fallback to mangled name
     }
 
+    /// Runtime counterpart of `get_type_name<T>()` keyed off a `std::type_index`.
     inline const char* get_type_name_from_index(const std::type_index& ti) {
         if (ti == std::type_index(typeid(int)))
             return "int";

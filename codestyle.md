@@ -66,6 +66,14 @@ Use `get_` for complex lookups or operations:
 [[nodiscard]] const FieldSchema* get_field_schema(std::string_view name) const;
 ```
 
+Also use `get_` for atomic, volatile, or memory-barrier reads — the access isn't a plain
+field load and the prefix signals that to the caller:
+
+```cpp
+[[nodiscard]] int64_t get_cursor() const noexcept;     // atomic load
+[[nodiscard]] int64_t get_volatile() const noexcept;   // volatile read
+```
+
 ### Template Parameters
 
 ```cpp
@@ -126,6 +134,42 @@ private:
     int port_;
     bool connected_;
 };
+```
+
+## Builder Pattern
+
+When a type has more than a handful of configuration fields, expose construction through a
+nested `Builder` class. The Builder keeps the configured value-type simple and lets callers
+set only the fields they care about.
+
+**Contract:**
+
+1. **Setters use deducing `this`**, named after the field (no `with_` or `set_` prefix):
+
+```cpp
+template <typename Self>
+constexpr auto&& ring_buffer_size(this Self&& self, std::size_t value) noexcept {
+    self.config_.ring_buffer_size_ = value;
+    return std::forward<Self>(self);
+}
+```
+
+2. **Terminal method is `finalize() &&`.** It runs validation and moves the built object
+   out. The rvalue-ref qualifier prevents reuse of a spent Builder:
+
+```cpp
+[[nodiscard]] Config finalize() && {
+    config_.validate();
+    return std::move(config_);
+}
+```
+
+3. **Constructors accept existing configs** for edit-one-field workflows:
+
+```cpp
+Builder() = default;
+explicit Builder(const Config& existing) : config_{existing} {}
+explicit Builder(Config&& existing)      : config_{std::move(existing)} {}
 ```
 
 ## Constexpr and Consteval
@@ -260,9 +304,11 @@ switch (category) {
 std::unreachable();
 ```
 
-### `GEARS_UNREACHABLE()`
+### `GEARS_UNREACHABLE(Type, Message)`
 
-Use in `if constexpr` chains to catch unhandled types at compile time:
+Use in `if constexpr` chains to catch unhandled types at compile time. Expands to a
+`static_assert` on `gears::dependent_false_v<Type>` followed by `std::unreachable()`, so the
+assert only fires when the branch is actually instantiated:
 
 ```cpp
 template <typename T>
@@ -272,7 +318,7 @@ constexpr auto process(T value) {
     } else if constexpr (std::floating_point<T>) {
         return value * 2.0;
     } else {
-        GEARS_UNREACHABLE();  // Compile error if instantiated
+        GEARS_UNREACHABLE(T, "process() expects integral or floating-point");
     }
 }
 ```
@@ -333,6 +379,34 @@ void migrate_schema(const Schema& target) {
 }
 ```
 
+## Platform-Specific Code
+
+Gate platform-specific code with `#if defined(<PLATFORM>)`. Nest sub-feature checks (libc
+version, kernel headers) inside the platform guard. Always provide a portable `#else`
+fallback — callers should never need `#ifdef` at the use site.
+
+```cpp
+#if defined(__linux__)
+    #if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30))
+        #include <unistd.h>
+    #else
+        #include <sys/syscall.h>
+    #endif
+#endif
+
+[[nodiscard]] inline uint64_t capture_kernel_tid() noexcept {
+#if defined(__linux__)
+    #if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30))
+    return static_cast<uint64_t>(::gettid());
+    #else
+    return static_cast<uint64_t>(::syscall(SYS_gettid));
+    #endif
+#else
+    return std::hash<std::thread::id>{}(std::this_thread::get_id());
+#endif
+}
+```
+
 ## Templates and Concepts
 
 ### Prefer Concepts Over SFINAE
@@ -360,6 +434,14 @@ concept IsFieldDef = requires {
 template <typename T, typename... Args>
 concept OneOf = (std::is_same_v<Args, T> || ...);
 ```
+
+### Concept Naming
+
+| Prefix    | Intent                                           | Example                                   |
+|-----------|--------------------------------------------------|-------------------------------------------|
+| `Is*`     | Type predicate — "T is a kind of X"              | `IsFieldDef`, `IsOperator`, `IsQuery`     |
+| `Has*`    | Structural requirement — "T exposes members/ops" | `HasStaticNameMember`, `HasAcceptVisitor` |
+| no prefix | Generic operator-like / variadic relation        | `OneOf`, `OneOfDecayed`                   |
 
 ### Requires Clause Placement
 
@@ -403,6 +485,21 @@ constexpr auto process(this Self&& self) {
 **Rationale:** `std::forward_like` directly applies the value category of `Self` to the member without going through the
 object. This avoids clang-tidy `bugprone-use-after-move` false positives that occur with
 `std::forward<Self>(self).member_`, and is semantically cleaner for member access.
+
+### Out-of-line Template Implementations
+
+For heavy template implementations, split the bodies into a `.inl` file placed in a
+`detail/` (or `source/`) subdirectory next to the header. Include it at the bottom of the
+matching `.hpp`, inside the same namespace context:
+
+```cpp
+// db_field.hpp
+namespace demiplane::db {
+    // ... class declarations ...
+}  // namespace demiplane::db
+
+#include "detail/db_field.inl"
+```
 
 ## Lambda Captures
 
@@ -453,6 +550,60 @@ std::visit([&result]<typename E>(E&& err) { ... }, value_);
 ```cpp
 // TODO: Issue#33 - add binary format flag
 // TODO: add constexpr support
+```
+
+## Module Layout
+
+Each top-level module under `common/` (and each component under `components/`) ships an
+**umbrella header** at `<module>/export/demiplane/<module>` — a file with no extension
+containing only `#pragma once` and `#include` directives for every public header of the
+module:
+
+```cpp
+// common/gears/export/demiplane/gears
+#pragma once
+
+#include "gears_class_traits.hpp"
+#include "gears_concepts.hpp"
+#include "gears_exceptions.hpp"
+#include "gears_hash.hpp"
+// ...
+```
+
+Consumers include the whole module via `#include <demiplane/<module>>`:
+
+```cpp
+#include <demiplane/gears>
+#include <demiplane/scroll>
+```
+
+## Namespaces
+
+### Opening Style
+
+Use the C++17 one-line nested form. Never nest with separate braces.
+
+```cpp
+namespace demiplane::scroll { ... }            // Good
+namespace demiplane::db::postgres { ... }      // Good
+
+// Avoid:
+// namespace demiplane { namespace scroll { ... } }
+```
+
+### Internal Implementation Details
+
+Place implementation-only types, trait structs, and helper concepts inside a nested
+`namespace detail { ... }` — lowercase, singular (never `details` or `impl`). Anything
+inside `detail` is not part of the public API.
+
+```cpp
+namespace demiplane::scroll {
+    namespace detail {
+        struct MetaSource { ... };
+        struct ThreadLocalCache { ... };
+    }  // namespace detail
+}  // namespace demiplane::scroll
 ```
 
 ## Include Organization
@@ -526,3 +677,39 @@ private:
     std::vector<column_type> columns_;
 };
 ```
+
+## Macros
+
+### Prefix Convention
+
+| Prefix       | Use                                                                   |
+|--------------|-----------------------------------------------------------------------|
+| `DMP_*`      | Global feature flags consumed across the whole framework              |
+| `<MODULE>_*` | Module-scoped macros — `GEARS_*`, `SCROLL_*`, `NEXUS_*`               |
+| short name   | Product-API macros where brevity matters — `LOG_*`, `COMPONENT_LOG_*` |
+
+Examples: `DMP_ENABLE_LOGGING`, `DMP_COMPONENT_LOGGING`, `GEARS_UNREACHABLE`,
+`SCROLL_COMPONENT_PREFIX`, `NEXUS_REGISTER`.
+
+### Feature-Flag Disabled Fallbacks
+
+When a macro is gated behind a feature flag, the `#else` branch must expand to a
+compilable no-op so call sites never need `#ifdef` guards:
+
+```cpp
+#ifdef DMP_ENABLE_LOGGING
+    #define LOG_INF(...) /* full expansion, stream-valued */
+    #define LOG_DIRECT_FMT(logger_ptr, level, prefix, fmt, ...)                \
+        (logger_ptr)->log(level, prefix, std::source_location::current(), fmt, __VA_ARGS__)
+#else
+    #define LOG_INF(...) ::demiplane::scroll::DummyStream()   // stream-valued → dummy
+    #define LOG_DIRECT_FMT(...) ((void)0)                     // statement-form → no-op
+#endif
+```
+
+### Logging
+
+The `common/scroll` module defines three families of logging macros (`LOG_*`,
+`COMPONENT_LOG_*`, `LOG_DIRECT_*`), each with its own precondition on the call site.
+See `common/scroll/provider/include/log_macros.hpp` for the full set and the class-scope
+setup required by `SCROLL_COMPONENT_PREFIX`.

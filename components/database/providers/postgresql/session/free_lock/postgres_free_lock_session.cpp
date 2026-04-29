@@ -21,7 +21,7 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return SyncExecutor{std::move(holder)};
     }
@@ -30,7 +30,7 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return SyncExecutor{std::move(holder)};
     }
@@ -39,7 +39,7 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return AsyncExecutor{std::move(holder), std::move(exec)};
     }
@@ -49,7 +49,7 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return AsyncExecutor{std::move(holder), std::move(exec)};
     }
@@ -81,7 +81,7 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return Transaction{std::move(holder), opts};
     }
@@ -91,7 +91,7 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return Transaction{std::move(holder), opts};
     }
@@ -101,12 +101,12 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
 
         Transaction tx{std::move(holder), opts};
         if (auto begin_result = tx.begin(); !begin_result.is_success()) {
-            return gears::Err(begin_result.error<ErrorContext>());
+            return gears::err(begin_result.error<ErrorContext>());
         }
 
         return AutoTransaction{std::move(tx)};
@@ -118,12 +118,12 @@ namespace demiplane::db::postgres {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return gears::Err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return gears::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
 
         Transaction tx{std::move(holder), opts};
         if (auto begin_result = tx.begin(); !begin_result.is_success()) {
-            return gears::Err(begin_result.error<ErrorContext>());
+            return gears::err(begin_result.error<ErrorContext>());
         }
 
         return AutoTransaction{std::move(tx)};

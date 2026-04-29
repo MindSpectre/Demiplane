@@ -4,6 +4,8 @@
 #include <string_view>
 #include <type_traits>
 
+#include "gears_templates.hpp"
+
 namespace demiplane::gears {
     /// `T` exposes a static data member `name` convertible to `std::string_view`.
     template <typename T>
@@ -50,4 +52,12 @@ namespace demiplane::gears {
         { s.c_str() } -> std::convertible_to<const char*>;
     } || std::is_convertible_v<std::remove_cvref_t<T>, const char*>;
 
+
+    // Forward declaration so the detail helpers can refer to Outcome.
+    template <typename T, typename... Errors>
+    class Outcome;
+
+    /// Concept for callables whose return type is some `Outcome<...>`.
+    template <typename T>
+    concept IsOutcome = is_specialization_of_v<std::remove_cvref_t<T>, Outcome>;
 }  // namespace demiplane::gears

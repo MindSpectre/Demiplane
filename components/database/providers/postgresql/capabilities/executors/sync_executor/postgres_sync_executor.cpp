@@ -41,7 +41,7 @@ namespace demiplane::db::postgres {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ec{ErrorCode{ClientErrorCode::SyntaxError}};
             ec.context = "Wrong provider. Query was compiled not by PostgreSQL";
-            return gears::Err(ec);
+            return gears::err(ec);
         }
         const auto params_ptr = query.backend_packet_as<Params>();
         if (!params_ptr) {
@@ -57,7 +57,7 @@ namespace demiplane::db::postgres {
         if (const auto ec = check_connection(conn_); ec) {
             ErrorContext ctx(ec);
             COMPONENT_LOG_ERR() << "Connection failed: " << ctx;
-            return gears::Err(std::move(ctx));
+            return gears::err(std::move(ctx));
         }
 
         PGresult* result = (params == nullptr || params->values.empty())
@@ -74,7 +74,7 @@ namespace demiplane::db::postgres {
         if (!result) {
             auto ec = extract_connection_error(conn_);
             COMPONENT_LOG_ERR() << "Connection failed: " << ec;
-            return gears::Err(std::move(ec));
+            return gears::err(std::move(ec));
         }
 
         return process_result(result);

@@ -157,4 +157,54 @@ namespace demiplane::gears {
     template <typename Variant, template <typename> class Predicate>
     inline constexpr bool all_variant_types_satisfy_v = all_variant_types_satisfy<Variant, Predicate>::value;
 
+
+    /// True iff every type in `Ts...` is distinct (decay-insensitive comparison).
+    template <typename...>
+    struct all_unique : std::true_type {};
+
+    template <typename Head, typename... Tail>
+    struct all_unique<Head, Tail...>
+        : std::bool_constant<(!std::is_same_v<Head, Tail> && ...) && all_unique<Tail...>::value> {};
+
+    template <typename... Ts>
+    inline constexpr bool all_unique_v = all_unique<Ts...>::value;
+
+
+    /**
+     * @brief Concatenate the alternatives of two `std::variant`s and remove duplicates,
+     *        preserving the order of first occurrence (`V1`'s alternatives first).
+     *
+     * Useful when widening a variant to hold the union of two error sets — e.g.
+     * `Outcome` chains where each step contributes its own error alternatives.
+     */
+    namespace detail {
+        template <typename T, typename Variant>
+        struct variant_contains;
+
+        template <typename T, typename... Us>
+        struct variant_contains<T, std::variant<Us...>> : std::bool_constant<(std::is_same_v<T, Us> || ...)> {};
+
+        template <typename Acc, typename... Rest>
+        struct variant_unique_append {
+            using type = Acc;
+        };
+
+        template <typename... Acc, typename Head, typename... Rest>
+        struct variant_unique_append<std::variant<Acc...>, Head, Rest...> {
+            using type = std::conditional_t<variant_contains<Head, std::variant<Acc...>>::value,
+                                            typename variant_unique_append<std::variant<Acc...>, Rest...>::type,
+                                            typename variant_unique_append<std::variant<Acc..., Head>, Rest...>::type>;
+        };
+    }  // namespace detail
+
+    template <typename V1, typename V2>
+    struct merge_variants;
+
+    template <typename... A, typename... B>
+    struct merge_variants<std::variant<A...>, std::variant<B...>> {
+        using type = detail::variant_unique_append<std::variant<A...>, B...>::type;
+    };
+
+    template <typename V1, typename V2>
+    using merge_variants_t = merge_variants<V1, V2>::type;
 }  // namespace demiplane::gears

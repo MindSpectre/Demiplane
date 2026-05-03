@@ -2,10 +2,8 @@
 
 #include "gears_class_traits.hpp"
 #include "gears_concepts.hpp"
-#include "gears_exceptions.hpp"
 #include "gears_hash.hpp"
 #include "gears_macros.hpp"
-#include "gears_exception_result.hpp"
 #include "gears_templates.hpp"
 #include "gears_types.hpp"
 #include "gears_utils.hpp"

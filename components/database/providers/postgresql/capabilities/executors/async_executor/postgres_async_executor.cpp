@@ -125,7 +125,7 @@ namespace demiplane::db::postgres {
             ErrorContext ctx{ErrorCode{ClientErrorCode::SyntaxError}};
             ctx.message = "Query compiled for different provider";
             ctx.detail  = "Expected PostgreSQL, got different backend";
-            co_return gears::Err(std::move(ctx));
+            co_return gears::err(std::move(ctx));
         }
 
         if (const auto params_ptr = query.backend_packet_as<Params>()) {
@@ -145,7 +145,7 @@ namespace demiplane::db::postgres {
         // 1. Validate executor state
         if (auto err = validate_state()) {
             COMPONENT_LOG_ERR() << "Validation failed: " << *err;
-            co_return gears::Err(std::move(*err));
+            co_return gears::err(std::move(*err));
         }
 
         // 2. Send query
@@ -165,19 +165,19 @@ namespace demiplane::db::postgres {
             // Use extract_connection_error for send failures
             auto err = extract_connection_error(conn_);
             COMPONENT_LOG_ERR() << "Send failed: " << err;
-            co_return gears::Err(std::move(err));
+            co_return gears::err(std::move(err));
         }
 
         // 3. Flush output buffer
         if (auto err = co_await async_flush()) {
             COMPONENT_LOG_ERR() << "Flush failed: " << *err;
-            co_return gears::Err(std::move(*err));
+            co_return gears::err(std::move(*err));
         }
 
         // 4. Wait for results
         if (auto err = co_await async_consume_until_ready()) {
             COMPONENT_LOG_ERR() << "Consume failed: " << *err;
-            co_return gears::Err(std::move(*err));
+            co_return gears::err(std::move(*err));
         }
 
         // 5. Collect result
@@ -250,7 +250,7 @@ namespace demiplane::db::postgres {
         if (!result) {
             ErrorContext ctx{ErrorCode{ClientErrorCode::InvalidArgument}};
             ctx.message = "No result returned from query";
-            return gears::Err(std::move(ctx));
+            return gears::err(std::move(ctx));
         }
 
         // Drain additional results (protocol cleanup)

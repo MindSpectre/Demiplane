@@ -4,11 +4,10 @@ set(DMP_GEARS ${DMP_COMMON}.Gears)
 # Result class for convenient handling
 ##############################################################################
 add_library(${DMP_GEARS}.Result INTERFACE
-        result/gears_exception_result.hpp
-        result/gears_outcome.hpp
+        outcome/gears_outcome.hpp
 )
 target_include_directories(${DMP_GEARS}.Result INTERFACE
-        result/
+        outcome/
 )
 target_link_libraries(${DMP_GEARS}.Result INTERFACE
         ${DMP_GEARS}.MetaProgramming
@@ -33,7 +32,6 @@ add_library(${DMP_GEARS}.MetaProgramming INTERFACE
         meta_programming/gears_class_traits.hpp
         meta_programming/gears_templates.hpp
         meta_programming/gears_concepts.hpp
-        meta_programming/gears_exceptions.hpp
 )
 target_include_directories(${DMP_GEARS}.MetaProgramming INTERFACE
         meta_programming/

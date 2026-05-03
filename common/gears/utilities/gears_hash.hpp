@@ -3,6 +3,11 @@
 #include <string_view>
 
 namespace demiplane::gears {
+    /**
+     * @brief Transparent hash functor for unordered containers — enables
+     *        heterogeneous lookup with `std::string`, `std::string_view`, and
+     *        `const char*` without constructing a temporary `std::string`.
+     */
     struct StringHash {
         using is_transparent = void;  // Enable heterogeneous lookup
 
@@ -19,7 +24,8 @@ namespace demiplane::gears {
         }
     };
 
-    // Transparent equality functor
+    /// Transparent equality functor — paired with `StringHash` for
+    /// heterogeneous unordered-container lookup.
     struct StringEqual {
         using is_transparent = void;
 

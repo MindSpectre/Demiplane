@@ -6,6 +6,13 @@
 
 namespace demiplane::gears {
 
+    /**
+     * @brief Compile-time string usable as a non-type template parameter.
+     *
+     * Stores the literal — including its trailing null — as a `char[N]`,
+     * letting templates be specialised on string contents (e.g. field names).
+     * Comparisons across different lengths are always false.
+     */
     template <std::size_t N>
     struct FixedString {
         char data[N] = {};

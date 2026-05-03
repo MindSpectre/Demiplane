@@ -21,17 +21,23 @@ namespace demiplane::gears {
         unused_value(rest...);  // Recursively process remaining arguments
     }
 
+    /// Compile-time error sink for `if constexpr` chains — fires only when the
+    /// branch is actually instantiated, via `dependent_false_v<T>`.
     template <class T = void>
     constexpr void unreachable() {
         static_assert(dependent_false_v<T>, "Unreachable branch reached.");
     }
 
+    /// `consteval` variant of `unreachable()` — same compile-time guarantee plus
+    /// `std::unreachable()` to mark the branch as runtime-undefined.
     template <typename CheckedType = void>
     consteval void unreachable_c() {
         static_assert(dependent_false_v<CheckedType>, "Unreachable branch reached.");
         std::unreachable();
     }
 
+    /// Static guard ensuring the enclosing function is non-static — pass
+    /// `this`; it fails to compile when the type deduces to `nullptr_t`.
     template <typename T>
     constexpr void force_non_static(const T* this_ptr) {
         static_assert(!std::is_same_v<T, std::nullptr_t>, "This function cannot be called from a static context");
@@ -39,6 +45,7 @@ namespace demiplane::gears {
     }
 
 
+    /// Static guard ensuring the deduced argument type is not `const`-qualified.
     template <typename T>
     constexpr void force_non_const(T) {
         static_assert(!std::is_const_v<std::remove_pointer_t<T>>, "Function must not be const-qualified!");

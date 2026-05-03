@@ -16,6 +16,11 @@ namespace demiplane::gears {
     template <typename T>
     inline constexpr bool always_true_v = always_true<T>::value;
 
+    /**
+     * @brief True iff `T` is a specialization of the class template `Template`.
+     *
+     * Example: `is_specialization_of_v<std::vector<int>, std::vector>` is `true`.
+     */
     template <typename, template <class...> class>
     struct is_specialization_of : std::false_type {};
 
@@ -26,6 +31,13 @@ namespace demiplane::gears {
     inline constexpr bool is_specialization_of_v = is_specialization_of<ClassWithTemplate, BaseClass>::value;
 
 
+    /**
+     * @brief True iff `Derived` inherits from some specialization of `BaseTemplate`,
+     *        but is not itself such a specialization.
+     *
+     * Useful for catching CRTP-style descendants while excluding the base
+     * template itself from the match.
+     */
     template <typename Derived, template <typename...> class BaseTemplate>
     struct derived_from_specialization_of {
     private:
@@ -79,13 +91,16 @@ namespace demiplane::gears {
     template <class...>
     struct type_list {};
 
-    // ── pick<T>() → std::get<T>(tuple) wrapper ────────────────────────
+    /// Wrapper around `std::get<T>(tuple)` — extract the element of type `T`.
     template <class T, class Tuple>
     decltype(auto) pick(Tuple&& t) {
         return std::get<T>(std::forward<Tuple>(t));
     }
 
-    // ── turn a type_list<Ts…> into a tuple of objects from `tuple` ───
+    /**
+     * @brief Project a `type_list<Ts...>` against a tuple, returning a tuple
+     *        of references (or values) to the matching elements in list order.
+     */
     template <class List, class Tuple>
     struct make_arg_tuple;
 
@@ -95,25 +110,29 @@ namespace demiplane::gears {
             return std::tuple<decltype(pick<Ts>(tup))...>(pick<Ts>(tup)...);
         }
     };
-    // Generic function to extract any type T from arguments using existing gears::pick
+
+    /// Extract the argument of type `T` from a forwarded parameter pack.
     template <typename T, typename... Args>
     decltype(auto) get_arg(Args&&... args) {
         auto args_tuple = std::forward_as_tuple(args...);
         return gears::pick<T>(args_tuple);
     }
 
-    // Check if arguments contain type T
+    /// True iff some argument's decayed type equals `T`.
     template <typename T, typename... Args>
     constexpr bool has_arg_type() {
         return (std::is_same_v<std::remove_cvref_t<Args>, T> || ...);
     }
+
+    /// True iff some argument's exact (cv/ref-qualified) type equals `T`.
     template <typename T, typename... Args>
     constexpr bool has_exact_arg_type() {
         return (std::is_same_v<Args, T> || ...);
     }
 
-    // Helper for overloaded visitor pattern
-    template<class... Ts>
+    /// Aggregates a set of callables into one overload set — the standard
+    /// `std::visit` helper. Used with the deduction guide below.
+    template <class... Ts>
     struct overloaded : Ts... {
         using Ts::operator()...;
     };
@@ -138,4 +157,54 @@ namespace demiplane::gears {
     template <typename Variant, template <typename> class Predicate>
     inline constexpr bool all_variant_types_satisfy_v = all_variant_types_satisfy<Variant, Predicate>::value;
 
+
+    /// True iff every type in `Ts...` is distinct (decay-insensitive comparison).
+    template <typename...>
+    struct all_unique : std::true_type {};
+
+    template <typename Head, typename... Tail>
+    struct all_unique<Head, Tail...>
+        : std::bool_constant<(!std::is_same_v<Head, Tail> && ...) && all_unique<Tail...>::value> {};
+
+    template <typename... Ts>
+    inline constexpr bool all_unique_v = all_unique<Ts...>::value;
+
+
+    /**
+     * @brief Concatenate the alternatives of two `std::variant`s and remove duplicates,
+     *        preserving the order of first occurrence (`V1`'s alternatives first).
+     *
+     * Useful when widening a variant to hold the union of two error sets — e.g.
+     * `Outcome` chains where each step contributes its own error alternatives.
+     */
+    namespace detail {
+        template <typename T, typename Variant>
+        struct variant_contains;
+
+        template <typename T, typename... Us>
+        struct variant_contains<T, std::variant<Us...>> : std::bool_constant<(std::is_same_v<T, Us> || ...)> {};
+
+        template <typename Acc, typename... Rest>
+        struct variant_unique_append {
+            using type = Acc;
+        };
+
+        template <typename... Acc, typename Head, typename... Rest>
+        struct variant_unique_append<std::variant<Acc...>, Head, Rest...> {
+            using type = std::conditional_t<variant_contains<Head, std::variant<Acc...>>::value,
+                                            typename variant_unique_append<std::variant<Acc...>, Rest...>::type,
+                                            typename variant_unique_append<std::variant<Acc..., Head>, Rest...>::type>;
+        };
+    }  // namespace detail
+
+    template <typename V1, typename V2>
+    struct merge_variants;
+
+    template <typename... A, typename... B>
+    struct merge_variants<std::variant<A...>, std::variant<B...>> {
+        using type = detail::variant_unique_append<std::variant<A...>, B...>::type;
+    };
+
+    template <typename V1, typename V2>
+    using merge_variants_t = merge_variants<V1, V2>::type;
 }  // namespace demiplane::gears

@@ -18,7 +18,7 @@ namespace demiplane::db::postgres {
         // Extract error if present
         if (auto error_ctx = extract_error(result)) {
             PQclear(result);
-            return gears::Err(std::move(*error_ctx));
+            return gears::err(std::move(*error_ctx));
         }
 
         // Success - wrap result in ResultBlock (takes ownership)

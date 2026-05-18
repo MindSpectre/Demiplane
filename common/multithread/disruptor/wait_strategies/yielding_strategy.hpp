@@ -1,7 +1,8 @@
 #pragma once
 
-#include "wait_strategy.hpp"
+#include <thread>
 
+#include "wait_strategy.hpp"
 namespace demiplane::multithread {
 
     /**
@@ -69,7 +70,6 @@ namespace demiplane::multithread {
             // No-op
         }
 
-    private:
         std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent) override {
             gears::unused_value(sequence, cursor, dependent);
             throw std::logic_error{"YieldingWaitStrategy does not support dependent sequences"};

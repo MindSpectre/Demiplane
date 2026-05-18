@@ -6,7 +6,7 @@
 #include <thread>
 #include <vector>
 
-#include <immintrin.h>
+#include <pause.hpp>
 
 #include "sequence.hpp"
 #include "shared/constants.hpp"
@@ -163,13 +163,7 @@ namespace demiplane::multithread {
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
                         if (++spin_count < SPIN_BEFORE_YIELD) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
-                            _mm_pause();
-#elif defined(__aarch64__)
-                            asm volatile("yield" ::: "memory");
-#else
-// no-op
-#endif
+                            pause_arc_agnostic();
                         } else {
                             std::this_thread::yield();
                             spin_count = 0;
@@ -254,13 +248,7 @@ namespace demiplane::multithread {
                     while (wrap_point > gating_seq) {
                         gating_seq = gating_sequence_.get();
                         if (++spin_count < SPIN_BEFORE_YIELD) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
-                            _mm_pause();
-#elif defined(__aarch64__)
-                            asm volatile("yield" ::: "memory");
-#else
-// no-op
-#endif
+                            pause_arc_agnostic();
                         } else {
                             std::this_thread::yield();
                             spin_count = 0;

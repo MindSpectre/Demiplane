@@ -91,13 +91,12 @@ namespace demiplane::multithread {
             cv_.notify_all();
         }
 
-
-    private:
-        std::int64_t
-        wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent_sequence) override {
-            gears::unused_value(sequence, cursor, dependent_sequence);
+        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent) override {
+            gears::unused_value(sequence, cursor, dependent);
             throw std::logic_error{"BlockingWaitStrategy does not support dependent sequences"};
         }
+
+    private:
         std::mutex mutex_;
         std::condition_variable cv_;
     };

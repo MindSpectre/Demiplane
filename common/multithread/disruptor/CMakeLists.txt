@@ -37,5 +37,6 @@ target_include_directories(${DMP_MULTITHREAD}.Disruptor INTERFACE
 target_link_libraries(${DMP_MULTITHREAD}.Disruptor INTERFACE
         Threads::Threads
         Demiplane::Common::Gears
+        ${DMP_MULTITHREAD}.Utils
 )
 ##############################################################################

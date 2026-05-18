@@ -3,3 +3,5 @@
 #include "thread_pool.hpp"
 #include "thread_safe_resource.hpp"
 #include "disruptor.hpp"
+#include "event_count.hpp"
+#include "resource_pool.hpp"

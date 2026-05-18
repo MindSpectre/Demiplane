@@ -45,15 +45,14 @@ namespace demiplane::multithread {
             cv_.notify_all();
         }
 
-
-    private:
-        std::int64_t
-        wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent_sequence) override {
-            gears::unused_value(sequence, cursor, dependent_sequence);
+        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent) override {
+            gears::unused_value(sequence, cursor, dependent);
             throw std::logic_error{"TimeoutBlockingWaitStrategy does not support dependent sequences"};
         }
-        std::mutex mutex_;
-        std::condition_variable cv_;
+
+    private:
+        std::mutex mutex_{};
+        std::condition_variable cv_{};
         std::chrono::milliseconds timeout_;
     };
 }  // namespace demiplane::multithread

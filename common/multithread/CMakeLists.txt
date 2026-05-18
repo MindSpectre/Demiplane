@@ -1,6 +1,61 @@
 set(DMP_MULTITHREAD ${DMP_COMMON}.Multithread)
 
 ##############################################################################
+# Multithread utils
+##############################################################################
+add_library(${DMP_MULTITHREAD}.Utils INTERFACE
+        utils/pause.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.Utils
+        INTERFACE
+        utils
+)
+target_link_libraries(${DMP_MULTITHREAD}.Utils
+        INTERFACE
+        Threads::Threads
+)
+##############################################################################
+
+
+##############################################################################
+# EventCount - folly-style futex wait primitive
+##############################################################################
+add_library(${DMP_MULTITHREAD}.EventCount INTERFACE
+        event_count/event_count.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.EventCount
+        INTERFACE
+        event_count
+)
+target_link_libraries(${DMP_MULTITHREAD}.EventCount
+        INTERFACE
+        Threads::Threads
+)
+##############################################################################
+
+
+##############################################################################
+# ResourcePool - partition-aware bounded resource pool
+##############################################################################
+add_library(${DMP_MULTITHREAD}.ResourcePool INTERFACE
+        resource_pool/resource_pool.hpp
+        resource_pool/lease.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.ResourcePool
+        INTERFACE
+        resource_pool
+)
+target_link_libraries(${DMP_MULTITHREAD}.ResourcePool
+        INTERFACE
+        Threads::Threads
+        Demiplane::Common::Gears
+        ${DMP_MULTITHREAD}.EventCount
+        ${DMP_MULTITHREAD}.Utils
+)
+##############################################################################
+
+
+##############################################################################
 # Synchronized resource class - wraps resource with mutex
 ##############################################################################
 add_library(${DMP_MULTITHREAD}.ThreadSafeResource INTERFACE
@@ -57,6 +112,8 @@ add_combined_library(${DMP_MULTITHREAD}
         ${DMP_MULTITHREAD}.ThreadPool
         ${DMP_MULTITHREAD}.ThreadSafeResource
         ${DMP_MULTITHREAD}.Disruptor
+        ${DMP_MULTITHREAD}.EventCount
+        ${DMP_MULTITHREAD}.ResourcePool
 )
 
 add_library(Demiplane::Common::Multithread ALIAS ${DMP_MULTITHREAD})

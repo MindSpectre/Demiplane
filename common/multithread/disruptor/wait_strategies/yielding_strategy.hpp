@@ -2,7 +2,8 @@
 
 #include <thread>
 
-#include "wait_strategy.hpp"
+#include <gears_utils.hpp>
+
 namespace demiplane::multithread {
 
     /**
@@ -43,9 +44,10 @@ namespace demiplane::multithread {
      * - Good balance of latency (<1μs) and CPU efficiency
      * - Examples: Logging, metrics, event processing
      */
-    class YieldingWaitStrategy final : public WaitStrategy {
+    class YieldingWaitStrategy final {
     public:
-        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) override {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+            gears::force_non_static(this);
             std::int64_t available_sequence;
             int spin_tries = 0;
 
@@ -62,17 +64,14 @@ namespace demiplane::multithread {
         }
 
 
-        void signal() noexcept override {
+        void signal() const noexcept {
+            gears::force_non_static(this);
             // No-op: yield() is not blockable
         }
 
-        void signal_all() noexcept override {
+        void signal_all() const noexcept {
+            gears::force_non_static(this);
             // No-op
-        }
-
-        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent) override {
-            gears::unused_value(sequence, cursor, dependent);
-            throw std::logic_error{"YieldingWaitStrategy does not support dependent sequences"};
         }
     };
 

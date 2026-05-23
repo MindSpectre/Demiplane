@@ -5,6 +5,7 @@ set(DMP_MULTITHREAD ${DMP_COMMON}.Multithread)
 ##############################################################################
 add_library(${DMP_MULTITHREAD}.Utils INTERFACE
         utils/pause.hpp
+        utils/thread_pinning.hpp
 )
 target_include_directories(${DMP_MULTITHREAD}.Utils
         INTERFACE

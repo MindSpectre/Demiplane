@@ -67,14 +67,12 @@ namespace demiplane::scroll {
                 auto& event = disruptor_.ring_buffer()[seq];
 
                 if (event.shutdown_signal) {
-                    disruptor_.sequencer().mark_consumed(seq);
                     last_consumed = seq;
                     running_.store(false, std::memory_order_release);
                     break;
                 }
 
                 batch->emplace_back(std::move(event));
-                disruptor_.sequencer().mark_consumed(seq);
                 last_consumed = seq;
             }
 

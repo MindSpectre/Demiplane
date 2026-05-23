@@ -1,6 +1,7 @@
 #pragma once
 
-#include "wait_strategy.hpp"
+#include <gears_utils.hpp>
+#include <pause.hpp>
 
 namespace demiplane::multithread {
 
@@ -35,9 +36,10 @@ namespace demiplane::multithread {
      * - Battery-powered devices
      * - Low message rate (wastes power)
      */
-    class BusySpinWaitStrategy final : public WaitStrategy {
+    class BusySpinWaitStrategy final {
     public:
-        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) override {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+            gears::force_non_static(this);
             std::int64_t available_sequence;
 
             // Tight spin loop - no pauses, no yields
@@ -51,17 +53,14 @@ namespace demiplane::multithread {
         }
 
 
-        void signal() noexcept override {
+        void signal() const noexcept {
+            gears::force_non_static(this);
             // No-op: Spinning threads will see the update via acquire load
         }
 
-        void signal_all() noexcept override {
+        void signal_all() const noexcept {
+            gears::force_non_static(this);
             // No-op: Nothing to wake up
-        }
-
-        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent) override {
-            gears::unused_value(sequence, cursor, dependent);
-            throw std::logic_error{"BusySpinWaitStrategy does not support dependent sequences"};
         }
     };
 

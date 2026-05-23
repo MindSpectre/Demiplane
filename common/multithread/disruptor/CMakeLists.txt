@@ -20,14 +20,13 @@ add_library(${DMP_MULTITHREAD}.Disruptor INTERFACE
         wait_strategies/yielding_strategy.hpp
         wait_strategies/wait_strategy.hpp
         shared/constants.hpp
-        multi_producer_sequencer/dynamic_multi_producer_sequencer.hpp
-        multi_producer_sequencer/static_multi_producer_sequencer.hpp
-        ring_buffer/dynamic_ring_buffer.hpp
-        ring_buffer/static_ring_buffer.hpp
-        disruptor/dynamic_disruptor.hpp
-        disruptor/static_disruptor.hpp
-        disruptor.hpp
+        sequencer/sequencer_concept.hpp
+        sequencer/multi_producer_sequencer.hpp
+        sequencer/single_producer_sequencer.hpp
         sequence.hpp
+        ring_buffer/ring_buffer.hpp
+        ring_buffer/static_ring_buffer.hpp
+        disruptor.hpp
 )
 
 target_include_directories(${DMP_MULTITHREAD}.Disruptor INTERFACE

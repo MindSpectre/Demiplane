@@ -40,7 +40,7 @@ namespace demiplane::chrono {
             if (i >= flags_.size() || i == 0) {
                 return {duration::zero(), duration::zero()};
             }
-            const duration since_start = std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
+            const auto since_start = std::chrono::duration_cast<duration>(flags_[i] - flags_[0]);
             duration since_prev{duration::zero()};
             if (i >= 1) {
                 since_prev = std::chrono::duration_cast<duration>(flags_[i] - flags_[i - 1]);

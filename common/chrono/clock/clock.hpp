@@ -7,6 +7,12 @@
 #include <string_view>
 
 namespace demiplane::chrono {
+    namespace detail {
+        template <typename T>
+        concept DoesStringHaveAppendMethod = requires(T& s, const char* ptr, std::size_t n) {
+            { s.append(ptr, n) };
+        };
+    }  // namespace detail
     // ─────────────── Base clock (parse & now) ───────────────
     class Clock {
     public:
@@ -81,7 +87,8 @@ namespace demiplane::chrono {
             return {timestamp, static_cast<std::size_t>(len)};
         }
 
-        static void format_time_iso_ms(const sys_tp tp, std::string& out) {
+        template <detail::DoesStringHaveAppendMethod StringT>
+        static void format_time_iso_ms(const sys_tp tp, StringT& out) {
             const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
             const auto tm = to_tm(tp);
             char timestamp[32];

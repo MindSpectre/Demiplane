@@ -17,7 +17,7 @@ target_link_libraries(${DMP_CHRONO}.Utilities INTERFACE
 ##############################################################################
 
 ##############################################################################
-# Stopwatch class with measure purposes
+# Stopwatch class with measure purposes # TODO: Refactor
 ##############################################################################
 add_library(${DMP_CHRONO}.Stopwatch INTERFACE
         stopwatch/include/stopwatch.hpp
@@ -38,6 +38,7 @@ target_link_libraries(${DMP_CHRONO}.Stopwatch
 ##############################################################################
 add_library(${DMP_CHRONO}.Clock INTERFACE
         clock/clock.hpp
+        clock/tsc_clock.hpp
 )
 target_include_directories(${DMP_CHRONO}.Clock
         INTERFACE

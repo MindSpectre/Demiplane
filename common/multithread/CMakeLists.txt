@@ -38,15 +38,15 @@ target_link_libraries(${DMP_MULTITHREAD}.EventCount
 ##############################################################################
 # ResourcePool - partition-aware bounded resource pool
 ##############################################################################
-add_library(${DMP_MULTITHREAD}.ResourcePool INTERFACE
-        resource_pool/resource_pool.hpp
-        resource_pool/lease.hpp
+add_library(${DMP_MULTITHREAD}.ResourcePool.Sync INTERFACE
+        resource_pool/sync/resource_pool.hpp
+        resource_pool/sync/lease.hpp
 )
-target_include_directories(${DMP_MULTITHREAD}.ResourcePool
+target_include_directories(${DMP_MULTITHREAD}.ResourcePool.Sync
         INTERFACE
-        resource_pool
+        resource_pool/sync
 )
-target_link_libraries(${DMP_MULTITHREAD}.ResourcePool
+target_link_libraries(${DMP_MULTITHREAD}.ResourcePool.Sync
         INTERFACE
         Threads::Threads
         Demiplane::Common::Gears
@@ -55,6 +55,25 @@ target_link_libraries(${DMP_MULTITHREAD}.ResourcePool
 )
 ##############################################################################
 
+##############################################################################
+# ResourcePool - partition-aware bounded resource pool
+##############################################################################
+add_library(${DMP_MULTITHREAD}.ResourcePool.Async INTERFACE
+        resource_pool/async/async_resource_pool.hpp
+        resource_pool/async/async_lease.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.ResourcePool.Async
+        INTERFACE
+        resource_pool/async
+)
+target_link_libraries(${DMP_MULTITHREAD}.ResourcePool.Async
+        INTERFACE
+        Threads::Threads
+        Demiplane::Common::Gears
+        ${DMP_MULTITHREAD}.EventCount
+        ${DMP_MULTITHREAD}.Utils
+)
+##############################################################################
 
 ##############################################################################
 # Synchronized resource class - wraps resource with mutex
@@ -114,7 +133,8 @@ add_combined_library(${DMP_MULTITHREAD}
         ${DMP_MULTITHREAD}.ThreadSafeResource
         ${DMP_MULTITHREAD}.Disruptor
         ${DMP_MULTITHREAD}.EventCount
-        ${DMP_MULTITHREAD}.ResourcePool
+        ${DMP_MULTITHREAD}.ResourcePool.Sync
+        ${DMP_MULTITHREAD}.ResourcePool.Async
 )
 
 add_library(Demiplane::Common::Multithread ALIAS ${DMP_MULTITHREAD})

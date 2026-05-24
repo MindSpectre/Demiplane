@@ -4,6 +4,8 @@ add_subdirectory(logger)
 
 add_subdirectory(disruptor)
 
+add_subdirectory(multithread)
+
 if (BUILD_HTTP)
     message("Benchmarks for HTTP will be built")
     add_subdirectory(http)

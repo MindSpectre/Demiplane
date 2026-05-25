@@ -1,26 +1,32 @@
 #pragma once
 
 #include <cstddef>
-#include <demiplane/multithread>
 #include <memory>
 #include <thread>
 #include <vector>
 
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
-#include <sys/prctl.h>
 
-#include "bench_scenarios.hpp"  // CORE_COUNT
+#if defined(__linux__)
+    #include <sys/prctl.h>
+#endif
 
-namespace bench::pool {
+#include "thread_pinning.hpp"  // pin_current_thread_to_core
 
-    /// N single-threaded io_contexts (one per core). Each context's scheduler lock is
+namespace demiplane::multithread {
+
+    /// N single-threaded io_contexts (one per shard). Each context's scheduler lock is
     /// touched only by its own runner thread plus cross-shard wake posts, so the heavy
     /// shared-scheduler-lock contention of one io_context run by N threads disappears.
     /// Single-threaded contexts also need no per-coroutine strand.
-    class ShardedAsioBackend {
+    class ShardedAsioBackend : gears::NonCopyable {
     public:
-        ShardedAsioBackend(const std::size_t n, const bool pin)
+        /// @param n         number of shards (single-threaded io_contexts).
+        /// @param pin       pin each shard's runner to a core when true.
+        /// @param pin_cores affinity-window size: shard `i` pins to `(i % pin_cores) + base_core`.
+        /// @param base_core first core of the affinity window (default 0).
+        ShardedAsioBackend(const std::size_t n, const bool pin, const std::size_t pin_cores, const int base_core = 0)
             : n_{n} {
             contexts_.reserve(n);
             guards_.reserve(n);
@@ -30,31 +36,30 @@ namespace bench::pool {
             }
             threads_.reserve(n);
             for (std::size_t i = 0; i < n; ++i) {
-                threads_.emplace_back([this, i, pin] {
-                    if (pin) {
-                        demiplane::multithread::pin_current_thread_to_core(static_cast<int>(i % CORE_COUNT));
+                threads_.emplace_back([this, i, pin, pin_cores, base_core] {
+                    if (pin && pin_cores > 0) {
+                        pin_current_thread_to_core(static_cast<int>(i % pin_cores) + base_core);
                     }
+#if defined(__linux__)
                     // 50us default timer slack -> ~1ns; sharpens timerfd/epoll waits on this io
-                    // thread (the pool's acquire_for timeout + the dispatcher poll).
+                    // thread (e.g. an acquire_for timeout + a dispatcher poll).
                     ::prctl(PR_SET_TIMERSLACK, 1UL, 0, 0, 0);
+#endif
                     contexts_[i]->run();
                 });
             }
         }
 
-        ShardedAsioBackend(const ShardedAsioBackend&)            = delete;
-        ShardedAsioBackend& operator=(const ShardedAsioBackend&) = delete;
-
         ~ShardedAsioBackend() noexcept {
             for (auto& g : guards_) {
                 g.reset();
             }
-            for (auto& c : contexts_) {
+            for (const auto& c : contexts_) {
                 c->stop();
             }
         }
 
-        [[nodiscard]] boost::asio::io_context::executor_type executor(const std::size_t i) {
+        [[nodiscard]] boost::asio::io_context::executor_type executor(const std::size_t i) const {
             return contexts_[i % n_]->get_executor();
         }
 
@@ -69,4 +74,4 @@ namespace bench::pool {
         std::vector<std::jthread> threads_;
     };
 
-}  // namespace bench::pool
+}  // namespace demiplane::multithread

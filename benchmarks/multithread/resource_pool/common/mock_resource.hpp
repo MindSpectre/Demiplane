@@ -3,12 +3,12 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <demiplane/chrono>
 
 #include <pause.hpp>
 
-#include "rdtsc_clock.hpp"
-
 namespace bench::pool {
+    using TscClock = demiplane::chrono::TscClock;
 
     /// Cheap holder for the pool. work_for() is an rdtsc-spin busy-wait that
     /// the compiler cannot elide (rdtsc is an intrinsic with side effects),
@@ -26,8 +26,8 @@ namespace bench::pool {
             if (d.count() <= 0) {
                 return;
             }
-            const std::uint64_t deadline = rdtsc_now() + ns_to_cycles(d);
-            while (rdtsc_now() < deadline) {
+            const std::uint64_t deadline = TscClock::now() + TscClock::to_cycles(d);
+            while (TscClock::now() < deadline) {
                 demiplane::multithread::pause_arc_agnostic();
             }
         }

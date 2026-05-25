@@ -415,7 +415,7 @@ namespace {
 
     void print_group_header(std::string_view title) {
         std::cout << '\n'
-                  << demiplane::ink::colors::colorize(demiplane::ink::colors::bold_yellow, std::string{title}) << '\n';
+                  << demiplane::ink::colors::colorize(std::string{title}, demiplane::ink::colors::bold_yellow) << '\n';
     }
 }  // namespace
 

@@ -72,6 +72,28 @@ target_link_libraries(${DMP_MULTITHREAD}.ResourcePool.Async
         Demiplane::Common::Gears
         ${DMP_MULTITHREAD}.EventCount
         ${DMP_MULTITHREAD}.Utils
+        Boost::asio
+        Boost::system
+)
+##############################################################################
+
+##############################################################################
+# AsioBackend - RAII io_context runners (single + sharded) for asio-based pools
+##############################################################################
+add_library(${DMP_MULTITHREAD}.AsioBackend INTERFACE
+        asio_backend/asio_backend.hpp
+        asio_backend/sharded_asio_backend.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.AsioBackend
+        INTERFACE
+        asio_backend
+)
+target_link_libraries(${DMP_MULTITHREAD}.AsioBackend
+        INTERFACE
+        Threads::Threads
+        ${DMP_MULTITHREAD}.Utils
+        Boost::asio
+        Boost::system
 )
 ##############################################################################
 
@@ -135,6 +157,7 @@ add_combined_library(${DMP_MULTITHREAD}
         ${DMP_MULTITHREAD}.EventCount
         ${DMP_MULTITHREAD}.ResourcePool.Sync
         ${DMP_MULTITHREAD}.ResourcePool.Async
+        ${DMP_MULTITHREAD}.AsioBackend
 )
 
 add_library(Demiplane::Common::Multithread ALIAS ${DMP_MULTITHREAD})

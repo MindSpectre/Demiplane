@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and run all 6 ResourcePool benchmark binaries, twice each
+# Build and run all 8 ResourcePool benchmark binaries (5 sync + 3 async), twice each
 # (floating workers + pinned 1:1), confined to cores 0..9 via taskset.
 # Output: /tmp/pool_bench_results/{floating,pinned}/<subject>.json
 #
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 cd "$REPO_ROOT"
 
 SKIP_BUILD=0
@@ -28,7 +28,6 @@ TARGETS=(
     "${PREFIX}.AcqFor2us"
     "${PREFIX}.AcqFor10us"
     "${PREFIX}.Pinned"
-    "${PREFIX}.MutexBase"
     "${PREFIX}.ArpAcqFor1us"
     "${PREFIX}.ArpAcqFor2us"
     "${PREFIX}.ArpAcqFor10us"
@@ -49,7 +48,6 @@ declare -a SUBJECTS=(
     "acqfor_2us:AcqFor2us"
     "acqfor_10us:AcqFor10us"
     "rp_pinned:Pinned"
-    "mutex_base:MutexBase"
     "arp_acqfor_1us:ArpAcqFor1us"
     "arp_acqfor_2us:ArpAcqFor2us"
     "arp_acqfor_10us:ArpAcqFor10us"

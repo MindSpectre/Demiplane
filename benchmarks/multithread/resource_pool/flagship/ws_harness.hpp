@@ -69,7 +69,7 @@ namespace bench::pool {
             sink_ioc_.stop();
         }
 
-        [[nodiscard]] WsStream& client(const std::size_t w) noexcept {
+        [[nodiscard]] WsStream& client(const std::size_t w) const noexcept {
             return *clients_[w];
         }
         [[nodiscard]] std::size_t size() const noexcept {

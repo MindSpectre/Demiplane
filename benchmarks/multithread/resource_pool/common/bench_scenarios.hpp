@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -99,9 +98,6 @@ namespace bench::pool {
         ScenarioKind::HeavyBurst,
     };
 
-    /// Mutex baseline supports the same try_acquire / acquire_for interface,
-    /// so it participates in every free-region scenario (including asio-post).
-    inline constexpr auto& MUTEX_COMPATIBLE_SCENARIOS = FREE_REGION_SCENARIOS;
 
     inline constexpr std::array<int, 6> WORKER_COUNTS_FLOATING = {8, 16, 32, 64, 128, 256};
     inline constexpr int WORKER_COUNT_PINNED                   = 10;

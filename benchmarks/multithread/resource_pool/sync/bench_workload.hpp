@@ -4,6 +4,7 @@
 #include <barrier>
 #include <chrono>
 #include <cstddef>
+#include <demiplane/chrono>
 #include <demiplane/multithread>
 #include <thread>
 #include <vector>
@@ -11,18 +12,17 @@
 #include <benchmark/benchmark.h>
 #include <pause.hpp>
 
-#include "asio_backend.hpp"
-#include "bench_latency.hpp"
-#include "bench_scenarios.hpp"
-#include "rdtsc_clock.hpp"
+#include "common/bench_latency.hpp"
+#include "common/bench_scenarios.hpp"
 
 namespace bench::pool {
+    using TscClock = demiplane::chrono::TscClock;
 
     namespace detail {
 
         inline void busy_wait_for(const std::uint64_t cycles, std::atomic<bool>& stop) noexcept {
-            const std::uint64_t end = rdtsc_now() + cycles;
-            while (rdtsc_now() < end && !stop.load(std::memory_order_acquire)) {
+            const std::uint64_t end = TscClock::now() + cycles;
+            while (TscClock::now() < end && !stop.load(std::memory_order_acquire)) {
                 demiplane::multithread::pause_arc_agnostic();
             }
         }
@@ -42,12 +42,12 @@ namespace bench::pool {
             switch (sc.kind) {
                 case ScenarioKind::Steady:
                 case ScenarioKind::TimeoutPressure: {
-                    while (rdtsc_now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
-                        const std::uint64_t t0 = rdtsc_now();
+                    while (TscClock::now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
+                        const std::uint64_t t0 = TscClock::now();
                         auto lease             = strategy(pool);
-                        const std::uint64_t t1 = rdtsc_now();
+                        const std::uint64_t t1 = TscClock::now();
                         if (lease.has_value()) {
-                            collector.record(cycles_to_ns(t1 - t0));
+                            collector.record(TscClock::to_duration(t1 - t0));
                             (*lease)->work_for(sc.work_duration);
                             completed.fetch_add(1, std::memory_order_relaxed);
                         } else {
@@ -58,21 +58,21 @@ namespace bench::pool {
                 }
                 case ScenarioKind::Burst:
                 case ScenarioKind::HeavyBurst: {
-                    const std::uint64_t idle_cycles = ns_to_cycles(sc.idle_between_bursts);
-                    while (rdtsc_now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
-                        for (int b = 0; b < sc.burst_size && rdtsc_now() < frame_end_cycles; ++b) {
-                            const std::uint64_t t0 = rdtsc_now();
+                    const std::uint64_t idle_cycles = TscClock::to_cycles(sc.idle_between_bursts);
+                    while (TscClock::now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
+                        for (int b = 0; b < sc.burst_size && TscClock::now() < frame_end_cycles; ++b) {
+                            const std::uint64_t t0 = TscClock::now();
                             auto lease             = strategy(pool);
-                            const std::uint64_t t1 = rdtsc_now();
+                            const std::uint64_t t1 = TscClock::now();
                             if (lease.has_value()) {
-                                collector.record(cycles_to_ns(t1 - t0));
+                                collector.record(TscClock::to_duration(t1 - t0));
                                 (*lease)->work_for(sc.work_duration);
                                 completed.fetch_add(1, std::memory_order_relaxed);
                             } else {
                                 skipped.fetch_add(1, std::memory_order_relaxed);
                             }
                         }
-                        if (rdtsc_now() >= frame_end_cycles) {
+                        if (TscClock::now() >= frame_end_cycles) {
                             break;
                         }
                         busy_wait_for(idle_cycles, stop);
@@ -101,8 +101,8 @@ namespace bench::pool {
             constexpr int BATCH                           = 1024;
             std::atomic<typename Pool::value_type*>& cell = pool.pinned(my_slot);
 
-            while (rdtsc_now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
-                const std::uint64_t t0 = rdtsc_now();
+            while (TscClock::now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
+                const std::uint64_t t0 = TscClock::now();
                 for (int k = 0; k < BATCH; ++k) {
                     auto* r = cell.load(std::memory_order_acquire);
                     benchmark::DoNotOptimize(r);
@@ -113,8 +113,8 @@ namespace bench::pool {
                     }
                     demiplane::multithread::pause_arc_agnostic();
                 }
-                const std::uint64_t t1 = rdtsc_now();
-                collector.record(cycles_to_ns((t1 - t0) / BATCH));
+                const std::uint64_t t1 = TscClock::now();
+                collector.record(TscClock::to_duration((t1 - t0) / BATCH));
                 completed.fetch_add(BATCH, std::memory_order_relaxed);
             }
         }
@@ -148,7 +148,7 @@ namespace bench::pool {
         constexpr auto FRAME_BUDGET              = 5ms;
         constexpr std::size_t SAMPLES_PER_WORKER = 1u << 16;
         const auto workers                       = static_cast<std::size_t>(state.range(0));
-        const std::uint64_t frame_budget_cycles  = ns_to_cycles(FRAME_BUDGET);
+        const std::uint64_t frame_budget_cycles  = TscClock::to_cycles(FRAME_BUDGET);
 
         std::vector<LatencyCollector> collectors(workers);
         for (auto& c : collectors) {
@@ -174,7 +174,7 @@ namespace bench::pool {
                     if (stop.load(std::memory_order_acquire)) {
                         return;
                     }
-                    const std::uint64_t frame_end = rdtsc_now() + frame_budget_cycles;
+                    const std::uint64_t frame_end = TscClock::now() + frame_budget_cycles;
                     if constexpr (detail::HasPinnedApi<Pool>) {
                         if (sc.kind == ScenarioKind::PinnedZeroContention) {
                             detail::run_pinned_frame(sc, pool, collectors[i], completed, frame_end, i, stop);
@@ -230,15 +230,15 @@ namespace bench::pool {
             c.reserve(1u << 16);
         }
 
-        AsioBackend backend{n_workers, pin};
+        demiplane::multithread::AsioBackend backend{n_workers, pin, static_cast<std::size_t>(CORE_COUNT)};
 
         auto task = [&] {
             auto& col              = registry.my();
-            const std::uint64_t t0 = rdtsc_now();
+            const std::uint64_t t0 = TscClock::now();
             auto lease             = strategy(pool);
-            const std::uint64_t t1 = rdtsc_now();
+            const std::uint64_t t1 = TscClock::now();
             if (lease.has_value()) {
-                col.record(cycles_to_ns(t1 - t0));
+                col.record(TscClock::to_duration(t1 - t0));
                 (*lease)->work_for(sc.work_duration);
                 completed.fetch_add(1, std::memory_order_relaxed);
             } else {
@@ -255,7 +255,7 @@ namespace bench::pool {
                     backend.post(task);
                 }
             } else {  // AsioPostBurst
-                const std::uint64_t idle_cycles = ns_to_cycles(sc.idle_between_bursts);
+                const std::uint64_t idle_cycles = TscClock::to_cycles(sc.idle_between_bursts);
                 while (!stop.load(std::memory_order_acquire)) {
                     for (int b = 0; b < sc.burst_size && !stop.load(std::memory_order_acquire); ++b) {
                         backend.post(task);

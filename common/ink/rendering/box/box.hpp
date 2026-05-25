@@ -58,7 +58,7 @@ namespace demiplane::ink {
     private:
         std::string body_;
         std::string title_{};
-        const border::Glyphs* glyphs_ = &border::ascii;  // static link, safe
+        const border::Glyphs* glyphs_ = &border::unicode;  // static link, safe
         std::string_view border_style_{};
         std::size_t padding_ = 1;
         bool terminate_      = false;
@@ -86,7 +86,7 @@ namespace demiplane::ink {
                          cross] = *glyphs_;
 
             auto wrap_border = [&](std::string s) -> std::string {
-                return border_style_.empty() ? std::move(s) : colors::colorize(border_style_, s);
+                return border_style_.empty() ? std::move(s) : colors::colorize(s, border_style_);
             };
 
             auto horizontal_run = [&](const std::size_t count) {

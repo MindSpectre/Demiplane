@@ -1,17 +1,14 @@
 #pragma once
 
 #include <cstdlib>
+#include <demiplane/chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <string_view>
 
-#include <benchmark/benchmark.h>
-
-#include "bench_scenarios.hpp"
-#include "rdtsc_clock.hpp"
-
 namespace bench::pool {
+    using TscClock = demiplane::chrono::TscClock;
 
     /// Strip `--pin=0|1` out of argv (Google Benchmark doesn't know about it),
     /// return the parsed value. argc is mutated in place.
@@ -19,8 +16,7 @@ namespace bench::pool {
         bool pin = false;
         int dst  = 1;
         for (int i = 1; i < argc; ++i) {
-            const std::string_view a{argv[i]};
-            if (a == "--pin=0") {
+            if (const std::string_view a{argv[i]}; a == "--pin=0") {
                 pin = false;
             } else if (a == "--pin=1") {
                 pin = true;
@@ -45,8 +41,8 @@ namespace bench::pool {
     /// Print the rdtsc calibration once at startup so the user can sanity-check
     /// against `lscpu`'s reported max frequency.
     inline void print_calibration() {
-        const double c = rdtsc_calib().cycles_per_ns;
-        std::cerr << "[rdtsc_calib] cycles_per_ns = " << c << "  (=" << (c * 1000.0) << " MHz nominal)\n";
+        const double c = TscClock::cycles_per_ns();
+        std::cerr << "[tsc_calib] cycles_per_ns = " << c << "  (=" << (c * 1000.0) << " MHz nominal)" << std::endl;
     }
 
     /// Cheap-to-read file helper. Returns empty string on read failure.
@@ -70,16 +66,15 @@ namespace bench::pool {
         std::cerr << "[env] checking jitter sources (warnings only; bench will still run)\n";
 
         // CPU governor — only checks core 0 (the rest are usually the same)
-        const std::string gov = read_file_trim("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
-        if (!gov.empty() && gov != "performance") {
+        if (const std::string gov = read_file_trim("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+            !gov.empty() && gov != "performance") {
             std::cerr << "[env]   WARN  cpu0 governor = '" << gov
                       << "' (recommend 'performance' — `sudo cpupower frequency-set -g performance`)\n";
         }
 
         // SMT / hyper-threading. lscpu's "Thread(s) per core" is per
         // /sys/devices/system/cpu/smt/active (when present).
-        const std::string smt = read_file_trim("/sys/devices/system/cpu/smt/active");
-        if (smt == "1") {
+        if (const std::string smt = read_file_trim("/sys/devices/system/cpu/smt/active"); smt == "1") {
             std::cerr << "[env]   WARN  SMT active — sibling threads share L1/L2 and add jitter "
                          "(`echo off | sudo tee /sys/devices/system/cpu/smt/control`)\n";
         }
@@ -101,8 +96,8 @@ namespace bench::pool {
         }
 
         // Transparent hugepages
-        const std::string thp = read_file_trim("/sys/kernel/mm/transparent_hugepage/enabled");
-        if (thp.find("[never]") != std::string::npos) {
+        if (const std::string thp = read_file_trim("/sys/kernel/mm/transparent_hugepage/enabled");
+            thp.find("[never]") != std::string::npos) {
             std::cerr << "[env]   WARN  THP = 'never' — bitset and slot storage pay TLB cost "
                          "(`echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/enabled`)\n";
         }
@@ -110,8 +105,7 @@ namespace bench::pool {
         // Loadavg
         const std::string la = read_file_trim("/proc/loadavg");
         if (!la.empty()) {
-            const double one_min = std::strtod(la.c_str(), nullptr);
-            if (one_min > 2.0) {
+            if (const double one_min = std::strtod(la.c_str(), nullptr); one_min > 2.0) {
                 std::cerr << "[env]   WARN  loadavg (1m) = " << one_min
                           << " — other processes will preempt the bench cores\n";
             }

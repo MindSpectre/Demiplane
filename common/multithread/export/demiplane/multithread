@@ -6,5 +6,7 @@
 #include "event_count.hpp"
 #include "resource_pool.hpp"
 #include "async_resource_pool.hpp"
+#include "asio_backend.hpp"
+#include "sharded_asio_backend.hpp"
 #include "pause.hpp"
 #include "thread_pinning.hpp"

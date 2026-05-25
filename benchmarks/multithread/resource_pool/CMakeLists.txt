@@ -13,18 +13,28 @@ if (NOT benchmark_FOUND)
 endif ()
 
 # ─── Shared header-only common (target_sources keeps the headers visible to IDEs)
-add_library(${DMP_BENCHMARKS_RESOURCEPOOL}.Common INTERFACE)
-target_sources(${DMP_BENCHMARKS_RESOURCEPOOL}.Common
-        INTERFACE
-        common/asio_backend.hpp
+add_library(${DMP_BENCHMARKS_RESOURCEPOOL}.Common INTERFACE
         common/bench_latency.hpp
-        common/bench_scenarios.hpp
-        common/bench_workload.hpp
-        common/mock_resource.hpp
-        common/mutex_queue_pool.hpp
-        common/pin_to_core.hpp
         common/pool_bench_main.hpp
-        common/rdtsc_clock.hpp
+        common/bench_scenarios.hpp
+        common/mock_resource.hpp
+
+        flagship/ws_harness.hpp
+        flagship/flagship_worker.hpp
+        flagship/flagship_utils.hpp
+        flagship/flagship_sync.hpp
+        flagship/flagship_producer.hpp
+        flagship/flagship_config.hpp
+        flagship/flagship_async.hpp
+        flagship/dispatch/pull_dedicated.hpp
+        flagship/dispatch/pull.hpp
+        flagship/dispatch/channel.hpp
+
+        sync/bench_workload.hpp
+        sync/sync_bench_main.hpp
+
+        async/async_bench_main.hpp
+        async/coro_workload.hpp
 )
 target_include_directories(${DMP_BENCHMARKS_RESOURCEPOOL}.Common
         INTERFACE
@@ -34,6 +44,8 @@ target_link_libraries(${DMP_BENCHMARKS_RESOURCEPOOL}.Common
         INTERFACE
         benchmark::benchmark
         Demiplane::Common::Multithread
+        Demiplane::Common::Chrono
+        Demiplane::Common::Ink
         Boost::headers
         Boost::system
         Threads::Threads
@@ -48,18 +60,17 @@ function(add_pool_bench name source)
     )
 endfunction()
 
-add_pool_bench(Try bench_rp_try.cpp)
-add_pool_bench(AcqFor1us bench_rp_acqfor_1us.cpp)
-add_pool_bench(AcqFor2us bench_rp_acqfor_2us.cpp)
-add_pool_bench(AcqFor10us bench_rp_acqfor_10us.cpp)
-add_pool_bench(Pinned bench_rp_pinned.cpp)
-add_pool_bench(MutexBase bench_mutex_base.cpp)
+add_pool_bench(Try sync/bench_rp_try.cpp)
+add_pool_bench(AcqFor1us sync/bench_rp_acqfor_1us.cpp)
+add_pool_bench(AcqFor2us sync/bench_rp_acqfor_2us.cpp)
+add_pool_bench(AcqFor10us sync/bench_rp_acqfor_10us.cpp)
+add_pool_bench(Pinned sync/bench_rp_pinned.cpp)
 
 # AsyncResourcePool — coroutine acquire_for, comparable to the sync AcqFor* subjects.
-add_pool_bench(ArpAcqFor1us bench_arp_acqfor_1us.cpp)
-add_pool_bench(ArpAcqFor2us bench_arp_acqfor_2us.cpp)
-add_pool_bench(ArpAcqFor10us bench_arp_acqfor_10us.cpp)
+add_pool_bench(ArpAcqFor1us async/bench_arp_acqfor_1us.cpp)
+add_pool_bench(ArpAcqFor2us async/bench_arp_acqfor_2us.cpp)
+add_pool_bench(ArpAcqFor10us async/bench_arp_acqfor_10us.cpp)
 
 # Flagship: end-to-end burst latency, sync vs async, disruptor-fed.
-add_pool_bench(FlagshipBurst bench_flagship_burst.cpp)
+add_pool_bench(FlagshipBurst flagship/flagship_bench.cpp)
 ##############################################################################

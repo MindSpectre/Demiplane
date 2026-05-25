@@ -2,8 +2,6 @@ set(DMP_BENCHMARKS ${PROJECT_NAME}.Benchmarks)
 
 add_subdirectory(logger)
 
-add_subdirectory(disruptor)
-
 add_subdirectory(multithread)
 
 if (BUILD_HTTP)

@@ -4,7 +4,8 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
+#include <demiplane/chrono>
+#include <demiplane/multithread>
 #include <thread>
 #include <vector>
 
@@ -12,19 +13,16 @@
 #include <boost/asio/as_tuple.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
-#include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 
-#include "asio_backend.hpp"
-#include "bench_latency.hpp"
-#include "bench_scenarios.hpp"
-#include "rdtsc_clock.hpp"
-#include "sharded_asio_backend.hpp"
+#include "common/bench_latency.hpp"
+#include "common/bench_scenarios.hpp"
 
 namespace bench::pool {
+    using TscClock = demiplane::chrono::TscClock;
 
     /// Free-region scenarios that map to a continuous coroutine workload. The two
     /// AsioPost* scenarios from the sync suite are sync-on-asio specific and have no
@@ -68,7 +66,8 @@ namespace bench::pool {
         // Sharded io pool: CORE_COUNT single-threaded io_contexts. Declared AFTER
         // collectors so it destructs FIRST (joins its threads) while the collectors and
         // pool are still alive.
-        ShardedAsioBackend backend{static_cast<std::size_t>(CORE_COUNT), pin};
+        demiplane::multithread::ShardedAsioBackend backend{
+            static_cast<std::size_t>(CORE_COUNT), pin, static_cast<std::size_t>(CORE_COUNT)};
 
         const bool is_burst   = sc.kind == ScenarioKind::Burst || sc.kind == ScenarioKind::HeavyBurst;
         // HeavyBurst holds the slot across an async wait (≈ a real I/O round-trip), so
@@ -92,11 +91,11 @@ namespace bench::pool {
                     while (!stop.load(std::memory_order_acquire)) {
                         const int batch = is_burst ? sc.burst_size : 1;
                         for (int b = 0; b < batch && !stop.load(std::memory_order_acquire); ++b) {
-                            const std::uint64_t t0 = rdtsc_now();
+                            const std::uint64_t t0 = TscClock::now();
                             auto lease             = co_await pool.async_acquire_for(exec, timeout);
-                            const std::uint64_t t1 = rdtsc_now();
+                            const std::uint64_t t1 = TscClock::now();
                             if (lease.has_value()) {
-                                col.record(cycles_to_ns(t1 - t0));
+                                col.record(TscClock::to_duration(t1 - t0));
                                 if (async_hold) {
                                     // Hold the slot across an async wait (suspended).
                                     hold_timer.expires_after(sc.work_duration);

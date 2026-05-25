@@ -28,13 +28,13 @@ namespace bench::pool {
     inline void merge_latency(benchmark::State& state, const std::vector<LatencyCollector>& collectors) {
         std::vector<std::chrono::nanoseconds> merged;
         std::size_t total = 0;
-        for (const auto& c : collectors) {
-            total += c.samples.size();
+        for (const auto& [samples] : collectors) {
+            total += samples.size();
         }
         merged.reserve(total);
 
-        for (const auto& c : collectors) {
-            merged.insert(merged.end(), c.samples.begin(), c.samples.end());
+        for (const auto& [samples] : collectors) {
+            merged.insert(merged.end(), samples.begin(), samples.end());
         }
 
         if (merged.empty()) {

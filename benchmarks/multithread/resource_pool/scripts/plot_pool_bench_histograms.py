@@ -28,7 +28,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[4]
 RESULTS_DIR = Path("/tmp/pool_bench_results")
 OUT_DIR = REPO_ROOT / "benchmark_results" / "pool_histograms"
 
@@ -38,7 +38,6 @@ JSON_FILES = {
     "RP_AcqFor_2us": "acqfor_2us.json",
     "RP_AcqFor_10us": "acqfor_10us.json",
     "RP_Pinned": "rp_pinned.json",
-    "MutexBase_AcqFor_10us": "mutex_base.json",
     "ARP_AcqFor_1us": "arp_acqfor_1us.json",
     "ARP_AcqFor_2us": "arp_acqfor_2us.json",
     "ARP_AcqFor_10us": "arp_acqfor_10us.json",
@@ -53,7 +52,6 @@ COLORS = {
     "RP_AcqFor_2us": "#2ca02c",
     "RP_AcqFor_10us": "#9467bd",
     "RP_Pinned": "#8c564b",
-    "MutexBase_AcqFor_10us": "#d62728",
     "ARP_AcqFor_1us": "#ff7f0e",
     "ARP_AcqFor_2us": "#e377c2",
     "ARP_AcqFor_10us": "#bcbd22",
@@ -80,7 +78,6 @@ SUBJECT_SCENARIOS = {
     "RP_AcqFor_2us": _FREE5,
     "RP_AcqFor_10us": _FREE5,
     "RP_Pinned": {"PinnedZeroContention"},
-    "MutexBase_AcqFor_10us": _FREE5,
     "ARP_AcqFor_1us": _ASYNC3,
     "ARP_AcqFor_2us": _ASYNC3,
     "ARP_AcqFor_10us": _ASYNC3,
@@ -115,7 +112,6 @@ def parse_name(name):
     """'BM_RP_Try_Steady/8/real_time' -> ('RP_Try', 'Steady', 8)."""
     base, workers_str, _ = name.split("/")
     # base is "BM_<Subject>_<Scenario>". The Subject can have underscores
-    # (RP_AcqFor_1us, MutexBase_AcqFor_100us). Split off the leading "BM_"
     # and identify the subject by longest-prefix match.
     body = base[3:]  # drop "BM_"
     for subj in sorted(SUBJECTS, key=len, reverse=True):

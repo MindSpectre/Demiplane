@@ -93,15 +93,22 @@ namespace demiplane::multithread {
 
         template <typename Factory>
             requires AsyncResourceFactory<Factory&, T>
-        constexpr explicit AsyncResourcePool(const std::size_t n_free, const std::uint32_t spin_budget, Factory&& make)
-            : AsyncResourcePool{
-                  std::size_t{0}, n_free, std::chrono::nanoseconds{spin_budget}, std::forward<Factory>(make)} {
-        }
-
-        template <typename Factory>
-            requires AsyncResourceFactory<Factory&, T>
         constexpr explicit AsyncResourcePool(const std::size_t n_free, Factory&& make)
             : AsyncResourcePool{std::size_t{0}, n_free, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
+        }
+
+        /// Construct a full free pool (n_free == MaxSize) with the default spin budget.
+        template <typename Factory>
+            requires AsyncResourceFactory<Factory&, T>
+        constexpr explicit AsyncResourcePool(Factory&& make)
+            : AsyncResourcePool{std::size_t{0}, MaxSize, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
+        }
+
+        /// Construct a partitioned pool with the default spin budget.
+        template <typename Factory>
+            requires AsyncResourceFactory<Factory&, T>
+        constexpr explicit AsyncResourcePool(const std::size_t n_pinned, const std::size_t n_free, Factory&& make)
+            : AsyncResourcePool{n_pinned, n_free, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
         }
 
         template <typename Factory>
@@ -240,6 +247,13 @@ namespace demiplane::multithread {
                 auto which = co_await (async_park(node, exec, boost::asio::use_awaitable) ||
                                        timer.async_wait(boost::asio::as_tuple(boost::asio::use_awaitable)));
                 if (which.index() == 1) {
+                    // A release can race the timeout: wake_one() flips this node to `notified`
+                    // and posts our resume, but on a single-threaded executor the timer completion
+                    // may be dequeued first, consuming that wake. Reclaim it here instead of
+                    // dropping it (otherwise: lost wakeup / spurious timeout under contention).
+                    if (auto lease = try_acquire()) {
+                        co_return lease;
+                    }
                     co_return std::nullopt;  // timer expired first => timeout
                 }
                 if (std::get<0>(which) != detail::WaitOutcome::woken) {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <pthread.h>
+#include <sched.h>
 #include <thread>
 
 namespace demiplane::multithread {

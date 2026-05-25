@@ -180,3 +180,16 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
         ${TEST_LIBS}
 )
 ##############################################################################
+
+##############################################################################
+# Test AsyncResourcePool
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.AsyncResourcePool
+        resource_pool/test_async_resource_pool.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
+        PRIVATE
+        Demiplane::Common::Multithread
+        ${TEST_LIBS}
+)
+##############################################################################

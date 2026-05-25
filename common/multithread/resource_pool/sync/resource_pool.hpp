@@ -86,15 +86,23 @@ namespace demiplane::multithread {
 
         template <typename Factory>
             requires ResourceFactory<Factory&, T>
-        constexpr explicit ResourcePool(const std::size_t n_free, const std::uint32_t spin_budget, Factory&& make)
-            : ResourcePool{std::size_t{0}, n_free, std::chrono::nanoseconds{spin_budget}, std::forward<Factory>(make)} {
-        }
-
-        template <typename Factory>
-            requires ResourceFactory<Factory&, T>
         constexpr explicit ResourcePool(const std::size_t n_free, Factory&& make)
             : ResourcePool{std::size_t{0}, n_free, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
         }
+
+        /// Construct a full free pool (n_free == MaxSize) with the default spin budget.
+        template <typename Factory>
+            requires ResourceFactory<Factory&, T>
+        constexpr explicit ResourcePool(Factory&& make)
+            : ResourcePool{std::size_t{0}, MaxSize, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
+        }
+        /// Construct a partitioned pool with the default spin budget.
+        template <typename Factory>
+            requires ResourceFactory<Factory&, T>
+        constexpr ResourcePool(const std::size_t n_pinned, const std::size_t n_free, Factory&& make)
+            : ResourcePool{n_pinned, n_free, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
+        }
+
         /// Construct a partitioned pool.
         template <typename Factory>
             requires ResourceFactory<Factory&, T>

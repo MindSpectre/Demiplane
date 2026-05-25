@@ -1,5 +1,9 @@
 #pragma once
 #include <atomic>
+#include <cstdint>
+#include <mutex>
+#include <utility>
+#include <vector>
 
 #include <boost/asio/any_completion_handler.hpp>
 #include <boost/asio/any_io_executor.hpp>

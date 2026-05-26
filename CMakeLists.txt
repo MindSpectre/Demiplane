@@ -57,8 +57,9 @@ list(APPEND general_compile_options
         -Wdouble-promotion -Wnull-dereference
         -Wnon-virtual-dtor
         -Werror
-        -fstack-protector-strong
+        -fno-stack-protector
         -fvisibility=hidden
+        -g
         $<$<CONFIG:Release>:-fomit-frame-pointer>
 )
 

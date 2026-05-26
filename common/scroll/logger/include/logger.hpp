@@ -3,7 +3,6 @@
 #include <atomic>
 #include <demiplane/multithread>
 #include <format>
-#include <future>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -235,7 +234,7 @@ namespace demiplane::scroll {
         }
 
     private:
-        multithread::DynamicDisruptor<LogEvent> disruptor_;
+        multithread::Disruptor<LogEvent, multithread::MultiProducerSequencer, multithread::AnyWaitStrategy> disruptor_;
         std::optional<boost::asio::thread_pool> owned_pool_;
         boost::asio::any_io_executor executor_;
         std::vector<SinkSlot> sink_slots_;
@@ -278,19 +277,18 @@ namespace demiplane::scroll {
         /**
          * @brief Create wait strategy based on config
          */
-        constexpr static std::unique_ptr<multithread::WaitStrategy>
-        create_wait_strategy(const LoggerConfig::WaitStrategy strategy) {
+        static multithread::AnyWaitStrategy create_wait_strategy(const LoggerConfig::WaitStrategy strategy) {
             using namespace multithread;
 
             switch (strategy) {
                 case LoggerConfig::WaitStrategy::BusySpin:
-                    return std::make_unique<BusySpinWaitStrategy>();
+                    return AnyWaitStrategy::make<BusySpinWaitStrategy>();
                 case LoggerConfig::WaitStrategy::Yielding:
-                    return std::make_unique<YieldingWaitStrategy>();
+                    return AnyWaitStrategy::make<YieldingWaitStrategy>();
                 case LoggerConfig::WaitStrategy::Blocking:
-                    return std::make_unique<BlockingWaitStrategy>();
+                    return AnyWaitStrategy::make<BlockingWaitStrategy>();
                 default:
-                    return std::make_unique<YieldingWaitStrategy>();
+                    return AnyWaitStrategy::make<YieldingWaitStrategy>();
             }
         }
     };

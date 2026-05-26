@@ -8,8 +8,7 @@ target_link_libraries(${DMP_BENCHMARKS}.Multithread.Disruptor
         PRIVATE
         Demiplane::Common::Multithread
         Demiplane::Common::Ink
+        Threads::Threads
 )
-add_compile_options(${DMP_BENCHMARK}.Multithread.Disruptor
-    -O3
-)
+target_compile_options(${DMP_BENCHMARKS}.Multithread.Disruptor PRIVATE -O3)
 ##############################################################################

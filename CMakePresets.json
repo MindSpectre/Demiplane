@@ -71,6 +71,20 @@
       "binaryDir": "build/asan"
     },
     {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer (Debug)",
+      "description": "Debug build with ThreadSanitizer; common/ only",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fsanitize=thread -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread -fuse-ld=mold -lc++abi",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=thread -fuse-ld=mold -lc++abi",
+        "BUILD_COMPONENTS": "OFF",
+        "DO_BENCHMARKS": "OFF"
+      },
+      "binaryDir": "build/tsan"
+    },
+    {
       "name": "llvm-coverage",
       "displayName": "Code Coverage — llvm-cov (Debug)",
       "description": "Debug build with llvm source-based coverage (use llvm-profdata + llvm-cov)",
@@ -101,6 +115,17 @@
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON"
       },
       "binaryDir": "build/release-lto"
+    },
+    {
+      "name": "release-instrprof",
+      "displayName": "Release + LLVM Instrumented Profiling",
+      "description": "Release build with llvm source-based profiling instrumentation (use for hotspot analysis via llvm-profdata; do not use for timing runs — instrumentation slows things ~2x)",
+      "inherits": "release",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate -fuse-ld=mold -lc++abi"
+      },
+      "binaryDir": "build/release-instrprof"
     },
     {
       "name": "macos-base",
@@ -258,6 +283,11 @@
       "configuration": "Debug"
     },
     {
+      "name": "tsan",
+      "configurePreset": "tsan",
+      "configuration": "Debug"
+    },
+    {
       "name": "llvm-coverage",
       "configurePreset": "llvm-coverage",
       "configuration": "Debug"
@@ -270,6 +300,11 @@
     {
       "name": "release-lto",
       "configurePreset": "release-lto",
+      "configuration": "Release"
+    },
+    {
+      "name": "release-instrprof",
+      "configurePreset": "release-instrprof",
       "configuration": "Release"
     },
     {
@@ -341,6 +376,14 @@
     {
       "name": "asan",
       "configurePreset": "asan",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
       "configuration": "Debug",
       "output": {
         "outputOnFailure": true

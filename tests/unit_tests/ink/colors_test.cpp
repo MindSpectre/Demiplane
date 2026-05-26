@@ -5,7 +5,7 @@
 namespace ink = demiplane::ink;
 
 TEST(InkColors, ColorizeWrapsWithCodeAndReset) {
-    const auto s = ink::colors::colorize(ink::colors::red, "hi");
+    const auto s = ink::colors::colorize("hi", ink::colors::red);
     EXPECT_EQ(s, "\033[0;31mhi\033[0m");
 }
 

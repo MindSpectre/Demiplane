@@ -60,9 +60,9 @@ namespace demiplane::multithread {
      * - High throughput (mutex contention)
      * - Sub-microsecond latency required
      */
-    class BlockingWaitStrategy final : public WaitStrategy {
+    class BlockingWaitStrategy final {
     public:
-        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) override {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const noexcept {
             std::int64_t available_sequence;
 
             // Quick check before locking (optimization)
@@ -81,24 +81,18 @@ namespace demiplane::multithread {
             return available_sequence;
         }
 
-        void signal() noexcept override {
+        void signal() const noexcept {
             // Wake one waiting thread
             cv_.notify_one();
         }
 
-        void signal_all() noexcept override {
+        void signal_all() const noexcept {
             // Wake all waiting threads (for shutdown)
             cv_.notify_all();
         }
 
-
     private:
-        std::int64_t
-        wait_for(const std::int64_t sequence, const Sequence& cursor, const Sequence* dependent_sequence) override {
-            gears::unused_value(sequence, cursor, dependent_sequence);
-            throw std::logic_error{"BlockingWaitStrategy does not support dependent sequences"};
-        }
-        std::mutex mutex_;
-        std::condition_variable cv_;
+        mutable std::mutex mutex_;
+        mutable std::condition_variable cv_;
     };
 }  // namespace demiplane::multithread

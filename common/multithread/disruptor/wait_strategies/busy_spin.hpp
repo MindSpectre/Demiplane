@@ -1,6 +1,7 @@
 #pragma once
 
-#include "wait_strategy.hpp"
+#include <gears_utils.hpp>
+#include <pause.hpp>
 
 namespace demiplane::multithread {
 
@@ -35,20 +36,15 @@ namespace demiplane::multithread {
      * - Battery-powered devices
      * - Low message rate (wastes power)
      */
-    class BusySpinWaitStrategy final : public WaitStrategy {
+    class BusySpinWaitStrategy final {
     public:
-        std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) override {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+            gears::force_non_static(this);
             std::int64_t available_sequence;
 
             // Tight spin loop - no pauses, no yields
             while ((available_sequence = cursor.get()) < sequence) {
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
-                _mm_pause();
-#elif defined(__aarch64__)
-                asm volatile("yield" ::: "memory");
-#else
-// no-op
-#endif
+                pause_arc_agnostic();
                 // Reduces power and gives hyperthread a chance
                 // std::this_thread::yield();  // Uncomment for slightly lower power
             }
@@ -57,18 +53,14 @@ namespace demiplane::multithread {
         }
 
 
-        void signal() noexcept override {
+        void signal() const noexcept {
+            gears::force_non_static(this);
             // No-op: Spinning threads will see the update via acquire load
         }
 
-        void signal_all() noexcept override {
+        void signal_all() const noexcept {
+            gears::force_non_static(this);
             // No-op: Nothing to wake up
-        }
-
-    private:
-        std::int64_t wait_for(std::int64_t sequence, const Sequence& cursor, const Sequence* dependent) override {
-            gears::unused_value(sequence, cursor, dependent);
-            throw std::logic_error{"BusySpinWaitStrategy does not support dependent sequences"};
         }
     };
 

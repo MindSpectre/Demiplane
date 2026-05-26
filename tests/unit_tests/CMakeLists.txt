@@ -138,5 +138,58 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Gears.Strings.InlineString
 )
 ##############################################################################
 
+##############################################################################
+# Test EventCount
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.EventCount
+        resource_pool/test_event_count.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.EventCount
+        PRIVATE
+        Demiplane::Common::Multithread
+        ${TEST_LIBS}
+)
+##############################################################################
 
+##############################################################################
+# Test EventCount - forced condition_variable fallback path
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.EventCount.Fallback
+        resource_pool/test_event_count.cpp
+)
+target_compile_definitions(${UNIT_TESTING_TARGET}.EventCount.Fallback
+        PRIVATE
+        DMP_EVENT_COUNT_FORCE_FALLBACK
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.EventCount.Fallback
+        PRIVATE
+        Demiplane::Common::Multithread
+        ${TEST_LIBS}
+)
+##############################################################################
 
+##############################################################################
+# Test ResourcePool
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.ResourcePool
+        resource_pool/test_resource_pool.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
+        PRIVATE
+        Demiplane::Common::Multithread
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test AsyncResourcePool
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.AsyncResourcePool
+        resource_pool/test_async_resource_pool.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
+        PRIVATE
+        Demiplane::Common::Multithread
+        ${TEST_LIBS}
+)
+##############################################################################

@@ -20,7 +20,7 @@ namespace demiplane::ink {
     namespace detail {
 
         struct TableRenderOptions {
-            const border::Glyphs* glyphs = &border::ascii;
+            const border::Glyphs* glyphs = &border::unicode;
             std::string_view header_style_prefix{};
             std::size_t min_width    = 0;
             bool terminate           = false;
@@ -115,7 +115,7 @@ namespace demiplane::ink {
                     if (!opts.header_style_prefix.empty()) {
                         out.append(vertical);
                         out.push_back(' ');
-                        out.append(colors::colorize(opts.header_style_prefix, pad(header_text, col_widths[c])));
+                        out.append(colors::colorize(pad(header_text, col_widths[c]), opts.header_style_prefix));
                         out.push_back(' ');
                     } else {
                         emit_cell_line(out, header_text, col_widths[c], Align::Left);

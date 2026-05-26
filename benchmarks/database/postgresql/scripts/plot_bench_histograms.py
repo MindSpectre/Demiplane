@@ -14,11 +14,12 @@ Run:    python3 scripts/plot_bench_histograms.py
 """
 
 import json
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
 RESULTS_DIR = Path("/tmp/bench_results")
 OUT_DIR = REPO_ROOT / "benchmark_results" / "histograms"
 OUT_DIR.mkdir(parents=True, exist_ok=True)

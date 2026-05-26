@@ -1,6 +1,103 @@
 set(DMP_MULTITHREAD ${DMP_COMMON}.Multithread)
 
 ##############################################################################
+# Multithread utils
+##############################################################################
+add_library(${DMP_MULTITHREAD}.Utils INTERFACE
+        utils/pause.hpp
+        utils/thread_pinning.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.Utils
+        INTERFACE
+        utils
+)
+target_link_libraries(${DMP_MULTITHREAD}.Utils
+        INTERFACE
+        Threads::Threads
+)
+##############################################################################
+
+
+##############################################################################
+# EventCount - folly-style futex wait primitive
+##############################################################################
+add_library(${DMP_MULTITHREAD}.EventCount INTERFACE
+        event_count/event_count.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.EventCount
+        INTERFACE
+        event_count
+)
+target_link_libraries(${DMP_MULTITHREAD}.EventCount
+        INTERFACE
+        Threads::Threads
+)
+##############################################################################
+
+
+##############################################################################
+# ResourcePool - partition-aware bounded resource pool
+##############################################################################
+add_library(${DMP_MULTITHREAD}.ResourcePool.Sync INTERFACE
+        resource_pool/sync/resource_pool.hpp
+        resource_pool/sync/lease.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.ResourcePool.Sync
+        INTERFACE
+        resource_pool/sync
+)
+target_link_libraries(${DMP_MULTITHREAD}.ResourcePool.Sync
+        INTERFACE
+        Threads::Threads
+        Demiplane::Common::Gears
+        ${DMP_MULTITHREAD}.EventCount
+        ${DMP_MULTITHREAD}.Utils
+)
+##############################################################################
+
+##############################################################################
+# ResourcePool - partition-aware bounded resource pool
+##############################################################################
+add_library(${DMP_MULTITHREAD}.ResourcePool.Async INTERFACE
+        resource_pool/async/async_resource_pool.hpp
+        resource_pool/async/async_lease.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.ResourcePool.Async
+        INTERFACE
+        resource_pool/async
+)
+target_link_libraries(${DMP_MULTITHREAD}.ResourcePool.Async
+        INTERFACE
+        Threads::Threads
+        Demiplane::Common::Gears
+        ${DMP_MULTITHREAD}.EventCount
+        ${DMP_MULTITHREAD}.Utils
+        Boost::asio
+        Boost::system
+)
+##############################################################################
+
+##############################################################################
+# AsioBackend - RAII io_context runners (single + sharded) for asio-based pools
+##############################################################################
+add_library(${DMP_MULTITHREAD}.AsioBackend INTERFACE
+        asio_backend/asio_backend.hpp
+        asio_backend/sharded_asio_backend.hpp
+)
+target_include_directories(${DMP_MULTITHREAD}.AsioBackend
+        INTERFACE
+        asio_backend
+)
+target_link_libraries(${DMP_MULTITHREAD}.AsioBackend
+        INTERFACE
+        Threads::Threads
+        ${DMP_MULTITHREAD}.Utils
+        Boost::asio
+        Boost::system
+)
+##############################################################################
+
+##############################################################################
 # Synchronized resource class - wraps resource with mutex
 ##############################################################################
 add_library(${DMP_MULTITHREAD}.ThreadSafeResource INTERFACE
@@ -57,6 +154,10 @@ add_combined_library(${DMP_MULTITHREAD}
         ${DMP_MULTITHREAD}.ThreadPool
         ${DMP_MULTITHREAD}.ThreadSafeResource
         ${DMP_MULTITHREAD}.Disruptor
+        ${DMP_MULTITHREAD}.EventCount
+        ${DMP_MULTITHREAD}.ResourcePool.Sync
+        ${DMP_MULTITHREAD}.ResourcePool.Async
+        ${DMP_MULTITHREAD}.AsioBackend
 )
 
 add_library(Demiplane::Common::Multithread ALIAS ${DMP_MULTITHREAD})

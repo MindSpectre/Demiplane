@@ -112,3 +112,4 @@ vcpkg/
 .env.test.local
 
 /tests/codesandbox/
+/benchmark_results/

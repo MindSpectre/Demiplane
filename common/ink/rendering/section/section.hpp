@@ -75,14 +75,14 @@ namespace demiplane::ink {
         Align value_align_          = Align::Left;
         std::vector<std::pair<std::string, std::string>> rows_{};
 
-        [[nodiscard]] std::string render_impl() const {
+        [[nodiscard]] constexpr std::string render_impl() const {
             std::string out;
 
             if (!title_.empty()) {
                 if (title_style_.empty()) {
                     out.append(title_);
                 } else {
-                    out.append(colors::colorize(title_style_, title_));
+                    out.append(colors::colorize(title_, title_style_));
                 }
             }
 

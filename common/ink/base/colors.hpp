@@ -72,7 +72,7 @@ namespace demiplane::ink::colors {
     constexpr std::string_view hi_background_white   = "\033[0;107m";
 
 
-    [[nodiscard]] constexpr std::string colorize(const std::string_view code, const std::string_view text) {
+    [[nodiscard]] constexpr std::string colorize(const std::string_view text, const std::string_view code) {
         std::string result;
         result.reserve(code.size() + text.size() + reset.size());
         result.append(code).append(text).append(reset);
@@ -80,178 +80,178 @@ namespace demiplane::ink::colors {
     }
 
     [[nodiscard]] constexpr std::string make_black(const std::string_view text) {
-        return colorize(black, text);
+        return colorize(text, black);
     }
     [[nodiscard]] constexpr std::string make_red(const std::string_view text) {
-        return colorize(red, text);
+        return colorize(text, red);
     }
     [[nodiscard]] constexpr std::string make_green(const std::string_view text) {
-        return colorize(green, text);
+        return colorize(text, green);
     }
     [[nodiscard]] constexpr std::string make_yellow(const std::string_view text) {
-        return colorize(yellow, text);
+        return colorize(text, yellow);
     }
     [[nodiscard]] constexpr std::string make_blue(const std::string_view text) {
-        return colorize(blue, text);
+        return colorize(text, blue);
     }
     [[nodiscard]] constexpr std::string make_magenta(const std::string_view text) {
-        return colorize(magenta, text);
+        return colorize(text, magenta);
     }
     [[nodiscard]] constexpr std::string make_cyan(const std::string_view text) {
-        return colorize(cyan, text);
+        return colorize(text, cyan);
     }
     [[nodiscard]] constexpr std::string make_white(const std::string_view text) {
-        return colorize(white, text);
+        return colorize(text, white);
     }
 
     [[nodiscard]] constexpr std::string make_background_black(const std::string_view text) {
-        return colorize(background_black, text);
+        return colorize(text, background_black);
     }
     [[nodiscard]] constexpr std::string make_background_red(const std::string_view text) {
-        return colorize(background_red, text);
+        return colorize(text, background_red);
     }
     [[nodiscard]] constexpr std::string make_background_green(const std::string_view text) {
-        return colorize(background_green, text);
+        return colorize(text, background_green);
     }
     [[nodiscard]] constexpr std::string make_background_yellow(const std::string_view text) {
-        return colorize(background_yellow, text);
+        return colorize(text, background_yellow);
     }
     [[nodiscard]] constexpr std::string make_background_blue(const std::string_view text) {
-        return colorize(background_blue, text);
+        return colorize(text, background_blue);
     }
     [[nodiscard]] constexpr std::string make_background_magenta(const std::string_view text) {
-        return colorize(background_magenta, text);
+        return colorize(text, background_magenta);
     }
     [[nodiscard]] constexpr std::string make_background_cyan(const std::string_view text) {
-        return colorize(background_cyan, text);
+        return colorize(text, background_cyan);
     }
     [[nodiscard]] constexpr std::string make_background_white(const std::string_view text) {
-        return colorize(background_white, text);
+        return colorize(text, background_white);
     }
 
     [[nodiscard]] constexpr std::string make_bold_black(const std::string_view text) {
-        return colorize(bold_black, text);
+        return colorize(text, bold_black);
     }
     [[nodiscard]] constexpr std::string make_bold_red(const std::string_view text) {
-        return colorize(bold_red, text);
+        return colorize(text, bold_red);
     }
     [[nodiscard]] constexpr std::string make_bold_green(const std::string_view text) {
-        return colorize(bold_green, text);
+        return colorize(text, bold_green);
     }
     [[nodiscard]] constexpr std::string make_bold_yellow(const std::string_view text) {
-        return colorize(bold_yellow, text);
+        return colorize(text, bold_yellow);
     }
     [[nodiscard]] constexpr std::string make_bold_blue(const std::string_view text) {
-        return colorize(bold_blue, text);
+        return colorize(text, bold_blue);
     }
     [[nodiscard]] constexpr std::string make_bold_magenta(const std::string_view text) {
-        return colorize(bold_magenta, text);
+        return colorize(text, bold_magenta);
     }
     [[nodiscard]] constexpr std::string make_bold_cyan(const std::string_view text) {
-        return colorize(bold_cyan, text);
+        return colorize(text, bold_cyan);
     }
     [[nodiscard]] constexpr std::string make_bold_white(const std::string_view text) {
-        return colorize(bold_white, text);
+        return colorize(text, bold_white);
     }
 
     [[nodiscard]] constexpr std::string make_underline_black(const std::string_view text) {
-        return colorize(underline_black, text);
+        return colorize(text, underline_black);
     }
     [[nodiscard]] constexpr std::string make_underline_red(const std::string_view text) {
-        return colorize(underline_red, text);
+        return colorize(text, underline_red);
     }
     [[nodiscard]] constexpr std::string make_underline_green(const std::string_view text) {
-        return colorize(underline_green, text);
+        return colorize(text, underline_green);
     }
     [[nodiscard]] constexpr std::string make_underline_yellow(const std::string_view text) {
-        return colorize(underline_yellow, text);
+        return colorize(text, underline_yellow);
     }
     [[nodiscard]] constexpr std::string make_underline_blue(const std::string_view text) {
-        return colorize(underline_blue, text);
+        return colorize(text, underline_blue);
     }
     [[nodiscard]] constexpr std::string make_underline_magenta(const std::string_view text) {
-        return colorize(underline_magenta, text);
+        return colorize(text, underline_magenta);
     }
     [[nodiscard]] constexpr std::string make_underline_cyan(const std::string_view text) {
-        return colorize(underline_cyan, text);
+        return colorize(text, underline_cyan);
     }
     [[nodiscard]] constexpr std::string make_underline_white(const std::string_view text) {
-        return colorize(underline_white, text);
+        return colorize(text, underline_white);
     }
 
     [[nodiscard]] constexpr std::string make_hi_black(const std::string_view text) {
-        return colorize(hi_black, text);
+        return colorize(text, hi_black);
     }
     [[nodiscard]] constexpr std::string make_hi_red(const std::string_view text) {
-        return colorize(hi_red, text);
+        return colorize(text, hi_red);
     }
     [[nodiscard]] constexpr std::string make_hi_green(const std::string_view text) {
-        return colorize(hi_green, text);
+        return colorize(text, hi_green);
     }
     [[nodiscard]] constexpr std::string make_hi_yellow(const std::string_view text) {
-        return colorize(hi_yellow, text);
+        return colorize(text, hi_yellow);
     }
     [[nodiscard]] constexpr std::string make_hi_blue(const std::string_view text) {
-        return colorize(hi_blue, text);
+        return colorize(text, hi_blue);
     }
     [[nodiscard]] constexpr std::string make_hi_magenta(const std::string_view text) {
-        return colorize(hi_magenta, text);
+        return colorize(text, hi_magenta);
     }
     [[nodiscard]] constexpr std::string make_hi_cyan(const std::string_view text) {
-        return colorize(hi_cyan, text);
+        return colorize(text, hi_cyan);
     }
     [[nodiscard]] constexpr std::string make_hi_white(const std::string_view text) {
-        return colorize(hi_white, text);
+        return colorize(text, hi_white);
     }
 
     [[nodiscard]] constexpr std::string make_bold_hi_black(const std::string_view text) {
-        return colorize(bold_hi_black, text);
+        return colorize(text, bold_hi_black);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_red(const std::string_view text) {
-        return colorize(bold_hi_red, text);
+        return colorize(text, bold_hi_red);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_green(const std::string_view text) {
-        return colorize(bold_hi_green, text);
+        return colorize(text, bold_hi_green);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_yellow(const std::string_view text) {
-        return colorize(bold_hi_yellow, text);
+        return colorize(text, bold_hi_yellow);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_blue(const std::string_view text) {
-        return colorize(bold_hi_blue, text);
+        return colorize(text, bold_hi_blue);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_magenta(const std::string_view text) {
-        return colorize(bold_hi_magenta, text);
+        return colorize(text, bold_hi_magenta);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_cyan(const std::string_view text) {
-        return colorize(bold_hi_cyan, text);
+        return colorize(text, bold_hi_cyan);
     }
     [[nodiscard]] constexpr std::string make_bold_hi_white(const std::string_view text) {
-        return colorize(bold_hi_white, text);
+        return colorize(text, bold_hi_white);
     }
 
     [[nodiscard]] constexpr std::string make_hi_background_black(const std::string_view text) {
-        return colorize(hi_background_black, text);
+        return colorize(text, hi_background_black);
     }
     [[nodiscard]] constexpr std::string make_hi_background_red(const std::string_view text) {
-        return colorize(hi_background_red, text);
+        return colorize(text, hi_background_red);
     }
     [[nodiscard]] constexpr std::string make_hi_background_green(const std::string_view text) {
-        return colorize(hi_background_green, text);
+        return colorize(text, hi_background_green);
     }
     [[nodiscard]] constexpr std::string make_hi_background_yellow(const std::string_view text) {
-        return colorize(hi_background_yellow, text);
+        return colorize(text, hi_background_yellow);
     }
     [[nodiscard]] constexpr std::string make_hi_background_blue(const std::string_view text) {
-        return colorize(hi_background_blue, text);
+        return colorize(text, hi_background_blue);
     }
     [[nodiscard]] constexpr std::string make_hi_background_magenta(const std::string_view text) {
-        return colorize(hi_background_magenta, text);
+        return colorize(text, hi_background_magenta);
     }
     [[nodiscard]] constexpr std::string make_hi_background_cyan(const std::string_view text) {
-        return colorize(hi_background_cyan, text);
+        return colorize(text, hi_background_cyan);
     }
     [[nodiscard]] constexpr std::string make_hi_background_white(const std::string_view text) {
-        return colorize(hi_background_white, text);
+        return colorize(text, hi_background_white);
     }
 
 }  // namespace demiplane::ink::colors

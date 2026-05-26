@@ -230,7 +230,7 @@ TEST_F(DisruptorTest, BlockingWaitStrategyWithSignal) {
  *============================================================================*/
 
 TEST_F(DisruptorTest, DisruptorSingleClaim) {
-    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     EXPECT_EQ(disruptor.sequencer().get_cursor(), -1);  // Initial state (nothing claimed yet)
 
@@ -245,7 +245,7 @@ TEST_F(DisruptorTest, DisruptorSingleClaim) {
 }
 
 TEST_F(DisruptorTest, DisruptorBatchClaim) {
-    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     const std::int64_t first = disruptor.sequencer().next_batch(5);
     EXPECT_EQ(first, 0);
@@ -257,7 +257,7 @@ TEST_F(DisruptorTest, DisruptorBatchClaim) {
 }
 
 TEST_F(DisruptorTest, DisruptorPublishAndAvailability) {
-    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     const std::int64_t seq = disruptor.sequencer().next();
     EXPECT_FALSE(disruptor.sequencer().is_available(seq));  // Not published yet
@@ -274,7 +274,7 @@ TEST_F(DisruptorTest, DisruptorGapDetection) {
      * - Thread B publishes seq 1 FIRST
      * - Consumer should NOT see seq 1 until seq 0 is published
      */
-    StaticDisruptor<int, 1024> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     const std::int64_t seq0 = disruptor.sequencer().next();  // 0
     const std::int64_t seq1 = disruptor.sequencer().next();  // 1
@@ -306,7 +306,7 @@ TEST_F(DisruptorTest, DisruptorBackpressure) {
      * until consumer advances gating sequence
      */
     constexpr size_t BUFFER_SIZE = 8;
-    StaticDisruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     // Fill the buffer (claim 8 sequences)
     for (size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -338,7 +338,7 @@ TEST_F(DisruptorTest, DisruptorBackpressure) {
 
 TEST_F(DisruptorTest, DisruptorRemainingCapacity) {
     constexpr size_t BUFFER_SIZE = 16;
-    StaticDisruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     // Initially, full capacity available
     EXPECT_EQ(disruptor.sequencer().remaining_capacity(), BUFFER_SIZE);
@@ -380,7 +380,7 @@ TEST_F(DisruptorTest, MultiThreadedStrictOrdering) {
     constexpr int ENTRIES_PER_PRODUCER = 1000;
     constexpr int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    StaticDisruptor<TestEntry, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<TestEntry, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     std::atomic<bool> start{false};
     std::atomic<int> ready_count{0};
@@ -409,7 +409,6 @@ TEST_F(DisruptorTest, MultiThreadedStrictOrdering) {
                 // Process batch
                 for (std::int64_t seq = next_sequence; seq <= available; ++seq) {
                     consumed_entries.push_back(disruptor.ring_buffer()[seq]);
-                    disruptor.sequencer().mark_consumed(seq);
                     ++processed;
                 }
 
@@ -501,7 +500,7 @@ TEST_F(DisruptorTest, MultiThreadedHighContention) {
     constexpr int ENTRIES_PER_PRODUCER = 500;
     constexpr int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    StaticDisruptor<std::int64_t, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<std::int64_t, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     std::barrier sync_point{NUM_PRODUCERS + 1};  // +1 for consumer
     std::vector<std::int64_t> consumed;
@@ -520,7 +519,6 @@ TEST_F(DisruptorTest, MultiThreadedHighContention) {
                 available >= next_seq) {
                 for (std::int64_t seq = next_seq; seq <= available; ++seq) {
                     consumed.push_back(disruptor.ring_buffer()[seq]);
-                    disruptor.sequencer().mark_consumed(seq);
                 }
                 next_seq = available + 1;
                 disruptor.sequencer().update_gating_sequence(available);
@@ -562,7 +560,7 @@ TEST_F(DisruptorTest, TryNextNonBlocking) {
      * Test non-blocking try_next() behavior
      */
     constexpr size_t BUFFER_SIZE = 4;
-    StaticDisruptor<int, BUFFER_SIZE> disruptor{std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     // Fill buffer
     for (size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -588,9 +586,9 @@ TEST_F(DisruptorTest, TryNextNonBlocking) {
 
 TEST_F(DynamicDisruptorTest, DynamicStaticRingBufferSizing) {
     // Runtime-sized buffers
-    DynamicRingBuffer<int> small_buffer{256};
-    DynamicRingBuffer<int> medium_buffer{1024};
-    DynamicRingBuffer<int> large_buffer{8192};
+    RingBuffer<int> small_buffer{256};
+    RingBuffer<int> medium_buffer{1024};
+    RingBuffer<int> large_buffer{8192};
 
     EXPECT_EQ(small_buffer.capacity(), 256);
     EXPECT_EQ(medium_buffer.capacity(), 1024);
@@ -599,7 +597,7 @@ TEST_F(DynamicDisruptorTest, DynamicStaticRingBufferSizing) {
 
 TEST_F(DynamicDisruptorTest, DynamicStaticRingBufferIndexWrapping) {
     const size_t SIZE = 8;
-    DynamicRingBuffer<int> buffer{SIZE};
+    RingBuffer<int> buffer{SIZE};
 
     // Test wrapping behavior
     for (std::int64_t seq = 0; seq < 100; ++seq) {
@@ -618,7 +616,7 @@ TEST_F(DynamicDisruptorTest, DynamicStaticRingBufferIndexWrapping) {
 }
 
 TEST_F(DynamicDisruptorTest, DynamicDisruptorSingleClaim) {
-    DynamicDisruptor<int> disruptor{1024, std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     EXPECT_EQ(disruptor.sequencer().get_cursor(), -1);  // Initial state (nothing claimed yet)
 
@@ -633,7 +631,7 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorSingleClaim) {
 }
 
 TEST_F(DynamicDisruptorTest, DynamicDisruptorBatchClaim) {
-    DynamicDisruptor<int> disruptor{1024, std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     const std::int64_t first = disruptor.sequencer().next_batch(5);
     EXPECT_EQ(first, 0);
@@ -645,7 +643,7 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorBatchClaim) {
 }
 
 TEST_F(DynamicDisruptorTest, DynamicDisruptorGapDetection) {
-    DynamicDisruptor<int> disruptor{1024, std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{1024};
 
     const std::int64_t seq0 = disruptor.sequencer().next();  // 0
     const std::int64_t seq1 = disruptor.sequencer().next();  // 1
@@ -673,7 +671,7 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorGapDetection) {
 
 TEST_F(DynamicDisruptorTest, DynamicDisruptorBackpressure) {
     const size_t BUFFER_SIZE = 8;
-    DynamicDisruptor<int> disruptor{BUFFER_SIZE, std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<int, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     // Fill the buffer (claim 8 sequences)
     for (size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -709,7 +707,7 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorMultiThreadedOrdering) {
     const int ENTRIES_PER_PRODUCER = 1000;
     const int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    DynamicDisruptor<TestEntry> disruptor{BUFFER_SIZE, std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<TestEntry, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     std::atomic<bool> start{false};
     std::atomic<int> ready_count{0};
@@ -738,7 +736,6 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorMultiThreadedOrdering) {
                 // Process batch
                 for (std::int64_t seq = next_sequence; seq <= available; ++seq) {
                     consumed_entries.push_back(disruptor.ring_buffer()[seq]);
-                    disruptor.sequencer().mark_consumed(seq);
                     ++processed;
                 }
 
@@ -822,7 +819,7 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorHighContention) {
     constexpr int ENTRIES_PER_PRODUCER = 500;
     constexpr int TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    DynamicDisruptor<std::int64_t> disruptor{BUFFER_SIZE, std::make_unique<YieldingWaitStrategy>()};
+    Disruptor<std::int64_t, MultiProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
 
     std::barrier sync_point{NUM_PRODUCERS + 1};  // +1 for consumer
     std::vector<std::int64_t> consumed;
@@ -840,7 +837,6 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorHighContention) {
                 available >= next_seq) {
                 for (std::int64_t seq = next_seq; seq <= available; ++seq) {
                     consumed.push_back(disruptor.ring_buffer()[seq]);
-                    disruptor.sequencer().mark_consumed(seq);
                 }
                 next_seq = available + 1;
                 disruptor.sequencer().update_gating_sequence(available);
@@ -871,6 +867,111 @@ TEST_F(DynamicDisruptorTest, DynamicDisruptorHighContention) {
     consumer.join();
 
     // Verify strict ordering
+    ASSERT_EQ(consumed.size(), TOTAL_ENTRIES);
+    for (size_t i = 0; i < consumed.size(); ++i) {
+        EXPECT_EQ(consumed[i], static_cast<std::int64_t>(i));
+    }
+}
+
+/*==============================================================================
+ * SINGLE-PRODUCER SEQUENCER TESTS - SPSC fast path
+ *
+ * Note: SingleProducerSequencer's cursor tracks the PUBLISHED frontier (it advances
+ * on publish, not on claim), unlike MultiProducerSequencer whose cursor is the
+ * claimed position. Assertions below reflect that.
+ *============================================================================*/
+
+class SingleProducerDisruptorTest : public ::testing::Test {};
+
+TEST_F(SingleProducerDisruptorTest, SingleClaim) {
+    Disruptor<int, SingleProducerSequencer, YieldingWaitStrategy> disruptor{1024};
+
+    EXPECT_EQ(disruptor.sequencer().get_cursor(), -1);  // nothing published yet
+    EXPECT_EQ(disruptor.sequencer().next(), 0);
+    EXPECT_EQ(disruptor.sequencer().next(), 1);
+    EXPECT_EQ(disruptor.sequencer().next(), 2);
+    // Cursor only advances on publish, not on claim
+    EXPECT_EQ(disruptor.sequencer().get_cursor(), -1);
+}
+
+TEST_F(SingleProducerDisruptorTest, BatchClaim) {
+    Disruptor<int, SingleProducerSequencer, YieldingWaitStrategy> disruptor{1024};
+
+    EXPECT_EQ(disruptor.sequencer().next_batch(5), 0);  // claims 0..4, returns first
+    EXPECT_EQ(disruptor.sequencer().next_batch(3), 5);  // claims 5..7, returns first
+}
+
+TEST_F(SingleProducerDisruptorTest, PublishAndAvailability) {
+    Disruptor<int, SingleProducerSequencer, YieldingWaitStrategy> disruptor{1024};
+
+    const std::int64_t seq = disruptor.sequencer().next();
+    EXPECT_FALSE(disruptor.sequencer().is_available(seq));  // claimed, not published
+
+    disruptor.ring_buffer()[seq] = 42;
+    disruptor.sequencer().publish(seq);
+
+    EXPECT_TRUE(disruptor.sequencer().is_available(seq));
+    EXPECT_EQ(disruptor.sequencer().get_cursor(), seq);  // cursor == published frontier
+    EXPECT_EQ(disruptor.sequencer().get_highest_published(0, disruptor.sequencer().get_cursor()), seq);
+}
+
+TEST_F(SingleProducerDisruptorTest, Backpressure) {
+    constexpr size_t BUFFER_SIZE = 8;
+    Disruptor<int, SingleProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
+
+    // Fill the buffer (claim 8 sequences)
+    for (size_t i = 0; i < BUFFER_SIZE; ++i) {
+        std::ignore = disruptor.sequencer().next();
+    }
+
+    std::atomic<bool> blocked{true};
+    std::atomic<std::int64_t> claimed_seq{-1};
+    std::thread producer{[&]() {
+        claimed_seq.store(disruptor.sequencer().next());  // 9th claim — should block
+        blocked.store(false);
+    }};
+
+    std::this_thread::sleep_for(std::chrono::milliseconds{100});
+    EXPECT_TRUE(blocked.load());  // still blocked
+
+    disruptor.sequencer().update_gating_sequence(0);  // consumed seq 0
+    producer.join();
+    EXPECT_FALSE(blocked.load());
+    EXPECT_EQ(claimed_seq.load(), 8);
+}
+
+TEST_F(SingleProducerDisruptorTest, SingleProducerSingleConsumerOrdering) {
+    constexpr size_t BUFFER_SIZE = 1024;
+    constexpr int TOTAL_ENTRIES  = 100'000;
+    Disruptor<std::int64_t, SingleProducerSequencer, YieldingWaitStrategy> disruptor{BUFFER_SIZE};
+
+    std::vector<std::int64_t> consumed;
+    consumed.reserve(TOTAL_ENTRIES);
+
+    std::thread consumer{[&]() {
+        std::int64_t next_seq = 0;
+        while (static_cast<int>(consumed.size()) < TOTAL_ENTRIES) {
+            const std::int64_t cursor = disruptor.sequencer().get_cursor();
+            if (const std::int64_t available = disruptor.sequencer().get_highest_published(next_seq, cursor);
+                available >= next_seq) {
+                for (std::int64_t seq = next_seq; seq <= available; ++seq) {
+                    consumed.push_back(disruptor.ring_buffer()[seq]);
+                }
+                next_seq = available + 1;
+                disruptor.sequencer().update_gating_sequence(available);
+            } else {
+                std::this_thread::yield();
+            }
+        }
+    }};
+
+    for (int i = 0; i < TOTAL_ENTRIES; ++i) {
+        const std::int64_t seq       = disruptor.sequencer().next();
+        disruptor.ring_buffer()[seq] = seq;
+        disruptor.sequencer().publish(seq);
+    }
+    consumer.join();
+
     ASSERT_EQ(consumed.size(), TOTAL_ENTRIES);
     for (size_t i = 0; i < consumed.size(); ++i) {
         EXPECT_EQ(consumed[i], static_cast<std::int64_t>(i));

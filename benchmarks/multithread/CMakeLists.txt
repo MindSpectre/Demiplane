@@ -1,0 +1,7 @@
+set(DMP_BENCHMARKS_MULTITHREAD ${DMP_BENCHMARKS}.Multithread)
+##############################################################################
+# Multithread benchmarks
+##############################################################################
+add_subdirectory(resource_pool)
+add_subdirectory(disruptor)
+##############################################################################

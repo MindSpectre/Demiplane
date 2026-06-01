@@ -33,9 +33,9 @@ This spec proposes a clean redesign that fixes the bugs as a side effect of gett
 1. **Layered architecture** with one-way dependencies: application → routing → HTTP semantics → protocol drivers → connections → transport. Each layer has a focused job.
 2. **Multi-protocol-ready** through a clean driver interface: HTTP/1.1 implemented in v1; HTTP/2 and HTTP/3 ship as compiling scaffolds with vcpkg deps wired so future-you can fill them in without touching the build.
 3. **Controller-merge as the primary application abstraction** — `HttpController` subclasses with `configure_routes()` stay the canonical pattern. Groups, middleware, prefixes, and per-route Outcome→Response error mapping all compose around it.
-4. **Performance-conscious from the start.** Per-request arena, header views into Beast's parsed storage with Beast's allocator pointed at our arena, no `std::regex`, no exception-driven control flow on routing misses. Framework-internal hot path stays at ~zero heap allocs per request; user-data allocations are explicitly the user's.
+4. **Zero-additional-allocation invariant.** Per-request arena in *both* directions: header views into Beast's parsed storage with Beast's allocator pointed at our arena, and responses built through the `RequestContext` so their headers + body land in the same arena. No `std::regex`, no exception-driven control flow on routing misses. The only heap allocation on a success request is the user's response-body bytes. This is an **enforced invariant** (allocation-counting test gate, §14), not an aspiration; cold-path 4xx/5xx error responses are the one documented exception (§5.5).
 5. **Typed error model** via `gears::Outcome<Response, Errors...>` for handlers, ADL-found `to_http_response(const E&)` for conversion, exception catch-all for unexpected errors only.
-6. **Honest lifecycle** — `setup()` binds synchronously and surfaces failures immediately; `start()` blocks until graceful shutdown completes; `stop()` is non-blocking and idempotent. Async shutdown observers run *before* the io_context stops.
+6. **Honest lifecycle on an injected executor.** The `Server` is *handed* an executor (`any_io_executor`); it owns no `io_context` and no threads. `setup()` binds synchronously (surfacing failures immediately) and `co_spawn`s the accept loops onto the caller's executor; `stop()` is non-blocking, idempotent, and **never stops the executor** (it may be shared with other subsystems); `wait_until_stopped()` blocks the caller until graceful shutdown completes. Async shutdown observers run on the still-driven executor *before* completion is reported. A `run_standalone(threads)` convenience owns the context+threads for trivial apps (§9).
 7. **Real TLS and config.** `TlsConfig` consumed by `TlsListener`, `build_ssl_context` produces a hardened OpenSSL context with ALPN, `ServerConfig` loaded from JSON via the project's existing `serialization::ConfigInterface` pattern.
 8. **Real test coverage.** Unit tests for pure logic; integration tests on `127.0.0.1:0` via real Beast clients exercising the wire.
 
@@ -86,7 +86,8 @@ This spec proposes a clean redesign that fixes the bugs as a side effect of gett
 - **`Server` is a thin orchestrator.** Owns the io_context, listeners, drivers (held inside listeners), the router, observer list, controller list. Doesn't loop sessions itself — drivers do that.
 - **The build/buy line is the `HttpDriver::serve()` method.** Whatever happens inside `serve()` is the driver's problem. `Http11Driver::serve()` uses Beast and looks like a session loop. Future `Http2Driver::serve()` will wrap nghttp2; the impedance mismatch lives there, not in the public interface.
 - **No virtual base for `Connection` or `HttpDriver`.** Concept-based duck typing; polymorphism only at the listener layer (where `Server` holds `unique_ptr<ListenerBase>`). No `dynamic_cast` anywhere in the runtime path.
-- **Per-request arena + Beast-allocator-redirected.** Beast's `request_parser<..., pmr_allocator>` parses headers/path/body into our request-scoped `monotonic_buffer_resource`. `Headers` is a tagged-union facade that wraps Beast's parsed `fields` directly for incoming, owned arena strings for outgoing. ~1 heap alloc per request in the framework path; that one is the user-built response body string.
+- **Per-request arena, both directions.** Beast's `request_parser<..., pmr_allocator>` parses headers/path/body into our request-scoped `monotonic_buffer_resource`; `Headers` wraps Beast's parsed `fields` for incoming and arena-owned strings for outgoing. **Responses are arena-backed too** — built through the `RequestContext` (§5.4) so headers and the response's *stored* allocator point at the arena, which keeps even post-handler middleware mutation off the global heap. The framework path holds a **zero-additional-allocation invariant**: the only heap alloc on a success request is the user's response-body bytes. Enforced by an allocation-counting `memory_resource` test gate (§14), not by convention. Cold-path 4xx/5xx error responses are the one documented exception (§5.5).
+- **The Server is handed an executor; it never makes one.** `Server(cfg, any_io_executor)` runs its accept loops and shutdown coroutines on the caller's executor and owns no `io_context` and no threads (§9). The caller decides the thread↔context topology — one dedicated context for HTTP, a shared pool, or per-core `io_context`s + `SO_REUSEPORT` for scale-out — so HTTP coexists with the logger, DB pool, and S3 client instead of competing for threads. (This also subsumes the per-thread-`io_context` throughput lesson: with one thread per context there is no shared-scheduler-lock contention.)
 
 ## 4. Directory Structure
 
@@ -176,6 +177,8 @@ public:
 
 `std::visit` over the 2-element variant compiles to a tag check + direct call; modern compilers inline through it.
 
+**Construction / empty state.** A `Headers` is always constructed *with an allocator* — `Headers::owned(alloc)` for an empty, mutable set (the request arena for responses), or `Headers::view_of_beast(fields)` for an incoming read-only view. There is **no default/null state**: an "empty" `Headers` is an empty `OwnedBacking` bound to its allocator, never a `BeastBacking{nullptr}` (which would make `get`/`add` a null deref). All mutators (`add`/`set`/`remove`) and any view→owned promotion allocate through that bound allocator — **never the global heap**.
+
 ### 5.2 `Body` — streaming truth, buffered helpers
 
 ```cpp
@@ -210,7 +213,9 @@ Concrete implementations:
 - `StreamingProducerBody` — for outgoing responses built incrementally via a producer closure.
 - `EmptyBody` — for `GET`, `HEAD`, `204` responses, etc. Inline-empty kind, 0 allocs.
 
-`Body` is held inline as a value type with a small-buffer-optimized type-erased storage (~32 bytes inline, heap fallback only for `StreamingProducerBody`). No `unique_ptr<Body>` indirection.
+`Body` is held inline as a value type with small-buffer-optimized, type-erased storage (SBO budget sized to hold a `std::string` by value, ~48 bytes). The common bodies — `EmptyBody`, `OwnedBufferBody`/`StringBody`, `BeastRequestBody` — live entirely inline: **zero** heap nodes. Only `StreamingProducerBody`'s closure can spill, and it spills **into the request arena**, never the global heap. No `unique_ptr<Body>` indirection anywhere. (The driver writes bodies by driving `read_chunk()` uniformly — the value-SBO type-erasure dispatches internally, so there is still **no `dynamic_cast` on the runtime path**, per §3.)
+
+**Lifetime invariant (see §11).** A request `Body` views connection-owned buffers; a response `Body`/`Headers` is arena-backed. Neither may outlive the arena `reset()` at the top of the next keep-alive iteration — the h1 driver (PR3) must finish writing the response *before* it resets the arena for the next read.
 
 ### 5.3 `Request` / `Response`
 
@@ -224,16 +229,27 @@ struct Request {
 };
 
 struct Response {
-    HttpStatus status   = HttpStatus::ok;
-    HttpVersion version = HttpVersion::http_1_1;
-    Headers headers;
-    Body body;
+    // The allocator is STORED, not just used at construction. Built on the hot
+    // path through the RequestContext (§5.4/§5.7), it points at the request
+    // arena — so middleware that mutates the response AFTER the handler returns
+    // (`auto r = co_await next(ctx); r.add_header(...)`) keeps those allocations
+    // in the arena too. Defaults to new_delete for the ctx-less / error path.
+    std::pmr::polymorphic_allocator<> alloc{};
 
-    // Fluent setters for handler ergonomics
-    Response& with_status(HttpStatus) &;            Response&& with_status(HttpStatus) &&;
-    Response& with_header(std::string n, std::string v) &;
-    Response&& with_header(std::string n, std::string v) &&;
-    Response& with_body(std::string body) &;        Response&& with_body(std::string body) &&;
+    HttpStatus  status     = HttpStatus::ok;
+    HttpVersion version    = HttpVersion::http_1_1;
+    bool        keep_alive = true;          // carried over from the request
+    Headers     headers    = Headers::owned(alloc);
+    Body        body;                        // value type, SBO (§5.2); default EmptyBody
+
+    // Fluent setters (deducing this; chain on lvalues + rvalues, allocate via
+    // `alloc`). set_header replaces; add_header appends (multi-value) — the
+    // distinction the old single `with_header` lacked. with_body moves owned
+    // bytes in (no copy).
+    template <typename Self> auto&& with_status(this Self&&, HttpStatus);
+    template <typename Self> auto&& set_header (this Self&&, std::string_view n, std::string_view v);
+    template <typename Self> auto&& add_header (this Self&&, std::string_view n, std::string_view v);
+    template <typename Self> auto&& with_body  (this Self&&, std::string body);
 };
 ```
 
@@ -277,6 +293,21 @@ public:
 
     // Arena access (for handler-allocated short-lived data)
     std::pmr::polymorphic_allocator<> arena_alloc() const;
+
+    // Response construction (arena-bound) — the hot-path factory. These build
+    // the Response IN this request's arena (headers + the response's stored
+    // allocator), so a success response costs zero global-heap allocations
+    // beyond the user's body bytes (§11). This is the canonical way to build a
+    // response; the static ResponseFactory (§5.7) is only for ctx-less / error
+    // contexts. (Option A from the design review — the arena is threaded in
+    // automatically, so it can't be forgotten.)
+    Response ok        (std::string body = "", std::string_view ct = "text/plain");
+    Response json      (std::string body);
+    Response created   (std::string body = "", std::string_view ct = "application/json");
+    Response no_content();
+    Response redirect  (std::string_view location, HttpStatus = HttpStatus::found);
+    Response status    (HttpStatus, std::string body = "", std::string_view ct = "text/plain");
+    Response stream    (HttpStatus, std::function<asio::awaitable<void>(Body::Writer&)> producer);
 
 private:
     Request request_;
@@ -329,6 +360,8 @@ Response to_http_response(const BodyLimitExceeded&);
 
 User-defined error types follow the same pattern. If a handler's `Outcome<Response, Errors...>` lists an error type without a `to_http_response` overload, the controller bind layer fails to instantiate — compile error pointing at the missing overload.
 
+`to_http_response(const E&)` is intentionally **arena-free**: error responses (4xx/5xx) are the cold path, so they construct on the global heap via the static `ResponseFactory` (§5.7). This keeps the extension point a clean one-argument free function — no allocator threading through every user override. The zero-additional-allocation invariant (§11) covers the **hot path** (2xx via `ctx.json(...)` etc.); the rare error path is the documented exception.
+
 ### 5.6 `AsyncOutcome` alias
 
 ```cpp
@@ -338,10 +371,12 @@ using AsyncOutcome = boost::asio::awaitable<gears::Outcome<T, Es...>>;
 
 Lives in `types/async_outcome.hpp`.
 
-### 5.7 `ResponseFactory`
+### 5.7 `ResponseFactory` (ctx-less / cold path)
+
+The **hot-path factory is on `RequestContext`** (§5.4): `ctx.json(...)`, `ctx.ok(...)`, etc. thread the request arena into the response automatically, so you cannot accidentally build a success response on the global heap. A *static* `ResponseFactory` remains only for the two contexts that have no `ctx`: `to_http_response(const E&)` error conversions (§5.5) and library/test code constructing a synthetic response. These build on the global heap — the cold path, accepted per §11.
 
 ```cpp
-class ResponseFactory {
+class ResponseFactory {   // global-heap; cold path only (errors, tests, synthetic)
 public:
     static Response ok          (std::string body = "", std::string_view ct = "text/plain");
     static Response json        (std::string body);
@@ -356,15 +391,12 @@ public:
     static Response method_not_allowed(std::span<const HttpMethod> allow);
     static Response internal_error(std::string body = "Internal Server Error");
 
-    static Response stream(HttpStatus, Headers,
-        std::function<asio::awaitable<void>(Body::Writer&)> producer);
-
     static Response custom(HttpStatus, std::string body,
                            std::string_view ct = "text/plain");
 };
 ```
 
-Factory does *not* set `Server` or `Date` headers — drivers stamp those uniformly right before write. Same handling across all protocol drivers, no helper to forget.
+Both paths converge on the same `Response` shape and yield identical wire output for a given status/body; the only difference is which allocator the headers/body land in (arena vs global heap). Neither sets `Server`/`Date` headers — drivers stamp those uniformly right before write, so there is no per-construction-path helper to forget. (Streaming responses are built via `ctx.stream(...)`, which needs the arena and so lives on `RequestContext`, not here.)
 
 ## 6. Connection + Driver Interface
 
@@ -839,8 +871,15 @@ class Server {
 public:
     NEXUS_REGISTER(nexus::Immortal);
 
-    explicit Server(ServerConfig cfg);
-    ~Server();   // calls stop() if state_ == started; never throws
+    // Executor injection is the primary model. The caller owns the
+    // io_context(s) and the threads that run them; the Server runs its accept
+    // loops and shutdown coroutines ON `exec` and NEVER creates, runs, or stops
+    // an executor. This lets HTTP share a process with a logger, DB pool, S3
+    // client, etc., each pinned to whatever executor/threads the caller chose.
+    Server(ServerConfig cfg, asio::any_io_executor exec);
+
+    ~Server();   // requests stop() if still running; never blocks, never
+                 // throws, never touches the executor's lifetime.
 
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
@@ -861,22 +900,30 @@ public:
 
     Server& add_observer(std::shared_ptr<ServerObserver> obs);
 
-    void setup();   // bind listeners, spawn workers, freeze registry
-    void start();   // blocks until SIGINT/SIGTERM/stop() and graceful shutdown completes
-    void stop();    // request graceful shutdown; non-blocking, idempotent
+    void setup();   // sync bind + freeze registry + co_spawn accept loops on
+                    // exec_. Throws on bind failure / route conflict. Does NOT
+                    // spawn threads and does NOT block — the loops go live the
+                    // moment the caller runs the executor.
+    void stop();    // request graceful shutdown; non-blocking, idempotent.
+                    // Runs drain + observers on exec_. NEVER stops the executor.
+
+    // Block the calling thread until graceful shutdown has fully completed.
+    // CONTRACT (§9.7): the caller MUST keep running the injected executor until
+    // this returns, and only THEN tear the executor down. The awaitable form is
+    // for callers already running on exec_.
+    void                  wait_until_stopped();
+    asio::awaitable<void> async_wait_stopped();
 
     bool is_running() const noexcept;
     std::span<const std::unique_ptr<ListenerBase>> listeners() const;
     const ServerConfig& config() const noexcept;
 
 private:
-    enum class State : std::uint8_t { build, setup_done, started, stopping, stopped };
+    enum class State : std::uint8_t { build, running, stopping, stopped };
     std::atomic<State> state_{State::build};
 
     ServerConfig cfg_;
-    asio::io_context ioc_;
-    std::optional<asio::executor_work_guard<asio::io_context::executor_type>> work_;
-    std::vector<std::thread> workers_;
+    asio::any_io_executor exec_;   // injected; NOT owned, never stopped
 
     std::vector<std::unique_ptr<ListenerBase>> listeners_;
     std::vector<std::shared_ptr<HttpController>> controllers_;
@@ -893,6 +940,15 @@ private:
     asio::awaitable<void> graceful_shutdown();
     SCROLL_COMPONENT_PREFIX("Server");
 };
+
+// Convenience for the "HTTP owns the process" case. Creates an internal
+// io_context + `threads` worker threads, calls `configure(server)` for
+// listener/controller/observer wiring, installs SIGINT/SIGTERM -> stop(),
+// blocks until graceful shutdown completes, then joins threads and stops the
+// context. Exactly equivalent to wiring an executor by hand and obeying the
+// §9.7 shutdown-ordering contract — provided so trivial apps need not.
+void run_standalone(ServerConfig cfg, std::size_t threads,
+                    const std::function<void(Server&)>& configure);
 ```
 
 ### 9.2 ServerObserver
@@ -921,28 +977,20 @@ Single typed observer interface replaces the current 10 callback vectors. Per-re
 ### 9.3 setup()
 
 1. Validate state is `build`.
-2. Validate at least one listener and `threads > 0`.
+2. Validate at least one listener. (Thread count is the caller's concern now — the Server owns no threads.)
 3. `registry_.freeze()` → if conflicts, throw `RouteConflictAggregateError`.
 4. Call `bind()` on every listener synchronously. Bind failures throw.
-5. Construct `work_` guard on the io_context.
-6. Spawn `cfg_.threads` worker threads, each running `ioc_.run()`.
-7. `co_spawn` each listener's `run(router_)` with `shutdown_signal_.slot()` as the cancellation slot.
-8. Notify `on_setup_complete` observers (await as a barrier).
-9. Set `state_` to `setup_done`.
+5. `co_spawn` each listener's `run(router_)` on `exec_`, with `shutdown_signal_.slot()` as the cancellation slot.
+6. Notify `on_setup_complete` observers (awaited as a barrier on `exec_`).
+7. Set `state_` to `running`.
 
-### 9.4 start()
+No work guard, no worker threads, no blocking. The accept loops are live the moment the caller's threads run the injected executor.
 
-1. CAS state from `setup_done` to `started`.
-2. Set up `signal_set` for SIGINT/SIGTERM that calls `stop()`.
-3. Block main thread on `shutdown_cv_.wait()`.
-4. Once notified, join all worker threads.
-5. Set state to `stopped`.
+### 9.4 stop()
 
-### 9.5 stop()
+Idempotent. CAS `running` → `stopping`. `co_spawn(graceful_shutdown(), detached)` on `exec_`. Returns immediately. **Never stops the executor** — it may be shared with other subsystems that must outlive HTTP (§9.7).
 
-Idempotent. CAS state to `stopping`. `co_spawn(graceful_shutdown(), detached)`. Returns immediately.
-
-### 9.6 graceful_shutdown()
+### 9.5 graceful_shutdown()
 
 ```cpp
 asio::awaitable<void> Server::graceful_shutdown() {
@@ -953,8 +1001,9 @@ asio::awaitable<void> Server::graceful_shutdown() {
     auto drain_deadline = std::chrono::steady_clock::now() + cfg_.drain_timeout;
     for (auto& l : listeners_) co_await l->drain_until(drain_deadline);
 
-    // Phase 3: notify async shutdown observers (BEFORE work guard release —
-    // io_context still running, so observers can do real work)
+    // Phase 3: notify async shutdown observers. These run on exec_ — the caller
+    // MUST still be driving it (§9.7), so observers can do real async work
+    // (flush a buffer, close a pool) before completion is reported.
     for (auto& obs : observers_) {
         try {
             co_await obs->on_shutdown_started();
@@ -977,20 +1026,43 @@ asio::awaitable<void> Server::graceful_shutdown() {
     // Phase 5: notify shutdown_complete observers (sync, noexcept)
     for (auto& obs : observers_) obs->on_shutdown_complete();
 
-    // Phase 6: release work guard. Workers' ioc.run() returns once queues drain.
-    // We do NOT call ioc.stop() — that would discard pending work.
-    work_.reset();
-
-    // Phase 7: signal start() to unblock and join workers
+    // Phase 6: report completion. We do NOT stop or drain the executor — the
+    // caller owns it. wait_until_stopped() / async_wait_stopped() unblock here.
     {
         std::lock_guard lk{shutdown_mutex_};
         shutdown_complete_ = true;
+        state_.store(State::stopped);
     }
     shutdown_cv_.notify_all();
 }
 ```
 
-The phase ordering is the explicit fix for the original review's C2 (async stop callbacks dropped). Observers run on a still-running `ioc_`; only after they're done do we release the work guard.
+The phase ordering keeps the original review's C2 fix (async stop callbacks no longer dropped): observers run while the caller's threads still drive `exec_`, and only after they finish is completion reported.
+
+### 9.6 ~Server()
+
+If `state_ == running`, call `stop()` (non-blocking). The destructor does **not** wait, joins nothing (it owns no threads), and never touches the executor. A correct caller has already `wait_until_stopped()`-ed before destroying the Server; the destructor's `stop()` is only a backstop against a leaked-running Server and cannot guarantee in-flight requests finish if the executor is about to die. (`run_standalone` sequences this for you.)
+
+### 9.7 Shutdown-ordering contract (injected mode)
+
+The inversion moves one responsibility onto the caller, and it is the single easiest thing to get wrong:
+
+> **The drain and the async `on_shutdown_started` observers run *on the injected executor*. After calling `stop()`, the caller must keep running that executor until `wait_until_stopped()` / `async_wait_stopped()` returns, and only THEN stop/destroy the executor.**
+
+- Stop the executor too early → drain and observer coroutines are killed mid-flight (truncated responses, un-flushed work).
+- The Server **never** stops the executor itself — precisely because the executor is typically shared with the logger / DB pool / S3 client, which must outlive HTTP's shutdown.
+
+The canonical caller sequence (injected mode):
+
+```cpp
+server.setup();                 // accept loops live on the caller's executor
+// ... caller's threads run exec / io_context; SIGINT handler calls server.stop() ...
+server.wait_until_stopped();    // returns only after graceful_shutdown completes
+ioc.stop();                     // NOW it is safe to tear the executor down
+for (auto& t : my_threads) t.join();
+```
+
+`run_standalone` exists so trivial apps never reason about this — it owns the context and threads and performs the stop → wait → stop-context → join sequence internally.
 
 ## 10. Configuration
 
@@ -1163,22 +1235,39 @@ Implementation:
 
 ### 10.3 Wiring config to runtime
 
-`ServerConfig` is the input to `Server`'s constructor. Listeners aren't auto-spawned from config alone — driver instances with their per-protocol config come from code:
+`ServerConfig` *plus an executor* are the inputs to `Server`'s constructor. Listeners aren't auto-spawned from config alone — driver instances with their per-protocol config come from code. `ServerConfig::threads` is consumed only by `run_standalone`; the injected path takes its threads from whatever runs the executor.
+
+Injected-executor path (HTTP shares the process with other subsystems):
 
 ```cpp
 auto cfg = load_server_config("server.json");
 if (!cfg) { /* report and exit */ }
 
-Server server{cfg.value()};
+// Caller owns the io_context + threads — e.g. one context dedicated to HTTP,
+// separate ones for the DB pool / logger / S3 client.
+asio::io_context http_ioc;
+std::jthread http_thread{[&]{ http_ioc.run(); }};
 
-attach_default_listeners(server);   // helper for the common case
+Server server{cfg.value(), http_ioc.get_executor()};
+attach_default_listeners(server);            // helper for the common case
 
 auto users = std::make_shared<UserController>(user_service);
 add_basic_middleware(*users, log_mw, request_id_mw);
 server.in_group("/api/v1").add_controller(users);
 
-server.setup();
-server.start();
+server.setup();                              // accept loops go live on http_ioc
+// ... install SIGINT -> server.stop() ...
+server.wait_until_stopped();                 // §9.7: keep driving http_ioc until this returns
+http_ioc.stop();                             // only now is it safe to tear down
+```
+
+Standalone path (HTTP owns the process) collapses all of that:
+
+```cpp
+run_standalone(cfg.value(), cfg.value().threads(), [&](Server& server) {
+    attach_default_listeners(server);
+    server.in_group("/api/v1").add_controller(users);
+});   // blocks until graceful shutdown; owns context + threads + signal handling
 ```
 
 `attach_default_listeners(Server&, DefaultDrivers={})` walks `cfg.listeners()`, dispatches by transport/protocol set, constructs the right driver instances using server-level timeouts/body_limit. For per-listener tuning, the user iterates manually.
@@ -1212,6 +1301,10 @@ For one `GET /users/42` with 6 headers and 0-byte body:
 
 **Result: ~1 alloc per request, owned by user-built data.**
 
+**This is now an enforced invariant, not an aspiration.** It holds because responses are built through `ctx` (§5.4) — headers and the response's *stored* allocator point at the arena, so even post-handler middleware mutation stays off the global heap — and `Body` is an SBO value type (§5.2) with no `unique_ptr` node. The one heap alloc is the user's body `std::string`; a handler that serializes into an arena `std::pmr::string` removes even that.
+
+**Verification scope (important).** An allocation-counting `memory_resource` gates the invariant (§14). In **PR1** (types only — no driver, no connection arena, no `BeastRequestBody`) the gate can verify only the **response** side: `ctx.json(...)` / `ctx.ok(...)` perform zero global-heap framework allocations. The full wire-path invariant — including the zero-copy *request* side — is only verifiable once the h1 driver and connection arena exist (**PR3**), where the gate runs against a real request on the wire. The §11.1 table above is therefore a PR3 acceptance target, partially gated from PR1.
+
 ### 11.2 Per-connection
 
 - `RequestArena` initial buffer: 8KB on the stack (configurable via `ServerConfig::request_arena_size`). Grows on demand if a request exceeds it.
@@ -1220,7 +1313,7 @@ For one `GET /users/42` with 6 headers and 0-byte body:
 
 ### 11.3 What remains user-controllable
 
-Response body content: if a handler builds JSON via `Json::Value::toStyledString()`, that's the user's allocation chain. Framework moves it into the `Response`. For large payloads, the user can opt into `ResponseFactory::stream(...)` — the producer closure writes chunks directly to the Body::Writer the driver hands it; no buffering buried in the framework.
+Response body content: if a handler builds JSON via `Json::Value::toStyledString()`, that's the user's allocation chain. Framework moves it into the `Response`. For large payloads, the user can opt into `ctx.stream(...)` (§5.4) — the producer closure writes chunks directly to the `Body::Writer` the driver hands it; no buffering buried in the framework.
 
 ## 12. Migration Plan
 
@@ -1251,7 +1344,7 @@ Response body content: if a handler builds JSON via `Json::Value::toStyledString
 | 2 | **Routing layer** — `RouteRegistry`, `HttpController` evolution, `Middleware` shape, `GroupBinding`, `Router`, the bake step, conflict detection. + unit tests. Old `Server` still wires it. | Yes — registry/controller logic testable with synthetic `RequestContext`s. |
 | 3 | **Connection + Driver interface + `Http11Driver`** — concept-based connections, templated `serve()`, bug-fix battery (URL decode, body limits, timeouts, exception → 500). h2/h3 scaffolds. vcpkg deps for nghttp2/ngtcp2/nghttp3 added. + driver-level tests. | Yes — drivers testable against fake connections. |
 | 4 | **Listeners + TLS** — `ListenerBase`, `TcpListener`, `TlsListener`, `QuicListener` scaffold, `ConnectionTracker`, `build_ssl_context`. + integration tests for h1-over-TCP and h1-over-TLS. | Yes — first end-to-end testable layer. |
-| 5 | **`Server` rewrite + observers + lifecycle** — three-state lifecycle, `setup`/`start`/`stop`, `graceful_shutdown`, observer interface. + lifecycle integration tests. | Yes — replaces old `Server`; architecture goes "live" here. |
+| 5 | **`Server` rewrite + observers + lifecycle** — executor injection (`Server(cfg, any_io_executor)`, owns no threads), `setup`/`stop`/`wait_until_stopped`, `graceful_shutdown`, §9.7 shutdown-ordering contract, `run_standalone` convenience, observer interface. + lifecycle integration tests. | Yes — replaces old `Server`; architecture goes "live" here. |
 | 6 | **Config (JSON + `ConfigInterface`)** — all config types, `load_server_config`, `attach_default_listeners` helper. + config tests. | Yes — JSON-loaded server is then a one-liner. |
 | 7 | **Cleanup** — delete `aliases.hpp`, old `server.hpp`/`controller.hpp`/etc., port manual test, update benchmarks. | Yes — the deletions PR. |
 
@@ -1382,6 +1475,7 @@ No I/O, no network, no threads. Each runs in milliseconds.
 - `outcome_to_response_test.cpp` — every built-in error type round-trips through `to_http_response`; user-defined error type with custom conversion compiles and dispatches correctly; missing conversion produces a clear compile error.
 - `request_context_test.cpp` — set/get/has type-keyed bag, type collisions, params accessed before set return nullopt.
 - `config_load_test.cpp` — valid JSON loads; missing required field surfaces field path; type mismatch surfaces field path; round-trip via `dump_server_config` produces equivalent config; enum string mappings round-trip.
+- `allocation_gate_test.cpp` — a counting `std::pmr::memory_resource` installed as the global-default resource asserts that building a success response via `ctx.json(...)` / `ctx.ok(...)` performs **zero** global-heap framework allocations (headers + body wrapper); the only permitted alloc is the user's body string. **PR1 scope = response side only** (no driver/connection arena yet); extended to the full request+response wire path in PR3 (§11.1). This test is what keeps the zero-additional-allocation invariant from silently rotting.
 
 ### 14.2 Integration tests (`tests/integration_tests/http/`)
 
@@ -1400,7 +1494,7 @@ Coverage:
 - Middleware: single, chain (3 deep), short-circuit (auth returns 401 without calling next), modify-after.
 - Groups: single-level, nested, multiple controllers in same group, conflict detection across controllers.
 - 404 vs 405: known path, unknown verb → 405 + correct `Allow`.
-- Lifecycle: `setup()` failure on port-in-use; `start()` blocks until `stop()`; SIGINT triggers graceful shutdown; `stop()` idempotent; registration after `setup()` throws.
+- Lifecycle: `setup()` failure on port-in-use; on an injected executor, `setup()` goes live and `wait_until_stopped()` returns only after `stop()` + graceful shutdown; `stop()` idempotent and does **not** stop the caller's executor (§9.7); SIGINT (via `run_standalone`) triggers graceful shutdown; registration after `setup()` throws.
 - Graceful shutdown: in-flight completes; new connections refused; `on_shutdown_started` runs and is awaited; drain timeout force-cancels remaining.
 - Concurrency: 1000 concurrent requests across N workers; correct responses; clean under TSan.
 - TLS: handshake against self-signed cert (test fixture); ALPN negotiates h1; client offering only `h2` + listener without h2 driver → connection closes.
@@ -1429,8 +1523,14 @@ Coverage:
 | Error → Response | ADL `to_http_response(const E&)` | Compile-time checked (missing = build break); zero overhead; lives next to error type |
 | Build-out scope | Option C: everything except protocol drivers | TLS interface + impl, ALPN real, body limits, timeouts, graceful shutdown, JSON config; only h2/h3 protocol bodies stay stubbed |
 | Allocation strategy | Per-request arena + Beast allocator redirect + Headers tagged-union facade | Zero framework heap allocs on hot path; user-data allocs unchanged |
+| Allocation policy | Zero-additional-alloc **invariant** (arena in both directions), gated by a counting `memory_resource` test | User's #1 goal is minimal overhead; an invariant + gate keeps it from rotting, unlike an aspirational table. Body = SBO value type; Response stores its arena allocator |
+| Response construction | ctx-scoped factories (`ctx.json(...)`) — review option A | Threads the arena in automatically; impossible to forget and silently fall back to global heap. Static `ResponseFactory` retained for ctx-less/error path only |
+| Error → Response alloc | `to_http_response` arena-free; 4xx/5xx on the global heap | Cold path; keeps the extension point a clean one-arg free function |
+| `target` representation | `string_view` into the receive buffer (not an owned `std::string`) | Zero-copy; avoids the SSO-dangling cache bug; consistent with the rest of the views-into-buffers request model |
+| Executor ownership | Injected (`any_io_executor`); Server owns no `io_context`/threads; `run_standalone` convenience | HTTP coexists with logger/DB/S3; caller controls thread↔context topology; also subsumes the per-thread-`io_context` throughput lesson |
+| Shutdown ownership | `stop()` never stops the executor; caller drives it until `wait_until_stopped()` (§9.7) | The executor is shared with subsystems that must outlive HTTP; stopping it would kill drain/observers mid-flight |
 | Connection abstraction | Concept-based, no virtual hierarchy, no `dynamic_cast` | Concrete connection types satisfy `Connection` concept; drivers templated on connection type; polymorphism only at listener layer |
-| Lifecycle | `setup()` (sync bind) / `start()` (block) / `stop()` (non-blocking, idempotent) | Honest failure surface; testable; signal-driven shutdown coexists with programmatic |
+| Lifecycle | Injected executor; `setup()` (sync bind + spawn loops) / `stop()` (non-blocking, never stops the executor) / `wait_until_stopped()` (block); `run_standalone` convenience | Honest failure surface; testable; coexists with other subsystems on caller-owned executors; see §9.7 contract |
 | Observer model | Single typed `ServerObserver` interface with `exception_ptr` for errors | Replaces 10-vector mess; UAF structurally impossible (heap-managed exception_ptr) |
 | Routing perf | Segment-vector parametric routing, not `std::regex` | Original design's headline perf bug; segment vectors are 10x+ faster, simpler, swap-in trie later if needed |
 | Config format | JSON via `ConfigInterface` for v1; YAML follow-up | Project's established pattern (FileSinkConfig); YAML adds the format param later |

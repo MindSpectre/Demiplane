@@ -1,30 +1,68 @@
 # HTTP Redesign — PR 1: Types Layer Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:
+> executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Reconciled 2026-05-31** against the updated design spec. This supersedes the original PR1 plan. The four spec↔plan divergences are resolved here: `Body` is a **value type with SBO type-erasure** (no `unique_ptr`), `Request::target` is a **`string_view`** into the receive buffer, response construction is **ctx-scoped** (`ctx.json(...)`) and arena-backed, and the zero-additional-allocation invariant is **gated by a counting `memory_resource`** (response side in PR1). See spec §3, §5, §11, §15.
+> **Reconciled 2026-05-31** against the updated design spec. This supersedes the original PR1 plan. The four spec↔plan
+> divergences are resolved here: `Body` is a **value type with SBO type-erasure** (no `unique_ptr`), `Request::target`
+> is
+> a **`string_view`** into the receive buffer, response construction is **ctx-scoped** (`ctx.json(...)`) and
+> arena-backed,
+> and the zero-additional-allocation invariant is **gated** (response side in PR1). See spec §3, §5, §11, §15.
+>
+> **Polished 2026-06-09** (design-review pass, verified against the repo): the allocation gate counts **replaced
+global `operator new`** — a pmr default-resource counter cannot see plain-container or coroutine-frame allocations (spec
+> §14); `Headers` gains a user-defined **move-assign that adopts the source backing** — a defaulted one element-copies
+> into the destination's old allocator, silently landing arena headers on the global heap (pmr POCMA trap);
+`RequestContext` **move-assign is deleted** — a defaulted one replaced the bag without running payload destructors (
+> leak); unit tests link the new **`Demiplane::Component::Http::Types` alias** — the existing umbrella
+`Demiplane::Component::Http` aggregates only the old `Handler` lib until PR 7, so it would not even propagate the Types
+> include dirs; sanitizer steps use the repo's real `asan` preset (`build/asan`), not the nonexistent
+`release-sanitize`.
 
-**Goal:** Build the protocol-agnostic core types (Headers, Body, Request, Response, RequestContext, errors, ResponseFactory) as a self-contained `Demiplane::Component::Http::Types` static library with full unit test coverage **and an allocation gate**. After this PR the new layer is usable from tests and ready for PR 2 (Routing). The existing `http_server/` library is untouched; this PR is strictly additive.
+**Goal:** Build the protocol-agnostic core types (Headers, Body, Request, Response, RequestContext, errors,
+ResponseFactory) as a self-contained `Demiplane::Component::Http::Types` static library with full unit test coverage *
+*and an allocation gate**. After this PR the new layer is usable from tests and ready for PR 2 (Routing). The existing
+`http_server/` library is untouched; this PR is strictly additive.
 
 **Architecture (reconciled):** Pure data + utility layer. No drivers, no servers, no network I/O.
 
-- `Headers` — tagged-union facade: `BeastBacking` (read-only view over `boost::beast::http::fields`) and `OwnedBacking` (arena-owned `pmr::string` pairs). **Always constructed with an allocator; no null/default state.** Mutators and view→owned promotion allocate through the bound allocator — never the global heap. Iteration is O(1) per step (the iterator holds the backing's native iterator, not an index it re-walks).
-- `Body` — **value type, ~48-byte SBO, type-erased** (`read_chunk()` dispatched through an internal vtable; no `dynamic_cast`, no `unique_ptr<Body>`). PR1 payload kinds: `EmptyBody`, `OwnedBufferBody`. `BeastRequestBody` (zero-copy request body) lands in PR3; `StreamingProducerBody` later. A non-streaming body exposes `buffered_view()` for the driver fast-path and for tests (this replaces the old `dynamic_cast<StringBody*>` idiom). Buffered helpers (`read_to_string`/`read_json`/`read_form`/`read_multipart`) return `gears::Outcome`.
-- `Request` — plain struct: `string_view target` (view into receive buffer), value `Body`, `Headers`. Valid only for the handler's duration (lifetime contract).
-- `Response` — **stores a `std::pmr::polymorphic_allocator<>`** (so post-handler middleware mutation stays in the arena), value `Body`, `Headers`, `keep_alive`. `set_header` replaces / `add_header` appends. Default-constructed Response uses `new_delete` (cold path); ctx builds it with the arena.
-- `RequestContext` — lazy header lookup, `target`-as-view path/query split (no SSO dangle), `query<T>`/`path_param<T>` **defined in the header** (any arithmetic or string type, no link-time type cap), type-keyed bag, and the **ctx-scoped response factories** (`ok`/`json`/`created`/`no_content`/`redirect`/`status`) that build arena-backed responses.
-- `errors.hpp` — built-in error structs each paired with an **arena-free** `to_http_response(const E&) -> Response` (cold-path, global heap via the static `ResponseFactory`).
+- `Headers` — tagged-union facade: `BeastBacking` (read-only view over `boost::beast::http::fields`) and
+  `OwnedBacking` (arena-owned `pmr::string` pairs). **Always constructed with an allocator; no null/default state.**
+  Mutators and view→owned promotion allocate through the bound allocator — never the global heap. Iteration is O(1) per
+  step (the iterator holds the backing's native iterator, not an index it re-walks). Move-assign adopts the source
+  backing (avoids the pmr POCMA element-copy trap).
+- `Body` — **value type, ~48-byte SBO, type-erased** (`read_chunk()` dispatched through an internal vtable; no
+  `dynamic_cast`, no `unique_ptr<Body>`). PR1 payload kinds: `EmptyBody`, `OwnedBufferBody`. `BeastRequestBody` (
+  zero-copy request body) lands in PR3; `StreamingProducerBody` later. A non-streaming body exposes `buffered_view()`
+  for the driver fast-path and for tests (this replaces the old `dynamic_cast<StringBody*>` idiom). Buffered helpers (
+  `read_to_string`/`read_json`/`read_form`/`read_multipart`) return `gears::Outcome`.
+- `Request` — plain struct: `string_view target` (view into receive buffer), value `Body`, `Headers`. Valid only for the
+  handler's duration (lifetime contract).
+- `Response` — **stores a `std::pmr::polymorphic_allocator<>`** (so post-handler middleware mutation stays in the
+  arena), value `Body`, `Headers`, `keep_alive`. `set_header` replaces / `add_header` appends. Default-constructed
+  Response uses `new_delete` (cold path); ctx builds it with the arena.
+- `RequestContext` — lazy header lookup, `target`-as-view path/query split (no SSO dangle), `query<T>`/`path_param<T>` *
+  *defined in the header** (any arithmetic or string type, no link-time type cap), type-keyed bag, and the **ctx-scoped
+  response factories** (`ok`/`json`/`created`/`no_content`/`redirect`/`status`) that build arena-backed responses.
+  Move-construct only (move-assign deleted — it would skip bag destructors).
+- `errors.hpp` — built-in error structs each paired with an **arena-free** `to_http_response(const E&) -> Response` (
+  cold-path, global heap via the static `ResponseFactory`).
 
 **Tech Stack:**
+
 - C++23 (deducing this; pmr; concepts; `if constexpr`)
 - Boost.Beast (only for `boost::beast::http::fields` in `Headers::BeastBacking`)
 - Boost.Container (`small_vector` for arena-backed param/bag storage)
 - Boost.Asio (`asio::awaitable<T>` for `Body::read_chunk` and `AsyncOutcome`)
 - JsonCpp (`Json::Value`, `Json::CharReaderBuilder`)
-- `gears::Outcome` (project's typed-error sum type — confirmed API: `visit`, `gears::err`, `is_success`, `holds_error<E>`, `error<E>`, `value`, `value_or`)
+- `gears::Outcome` (project's typed-error sum type — confirmed API: `visit`, `gears::err`, `is_success`,
+  `holds_error<E>`, `error<E>`, `value`, `value_or`)
 - GoogleTest
 
-**Out of PR1 scope (deferred, noted where relevant):** `BeastRequestBody` and `ctx.stream(...)` / `StreamingProducerBody` (need the driver + `Body::Writer`, PR3+); routing/`set_path_param` caller is PR2; the request-side half of the allocation gate (PR3, when a real connection arena exists).
+**Out of PR1 scope (deferred, noted where relevant):** `BeastRequestBody` and `ctx.stream(...)` /
+`StreamingProducerBody` (need the driver + `Body::Writer`, PR3+); routing/`set_path_param` caller is PR2; the
+request-side half of the allocation gate (PR3, when a real connection arena exists).
 
 ---
 
@@ -75,13 +113,15 @@ components/http/CMakeLists.txt        ← edited: register Types subdirectory
 tests/unit_tests/CMakeLists.txt       ← edited: add Http.Types unit test target
 ```
 
-Build verification each task: `cmake --build build/release` from the project root completes clean. Test verification: `ctest --test-dir build/release --output-on-failure -L unit -R Http.Types` passes.
+Build verification each task: `cmake --build build/release` from the project root completes clean. Test verification:
+`ctest --test-dir build/release --output-on-failure -L unit -R Http.Types` passes.
 
 ---
 
 ## Task 1: Bootstrap directory tree + minimum-viable CMakeLists
 
-**Files:** Create `components/http/types/CMakeLists.txt`, `components/http/types/types_placeholder.cpp`; Modify `components/http/CMakeLists.txt`.
+**Files:** Create `components/http/types/CMakeLists.txt`, `components/http/types/types_placeholder.cpp`; Modify
+`components/http/CMakeLists.txt`.
 
 **Goal:** Get an empty `Demiplane::Component::Http::Types` static library compiling and linkable.
 
@@ -114,6 +154,11 @@ target_link_libraries(${DMP_HTTP}.Types
         JsonCpp::JsonCpp
 )
 
+# Linkable alias for unit tests and early consumers. The component umbrella
+# (Demiplane::Component::Http) aggregates only the old Handler lib until PR 7,
+# so it does NOT propagate this layer's include dirs.
+add_library(Demiplane::Component::Http::Types ALIAS ${DMP_HTTP}.Types)
+
 # Source files added in subsequent tasks via target_sources.
 target_sources(${DMP_HTTP}.Types PRIVATE types_placeholder.cpp)
 ##############################################################################
@@ -129,7 +174,8 @@ namespace demiplane::http::detail {
 }
 ```
 
-- [ ] **Step 4: Edit `components/http/CMakeLists.txt`** — register the new sub-CMakeLists *before* the existing `${DMP_HTTP}.Handler`. The current file starts:
+- [ ] **Step 4: Edit `components/http/CMakeLists.txt`** — register the new sub-CMakeLists *before* the existing
+  `${DMP_HTTP}.Handler`. The current file starts:
 
 ```cmake
 set(DMP_HTTP ${DMP_COMPONENT}.HTTP)
@@ -180,7 +226,8 @@ http component umbrella. Placeholder TU only; real source lands per task."
 
 ## Task 2: http_enums.hpp
 
-**Files:** Create `components/http/types/http_enums.hpp`, `tests/unit_tests/http/types/test_http_enums.cpp`; Modify `tests/unit_tests/CMakeLists.txt`.
+**Files:** Create `components/http/types/http_enums.hpp`, `tests/unit_tests/http/types/test_http_enums.cpp`; Modify
+`tests/unit_tests/CMakeLists.txt`.
 
 **Goal:** The four protocol-agnostic enums + Beast conversion helpers.
 
@@ -220,7 +267,8 @@ TEST(HttpEnumsTest, VersionNumeric) {
 }
 ```
 
-- [ ] **Step 2: Wire up the test target** — edit `tests/unit_tests/CMakeLists.txt`, near the bottom of the `add_unit_test` blocks:
+- [ ] **Step 2: Wire up the test target** — edit `tests/unit_tests/CMakeLists.txt`, near the bottom of the
+  `add_unit_test` blocks:
 
 ```cmake
 ##############################################################################
@@ -229,9 +277,11 @@ TEST(HttpEnumsTest, VersionNumeric) {
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         http/types/test_http_enums.cpp
 )
+# NOT Demiplane::Component::Http — that umbrella aggregates only the old
+# Handler lib until PR 7 and would not propagate the Types include dirs.
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
         PRIVATE
-        Demiplane::Component::Http
+        Demiplane::Component::Http::Types
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -387,7 +437,8 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-> Note: `Response` is forward-declared as a `struct` (it is a struct in Task 8) to keep the elaborated-type-specifier consistent.
+> Note: `Response` is forward-declared as a `struct` (it is a struct in Task 8) to keep the elaborated-type-specifier
+> consistent.
 
 - [ ] **Step 2: Build to verify it parses; Step 3: Commit**
 
@@ -403,7 +454,8 @@ git commit -m "feat(http/types): add AsyncOutcome / AsyncResponse aliases"
 
 **Files:** Create `components/http/types/errors/errors.hpp`.
 
-**Goal:** Built-in error structs + forward-declared **arena-free** `to_http_response(const E&)` overloads (defs in Task 11).
+**Goal:** Built-in error structs + forward-declared **arena-free** `to_http_response(const E&)` overloads (defs in Task
+11).
 
 - [ ] **Step 1: Create `components/http/types/errors/errors.hpp`**
 
@@ -469,9 +521,11 @@ git commit -m "feat(http/types): add built-in error types + arena-free to_http_r
 
 ## Task 5: url_decode — shared RFC 3986 decoder
 
-**Files:** Create `url_decode/url_decode.{hpp,cpp}`, `tests/unit_tests/http/types/test_url_decode.cpp`; Modify both CMakeLists.
+**Files:** Create `url_decode/url_decode.{hpp,cpp}`, `tests/unit_tests/http/types/test_url_decode.cpp`; Modify both
+CMakeLists.
 
-**Goal:** One canonical decoder (the original plan duplicated it in body.cpp and request_context.cpp — extract it). Returns `std::nullopt` on malformed escapes so callers choose how to surface them.
+**Goal:** One canonical decoder (the original plan duplicated it in body.cpp and request_context.cpp — extract it).
+Returns `std::nullopt` on malformed escapes so callers choose how to surface them.
 
 - [ ] **Step 1: Write the failing test** — `tests/unit_tests/http/types/test_url_decode.cpp`
 
@@ -506,8 +560,10 @@ TEST(UrlDecodeTest, LowercaseHex)          { EXPECT_EQ(url_decode("%2f").value()
 namespace demiplane::http {
 
     /// RFC 3986 percent-decoding. With plus_is_space, '+' -> ' '
-    /// (application/x-www-form-urlencoded). Returns nullopt on a malformed
-    /// escape (truncated or non-hex) so callers can surface a typed error.
+    /// (application/x-www-form-urlencoded — query strings and form bodies).
+    /// PATH SEGMENTS must pass plus_is_space=false: '+' is a literal in paths
+    /// (spec §8.6). Returns nullopt on a malformed escape (truncated or
+    /// non-hex) so callers can surface a typed error.
     std::optional<std::string> url_decode(std::string_view in, bool plus_is_space = true);
 
 }  // namespace demiplane::http
@@ -569,7 +625,9 @@ git commit -m "feat(http/types): add shared url_decode (RFC 3986 + form '+')"
 
 **Files:** Create `headers/headers.{hpp,cpp}`, `tests/unit_tests/http/types/test_headers.cpp`; Modify both CMakeLists.
 
-**Goal (reconciled):** Tagged-union `Headers`. **Always constructed with an allocator; no null/default state** — "empty" is an empty `OwnedBacking` bound to its allocator. Mutators and view→owned promotion use the **bound allocator, never the global heap**. Iteration is **O(1) per step** (the iterator holds the backing's native iterator).
+**Goal (reconciled):** Tagged-union `Headers`. **Always constructed with an allocator; no null/default state** — "empty"
+is an empty `OwnedBacking` bound to its allocator. Mutators and view→owned promotion use the **bound allocator, never
+the global heap**. Iteration is **O(1) per step** (the iterator holds the backing's native iterator).
 
 - [ ] **Step 1: Write the failing test** — `tests/unit_tests/http/types/test_headers.cpp`
 
@@ -672,6 +730,21 @@ TEST_F(HeadersTest, GetOrFallback) {
     EXPECT_EQ(h.get_or("X-Tag", "fallback"), "value");
     EXPECT_EQ(h.get_or("X-Missing", "fallback"), "fallback");
 }
+
+TEST_F(HeadersTest, MoveAssignAdoptsSourceBackingNoCopy) {
+    std::pmr::monotonic_buffer_resource other_res{4096};
+    Headers a = Headers::owned(alloc_);
+    a.add("X-Old", "1");
+    Headers b = Headers::owned(&other_res);
+    b.add("X-New", "2");
+    const char* stolen = b.get("X-New")->data();   // points into other_res
+    a = std::move(b);
+    EXPECT_FALSE(a.get("X-Old").has_value());
+    ASSERT_TRUE(a.get("X-New").has_value());
+    // Adopted (buffer stolen), not element-copied into a's old allocator:
+    // the value still lives at the same address.
+    EXPECT_EQ(a.get("X-New")->data(), stolen);
+}
 ```
 
 - [ ] **Step 2: Add `http/types/test_headers.cpp` to the test sources.**
@@ -718,9 +791,14 @@ namespace demiplane::http {
         static Headers owned(std::pmr::polymorphic_allocator<> alloc);
         static Headers view_of_beast(const boost::beast::http::fields& fields);
 
-        // Headers is move-only (it may hold a pmr container).
+        // Move-only (it may hold a pmr container). Move-ASSIGN is user-defined:
+        // it adopts the source's backing wholesale (variant emplace → vector
+        // move-construct steals buffer + allocator). A defaulted move-assign
+        // hits the pmr POCMA=false trap — element-wise COPY into the
+        // destination's OLD allocator, so `Response r; r = co_await next(ctx);`
+        // would silently copy arena headers onto the global heap.
         Headers(Headers&&) = default;
-        Headers& operator=(Headers&&) = default;
+        Headers& operator=(Headers&& other) noexcept;
         Headers(const Headers&) = delete;
         Headers& operator=(const Headers&) = delete;
 
@@ -748,7 +826,8 @@ namespace demiplane::http {
             using value_type        = Headers::value_type;
             using reference         = value_type;
             using difference_type   = std::ptrdiff_t;
-            using iterator_category = std::forward_iterator_tag;
+            // input, not forward: operator* returns a proxy pair by value.
+            using iterator_category = std::input_iterator_tag;
 
             const_iterator() = default;
             value_type operator*() const;
@@ -813,6 +892,17 @@ namespace demiplane::http {
     }
     Headers Headers::view_of_beast(const boost::beast::http::fields& fields) {
         return Headers{BeastBacking{&fields}};
+    }
+
+    Headers& Headers::operator=(Headers&& other) noexcept {
+        if (this != &other) {
+            // Adopt the source backing wholesale: emplace destroys ours and
+            // move-CONSTRUCTS theirs (vector steals buffer + allocator). See
+            // the header note on the pmr POCMA=false move-assign trap.
+            std::visit([&]<typename B>(B& b) { backing_.emplace<B>(std::move(b)); },
+                       other.backing_);
+        }
+        return *this;
     }
 
     void Headers::promote_to_owned(std::pmr::polymorphic_allocator<> alloc) {
@@ -933,7 +1023,9 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-> The `equal_range`-based `get_all` preserves insertion order for Beast (Beast keeps duplicate fields in insertion order). `size()` over Beast is `std::distance` (Beast's `fields` has no O(1) size); it is used only by `end()` and rarely otherwise.
+> The `equal_range`-based `get_all` preserves insertion order for Beast (Beast keeps duplicate fields in insertion
+> order). `size()` over Beast is `std::distance` (Beast's `fields` has no O(1) size); it is used only by `end()` and
+> rarely otherwise.
 
 - [ ] **Step 6: Wire source** — `target_sources(${DMP_HTTP}.Types PRIVATE headers/headers.cpp)`.
 
@@ -946,7 +1038,8 @@ git commit -m "feat(http/types): add Headers (allocator-bound, O(1) iteration, n
 BeastBacking views parsed fields; OwnedBacking is arena-owned. Mutation
 requires an explicit promote_to_owned(alloc) — never the global heap. The
 const_iterator carries the backing's native iterator, so iteration is O(1)
-per step (fixes the O(n^2) re-walk in the original design)."
+per step (fixes the O(n^2) re-walk in the original design). Move-assign
+adopts the source backing (avoids the pmr POCMA element-copy trap)."
 ```
 
 ---
@@ -955,9 +1048,14 @@ per step (fixes the O(n^2) re-walk in the original design)."
 
 **Files:** Create `body/body.{hpp,cpp}`, `tests/unit_tests/http/types/test_body.cpp`; Modify both CMakeLists.
 
-**Goal (reconciled):** `Body` is a **value type** with ~48-byte SBO type-erased storage — **no `unique_ptr`, no `dynamic_cast`**. `read_chunk()` dispatches through an internal vtable. PR1 payloads: `EmptyBody`, `OwnedBufferBody`. A non-streaming body exposes `buffered_view()` (driver fast-path + the test inspection idiom that replaces `dynamic_cast<StringBody*>`). Buffered helpers land in Task 12.
+**Goal (reconciled):** `Body` is a **value type** with ~48-byte SBO type-erased storage — **no `unique_ptr`,
+no `dynamic_cast`**. `read_chunk()` dispatches through an internal vtable. PR1 payloads: `EmptyBody`, `OwnedBufferBody`.
+A non-streaming body exposes `buffered_view()` (driver fast-path + the test inspection idiom that replaces
+`dynamic_cast<StringBody*>`). Buffered helpers land in Task 12.
 
-> **Implementer note — the riskiest code in PR1.** The move/destroy/alignment plumbing is exactly what the ASan run in the final task stresses. Keep the payloads ≤ `kInlineSize` (static_assert enforces it) and never move a `Body` while a `read_chunk()` awaitable from it is still in flight (the awaitable captures the payload by address).
+> **Implementer note — the riskiest code in PR1.** The move/destroy/alignment plumbing is exactly what the ASan run in
+> the final task stresses. Keep the payloads ≤ `kInlineSize` (static_assert enforces it) and never move a `Body` while a
+`read_chunk()` awaitable from it is still in flight (the awaitable captures the payload by address).
 
 - [ ] **Step 1: Write the failing test** — `tests/unit_tests/http/types/test_body.cpp`
 
@@ -1146,7 +1244,8 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-- [ ] **Step 5: Create `components/http/types/body/body.cpp`** (payloads + ctor/move/dtor; buffered helpers added in Task 12)
+- [ ] **Step 5: Create `components/http/types/body/body.cpp`** (payloads + ctor/move/dtor; buffered helpers added in
+  Task 12)
 
 ```cpp
 #include "body.hpp"
@@ -1235,7 +1334,8 @@ fast-path + test idiom). Move leaves the source a valid EmptyBody."
 
 **Files:** Create `request/request.{hpp,cpp}`; Modify CMakeLists.
 
-**Goal (reconciled):** `target` is a **`string_view`** into the receive buffer (zero-copy, and it survives `RequestContext` moves — the SSO dangle is structurally gone). `body` is a **value `Body`** (not `unique_ptr`).
+**Goal (reconciled):** `target` is a **`string_view`** into the receive buffer (zero-copy, and it survives
+`RequestContext` moves — the SSO dangle is structurally gone). `body` is a **value `Body`** (not `unique_ptr`).
 
 - [ ] **Step 1: Create `components/http/types/request/request.hpp`**
 
@@ -1279,7 +1379,8 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-> `Request` takes its `Headers` at construction because `Headers` has no default state. Drivers build `Request{Headers::view_of_beast(parser.get())}` (PR3); tests build `Request{Headers::owned(alloc)}`.
+> `Request` takes its `Headers` at construction because `Headers` has no default state. Drivers build
+`Request{Headers::view_of_beast(parser.get())}` (PR3); tests build `Request{Headers::owned(alloc)}`.
 
 - [ ] **Step 2: Create `components/http/types/request/request.cpp`**
 
@@ -1304,9 +1405,12 @@ Headers supplied at construction since Headers has no null state."
 
 ## Task 9: Response struct — stored allocator + fluent setters
 
-**Files:** Create `response/response.{hpp,cpp}`, `tests/unit_tests/http/types/test_response.cpp`; Modify both CMakeLists.
+**Files:** Create `response/response.{hpp,cpp}`, `tests/unit_tests/http/types/test_response.cpp`; Modify both
+CMakeLists.
 
-**Goal (reconciled):** `Response` **stores its allocator** (so middleware mutation after the handler stays in the arena), holds a value `Body`, defaults to `new_delete` (cold path), and exposes `set_header` (replace) / `add_header` (append) — the distinction the old single `with_header` lacked. Built on the hot path by `ctx` (Task 15).
+**Goal (reconciled):** `Response` **stores its allocator** (so middleware mutation after the handler stays in the
+arena), holds a value `Body`, defaults to `new_delete` (cold path), and exposes `set_header` (replace) / `add_header` (
+append) — the distinction the old single `with_header` lacked. Built on the hot path by `ctx` (Task 15).
 
 - [ ] **Step 1: Write the failing test** — `tests/unit_tests/http/types/test_response.cpp`
 
@@ -1448,7 +1552,8 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-> Member order matters: `alloc` is declared before `headers` so the constructor's `Headers::owned(a)` binds to the just-initialized arena allocator. An empty `OwnedBacking` does not allocate until the first `add`/`set`.
+> Member order matters: `alloc` is declared before `headers` so the constructor's `Headers::owned(a)` binds to the
+> just-initialized arena allocator. An empty `OwnedBacking` does not allocate until the first `add`/`set`.
 
 - [ ] **Step 5: Create `components/http/types/response/response.cpp`**
 
@@ -1473,9 +1578,11 @@ in the arena. set_header replaces; add_header appends. Default = new_delete
 
 ## Task 10: ResponseFactory — static cold-path helper
 
-**Files:** Create `response_factory/response_factory.{hpp,cpp}`, `tests/unit_tests/http/types/test_response_factory.cpp`; Modify both CMakeLists.
+**Files:** Create `response_factory/response_factory.{hpp,cpp}`,
+`tests/unit_tests/http/types/test_response_factory.cpp`; Modify both CMakeLists.
 
-**Goal (reconciled):** A **static, global-heap, cold-path** factory for the two ctx-less contexts: `to_http_response` (Task 11/errors) and library/test/synthetic construction. The hot path is `ctx.json(...)` (Task 15).
+**Goal (reconciled):** A **static, global-heap, cold-path** factory for the two ctx-less contexts: `to_http_response` (
+Task 11/errors) and library/test/synthetic construction. The hot path is `ctx.json(...)` (Task 15).
 
 - [ ] **Step 1: Write the failing test** — `tests/unit_tests/http/types/test_response_factory.cpp`
 
@@ -1740,7 +1847,8 @@ git commit -m "feat(http/types): implement to_http_response for all built-in err
 
 **Files:** Modify `body/body.cpp`, `tests/unit_tests/http/types/test_body.cpp`.
 
-**Goal:** `read_to_string`/`read_json`/`read_form`/`read_multipart` drive `read_chunk()` with a limit, returning `AsyncOutcome` with typed failure. Uses the shared `url_decode` (Task 5).
+**Goal:** `read_to_string`/`read_json`/`read_form`/`read_multipart` drive `read_chunk()` with a limit, returning
+`AsyncOutcome` with typed failure. Uses the shared `url_decode` (Task 5).
 
 - [ ] **Step 1: Append failing tests to `test_body.cpp`**
 
@@ -1941,7 +2049,9 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-> The multipart parser handles the well-formed common case and rejects malformed input with a typed error; transfer-encoded parts and very large file streaming are out of scope (the spec notes large-upload streaming is a driver-era concern).
+> The multipart parser handles the well-formed common case and rejects malformed input with a typed error;
+> transfer-encoded parts and very large file streaming are out of scope (the spec notes large-upload streaming is a
+> driver-era concern).
 
 - [ ] **Step 4: Build + run — expect pass; Step 5: Commit**
 
@@ -1957,9 +2067,12 @@ multipart use the shared url_decode. Malformed input surfaces a parse error."
 
 ## Task 13: RequestContext — accessors, predicates, target-as-view split
 
-**Files:** Create `request_context/request_context.{hpp,cpp}`, `tests/unit_tests/http/types/test_request_context.cpp`; Modify both CMakeLists.
+**Files:** Create `request_context/request_context.{hpp,cpp}`, `tests/unit_tests/http/types/test_request_context.cpp`;
+Modify both CMakeLists.
 
-**Goal:** Construction, header lookup, body access, content-type/Accept predicates, and the lazy `target`→(path, query) split. Because `target` is a **view into stable external storage** (not an owned SSO string), caching the split is safe across `RequestContext` moves.
+**Goal:** Construction, header lookup, body access, content-type/Accept predicates, and the lazy `target`→(path, query)
+split. Because `target` is a **view into stable external storage** (not an owned SSO string), caching the split is safe
+across `RequestContext` moves.
 
 - [ ] **Step 1: Write the failing test** — `tests/unit_tests/http/types/test_request_context.cpp`
 
@@ -2069,7 +2182,11 @@ namespace demiplane::http {
         RequestContext(Request req, std::pmr::polymorphic_allocator<> alloc);
 
         RequestContext(RequestContext&&)            = default;
-        RequestContext& operator=(RequestContext&&) = default;
+        // Move-ASSIGN is deleted: a defaulted one would replace bag_ without
+        // running the old payloads' destructors (a real leak for owning
+        // payloads). Contexts are move-CONSTRUCTED through the chain; nothing
+        // ever assigns over one.
+        RequestContext& operator=(RequestContext&&) = delete;
         RequestContext(const RequestContext&)            = delete;
         RequestContext& operator=(const RequestContext&) = delete;
 
@@ -2145,7 +2262,8 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-> `accepts_json()`/predicates use substring matching and treat `*/*` as acceptance (browser caveat in the design review) — kept simple for v1; strict content negotiation is a follow-up if needed.
+> `accepts_json()`/predicates use substring matching and treat `*/*` as acceptance (browser caveat in the design
+> review) — kept simple for v1; strict content negotiation is a follow-up if needed.
 
 - [ ] **Step 6: Wire source; Step 7: Build + run — expect pass; Step 8: Commit**
 
@@ -2163,7 +2281,10 @@ Lazy path/query split memoized over the string_view target — survives moves
 
 **Files:** Modify `request_context/{hpp,cpp}`, `test_request_context.cpp`.
 
-**Goal (reconciled):** `path_param<T>` / `path_param_or<T>` / `query<T>` / `query_or<T>` for **any arithmetic or string type** — **definitions live in the header** so consumers instantiate them for their own `T` (no `.cpp` explicit-instantiation list, no `query<size_t>` link error). Query parsed lazily; URL-decoded throughout. `set_path_param` is the routing-layer hook (PR2).
+**Goal (reconciled):** `path_param<T>` / `path_param_or<T>` / `query<T>` / `query_or<T>` for **any arithmetic or string
+type** — **definitions live in the header** so consumers instantiate them for their own `T` (no `.cpp`
+explicit-instantiation list, no `query<size_t>` link error). Query parsed lazily; URL-decoded throughout.
+`set_path_param` is the routing-layer hook (PR2).
 
 - [ ] **Step 1: Append failing tests** — including the types the old plan could not link
 
@@ -2203,7 +2324,8 @@ TEST_F(RequestContextTest, PathParamConvertFailure) {
 
 - [ ] **Step 2: Build — expect failure.**
 
-- [ ] **Step 3: Edit `request_context.hpp`** — add includes, storage, public template methods (defined inline), and a private `convert_string<T>`.
+- [ ] **Step 3: Edit `request_context.hpp`** — add includes, storage, public template methods (defined inline), and a
+  private `convert_string<T>`.
 
 Add includes:
 
@@ -2279,7 +2401,8 @@ Add to the private section:
         }
 ```
 
-> Member-init order: `alloc_` is declared before `path_params_`/`query_params_`, so the small_vectors' allocator references the live `alloc_`.
+> Member-init order: `alloc_` is declared before `path_params_`/`query_params_`, so the small_vectors' allocator
+> references the live `alloc_`.
 
 - [ ] **Step 4: Append helper definitions to `request_context.cpp`**
 
@@ -2345,7 +2468,10 @@ link cap (query<size_t> et al. now link). Arena-backed small_vector storage."
 
 **Files:** Modify `request_context/{hpp,cpp}`, `test_request_context.cpp`.
 
-**Goal:** (a) `set<T>`/`get<T>`/`has<T>` type-keyed middleware bag (arena-backed, header-defined for user types); (b) the **ctx-scoped, arena-bound response factories** — `ok`/`json`/`created`/`no_content`/`redirect`/`status` — that build a `Response` whose headers + stored allocator point at the request arena (spec §5.4, option A). (`stream` is deferred to the driver PR.)
+**Goal:** (a) `set<T>`/`get<T>`/`has<T>` type-keyed middleware bag (arena-backed, header-defined for user types); (b)
+the **ctx-scoped, arena-bound response factories** — `ok`/`json`/`created`/`no_content`/`redirect`/`status` — that build
+a `Response` whose headers + stored allocator point at the request arena (spec §5.4, option A). (`stream` is deferred to
+the driver PR.)
 
 - [ ] **Step 1: Append failing tests**
 
@@ -2407,7 +2533,8 @@ TEST_F(RequestContextTest, BagDestructorRunsExactlyOnceAcrossMove) {
 
 - [ ] **Step 2: Build — expect failure.**
 
-- [ ] **Step 3: Edit `request_context.hpp`** — add includes, response include, bag + factory API. Add a non-trivial destructor (the bag runs payload destructors).
+- [ ] **Step 3: Edit `request_context.hpp`** — add includes, response include, bag + factory API. Add a non-trivial
+  destructor (the bag runs payload destructors).
 
 Add includes:
 
@@ -2492,14 +2619,20 @@ Private section — bag storage + lookup:
             return nullptr;
         }
         const BagEntry* find_bag_entry(std::type_index key) const {
-            for (auto& e : bag_) if (e.key == key) return const_cast<BagEntry*>(&e);
+            for (const auto& e : bag_) if (e.key == key) return &e;
             return nullptr;
         }
 ```
 
-> The bag bumps fresh arena storage on replace (the old bytes leak until the per-request arena `reset()` — by design for a monotonic resource). `~RequestContext` runs the payload destructors, guarding on `ptr`. `BagEntry`'s move ctor nulls the source `ptr`, so a moved-from context runs no destroyers — double-destruction is impossible regardless of `small_vector`'s moved-from element behaviour (the `BagDestructorRunsExactlyOnceAcrossMove` test + the Task 17 ASan run cover this).
+> The bag bumps fresh arena storage on replace (the old bytes leak until the per-request arena `reset()` — by design for
+> a monotonic resource). `~RequestContext` runs the payload destructors, guarding on `ptr`. `BagEntry`'s move ctor nulls
+> the source `ptr`, so a moved-from context runs no destroyers — double-destruction is impossible regardless of
+`small_vector`'s moved-from element behaviour (the `BagDestructorRunsExactlyOnceAcrossMove` test + the Task 17 ASan run
+> cover this).
 
-- [ ] **Step 4: Append definitions to `request_context.cpp`** (no new includes — `Response`/`Body` are already visible via `request_context.hpp`; ctx builds responses directly in the arena, it does **not** route through the static `ResponseFactory`)
+- [ ] **Step 4: Append definitions to `request_context.cpp`** (no new includes — `Response`/`Body` are already visible
+  via `request_context.hpp`; ctx builds responses directly in the arena, it does **not** route through the static
+  `ResponseFactory`)
 
 ```cpp
 namespace demiplane::http {
@@ -2535,7 +2668,9 @@ namespace demiplane::http {
 }  // namespace demiplane::http
 ```
 
-- [ ] **Step 5: Confirm the bag templates live in the header** — `set<T>`/`get<T>`/`has<T>` are defined inline in the header above (user code instantiates them), `find_bag_entry`/`~RequestContext` in the `.cpp`. Confirm `<new>` and `<typeindex>` are included in the header.
+- [ ] **Step 5: Confirm the bag templates live in the header** — `set<T>`/`get<T>`/`has<T>` are defined inline in the
+  header above (user code instantiates them), `find_bag_entry`/`~RequestContext` in the `.cpp`. Confirm `<new>` and
+  `<typeindex>` are included in the header.
 
 - [ ] **Step 6: Build + run — expect pass; Step 7: Commit**
 
@@ -2555,7 +2690,13 @@ runs bag destructors."
 
 **Files:** Create `tests/unit_tests/http/types/test_allocation_gate.cpp`; Modify `tests/unit_tests/CMakeLists.txt`.
 
-**Goal (spec §11/§14):** Prove the zero-additional-allocation invariant for the **response side** (all PR1 can verify — no driver/connection arena yet). A counting `std::pmr::memory_resource` is installed as the global-default resource; building a success response via `ctx.json(...)` / `ctx.ok(...)` must perform **zero** global-heap framework allocations. The only permitted global allocation is the user's body string, which is constructed *before* the measured region.
+**Goal (spec §11/§14):** Prove the zero-additional-allocation invariant for the **response side** (all PR1 can verify —
+no driver/connection arena yet). Replaced global `operator new`/`operator delete` — armed only inside the measured
+region via a thread-local flag — count **every** heap allocation, including the plain-`std::string`/`std::vector`
+/coroutine-frame classes a pmr default-resource counter cannot see (which are exactly the accidental allocations this
+gate exists to catch). Building a success response via `ctx.json(...)` / `ctx.ok(...)` must perform **zero** heap
+allocations; the user's body string is constructed *before* the measured region and moved in (and is sized past SSO, so
+an accidental copy would allocate and fail the gate).
 
 - [ ] **Step 1: Write the test**
 
@@ -2563,7 +2704,9 @@ runs bag destructors."
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstdlib>
 #include <memory_resource>
+#include <new>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -2576,29 +2719,50 @@ runs bag destructors."
 
 using namespace demiplane::http;
 
+// ── Global operator new/delete instrumentation ──────────────────────────────
+// Replacing these in one TU instruments the whole test binary (that is how
+// global replacement works), but counting is armed only inside the measured
+// regions via a thread_local flag, so gtest/runtime allocations elsewhere
+// don't perturb the count. This intercepts what a pmr default-resource counter
+// CANNOT: plain std::string/std::vector and coroutine-frame allocations —
+// exactly the accidental classes this gate exists to catch.
 namespace {
-    // Counts allocations routed to the upstream (global) resource.
-    class CountingResource : public std::pmr::memory_resource {
-    public:
-        std::atomic<std::size_t> count{0};
-        explicit CountingResource(std::pmr::memory_resource* up) : up_{up} {}
-    private:
-        void* do_allocate(std::size_t b, std::size_t a) override { ++count; return up_->allocate(b, a); }
-        void  do_deallocate(void* p, std::size_t b, std::size_t a) override { up_->deallocate(p, b, a); }
-        bool  do_is_equal(const std::pmr::memory_resource& o) const noexcept override { return this == &o; }
-        std::pmr::memory_resource* up_;
+    std::atomic<std::size_t> g_armed_allocs{0};
+    thread_local bool t_armed = false;
+
+    struct ArmedRegion {                  // counts allocs in this thread's region
+        std::size_t start = g_armed_allocs.load(std::memory_order_relaxed);
+        ArmedRegion() { t_armed = true; }
+        std::size_t finish() {
+            t_armed = false;
+            return g_armed_allocs.load(std::memory_order_relaxed) - start;
+        }
     };
 }
 
-TEST(AllocationGateTest, CtxOkPerformsNoGlobalHeapAllocations) {
-    CountingResource counter{std::pmr::get_default_resource()};
-    auto* prev = std::pmr::set_default_resource(&counter);
+void* operator new(std::size_t size) {
+    if (t_armed) g_armed_allocs.fetch_add(1, std::memory_order_relaxed);
+    if (void* p = std::malloc(size)) return p;
+    throw std::bad_alloc{};
+}
+void* operator new(std::size_t size, std::align_val_t align) {
+    if (t_armed) g_armed_allocs.fetch_add(1, std::memory_order_relaxed);
+    const auto a = static_cast<std::size_t>(align);
+    const std::size_t rounded = (size + a - 1) / a * a;   // aligned_alloc precondition
+    if (void* p = std::aligned_alloc(a, rounded)) return p;
+    throw std::bad_alloc{};
+}
+void operator delete(void* p) noexcept { std::free(p); }
+void operator delete(void* p, std::size_t) noexcept { std::free(p); }
+void operator delete(void* p, std::align_val_t) noexcept { std::free(p); }
+void operator delete(void* p, std::size_t, std::align_val_t) noexcept { std::free(p); }
+// (The default operator new[]/delete[] and nothrow forms forward to the above.)
 
-    // Stack-backed arena — mirrors the real RequestArena (§6.1) and, crucially,
-    // never draws from `counter`. A size-only monotonic_buffer_resource{8192}
-    // would capture get_default_resource() (== &counter, just set above) as its
-    // upstream and pull its first block THROUGH the counter, spuriously failing
-    // the gate. Do NOT "simplify" this back to the size-only ctor.
+TEST(AllocationGateTest, CtxOkPerformsNoHeapAllocations) {
+    // Stack-backed arena — mirrors the real RequestArena (§6.1) and never
+    // reaches operator new. A size-only monotonic_buffer_resource{8192} would
+    // pull its first block from new_delete_resource INSIDE the armed region
+    // and spuriously fail the gate. Do NOT "simplify" to the size-only ctor.
     std::array<std::byte, 8192> buf;
     std::pmr::monotonic_buffer_resource arena{buf.data(), buf.size()};
     std::pmr::polymorphic_allocator<> arena_alloc{&arena};
@@ -2608,19 +2772,15 @@ TEST(AllocationGateTest, CtxOkPerformsNoGlobalHeapAllocations) {
     req.target = target;
     RequestContext ctx{std::move(req), arena_alloc};
 
-    const std::size_t before = counter.count.load();
+    ArmedRegion region;
     Response r = ctx.ok();                 // empty body — pure framework path
-    const std::size_t after = counter.count.load();
+    const std::size_t allocs = region.finish();
 
-    std::pmr::set_default_resource(prev);
-    EXPECT_EQ(after - before, 0u) << "ctx.ok() touched the global heap";
+    EXPECT_EQ(allocs, 0u) << "ctx.ok() touched the heap";
     EXPECT_EQ(*r.headers.get("Content-Type"), "text/plain");
 }
 
 TEST(AllocationGateTest, CtxJsonAllocatesNothingBeyondTheUserBody) {
-    CountingResource counter{std::pmr::get_default_resource()};
-    auto* prev = std::pmr::set_default_resource(&counter);
-
     std::array<std::byte, 8192> buf;
     std::pmr::monotonic_buffer_resource arena{buf.data(), buf.size()};   // stack-backed (see CtxOk note)
     std::pmr::polymorphic_allocator<> arena_alloc{&arena};
@@ -2630,18 +2790,26 @@ TEST(AllocationGateTest, CtxJsonAllocatesNothingBeyondTheUserBody) {
     req.target = target;
     RequestContext ctx{std::move(req), arena_alloc};
 
-    std::string payload = R"({"id":42})";  // the user's body — constructed BEFORE the measured region
-    const std::size_t before = counter.count.load();
-    Response r = ctx.json(std::move(payload));   // moved in; no copy
-    const std::size_t after = counter.count.load();
+    // The user's body — constructed BEFORE the measured region, then moved in.
+    // Sized past SSO: an accidental copy inside the framework WOULD allocate
+    // and fail the gate.
+    std::string payload = R"({"id":42,"name":"long enough to defeat any SSO buffer"})";
 
-    std::pmr::set_default_resource(prev);
-    EXPECT_EQ(after - before, 0u) << "ctx.json() framework path touched the global heap";
-    EXPECT_EQ(*r.body.buffered_view(), R"({"id":42})");
+    ArmedRegion region;
+    Response r = ctx.json(std::move(payload));   // moved; the framework must not copy
+    const std::size_t allocs = region.finish();
+
+    EXPECT_EQ(allocs, 0u) << "ctx.json() framework path touched the heap";
+    EXPECT_EQ(*r.body.buffered_view(), R"({"id":42,"name":"long enough to defeat any SSO buffer"})");
 }
 ```
 
-> Scope note (spec §11.1): this gates the **response** side only. The request side (zero-copy `BeastRequestBody`, connection arena) does not exist until PR3; the full wire-path gate runs there. If a future libstdc++/Boost detail makes `ctx.ok()` touch the global heap (e.g. a small_vector growth path), that's a real regression to investigate, not a test to relax.
+> Scope note (spec §11.1): this gates the **response** side only — the measured regions contain no coroutines, so the
+> budget here is exactly zero. The request side (zero-copy `BeastRequestBody`, connection arena) does not exist until
+> PR3;
+> the full wire-path gate runs there as an *exact-budget* assertion (coroutine frames + user body, nothing else). If a
+> future libc++/Boost detail makes `ctx.ok()` touch the heap (e.g. a small_vector growth path), that's a real regression
+> to investigate, not a test to relax.
 
 - [ ] **Step 2: Add `http/types/test_allocation_gate.cpp` to the test sources.**
 
@@ -2656,12 +2824,14 @@ ctest --test-dir build/release --output-on-failure -L unit -R Http.Types 2>&1 | 
 
 ```bash
 git add tests/unit_tests/http/types/test_allocation_gate.cpp tests/unit_tests/CMakeLists.txt
-git commit -m "test(http/types): add response-side allocation gate
+git commit -m "test(http/types): add response-side allocation gate (operator-new counting)
 
-A counting memory_resource asserts ctx.ok()/ctx.json() perform zero
-global-heap framework allocations (the only allowed alloc is the user's
-body string, constructed outside the measured region). Enforces the
-zero-additional-allocation invariant; request-side gate lands in PR3."
+Replaced global operator new/delete, armed around the measured region,
+assert ctx.ok()/ctx.json() perform zero heap allocations (the only
+allowed alloc is the user's body string, constructed outside the region
+and sized past SSO so an accidental copy fails the gate). A pmr
+default-resource counter can't see plain-container or coroutine-frame
+allocs — this can. Request-side gate lands in PR3."
 ```
 
 ---
@@ -2670,7 +2840,8 @@ zero-additional-allocation invariant; request-side gate lands in PR3."
 
 **Files:** verification only + remove `types_placeholder.cpp`.
 
-**Goal:** Confirm the layer ships: clean build, all tests pass, ASan/UBSan clean (the Body SBO type-erasure and the bag's placement-new are the prime suspects).
+**Goal:** Confirm the layer ships: clean build, all tests pass, ASan/UBSan clean (the Body SBO type-erasure and the
+bag's placement-new are the prime suspects).
 
 - [ ] **Step 1: Full build**
 
@@ -2691,14 +2862,15 @@ Expected: every existing test still passes; `Http.Types` is all green.
 - [ ] **Step 3: ASan + UBSan** — exercises Body move/destroy, bag placement-new, and the allocation gate
 
 ```bash
-cmake --preset release-sanitize 2>&1 | tail -5 || \
-    cmake -B build/asan -DCMAKE_BUILD_TYPE=Debug \
-        -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
+# The repo ships real sanitizer presets: `asan` (ASan+UBSan → build/asan) and
+# `tsan` (→ build/tsan); see CMakePresets.json.
+cmake --preset asan 2>&1 | tail -5
 cmake --build build/asan --target Demiplane.Tests.Unit.Http.Types -- -j4 2>&1 | tail -15
 ctest --test-dir build/asan --output-on-failure -L unit -R Http.Types 2>&1 | tail -25
 ```
 
-Expected: clean. The most likely failure is in `Body` move (double-destroy / use-after-move) or the bag destroyers; fix the underlying issue before committing.
+Expected: clean. The most likely failure is in `Body` move (double-destroy / use-after-move) or the bag destroyers; fix
+the underlying issue before committing.
 
 - [ ] **Step 4: Lint pass (if the project uses clang-tidy)**
 
@@ -2728,8 +2900,10 @@ Every Types subdirectory now has real source."
 ## Self-Review
 
 Spec coverage (reconciled spec §5/§11):
+
 - §5.1 Headers (allocator-bound, no null state, O(1) iteration) — Task 6.
-- §5.2 Body (value-type SBO, no unique_ptr/dynamic_cast, buffered_view, streaming-truth) — Task 7; buffered helpers — Task 12.
+- §5.2 Body (value-type SBO, no unique_ptr/dynamic_cast, buffered_view, streaming-truth) — Task 7; buffered helpers —
+  Task 12.
 - §5.3 Request (string_view target, value Body) — Task 8. Response (stored allocator, set/add_header) — Task 9.
 - §5.4 RequestContext (target-as-view split, lazy headers, params, bag, ctx-scoped factories) — Tasks 13–15.
 - §5.5 errors + arena-free to_http_response — Tasks 4 + 11.
@@ -2739,27 +2913,54 @@ Spec coverage (reconciled spec §5/§11):
 - §14.1 unit tests — per task, incl. `allocation_gate_test` and `url_decode` extraction.
 
 Divergences from the original PR1 plan, all per the reconciled spec:
+
 - Body: virtual base + `unique_ptr` → **value-type SBO** (no heap node, no dynamic_cast).
 - Request::target: owned `std::string` → **`string_view`** (zero-copy; kills the SSO dangle).
 - Response: gains a **stored allocator**; `with_header` → **`set_header`/`add_header`**.
-- Response construction: static `ResponseFactory` on the hot path → **`ctx.json(...)`**; static factory retained for the cold/error path only.
-- `query<T>`/`path_param<T>`: `.cpp` explicit-instantiation list → **header-defined** (no link cap; `query<size_t>` links).
+- Response construction: static `ResponseFactory` on the hot path → **`ctx.json(...)`**; static factory retained for the
+  cold/error path only.
+- `query<T>`/`path_param<T>`: `.cpp` explicit-instantiation list → **header-defined** (no link cap; `query<size_t>`
+  links).
 - Test idiom: `dynamic_cast<StringBody*>` → **`body.buffered_view()`**.
 - New: shared `url_decode` (de-duplicated), **allocation gate** test.
 
-Deferred (noted in-plan): `BeastRequestBody` + `ctx.stream` / `StreamingProducerBody` (PR3+); routing `set_path_param` caller (PR2); request-side allocation gate (PR3).
+2026-06-09 polish (each verified against the repo):
 
-Type consistency: `Headers::owned`/`view_of_beast` and `promote_to_owned(alloc)` consistent across tasks; `Body` factory/`buffered_view`/`read_chunk` signatures match between Task 7 (decl) and Task 12 (defs); `Response{alloc}` ctor + member order verified (alloc before headers); `RequestContext` member-init order (alloc_ before param/bag vectors) verified; bag `set/get/has` header-defined for user types, `~RequestContext` + `find_bag_entry` in the `.cpp`.
+- Allocation gate: pmr default-resource counter → **replaced global `operator new`/`delete`** (sees plain-container and
+  coroutine-frame allocs; gate payload sized past SSO so an accidental copy fails it).
+- `Headers` move-assign: defaulted → **backing-adopting** (a defaulted pmr move-assign element-copies into the
+  destination's old allocator — silent de-arena-ization).
+- `RequestContext` move-assign: defaulted → **deleted** (a defaulted one skipped bag payload destructors — leak).
+- Test linkage: `Demiplane::Component::Http` umbrella → new **`Demiplane::Component::Http::Types` alias** (the umbrella
+  aggregates only the old Handler lib until PR 7 — linking it would not even compile the tests).
+- Sanitizer step: nonexistent `release-sanitize` preset → repo's **`asan`** preset (`build/asan`). FP `std::from_chars`
+  confirmed working on the toolchain (clang 21 / libc++), so `query<double>` is safe.
+- `const_iterator::iterator_category`: forward → **input** (proxy-reference honesty); const `find_bag_entry`'s pointless
+  `const_cast` removed.
 
-Allocation-invariant honesty: the gate (Task 16) verifies the **response side only**; the spec (§11.1) and this plan both state the full wire-path invariant is a PR3 acceptance target. No claim is made that PR1 proves the request side.
+Deferred (noted in-plan): `BeastRequestBody` + `ctx.stream` / `StreamingProducerBody` (PR3+); routing `set_path_param`
+caller (PR2); request-side allocation gate (PR3).
+
+Type consistency: `Headers::owned`/`view_of_beast` and `promote_to_owned(alloc)` consistent across tasks; `Body`
+factory/`buffered_view`/`read_chunk` signatures match between Task 7 (decl) and Task 12 (defs); `Response{alloc}` ctor +
+member order verified (alloc before headers); `RequestContext` member-init order (alloc_ before param/bag vectors)
+verified; bag `set/get/has` header-defined for user types, `~RequestContext` + `find_bag_entry` in the `.cpp`.
+
+Allocation-invariant honesty: the gate (Task 16) verifies the **response side only**; the spec (§11.1) and this plan
+both state the full wire-path invariant is a PR3 acceptance target. No claim is made that PR1 proves the request side.
 
 ---
 
 ## Execution Handoff
 
-**Plan reconciled and saved to `docs/superpowers/plans/2026-05-07-http-types-layer.md`.** It now matches the reconciled design spec (`2026-05-07-http-redesign-design.md`, updated 2026-05-31). Two execution options:
+**Plan reconciled and saved to `docs/superpowers/plans/2026-05-07-http-types-layer.md`.** It now matches the reconciled
+design spec (`2026-05-07-http-redesign-design.md`, updated 2026-05-31). Two execution options:
 
-1. **Subagent-Driven (recommended)** — one fresh subagent per task, review between tasks. Each task closes a TDD cycle (red → green → commit). The Body SBO type-erasure (Task 7) and the allocation gate (Task 16) deserve an explicit review checkpoint.
+1. **Subagent-Driven (recommended)** — one fresh subagent per task, review between tasks. Each task closes a TDD cycle (
+   red → green → commit). The Body SBO type-erasure (Task 7) and the allocation gate (Task 16) deserve an explicit
+   review checkpoint.
 2. **Inline Execution** — execute tasks in this session via executing-plans, batch with checkpoints.
 
-After PR 1 lands, the next plan is `2026-MM-DD-http-routing-layer.md` (RouteRegistry, HttpController, GroupBinding, Router, the bake step, conflict detection) — where `set_path_param`'s caller and the typed-error→Response bake step land.
+After PR 1 lands, the next plan is `2026-MM-DD-http-routing-layer.md` (RouteRegistry, HttpController, GroupBinding,
+Router, the bake step, conflict detection) — where `set_path_param`'s caller and the typed-error→Response bake step
+land.

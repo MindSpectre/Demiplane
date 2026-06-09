@@ -27,4 +27,5 @@ target_sources(${DMP_HTTP}.Types PRIVATE types_placeholder.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE url_decode/url_decode.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE headers/headers.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE body/body.cpp)
+target_sources(${DMP_HTTP}.Types PRIVATE request/request.cpp)
 ##############################################################################

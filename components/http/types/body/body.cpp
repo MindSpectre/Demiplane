@@ -161,10 +161,19 @@ namespace demiplane::http {
                 };
                 if (ci_starts(line, "content-disposition:")) {
                     auto param = [&](std::string_view key) -> std::string {
-                        auto p = line.find(key);
-                        if (p == std::string_view::npos) return {};
-                        p += key.size();
-                        if (p < line.size() && line[p] == '=') ++p;
+                        auto is_alpha = [](char c) {
+                            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+                        };
+                        std::size_t p = 0;
+                        for (;;) {
+                            p = line.find(key, p);
+                            if (p == std::string_view::npos) return {};
+                            const std::size_t after = p + key.size();
+                            const bool boundary_before = (p == 0) || !is_alpha(line[p - 1]);
+                            const bool eq_after = after < line.size() && line[after] == '=';
+                            if (boundary_before && eq_after) { p = after + 1; break; }  // p past '='
+                            ++p;
+                        }
                         if (p < line.size() && line[p] == '"') {
                             ++p; auto e = line.find('"', p);
                             if (e == std::string_view::npos) return {};

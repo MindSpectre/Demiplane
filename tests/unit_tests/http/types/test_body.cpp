@@ -120,3 +120,18 @@ TEST(BodyTest, ReadMultipartWellFormed) {
     EXPECT_EQ(o.value()[0].name, "field");
     EXPECT_EQ(o.value()[0].value, "value");
 }
+TEST(BodyTest, ReadMultipartFilenameDoesNotLeakIntoName) {
+    const std::string boundary = "X";
+    // filename appears BEFORE name; a naive find("name") matches inside "filename".
+    std::string body =
+        "--X\r\nContent-Disposition: form-data; filename=\"doc.txt\"; name=\"file\"\r\n"
+        "Content-Type: text/plain\r\n\r\nDATA\r\n--X--\r\n";
+    Body b = Body::owned(body);
+    auto o = run_awaitable(b.read_multipart(4096, boundary));
+    ASSERT_TRUE(o.is_success());
+    ASSERT_EQ(o.value().size(), 1u);
+    EXPECT_EQ(o.value()[0].name, "file");
+    EXPECT_EQ(o.value()[0].filename, "doc.txt");
+    EXPECT_EQ(o.value()[0].content_type, "text/plain");
+    EXPECT_EQ(o.value()[0].value, "DATA");
+}

@@ -1,8 +1,13 @@
 #pragma once
 
+#include <charconv>
 #include <memory_resource>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <type_traits>
+
+#include <boost/container/small_vector.hpp>
 
 #include "../body/body.hpp"
 #include "../headers/headers.hpp"
@@ -56,13 +61,69 @@ namespace demiplane::http {
 
         std::pmr::polymorphic_allocator<> arena_alloc() const noexcept { return alloc_; }
 
+        // ── Path parameters (set by the routing layer, PR2) ───────────────
+        void set_path_param(std::string_view name, std::string_view value);
+
+        template <typename T>
+        std::optional<T> path_param(std::string_view name) const {
+            auto raw = raw_path_param(name);
+            return raw ? convert_string<T>(*raw) : std::nullopt;
+        }
+        template <typename T>
+        T path_param_or(std::string_view name, T fallback) const {
+            if (auto v = path_param<T>(name)) return *std::move(v);
+            return fallback;
+        }
+
+        // ── Query parameters (lazily parsed from query_string) ────────────
+        template <typename T>
+        std::optional<T> query(std::string_view name) const {
+            auto raw = raw_query(name);
+            return raw ? convert_string<T>(*raw) : std::nullopt;
+        }
+        template <typename T>
+        T query_or(std::string_view name, T fallback) const {
+            if (auto v = query<T>(name)) return *std::move(v);
+            return fallback;
+        }
+
     private:
         Request request_;
         std::pmr::polymorphic_allocator<> alloc_;
 
+        using ParamEntry = std::pair<std::pmr::string, std::pmr::string>;
+        using ParamVec = boost::container::small_vector<
+            ParamEntry, 4, std::pmr::polymorphic_allocator<ParamEntry>>;
+
+        ParamVec path_params_{std::pmr::polymorphic_allocator<ParamEntry>{alloc_}};
+        mutable bool query_parsed_ = false;
+        mutable ParamVec query_params_{std::pmr::polymorphic_allocator<ParamEntry>{alloc_}};
+
         mutable std::optional<std::string_view> cached_path_;
         mutable std::optional<std::string_view> cached_query_;
         void ensure_split() const;
+
+        void ensure_query_parsed() const;
+        std::optional<std::string_view> raw_query(std::string_view name) const;
+        std::optional<std::string_view> raw_path_param(std::string_view name) const;
+
+        // Defined in the header so consumers instantiate for their own T —
+        // no .cpp explicit-instantiation list, no link cap on the type set.
+        template <typename T>
+        static std::optional<T> convert_string(std::string_view value) {
+            if constexpr (std::is_same_v<T, std::string>) {
+                return std::string{value};
+            } else if constexpr (std::is_same_v<T, std::string_view>) {
+                return value;
+            } else if constexpr (std::is_arithmetic_v<T>) {
+                T out{};
+                auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), out);
+                if (ec != std::errc{} || ptr != value.data() + value.size()) return std::nullopt;
+                return out;
+            } else {
+                static_assert(sizeof(T) == 0, "RequestContext: unsupported param type");
+            }
+        }
     };
 
 }  // namespace demiplane::http

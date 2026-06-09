@@ -72,3 +72,34 @@ TEST_F(RequestContextTest, CachedPathSurvivesMove) {
     RequestContext b{std::move(a)};                                 // move after caching
     EXPECT_EQ(b.path(), "/u");                                      // view still valid (target is a view)
 }
+TEST_F(RequestContextTest, QueryUrlDecodedTypedConversions) {
+    RequestContext ctx{make_request(HttpMethod::get, "/?name=John%20Doe&n=42&city=New+York"), alloc_};
+    EXPECT_EQ(ctx.query<std::string>("name").value_or(""), "John Doe");
+    EXPECT_EQ(ctx.query<int>("n").value_or(0), 42);
+    EXPECT_EQ(ctx.query<std::string>("city").value_or(""), "New York");
+    EXPECT_FALSE(ctx.query<int>("missing").has_value());
+}
+TEST_F(RequestContextTest, QueryArbitraryArithmeticTypesLink) {
+    RequestContext ctx{make_request(HttpMethod::get, "/?p=7"), alloc_};
+    EXPECT_EQ(ctx.query<std::size_t>("p").value_or(0), 7u);   // these would NOT link in the old plan
+    EXPECT_EQ(ctx.query<unsigned>("p").value_or(0), 7u);
+    EXPECT_DOUBLE_EQ(ctx.query<double>("p").value_or(0.0), 7.0);
+}
+TEST_F(RequestContextTest, QueryOrFallback) {
+    RequestContext ctx{make_request(HttpMethod::get, "/?n=10"), alloc_};
+    EXPECT_EQ(ctx.query_or<int>("n", 99), 10);
+    EXPECT_EQ(ctx.query_or<int>("missing", 99), 99);
+}
+TEST_F(RequestContextTest, PathParamSetAndConvert) {
+    RequestContext ctx{make_request(HttpMethod::get, "/users/42"), alloc_};
+    ctx.set_path_param("id", "42");
+    EXPECT_EQ(ctx.path_param<int>("id").value_or(0), 42);
+    EXPECT_EQ(ctx.path_param_or<std::string>("id", "x"), "42");
+    EXPECT_FALSE(ctx.path_param<int>("missing").has_value());
+}
+TEST_F(RequestContextTest, PathParamConvertFailure) {
+    RequestContext ctx{make_request(HttpMethod::get, "/users/abc"), alloc_};
+    ctx.set_path_param("id", "abc");
+    EXPECT_FALSE(ctx.path_param<int>("id").has_value());
+    EXPECT_EQ(ctx.path_param<std::string>("id").value_or(""), "abc");
+}

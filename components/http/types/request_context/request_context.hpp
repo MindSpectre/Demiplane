@@ -95,9 +95,12 @@ namespace demiplane::http {
             static_assert(std::is_move_constructible_v<T>);
             std::type_index key{typeid(T)};
             if (auto* e = find_bag_entry(key)) {
-                e->destroyer(e->ptr);
+                // Construct the new payload BEFORE destroying the old one, so a
+                // throwing move leaves the existing payload intact (strong
+                // guarantee) rather than a live destroyer over destroyed bytes.
                 void* mem = alloc_.allocate_bytes(sizeof(T), alignof(T));
                 ::new (mem) T(std::move(value));
+                e->destroyer(e->ptr);
                 e->ptr = mem;
                 e->destroyer = +[](void* p) noexcept { static_cast<T*>(p)->~T(); };
                 return;

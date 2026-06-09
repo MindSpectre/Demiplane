@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <demiplane/gears>
 #include <iterator>
 #include <memory_resource>
 #include <optional>
@@ -27,7 +28,7 @@ namespace demiplane::http {
      * view_of_beast(fields). Mutators and promotion allocate through the bound
      * allocator — never the global heap.
      */
-    class Headers {
+    class Headers : gears::NonCopyable {
     public:
         using value_type = std::pair<std::string_view, std::string_view>;
 
@@ -43,17 +44,17 @@ namespace demiplane::http {
         // would silently copy arena headers onto the global heap.
         Headers(Headers&&) = default;
         Headers& operator=(Headers&& other) noexcept;
-        Headers(const Headers&) = delete;
-        Headers& operator=(const Headers&) = delete;
 
         // ── Read API ─────────────────────────────────────────────────────
-        std::optional<std::string_view> get(std::string_view name) const;
-        std::string get_or(std::string_view name, std::string_view fallback) const;
-        std::pmr::vector<std::string_view> get_all(std::string_view name,
-                                                   std::pmr::polymorphic_allocator<> alloc) const;
-        bool contains(std::string_view name) const;
-        std::size_t size() const;
-        bool empty() const { return size() == 0; }
+        [[nodiscard]] std::optional<std::string_view> get(std::string_view name) const;
+        [[nodiscard]] std::string get_or(std::string_view name, std::string_view fallback) const;
+        [[nodiscard]] std::pmr::vector<std::string_view> get_all(std::string_view name,
+                                                                 std::pmr::polymorphic_allocator<> alloc) const;
+        [[nodiscard]] bool contains(std::string_view name) const;
+        [[nodiscard]] std::size_t size() const;
+        [[nodiscard]] bool empty() const {
+            return size() == 0;
+        }
 
         // ── Write API (requires OwnedBacking; promote first if viewing) ────
         void add(std::string_view name, std::string_view value);
@@ -84,25 +85,33 @@ namespace demiplane::http {
         private:
             friend class Headers;
             const Headers* h_ = nullptr;
-            std::size_t idx_  = 0;   // position; also drives beast_it_ advance
+            std::size_t idx_  = 0;  // position; also drives beast_it_ advance
             boost::beast::http::fields::const_iterator beast_it_{};
         };
 
-        const_iterator begin() const;
-        const_iterator end() const;
+        [[nodiscard]] const_iterator begin() const;
+        [[nodiscard]] const_iterator end() const;
 
     private:
-        struct BeastBacking { const boost::beast::http::fields* fields; };
+        struct BeastBacking {
+            const boost::beast::http::fields* fields;
+        };
         struct OwnedBacking {
             std::pmr::vector<std::pair<std::pmr::string, std::pmr::string>> entries;
-            explicit OwnedBacking(std::pmr::polymorphic_allocator<> a) : entries(a) {}
+            explicit OwnedBacking(const std::pmr::polymorphic_allocator<> a)
+                : entries(a) {
+            }
         };
         std::variant<BeastBacking, OwnedBacking> backing_;
 
-        explicit Headers(BeastBacking b) : backing_{b} {}
-        explicit Headers(OwnedBacking&& o) : backing_{std::move(o)} {}
+        explicit Headers(BeastBacking b)
+            : backing_{b} {
+        }
+        explicit Headers(OwnedBacking&& o)
+            : backing_{std::move(o)} {
+        }
 
-        OwnedBacking& as_owned();   // asserts owned; used by mutators after promote
+        OwnedBacking& as_owned();  // asserts owned; used by mutators after promote
     };
 
 }  // namespace demiplane::http

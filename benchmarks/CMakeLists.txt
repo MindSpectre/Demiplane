@@ -4,11 +4,6 @@ add_subdirectory(logger)
 
 add_subdirectory(multithread)
 
-if (BUILD_HTTP)
-    message("Benchmarks for HTTP will be built")
-    add_subdirectory(http)
-endif ()
-
 if (BUILD_DATABASE)
     message("Benchmarks for Database will be built")
     add_subdirectory(database)

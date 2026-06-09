@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <body/body.hpp>
-#include <response_factory/response_factory.hpp>
+#include <body.hpp>
+#include <response_factory.hpp>
 
 using namespace demiplane::http;
 
@@ -16,7 +16,7 @@ TEST(ResponseFactoryTest, OkDefault) {
     EXPECT_EQ(body_of(r), "");
 }
 TEST(ResponseFactoryTest, JsonContentType) {
-    auto r = ResponseFactory::json("{\"k\":\"v\"}");
+    auto r = ResponseFactory::json(R"({"k":"v"})");
     EXPECT_EQ(*r.headers.get("Content-Type"), "application/json");
     EXPECT_EQ(body_of(r), "{\"k\":\"v\"}");
 }

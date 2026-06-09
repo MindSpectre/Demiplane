@@ -3,8 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include <body/body.hpp>
-#include <response/response.hpp>
+#include <body.hpp>
+#include <response.hpp>
 
 using namespace demiplane::http;
 

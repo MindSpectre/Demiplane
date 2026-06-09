@@ -6,7 +6,7 @@
 #include <boost/beast/http.hpp>
 #include <gtest/gtest.h>
 
-#include <headers/headers.hpp>
+#include <headers.hpp>
 
 using namespace demiplane::http;
 

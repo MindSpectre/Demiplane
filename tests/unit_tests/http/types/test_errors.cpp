@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <body/body.hpp>
-#include <errors/errors.hpp>
-#include <response/response.hpp>
+#include <body.hpp>
+#include <errors.hpp>
+#include <response.hpp>
 
 using namespace demiplane::http;
 

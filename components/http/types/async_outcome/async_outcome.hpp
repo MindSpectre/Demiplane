@@ -1,11 +1,12 @@
 #pragma once
 
-#include <boost/asio/awaitable.hpp>
 #include <demiplane/gears>
+
+#include <boost/asio/awaitable.hpp>
 
 namespace demiplane::http {
 
-    struct Response;   // defined in Task 8
+    struct Response;  // defined in Task 8
 
     /// asio coroutine yielding a typed-error sum result. Handlers/middleware
     /// return AsyncOutcome<Response, Errors...>; the bind layer (PR2) collapses

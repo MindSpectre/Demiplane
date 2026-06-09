@@ -1,34 +1,39 @@
 ##############################################################################
 # Http Types — protocol-agnostic core types
+#
+# Each type is its own leaf target with its own include directory, so headers
+# cross-reference each other as <body.hpp>/<headers.hpp>/... (never ../). The
+# dotted ${DMP_HTTP}.Types target below is an INTERFACE aggregate that links
+# every leaf — link it when you want the whole layer. There is intentionally
+# no Demiplane::Component::Http::Types alias.
 ##############################################################################
-add_library(${DMP_HTTP}.Types STATIC)
+add_subdirectory(enums)
+add_subdirectory(async_outcome)
+add_subdirectory(url_decode)
+add_subdirectory(headers)
+add_subdirectory(errors)
+add_subdirectory(body)
+add_subdirectory(response)
+add_subdirectory(request)
+add_subdirectory(response_factory)
+add_subdirectory(request_context)
 
-target_include_directories(${DMP_HTTP}.Types PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
+##############################################################################
+# Unified interface aggregate
+##############################################################################
+add_library(${DMP_HTTP}.Types INTERFACE)
+
+target_link_libraries(${DMP_HTTP}.Types INTERFACE
+        ${DMP_HTTP}.Types.Enums
+        ${DMP_HTTP}.Types.AsyncOutcome
+        ${DMP_HTTP}.Types.UrlDecode
+        ${DMP_HTTP}.Types.Headers
+        ${DMP_HTTP}.Types.Errors
+        ${DMP_HTTP}.Types.ErrorResponses
+        ${DMP_HTTP}.Types.Body
+        ${DMP_HTTP}.Types.Response
+        ${DMP_HTTP}.Types.Request
+        ${DMP_HTTP}.Types.ResponseFactory
+        ${DMP_HTTP}.Types.RequestContext
 )
-
-target_link_libraries(${DMP_HTTP}.Types
-        PUBLIC
-        Demiplane::Common::Gears
-        Demiplane::Common::Scroll
-        Boost::beast
-        Boost::asio
-        Boost::container
-        JsonCpp::JsonCpp
-)
-
-# Linkable alias for unit tests and early consumers. The component umbrella
-# (Demiplane::Component::Http) aggregates only the old Handler lib until PR 7,
-# so it does NOT propagate this layer's include dirs.
-add_library(Demiplane::Component::Http::Types ALIAS ${DMP_HTTP}.Types)
-
-# Source files added in subsequent tasks via target_sources.
-target_sources(${DMP_HTTP}.Types PRIVATE url_decode/url_decode.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE headers/headers.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE body/body.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE request/request.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE response/response.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE response_factory/response_factory.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE errors/errors.cpp)
-target_sources(${DMP_HTTP}.Types PRIVATE request_context/request_context.cpp)
 ##############################################################################

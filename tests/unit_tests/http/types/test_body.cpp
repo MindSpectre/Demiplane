@@ -1,13 +1,11 @@
 #include <string>
 
+#include <body.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/use_future.hpp>
-#include <gtest/gtest.h>
-
-#include <body/body.hpp>
 #include <gears_outcome.hpp>
-#include <url_decode/url_decode.hpp>
+#include <gtest/gtest.h>
 
 using namespace demiplane::http;
 
@@ -19,7 +17,7 @@ namespace {
         ioc.run();
         return fut.get();
     }
-}
+}  // namespace
 
 TEST(BodyTest, DefaultIsEmpty) {
     Body b;
@@ -52,16 +50,16 @@ TEST(BodyTest, MoveTransfersPayloadLeavesSourceEmpty) {
     Body src = Body::owned("payload");
     Body dst = std::move(src);
     EXPECT_EQ(*dst.buffered_view(), "payload");
-    EXPECT_EQ(*src.buffered_view(), "");   // moved-from is a valid EmptyBody
+    EXPECT_EQ(*src.buffered_view(), "");  // NOLINT(bugprone-use-after-move) moved-from is a valid EmptyBody
     EXPECT_EQ(src.size_hint().value_or(99), 0u);
 }
 
 TEST(BodyTest, MoveAssignDestroysOldPayload) {
     Body a = Body::owned("aaa");
     Body b = Body::owned("bbb");
-    a = std::move(b);
+    a      = std::move(b);
     EXPECT_EQ(*a.buffered_view(), "bbb");
-    EXPECT_EQ(*b.buffered_view(), "");
+    EXPECT_EQ(*b.buffered_view(), "");  // NOLINT(bugprone-use-after-move) intentionally inspects moved-from state
 }
 
 TEST(BodyTest, ReadToStringSucceeds) {
@@ -111,10 +109,9 @@ TEST(BodyTest, ReadMultipartNoBoundaryIsError) {
 }
 TEST(BodyTest, ReadMultipartWellFormed) {
     const std::string boundary = "X";
-    std::string body =
-        "--X\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--X--\r\n";
-    Body b = Body::owned(body);
-    auto o = run_awaitable(b.read_multipart(4096, boundary));
+    std::string body           = "--X\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--X--\r\n";
+    Body b                     = Body::owned(body);
+    auto o                     = run_awaitable(b.read_multipart(4096, boundary));
     ASSERT_TRUE(o.is_success());
     ASSERT_EQ(o.value().size(), 1u);
     EXPECT_EQ(o.value()[0].name, "field");
@@ -123,11 +120,10 @@ TEST(BodyTest, ReadMultipartWellFormed) {
 TEST(BodyTest, ReadMultipartFilenameDoesNotLeakIntoName) {
     const std::string boundary = "X";
     // filename appears BEFORE name; a naive find("name") matches inside "filename".
-    std::string body =
-        "--X\r\nContent-Disposition: form-data; filename=\"doc.txt\"; name=\"file\"\r\n"
-        "Content-Type: text/plain\r\n\r\nDATA\r\n--X--\r\n";
-    Body b = Body::owned(body);
-    auto o = run_awaitable(b.read_multipart(4096, boundary));
+    std::string body           = "--X\r\nContent-Disposition: form-data; filename=\"doc.txt\"; name=\"file\"\r\n"
+                                 "Content-Type: text/plain\r\n\r\nDATA\r\n--X--\r\n";
+    Body b                     = Body::owned(body);
+    auto o                     = run_awaitable(b.read_multipart(4096, boundary));
     ASSERT_TRUE(o.is_success());
     ASSERT_EQ(o.value().size(), 1u);
     EXPECT_EQ(o.value()[0].name, "file");

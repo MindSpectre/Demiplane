@@ -3,12 +3,11 @@
 #include <string>
 #include <vector>
 
+#include <body.hpp>
 #include <gtest/gtest.h>
-
-#include <body/body.hpp>
-#include <headers/headers.hpp>
-#include <request/request.hpp>
-#include <request_context/request_context.hpp>
+#include <headers.hpp>
+#include <request.hpp>
+#include <request_context.hpp>
 
 using namespace demiplane::http;
 
@@ -16,17 +15,19 @@ class RequestContextTest : public ::testing::Test {
 protected:
     std::pmr::monotonic_buffer_resource resource_{8192};
     std::pmr::polymorphic_allocator<> alloc_{&resource_};
-    std::deque<std::string> target_storage_;   // stable backing for string_view targets
+    std::deque<std::string> target_storage_;  // stable backing for string_view targets
 
-    Request make_request(HttpMethod m, std::string target,
-                         std::vector<std::pair<std::string, std::string>> hdrs = {},
-                         std::string body_text = "") {
+    Request make_request(HttpMethod m,
+                         std::string target,
+                         const std::vector<std::pair<std::string, std::string>>& hdrs = {},
+                         std::string body_text                                        = "") {
         Request req{Headers::owned(alloc_)};
         req.method  = m;
         req.version = HttpVersion::http_1_1;
         target_storage_.push_back(std::move(target));
-        req.target  = target_storage_.back();          // view into stable storage
-        for (auto const& [k, v] : hdrs) req.headers.add(k, v);
+        req.target = target_storage_.back();  // view into stable storage
+        for (auto const& [k, v] : hdrs)
+            req.headers.add(k, v);
         req.body = body_text.empty() ? Body::empty() : Body::owned(std::move(body_text));
         return req;
     }
@@ -39,7 +40,10 @@ TEST_F(RequestContextTest, MethodTargetVersion) {
     EXPECT_EQ(ctx.version(), HttpVersion::http_1_1);
 }
 TEST_F(RequestContextTest, HeaderLookup) {
-    RequestContext ctx{make_request(HttpMethod::get, "/", {{"Host", "example.com"}}), alloc_};
+    RequestContext ctx{
+        make_request(HttpMethod::get, "/", {{"Host", "example.com"}}
+          ), alloc_
+    };
     ASSERT_TRUE(ctx.header("host").has_value());
     EXPECT_EQ(*ctx.header("host"), "example.com");
     EXPECT_FALSE(ctx.header("missing").has_value());
@@ -49,9 +53,18 @@ TEST_F(RequestContextTest, BodyAccess) {
     EXPECT_EQ(ctx.body().size_hint().value_or(0), 5u);
 }
 TEST_F(RequestContextTest, ContentTypePredicates) {
-    auto json_ctx  = RequestContext{make_request(HttpMethod::post, "/", {{"Content-Type","application/json"}}), alloc_};
-    auto form_ctx  = RequestContext{make_request(HttpMethod::post, "/", {{"Content-Type","application/x-www-form-urlencoded"}}), alloc_};
-    auto multi_ctx = RequestContext{make_request(HttpMethod::post, "/", {{"Content-Type","multipart/form-data; boundary=xx"}}), alloc_};
+    auto json_ctx = RequestContext{
+        make_request(HttpMethod::post, "/", {{"Content-Type", "application/json"}}
+          ), alloc_
+    };
+    auto form_ctx = RequestContext{
+        make_request(HttpMethod::post, "/", {{"Content-Type", "application/x-www-form-urlencoded"}}
+          ), alloc_
+    };
+    auto multi_ctx = RequestContext{
+        make_request(HttpMethod::post, "/", {{"Content-Type", "multipart/form-data; boundary=xx"}}
+          ), alloc_
+    };
     EXPECT_TRUE(json_ctx.is_json());
     EXPECT_TRUE(form_ctx.is_form());
     EXPECT_TRUE(multi_ctx.is_multipart());
@@ -81,7 +94,7 @@ TEST_F(RequestContextTest, QueryUrlDecodedTypedConversions) {
 }
 TEST_F(RequestContextTest, QueryArbitraryArithmeticTypesLink) {
     RequestContext ctx{make_request(HttpMethod::get, "/?p=7"), alloc_};
-    EXPECT_EQ(ctx.query<std::size_t>("p").value_or(0), 7u);   // these would NOT link in the old plan
+    EXPECT_EQ(ctx.query<std::size_t>("p").value_or(0), 7u);  // these would NOT link in the old plan
     EXPECT_EQ(ctx.query<unsigned>("p").value_or(0), 7u);
     EXPECT_DOUBLE_EQ(ctx.query<double>("p").value_or(0.0), 7.0);
 }
@@ -104,8 +117,13 @@ TEST_F(RequestContextTest, PathParamConvertFailure) {
     EXPECT_EQ(ctx.path_param<std::string>("id").value_or(""), "abc");
 }
 
-struct TraceId { std::string value; };
-struct UserPrincipal { int id; std::string name; };
+struct TraceId {
+    std::string value;
+};
+struct UserPrincipal {
+    [[maybe_unused]] int id;
+    std::string name;
+};
 
 TEST_F(RequestContextTest, BagSetGetHas) {
     RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
@@ -119,7 +137,7 @@ TEST_F(RequestContextTest, BagDifferentTypesCoexistAndReplace) {
     RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
     ctx.set<TraceId>(TraceId{"a"});
     ctx.set<UserPrincipal>(UserPrincipal{42, "alice"});
-    ctx.set<TraceId>(TraceId{"b"});                 // replace
+    ctx.set<TraceId>(TraceId{"b"});  // replace
     EXPECT_EQ(ctx.get<TraceId>()->value, "b");
     EXPECT_EQ(ctx.get<UserPrincipal>()->name, "alice");
 }
@@ -129,7 +147,7 @@ TEST_F(RequestContextTest, CtxJsonBuildsArenaBackedResponse) {
     EXPECT_EQ(r.status, HttpStatus::ok);
     EXPECT_EQ(*r.headers.get("Content-Type"), "application/json");
     EXPECT_EQ(*r.body.buffered_view(), "{\"ok\":true}");
-    EXPECT_EQ(r.alloc.resource(), ctx.arena_alloc().resource());   // arena-bound
+    EXPECT_EQ(r.alloc.resource(), ctx.arena_alloc().resource());  // arena-bound
 }
 TEST_F(RequestContextTest, CtxOkAndStatusAndNoContent) {
     RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
@@ -145,15 +163,22 @@ TEST_F(RequestContextTest, CtxOkAndStatusAndNoContent) {
 TEST_F(RequestContextTest, BagDestructorRunsExactlyOnceAcrossMove) {
     static int live = 0;
     struct Tracked {
-        std::string s = "payload";              // owning member -> double-free under ASan if double-destroyed
-        Tracked() { ++live; }
-        Tracked(Tracked&& o) noexcept : s(std::move(o.s)) { ++live; }
-        ~Tracked() { --live; }
+        std::string s = "payload";  // owning member -> double-free under ASan if double-destroyed
+        Tracked() {
+            ++live;
+        }
+        Tracked(Tracked&& o) noexcept
+            : s(std::move(o.s)) {
+            ++live;
+        }
+        ~Tracked() {
+            --live;
+        }
     };
     {
         RequestContext a{make_request(HttpMethod::get, "/"), alloc_};
         a.set<Tracked>(Tracked{});
-        RequestContext b{std::move(a)};         // move a populated-bag context
-    }                                           // both a and b destruct here
-    EXPECT_EQ(live, 0);                         // exactly one destruction (-1 would mean double-destroy)
+        RequestContext b{std::move(a)};  // move a populated-bag context
+    }  // both a and b destruct here
+    EXPECT_EQ(live, 0);  // exactly one destruction (-1 would mean double-destroy)
 }

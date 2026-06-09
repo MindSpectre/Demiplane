@@ -1,10 +1,11 @@
 #pragma once
 
+#include <demiplane/gears>
 #include <string_view>
 
-#include "../body/body.hpp"
-#include "../headers/headers.hpp"
-#include "../http_enums.hpp"
+#include <body.hpp>
+#include <headers.hpp>
+#include <http_enums.hpp>
 
 namespace demiplane::http {
 
@@ -20,18 +21,16 @@ namespace demiplane::http {
      * `headers` and `body` are move-only value types. A Request must be
      * constructed with a Headers bound to an allocator (there is no null state).
      */
-    struct Request {
-        HttpMethod  method  = HttpMethod::unknown;
+    struct Request : gears::NonCopyable {
+        HttpMethod method   = HttpMethod::unknown;
         HttpVersion version = HttpVersion::http_1_1;
-        std::string_view target;            // view into receive buffer
-        Headers     headers;                // move-only; bound to an allocator
-        Body        body;                   // value type; default EmptyBody
+        std::string_view target;  // view into receive buffer
+        Headers headers;          // move-only; bound to an allocator
+        Body body;                // value type; default EmptyBody
 
-        explicit Request(Headers hdrs) : headers{std::move(hdrs)} {}
-        Request(Request&&) = default;
-        Request& operator=(Request&&) = default;
-        Request(const Request&) = delete;
-        Request& operator=(const Request&) = delete;
+        explicit Request(Headers hdrs)
+            : headers{std::move(hdrs)} {
+        }
     };
 
 }  // namespace demiplane::http

@@ -1,14 +1,14 @@
 #pragma once
 
+#include <demiplane/gears>
 #include <memory_resource>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "../body/body.hpp"
-#include "../headers/headers.hpp"
-#include "../http_enums.hpp"
-
+#include <body.hpp>
+#include <headers.hpp>
+#include <http_enums.hpp>
 namespace demiplane::http {
 
     /**
@@ -20,16 +20,18 @@ namespace demiplane::http {
      * Default-constructed (ctx-less / error / test) it uses new_delete — the
      * cold path. Body is a value type (Task 7). Drivers stamp Date/Server.
      */
-    struct Response {
+    struct Response : gears::NonCopyable {
         std::pmr::polymorphic_allocator<> alloc{};
-        HttpStatus  status     = HttpStatus::ok;
-        HttpVersion version    = HttpVersion::http_1_1;
-        bool        keep_alive = true;
-        Headers     headers;
-        Body        body;                       // default EmptyBody
+        HttpStatus status   = HttpStatus::ok;
+        HttpVersion version = HttpVersion::http_1_1;
+        bool keep_alive     = true;
+        Headers headers;
+        Body body;  // default EmptyBody
 
-        explicit Response(std::pmr::polymorphic_allocator<> a = {})
-            : alloc{a}, headers{Headers::owned(a)} {}
+        explicit Response(const std::pmr::polymorphic_allocator<> a = {})
+            : alloc{a},
+              headers{Headers::owned(a)} {
+        }
 
         Response(Response&&) = default;
         // pmr::polymorphic_allocator has a deleted copy-assign, so the
@@ -47,8 +49,6 @@ namespace demiplane::http {
             }
             return *this;
         }
-        Response(const Response&) = delete;
-        Response& operator=(const Response&) = delete;
 
         // ── Fluent setters (deducing this; chain on lvalues + rvalues) ─────
         template <typename Self>

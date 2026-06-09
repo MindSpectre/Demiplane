@@ -2,10 +2,12 @@
 
 #include <charconv>
 #include <memory_resource>
+#include <new>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <typeindex>
 
 #include <boost/container/small_vector.hpp>
 
@@ -13,6 +15,7 @@
 #include "../headers/headers.hpp"
 #include "../http_enums.hpp"
 #include "../request/request.hpp"
+#include "../response/response.hpp"
 
 namespace demiplane::http {
 
@@ -87,6 +90,44 @@ namespace demiplane::http {
             return fallback;
         }
 
+        // ── Type-keyed middleware bag (arena-backed) ──────────────────────
+        template <typename T> void set(T value) {
+            static_assert(std::is_move_constructible_v<T>);
+            std::type_index key{typeid(T)};
+            if (auto* e = find_bag_entry(key)) {
+                e->destroyer(e->ptr);
+                void* mem = alloc_.allocate_bytes(sizeof(T), alignof(T));
+                ::new (mem) T(std::move(value));
+                e->ptr = mem;
+                e->destroyer = +[](void* p) noexcept { static_cast<T*>(p)->~T(); };
+                return;
+            }
+            void* mem = alloc_.allocate_bytes(sizeof(T), alignof(T));
+            ::new (mem) T(std::move(value));
+            bag_.push_back(BagEntry{key, mem, +[](void* p) noexcept { static_cast<T*>(p)->~T(); }});
+        }
+        template <typename T> T* get() {
+            auto* e = find_bag_entry(std::type_index{typeid(T)});
+            return e ? static_cast<T*>(e->ptr) : nullptr;
+        }
+        template <typename T> const T* get() const {
+            auto* e = find_bag_entry(std::type_index{typeid(T)});
+            return e ? static_cast<const T*>(e->ptr) : nullptr;
+        }
+        template <typename T> bool has() const {
+            return find_bag_entry(std::type_index{typeid(T)}) != nullptr;
+        }
+
+        // ── Arena-bound response factories (hot path; spec §5.4) ──────────
+        Response ok        (std::string body = "", std::string_view ct = "text/plain");
+        Response json      (std::string body);
+        Response created   (std::string body = "", std::string_view ct = "application/json");
+        Response no_content();
+        Response redirect  (std::string_view location, HttpStatus status = HttpStatus::found);
+        Response status    (HttpStatus s, std::string body = "", std::string_view ct = "text/plain");
+
+        ~RequestContext();
+
     private:
         Request request_;
         std::pmr::polymorphic_allocator<> alloc_;
@@ -98,6 +139,39 @@ namespace demiplane::http {
         ParamVec path_params_{std::pmr::polymorphic_allocator<ParamEntry>{alloc_}};
         mutable bool query_parsed_ = false;
         mutable ParamVec query_params_{std::pmr::polymorphic_allocator<ParamEntry>{alloc_}};
+
+        struct BagEntry {
+            std::type_index key;
+            void* ptr;
+            void (*destroyer)(void*) noexcept;
+
+            BagEntry(std::type_index k, void* p, void (*d)(void*) noexcept) noexcept
+                : key{k}, ptr{p}, destroyer{d} {}
+            // Move nulls the source ptr, so a moved-from RequestContext's bag
+            // runs NO destroyers — double-destruction is impossible regardless
+            // of small_vector's moved-from element behaviour. (~RequestContext
+            // guards on `ptr`.) RequestContext is moved by value through the
+            // middleware chain carrying a populated bag, so this path is hot.
+            BagEntry(BagEntry&& o) noexcept
+                : key{o.key}, ptr{o.ptr}, destroyer{o.destroyer} { o.ptr = nullptr; }
+            BagEntry& operator=(BagEntry&& o) noexcept {
+                key = o.key; ptr = o.ptr; destroyer = o.destroyer; o.ptr = nullptr; return *this;
+            }
+            BagEntry(const BagEntry&) = delete;
+            BagEntry& operator=(const BagEntry&) = delete;
+        };
+        boost::container::small_vector<BagEntry, 4,
+            std::pmr::polymorphic_allocator<BagEntry>> bag_{
+                std::pmr::polymorphic_allocator<BagEntry>{alloc_}};
+
+        BagEntry* find_bag_entry(std::type_index key) {
+            for (auto& e : bag_) if (e.key == key) return &e;
+            return nullptr;
+        }
+        const BagEntry* find_bag_entry(std::type_index key) const {
+            for (const auto& e : bag_) if (e.key == key) return &e;
+            return nullptr;
+        }
 
         mutable std::optional<std::string_view> cached_path_;
         mutable std::optional<std::string_view> cached_query_;

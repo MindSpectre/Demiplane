@@ -103,3 +103,57 @@ TEST_F(RequestContextTest, PathParamConvertFailure) {
     EXPECT_FALSE(ctx.path_param<int>("id").has_value());
     EXPECT_EQ(ctx.path_param<std::string>("id").value_or(""), "abc");
 }
+
+struct TraceId { std::string value; };
+struct UserPrincipal { int id; std::string name; };
+
+TEST_F(RequestContextTest, BagSetGetHas) {
+    RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
+    EXPECT_FALSE(ctx.has<TraceId>());
+    EXPECT_EQ(ctx.get<TraceId>(), nullptr);
+    ctx.set<TraceId>(TraceId{"abc-123"});
+    ASSERT_TRUE(ctx.has<TraceId>());
+    EXPECT_EQ(ctx.get<TraceId>()->value, "abc-123");
+}
+TEST_F(RequestContextTest, BagDifferentTypesCoexistAndReplace) {
+    RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
+    ctx.set<TraceId>(TraceId{"a"});
+    ctx.set<UserPrincipal>(UserPrincipal{42, "alice"});
+    ctx.set<TraceId>(TraceId{"b"});                 // replace
+    EXPECT_EQ(ctx.get<TraceId>()->value, "b");
+    EXPECT_EQ(ctx.get<UserPrincipal>()->name, "alice");
+}
+TEST_F(RequestContextTest, CtxJsonBuildsArenaBackedResponse) {
+    RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
+    Response r = ctx.json("{\"ok\":true}");
+    EXPECT_EQ(r.status, HttpStatus::ok);
+    EXPECT_EQ(*r.headers.get("Content-Type"), "application/json");
+    EXPECT_EQ(*r.body.buffered_view(), "{\"ok\":true}");
+    EXPECT_EQ(r.alloc.resource(), ctx.arena_alloc().resource());   // arena-bound
+}
+TEST_F(RequestContextTest, CtxOkAndStatusAndNoContent) {
+    RequestContext ctx{make_request(HttpMethod::get, "/"), alloc_};
+    EXPECT_EQ(ctx.ok("hi").status, HttpStatus::ok);
+    EXPECT_EQ(ctx.no_content().status, HttpStatus::no_content);
+    EXPECT_EQ(ctx.status(HttpStatus::accepted, "queued").status, HttpStatus::accepted);
+}
+
+// Proves the bag runs each payload's destructor EXACTLY ONCE across a move
+// (RequestContext is moved by value through the middleware chain). A regression
+// to a fragile BagEntry move would double-destroy: `live` goes to -1 here, and
+// the owning std::string member double-frees under ASan (Task 17).
+TEST_F(RequestContextTest, BagDestructorRunsExactlyOnceAcrossMove) {
+    static int live = 0;
+    struct Tracked {
+        std::string s = "payload";              // owning member -> double-free under ASan if double-destroyed
+        Tracked() { ++live; }
+        Tracked(Tracked&& o) noexcept : s(std::move(o.s)) { ++live; }
+        ~Tracked() { --live; }
+    };
+    {
+        RequestContext a{make_request(HttpMethod::get, "/"), alloc_};
+        a.set<Tracked>(Tracked{});
+        RequestContext b{std::move(a)};         // move a populated-bag context
+    }                                           // both a and b destruct here
+    EXPECT_EQ(live, 0);                         // exactly one destruction (-1 would mean double-destroy)
+}

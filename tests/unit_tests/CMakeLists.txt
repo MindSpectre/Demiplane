@@ -193,3 +193,18 @@ target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
         ${TEST_LIBS}
 )
 ##############################################################################
+
+##############################################################################
+# Test HTTP Types layer
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
+        http/types/test_http_enums.cpp
+)
+# NOT Demiplane::Component::Http — that umbrella aggregates only the old
+# Handler lib until PR 7 and would not propagate the Types include dirs.
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
+        PRIVATE
+        Demiplane::Component::Http::Types
+        ${TEST_LIBS}
+)
+##############################################################################

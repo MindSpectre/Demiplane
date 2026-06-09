@@ -26,4 +26,5 @@ add_library(Demiplane::Component::Http::Types ALIAS ${DMP_HTTP}.Types)
 target_sources(${DMP_HTTP}.Types PRIVATE types_placeholder.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE url_decode/url_decode.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE headers/headers.cpp)
+target_sources(${DMP_HTTP}.Types PRIVATE body/body.cpp)
 ##############################################################################

@@ -24,4 +24,5 @@ add_library(Demiplane::Component::Http::Types ALIAS ${DMP_HTTP}.Types)
 
 # Source files added in subsequent tasks via target_sources.
 target_sources(${DMP_HTTP}.Types PRIVATE types_placeholder.cpp)
+target_sources(${DMP_HTTP}.Types PRIVATE url_decode/url_decode.cpp)
 ##############################################################################

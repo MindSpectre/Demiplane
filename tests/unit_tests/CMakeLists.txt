@@ -205,6 +205,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         http/types/test_response.cpp
         http/types/test_response_factory.cpp
         http/types/test_errors.cpp
+        http/types/test_request_context.cpp
 )
 # NOT Demiplane::Component::Http — that umbrella aggregates only the old
 # Handler lib until PR 7 and would not propagate the Types include dirs.

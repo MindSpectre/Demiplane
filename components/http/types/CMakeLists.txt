@@ -31,4 +31,5 @@ target_sources(${DMP_HTTP}.Types PRIVATE request/request.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE response/response.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE response_factory/response_factory.cpp)
 target_sources(${DMP_HTTP}.Types PRIVATE errors/errors.cpp)
+target_sources(${DMP_HTTP}.Types PRIVATE request_context/request_context.cpp)
 ##############################################################################

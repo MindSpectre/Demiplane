@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 
 #include <body/body.hpp>
+#include <gears_outcome.hpp>
+#include <url_decode/url_decode.hpp>
 
 using namespace demiplane::http;
 
@@ -60,4 +62,61 @@ TEST(BodyTest, MoveAssignDestroysOldPayload) {
     a = std::move(b);
     EXPECT_EQ(*a.buffered_view(), "bbb");
     EXPECT_EQ(*b.buffered_view(), "");
+}
+
+TEST(BodyTest, ReadToStringSucceeds) {
+    Body b = Body::owned("hello");
+    auto o = run_awaitable(b.read_to_string(100));
+    ASSERT_TRUE(o.is_success());
+    EXPECT_EQ(o.value(), "hello");
+}
+TEST(BodyTest, ReadToStringLimitExceeded) {
+    Body b = Body::owned("hello");
+    auto o = run_awaitable(b.read_to_string(3));
+    ASSERT_TRUE(o.is_error());
+    EXPECT_TRUE(o.holds_error<BodyLimitExceeded>());
+}
+TEST(BodyTest, ReadJsonSucceeds) {
+    Body b = Body::owned(R"({"a":1,"b":"two"})");
+    auto o = run_awaitable(b.read_json(1024));
+    ASSERT_TRUE(o.is_success());
+    EXPECT_EQ(o.value()["a"].asInt(), 1);
+    EXPECT_EQ(o.value()["b"].asString(), "two");
+}
+TEST(BodyTest, ReadJsonMalformed) {
+    Body b = Body::owned("not json");
+    auto o = run_awaitable(b.read_json(1024));
+    ASSERT_TRUE(o.is_error());
+    EXPECT_TRUE(o.holds_error<JsonParseError>());
+}
+TEST(BodyTest, ReadFormUrlDecodes) {
+    Body b = Body::owned("name=John%20Doe&city=New+York&empty=");
+    auto o = run_awaitable(b.read_form(1024));
+    ASSERT_TRUE(o.is_success());
+    EXPECT_EQ(o.value().at("name"), "John Doe");
+    EXPECT_EQ(o.value().at("city"), "New York");
+    EXPECT_EQ(o.value().at("empty"), "");
+}
+TEST(BodyTest, ReadFormEmptyKeyIsError) {
+    Body b = Body::owned("=value");
+    auto o = run_awaitable(b.read_form(1024));
+    ASSERT_TRUE(o.is_error());
+    EXPECT_TRUE(o.holds_error<FormParseError>());
+}
+TEST(BodyTest, ReadMultipartNoBoundaryIsError) {
+    Body b = Body::owned("x");
+    auto o = run_awaitable(b.read_multipart(1024, ""));
+    ASSERT_TRUE(o.is_error());
+    EXPECT_TRUE(o.holds_error<MultipartParseError>());
+}
+TEST(BodyTest, ReadMultipartWellFormed) {
+    const std::string boundary = "X";
+    std::string body =
+        "--X\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--X--\r\n";
+    Body b = Body::owned(body);
+    auto o = run_awaitable(b.read_multipart(4096, boundary));
+    ASSERT_TRUE(o.is_success());
+    ASSERT_EQ(o.value().size(), 1u);
+    EXPECT_EQ(o.value()[0].name, "field");
+    EXPECT_EQ(o.value()[0].value, "value");
 }

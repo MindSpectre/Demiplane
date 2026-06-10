@@ -182,3 +182,19 @@ TEST_F(RequestContextTest, BagDestructorRunsExactlyOnceAcrossMove) {
     }  // both a and b destruct here
     EXPECT_EQ(live, 0);  // exactly one destruction (-1 would mean double-destroy)
 }
+
+TEST_F(RequestContextTest, QueryAndPathParamBool) {
+    RequestContext ctx{make_request(HttpMethod::get, "/f?a=true&b=false&c=1&d=0&e=yes&f=&g=True"), alloc_};
+    EXPECT_EQ(ctx.query<bool>("a"), true);
+    EXPECT_EQ(ctx.query<bool>("b"), false);
+    EXPECT_EQ(ctx.query<bool>("c"), true);
+    EXPECT_EQ(ctx.query<bool>("d"), false);
+    EXPECT_EQ(ctx.query<bool>("e"), std::nullopt);  // strict: only true/false/1/0
+    EXPECT_EQ(ctx.query<bool>("f"), std::nullopt);
+    EXPECT_EQ(ctx.query<bool>("g"), std::nullopt);   // strict: case-sensitive, "True" rejected
+    EXPECT_TRUE(ctx.query_or<bool>("e", true));       // present but invalid ("yes") → fallback
+    EXPECT_TRUE(ctx.query_or<bool>("missing", true));
+
+    ctx.set_path_param("flag", "true");
+    EXPECT_EQ(ctx.path_param<bool>("flag"), true);
+}

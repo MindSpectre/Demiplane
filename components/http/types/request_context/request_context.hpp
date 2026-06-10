@@ -222,6 +222,15 @@ namespace demiplane::http {
                 return std::string{value};
             } else if constexpr (std::is_same_v<T, std::string_view>) {
                 return value;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                // is_arithmetic_v<bool> is true but from_chars has no bool
+                // overload — this branch must precede the arithmetic one.
+                // Strict by design: "1"/"true" and "0"/"false" only.
+                if (value == "1" || value == "true")
+                    return true;
+                if (value == "0" || value == "false")
+                    return false;
+                return std::nullopt;
             } else if constexpr (std::is_arithmetic_v<T>) {
                 T out{};
                 auto [ptr, ec] = std::from_chars(value.data(), value.data() + value.size(), out);

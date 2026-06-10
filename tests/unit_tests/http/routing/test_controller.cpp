@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 
 #include <controller.hpp>
+#include <demiplane/gears>
+#include <response_factory.hpp>
 #include <route_registry.hpp>
 
 #include "routing_test_utils.hpp"
@@ -160,3 +162,129 @@ TEST_F(ControllerTest, CrossControllerMemberThrowsAtBake) {
     auto ctrl = std::make_shared<CrossRegisteringController>();
     EXPECT_THROW(bake(ctrl), std::logic_error);
 }
+
+// ── Outcome→Response collapse ───────────────────────────────────────────────
+
+namespace myapp {
+
+    struct TeapotError {
+        std::string blend;
+    };
+
+    // User-defined ADL conversion — lives next to the error type (spec §5.5).
+    inline demiplane::http::Response to_http_response(const TeapotError& e) {
+        return demiplane::http::ResponseFactory::custom(
+            demiplane::http::HttpStatus::unprocessable_entity, "teapot:" + e.blend);
+    }
+
+}  // namespace myapp
+
+namespace {
+
+    class OutcomeController final : public HttpController {
+    public:
+        void configure_routes() override {
+            Get("/users/{id}", &OutcomeController::get_user);
+            Post("/users", &OutcomeController::create_user);
+            Get("/tea", [](RequestContext ctx) -> AsyncOutcome<Response, myapp::TeapotError> {
+                if (ctx.query<bool>("brew").value_or(false))
+                    co_return ctx.ok("brewing");
+                co_return demiplane::gears::err(myapp::TeapotError{"earl-grey"});
+            });
+        }
+
+    private:
+        AsyncOutcome<Response, NotFoundError> get_user(RequestContext ctx) {
+            if (const auto id = ctx.path_param<int>("id"); id && *id == 42)
+                co_return ctx.ok("user-42");
+            co_return demiplane::gears::err(NotFoundError{"user", "?"});
+        }
+
+        AsyncOutcome<Response, BadRequestError, ForbiddenError> create_user(RequestContext ctx) {
+            const auto mode = ctx.query<std::string>("mode");
+            if (mode == "bad")
+                co_return demiplane::gears::err(BadRequestError{"bad mode"});
+            if (mode == "forbidden")
+                co_return demiplane::gears::err(ForbiddenError{"no"});
+            co_return ctx.created("ok");
+        }
+    };
+
+}  // namespace
+
+class OutcomeControllerTest : public ControllerTest {
+protected:
+    void SetUp() override {
+        auto ctrl = std::make_shared<OutcomeController>();
+        bake(ctrl);
+        ASSERT_TRUE(registry_.freeze().empty());
+    }
+};
+
+TEST_F(OutcomeControllerTest, SuccessAlternativePassesThrough) {
+    EXPECT_EQ(*invoke(HttpMethod::get, "/users/42").body.buffered_view(), "user-42");
+}
+
+TEST_F(OutcomeControllerTest, TypedErrorCollapsesViaAdl) {
+    const Response r = invoke(HttpMethod::get, "/users/7");
+    EXPECT_EQ(r.status, HttpStatus::not_found);
+    EXPECT_EQ(*r.body.buffered_view(), "user ? not found");
+}
+
+TEST_F(OutcomeControllerTest, MultiErrorPackEachAlternative) {
+    // make_ctx targets carry the query string; invoke() routes on the path.
+    auto resolved = registry_.find_route(HttpMethod::post, "/users", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    const auto run = [&](const std::string& target) {
+        return run_awaitable((*resolved.value().handler)(make_ctx(HttpMethod::post, target)));
+    };
+    EXPECT_EQ(run("/users?mode=bad").status, HttpStatus::bad_request);
+    EXPECT_EQ(run("/users?mode=forbidden").status, HttpStatus::forbidden);
+    EXPECT_EQ(run("/users").status, HttpStatus::created);
+}
+
+TEST_F(OutcomeControllerTest, UserDefinedErrorTypeViaLambda) {
+    auto resolved = registry_.find_route(HttpMethod::get, "/tea", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    const Response err = run_awaitable(
+        (*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea")));
+    EXPECT_EQ(err.status, HttpStatus::unprocessable_entity);
+    EXPECT_EQ(*err.body.buffered_view(), "teapot:earl-grey");
+
+    const Response ok = run_awaitable(
+        (*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea?brew=true")));
+    EXPECT_EQ(ok.status, HttpStatus::ok);
+    EXPECT_EQ(*ok.body.buffered_view(), "brewing");
+}
+
+// ── Compile-time gates (spec §8.3: missing to_http_response = build break) ──
+
+namespace {
+    struct NotRenderable {};
+
+    using GoodPlain   = decltype([](RequestContext) -> AsyncResponse { co_return Response{}; });
+    using GoodOutcome = decltype([](RequestContext)
+                                     -> AsyncOutcome<Response, NotFoundError> {
+        co_return Response{};
+    });
+    using BadReturn   = decltype([](RequestContext) { return 42; });
+    using BadError    = decltype([](RequestContext)
+                                     -> AsyncOutcome<Response, NotRenderable> {
+        co_return Response{};
+    });
+
+    static_assert(detail::HttpRenderableError<NotFoundError>);
+    static_assert(detail::HttpRenderableError<myapp::TeapotError>);
+    static_assert(!detail::HttpRenderableError<NotRenderable>);
+    static_assert(RouteHandler<GoodPlain>);
+    static_assert(RouteHandler<GoodOutcome>);
+    static_assert(!RouteHandler<BadReturn>);
+    static_assert(!RouteHandler<BadError>);  // error type without to_http_response
+
+    // Mixed pack: one renderable + one not — concept must still reject.
+    using BadMixedPack = decltype([](RequestContext)
+                                      -> AsyncOutcome<Response, NotFoundError, NotRenderable> {
+        co_return Response{};
+    });
+    static_assert(!RouteHandler<BadMixedPack>);
+}  // namespace

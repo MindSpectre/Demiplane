@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -111,4 +113,92 @@ TEST(JoinPathTest, Battery) {
     EXPECT_EQ(join_path("", "/"), "/");
     EXPECT_EQ(join_path("/api", "users"), "/api/users");
     EXPECT_EQ(join_path("/", "/x"), "/x");
+}
+
+// ── find_route: exact + 404/405 + normalization ────────────────────────────
+
+class RouteRegistryLookupTest : public http_routing_test::RoutingTestBase {};
+
+TEST_F(RouteRegistryLookupTest, ExactHitInvokesStoredHandler) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users", tag_handler("users-get"));
+    ASSERT_TRUE(reg.freeze().empty());
+
+    auto resolved = reg.find_route(HttpMethod::get, "/users", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    EXPECT_TRUE(resolved.value().path_params.empty());
+
+    Response r = run_awaitable(
+        (*resolved.value().handler)(make_ctx(HttpMethod::get, "/users")));
+    EXPECT_EQ(r.status, HttpStatus::ok);
+    EXPECT_EQ(*r.body.buffered_view(), "users-get");
+}
+
+TEST_F(RouteRegistryLookupTest, UnknownPathIsNotFound) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users", tag_handler("u"));
+    (void)reg.freeze();
+
+    auto resolved = reg.find_route(HttpMethod::get, "/missing", alloc_);
+    ASSERT_TRUE(resolved.is_error());
+    EXPECT_TRUE(resolved.holds_error<NotFoundError>());
+}
+
+TEST_F(RouteRegistryLookupTest, KnownPathWrongVerbIs405WithAllowedSet) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users", tag_handler("g"));
+    reg.add_route(HttpMethod::post, "/users", tag_handler("p"));
+    (void)reg.freeze();
+
+    auto resolved = reg.find_route(HttpMethod::del, "/users", alloc_);
+    ASSERT_TRUE(resolved.holds_error<MethodNotAllowedError>());
+    const auto& allowed = resolved.error<MethodNotAllowedError>().allowed;
+    EXPECT_EQ(allowed.size(), 2u);
+    EXPECT_NE(std::ranges::find(allowed, HttpMethod::get), allowed.end());
+    EXPECT_NE(std::ranges::find(allowed, HttpMethod::post), allowed.end());
+}
+
+TEST_F(RouteRegistryLookupTest, UnknownIncomingVerbOnKnownPathIs405) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users", tag_handler("g"));
+    (void)reg.freeze();
+    // Beast's verb::unknown maps to HttpMethod::unknown — slot 0 is never
+    // registered, so this falls out as 405 with the path's Allow set.
+    auto resolved = reg.find_route(HttpMethod::unknown, "/users", alloc_);
+    ASSERT_TRUE(resolved.holds_error<MethodNotAllowedError>());
+}
+
+TEST_F(RouteRegistryLookupTest, TrailingSlashCollapsedByDefault) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users", tag_handler("u"));
+    reg.add_route(HttpMethod::get, "/", tag_handler("root"));
+    (void)reg.freeze();
+
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users/", alloc_).is_success());
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/", alloc_).is_success());  // "/" stays "/"
+    // multi-slash NOT collapsed under the default policy:
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users//", alloc_).is_error());
+}
+
+TEST_F(RouteRegistryLookupTest, MultiSlashPolicyCollapsesRuns) {
+    RouteRegistry reg{PathNormalization::collapse_multi_slash};
+    reg.add_route(HttpMethod::get, "/users/list", tag_handler("u"));
+    (void)reg.freeze();
+
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users//list/", alloc_).is_success());
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "///users///list", alloc_).is_success());
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users/list/", alloc_).is_success());
+}
+
+TEST_F(RouteRegistryLookupTest, NonePolicyMatchesExactBytes) {
+    RouteRegistry reg{PathNormalization::none};
+    reg.add_route(HttpMethod::get, "/users", tag_handler("a"));
+    reg.add_route(HttpMethod::get, "/users/", tag_handler("b"));  // distinct route, no conflict
+    ASSERT_TRUE(reg.freeze().empty());
+
+    auto a = reg.find_route(HttpMethod::get, "/users", alloc_);
+    auto b = reg.find_route(HttpMethod::get, "/users/", alloc_);
+    ASSERT_TRUE(a.is_success());
+    ASSERT_TRUE(b.is_success());
+    EXPECT_NE(a.value().handler, b.value().handler);
 }

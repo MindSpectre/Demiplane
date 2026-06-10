@@ -58,7 +58,7 @@ namespace demiplane::http {
             out.assign(path);
         }
         if (norm_ != PathNormalization::none) {
-            while (out.size() > 1 && out.back() == '/')
+            if (out.size() > 1 && out.back() == '/')
                 out.pop_back();
         }
         return out;
@@ -163,11 +163,36 @@ namespace demiplane::http {
         return std::exchange(conflicts_, {});
     }
 
-    // ── Lookup side — real bodies land in later tasks ───────────────────────
+    // ── Lookup side ─────────────────────────────────────────────────────────
 
     std::string_view RouteRegistry::normalize_lookup(
-        const std::string_view path, std::pmr::polymorphic_allocator<> /*alloc*/) const {
-        return path;  // Task 6
+        std::string_view path, std::pmr::polymorphic_allocator<> alloc) const {
+        if (norm_ == PathNormalization::none)
+            return path;
+        if (norm_ == PathNormalization::collapse_multi_slash
+            && path.find("//") != std::string_view::npos) {
+            // Rare path: rewrite into the request arena — never the global heap.
+            char* buf       = static_cast<char*>(alloc.allocate_bytes(path.size(), 1));
+            std::size_t n   = 0;
+            bool prev_slash = false;
+            for (const char c : path) {
+                if (c == '/' && prev_slash)
+                    continue;
+                prev_slash = c == '/';
+                buf[n++]   = c;
+            }
+            path = std::string_view{buf, n};
+            // collapse_trailing_slash (and collapse_multi_slash after run-collapse):
+            // strip exactly one trailing slash — a view shrink, zero alloc.
+            if (path.size() > 1 && path.back() == '/')
+                path.remove_suffix(1);
+            return path;
+        }
+        // collapse_trailing_slash (and collapse_multi_slash after run-collapse):
+        // strip exactly one trailing slash — a view shrink, zero alloc.
+        if (path.size() > 1 && path.back() == '/')
+            path.remove_suffix(1);
+        return path;
     }
 
     bool RouteRegistry::match_template(const ParamTemplate& /*tmpl*/,
@@ -177,14 +202,39 @@ namespace demiplane::http {
         return false;  // Task 7
     }
 
-    std::vector<HttpMethod> RouteRegistry::allowed_methods(const MethodSlots& /*slots*/) {
-        return {};  // Task 6
+    std::vector<HttpMethod> RouteRegistry::allowed_methods(const MethodSlots& slots) {
+        std::vector<HttpMethod> out;  // cold path (405) — heap is fine here
+        for (std::size_t i = 1; i < kHttpMethodCount; ++i)  // slot 0 = unknown, never filled
+            if (slots[i])
+                out.push_back(static_cast<HttpMethod>(i));
+        return out;
     }
 
     gears::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError> RouteRegistry::find_route(
-        const HttpMethod /*method*/, const std::string_view path,
-        std::pmr::polymorphic_allocator<> /*arena_alloc*/) const {
-        return gears::err(NotFoundError{"route", std::string{path}});  // Task 6
+        const HttpMethod method, const std::string_view path,
+        std::pmr::polymorphic_allocator<> arena_alloc) const {
+        assert(frozen_ && "RouteRegistry::find_route on an unfrozen registry");
+        const std::string_view normalized = normalize_lookup(path, arena_alloc);
+        const auto idx                    = std::to_underlying(method);
+
+        if (const auto it = exact_.find(normalized); it != exact_.end()) {
+            if (const ContextHandler& h = it->second[idx]) {
+                return ResolvedRoute{&h, ResolvedRoute::ParamVec{arena_alloc}};
+            }
+            return gears::err(MethodNotAllowedError{allowed_methods(it->second)});
+        }
+
+        for (const ParamTemplate& tmpl : parametric_) {
+            ResolvedRoute::ParamVec params{arena_alloc};
+            if (!match_template(tmpl, normalized, arena_alloc, params))
+                continue;
+            if (const ContextHandler& h = tmpl.by_method[idx]) {
+                return ResolvedRoute{&h, std::move(params)};
+            }
+            // First shape match decides 405 (spec §8.5) — no fall-through.
+            return gears::err(MethodNotAllowedError{allowed_methods(tmpl.by_method)});
+        }
+        return gears::err(NotFoundError{"route", std::string{normalized}});
     }
 
 }  // namespace demiplane::http

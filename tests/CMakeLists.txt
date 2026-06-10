@@ -18,12 +18,13 @@ add_subdirectory(integration_tests)
 add_subdirectory(functional_tests)
 
 add_subdirectory(codesandbox)
+
 ##############################################################################
 # Http component test
 ##############################################################################
 if (BUILD_HTTP)
     message("Nexus tests will be built")
-    add_subdirectory(manual_tests/http)
+    add_subdirectory(unit_tests/http)
 endif ()
 ##############################################################################
 

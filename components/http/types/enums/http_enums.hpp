@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 
@@ -19,6 +20,12 @@ namespace demiplane::http {
         head,
         options,
     };
+
+    /// Number of HttpMethod enumerators INCLUDING `unknown` (slot 0). Sizes
+    /// per-method dispatch arrays in the routing layer. `unknown` can never be
+    /// registered (RouteRegistry throws), so its slot stays empty and an
+    /// unrecognized incoming verb falls out as 404/405 (spec §8.5).
+    inline constexpr std::size_t kHttpMethodCount = 8;
 
     enum class HttpStatus : std::uint16_t {
         ok                     = 200,

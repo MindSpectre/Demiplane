@@ -202,3 +202,107 @@ TEST_F(RouteRegistryLookupTest, NonePolicyMatchesExactBytes) {
     ASSERT_TRUE(b.is_success());
     EXPECT_NE(a.value().handler, b.value().handler);
 }
+
+// ── find_route: parametric ──────────────────────────────────────────────────
+
+TEST_F(RouteRegistryLookupTest, SingleParamCapture) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users/{id}", tag_handler("u"));
+    (void)reg.freeze();
+
+    auto resolved = reg.find_route(HttpMethod::get, "/users/42", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    const auto& params = resolved.value().path_params;
+    ASSERT_EQ(params.size(), 1u);
+    EXPECT_EQ(params[0].first, "id");
+    EXPECT_EQ(params[0].second, "42");
+}
+
+TEST_F(RouteRegistryLookupTest, MultiParamCapture) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users/{id}/posts/{post_id}", tag_handler("p"));
+    (void)reg.freeze();
+
+    auto resolved = reg.find_route(HttpMethod::get, "/users/7/posts/99", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    const auto& params = resolved.value().path_params;
+    ASSERT_EQ(params.size(), 2u);
+    EXPECT_EQ(params[0].first, "id");
+    EXPECT_EQ(params[0].second, "7");
+    EXPECT_EQ(params[1].first, "post_id");
+    EXPECT_EQ(params[1].second, "99");
+}
+
+TEST_F(RouteRegistryLookupTest, CapturesArePercentDecodedPlusStaysLiteral) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/files/{name}", tag_handler("f"));
+    (void)reg.freeze();
+
+    auto decoded = reg.find_route(HttpMethod::get, "/files/report%202026", alloc_);
+    ASSERT_TRUE(decoded.is_success());
+    EXPECT_EQ(decoded.value().path_params[0].second, "report 2026");
+
+    auto plus = reg.find_route(HttpMethod::get, "/files/a+b", alloc_);
+    ASSERT_TRUE(plus.is_success());
+    EXPECT_EQ(plus.value().path_params[0].second, "a+b");  // '+' literal in paths (§8.6)
+}
+
+TEST_F(RouteRegistryLookupTest, CaptureWithMultipleEscapesDecodesFully) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/files/{name}", tag_handler("f"));
+    (void)reg.freeze();
+
+    auto resolved = reg.find_route(HttpMethod::get, "/files/a%20b%20c", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    EXPECT_EQ(resolved.value().path_params[0].second, "a b c");
+}
+
+TEST_F(RouteRegistryLookupTest, MalformedEscapeInCaptureIsNotFound) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/files/{name}", tag_handler("f"));
+    (void)reg.freeze();
+    auto resolved = reg.find_route(HttpMethod::get, "/files/bad%2", alloc_);
+    ASSERT_TRUE(resolved.is_error());
+    EXPECT_TRUE(resolved.holds_error<NotFoundError>());
+}
+
+TEST_F(RouteRegistryLookupTest, ExactBeatsParametric) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users/me", tag_handler("exact"));
+    reg.add_route(HttpMethod::get, "/users/{id}", tag_handler("param"));
+    (void)reg.freeze();
+
+    auto resolved = reg.find_route(HttpMethod::get, "/users/me", alloc_);
+    ASSERT_TRUE(resolved.is_success());
+    EXPECT_TRUE(resolved.value().path_params.empty());
+    Response r = run_awaitable(
+        (*resolved.value().handler)(make_ctx(HttpMethod::get, "/users/me")));
+    EXPECT_EQ(*r.body.buffered_view(), "exact");
+}
+
+TEST_F(RouteRegistryLookupTest, ParametricWrongVerbIs405) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users/{id}", tag_handler("g"));
+    (void)reg.freeze();
+    auto resolved = reg.find_route(HttpMethod::post, "/users/42", alloc_);
+    ASSERT_TRUE(resolved.holds_error<MethodNotAllowedError>());
+    EXPECT_EQ(resolved.error<MethodNotAllowedError>().allowed,
+              std::vector{HttpMethod::get});
+}
+
+TEST_F(RouteRegistryLookupTest, ParamNeverCapturesEmptySegment) {
+    RouteRegistry reg{PathNormalization::none};
+    reg.add_route(HttpMethod::get, "/users/{id}", tag_handler("u"));
+    (void)reg.freeze();
+    // Under `none`, "/users/" keeps its trailing empty segment — a param must
+    // not capture "".
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users/", alloc_).is_error());
+}
+
+TEST_F(RouteRegistryLookupTest, SegmentCountMustMatch) {
+    RouteRegistry reg;
+    reg.add_route(HttpMethod::get, "/users/{id}", tag_handler("u"));
+    (void)reg.freeze();
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users", alloc_).is_error());
+    EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users/1/extra", alloc_).is_error());
+}

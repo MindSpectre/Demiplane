@@ -195,11 +195,25 @@ namespace demiplane::http {
         return path;
     }
 
-    bool RouteRegistry::match_template(const ParamTemplate& /*tmpl*/,
-                                       const std::string_view /*path*/,
-                                       std::pmr::polymorphic_allocator<> /*alloc*/,
-                                       ResolvedRoute::ParamVec& /*out_params*/) {
-        return false;  // Task 7
+    bool RouteRegistry::match_template(const ParamTemplate& tmpl, const std::string_view path,
+                                       const std::pmr::polymorphic_allocator<> alloc,
+                                       ResolvedRoute::ParamVec& out_params) {
+        std::size_t i      = 0;
+        const bool walked  = for_each_segment(path, [&](const std::string_view seg) {
+            if (i >= tmpl.segments.size())
+                return false;  // more incoming segments than the template has
+            const PathSegment& ts = tmpl.segments[i++];
+            if (!ts.is_param)
+                return seg == ts.text;  // literal: raw byte compare (§8.6)
+            if (seg.empty())
+                return false;  // a param never captures an empty segment
+            const auto decoded = url_decode_arena(seg, /*plus_is_space=*/false, alloc);
+            if (!decoded)
+                return false;  // malformed escape → this template does not match
+            out_params.emplace_back(std::string_view{ts.text}, *decoded);
+            return true;
+        });
+        return walked && i == tmpl.segments.size();
     }
 
     std::vector<HttpMethod> RouteRegistry::allowed_methods(const MethodSlots& slots) {

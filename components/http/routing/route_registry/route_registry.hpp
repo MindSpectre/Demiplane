@@ -125,6 +125,9 @@ namespace demiplane::http {
         [[nodiscard]] std::string_view normalize_lookup(std::string_view path,
                                                         std::pmr::polymorphic_allocator<> alloc) const;
         [[nodiscard]] static std::vector<PathSegment> parse_segments(std::string_view normalized);
+        /// Matches `path` against `tmpl`, appending captures to out_params in
+        /// segment order. out_params is NOT cleared on a false return — the
+        /// caller must pass a fresh (or cleared) vector per template attempt.
         [[nodiscard]] static bool match_template(const ParamTemplate& tmpl, std::string_view path,
                                                  std::pmr::polymorphic_allocator<> alloc,
                                                  ResolvedRoute::ParamVec& out_params);

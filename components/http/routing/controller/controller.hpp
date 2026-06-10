@@ -12,6 +12,7 @@
 
 #include <boost/asio/awaitable.hpp>
 #include <demiplane/gears>
+#include <gears_outcome.hpp>
 #include <demiplane/nexus>
 #include <demiplane/scroll>
 

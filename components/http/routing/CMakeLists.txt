@@ -7,6 +7,7 @@
 ##############################################################################
 add_subdirectory(middleware)
 add_subdirectory(route_registry)
+add_subdirectory(controller)
 
 ##############################################################################
 # Unified interface aggregate
@@ -16,5 +17,6 @@ add_library(${DMP_HTTP}.Routing INTERFACE)
 target_link_libraries(${DMP_HTTP}.Routing INTERFACE
         ${DMP_HTTP}.Routing.Middleware
         ${DMP_HTTP}.Routing.RouteRegistry
+        ${DMP_HTTP}.Routing.Controller
 )
 ##############################################################################

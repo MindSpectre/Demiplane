@@ -7,6 +7,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Routing
         routing/test_middleware.cpp
         routing/test_group.cpp
         routing/test_router.cpp
+        routing/test_routing_allocation_gate.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Routing
         PRIVATE

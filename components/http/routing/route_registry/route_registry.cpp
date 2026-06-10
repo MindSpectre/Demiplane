@@ -1,0 +1,190 @@
+#include "route_registry.hpp"
+
+#include <algorithm>
+#include <cassert>
+#include <stdexcept>
+
+#include <url_decode.hpp>
+
+namespace demiplane::http {
+
+    namespace {
+        /// Calls fn(segment) for each '/'-separated segment of `path` (which
+        /// must start with '/'). "/" yields one empty segment — harmless and,
+        /// critically, CONSISTENT between registration and lookup. Stops and
+        /// returns false the first time fn returns false.
+        template <typename Fn>
+        bool for_each_segment(const std::string_view path, Fn&& fn) {
+            std::size_t pos = 1;  // skip the leading '/'
+            while (pos <= path.size()) {
+                const std::size_t next = path.find('/', pos);
+                const std::string_view seg =
+                    path.substr(pos, next == std::string_view::npos ? std::string_view::npos
+                                                                    : next - pos);
+                if (!fn(seg))
+                    return false;
+                if (next == std::string_view::npos)
+                    break;
+                pos = next + 1;
+            }
+            return true;
+        }
+    }  // namespace
+
+    std::string join_path(const std::string_view prefix, const std::string_view path) {
+        std::string out{prefix};
+        while (!out.empty() && out.back() == '/')
+            out.pop_back();
+        if (path.empty() || path == "/")
+            return out.empty() ? std::string{"/"} : out;
+        if (path.front() != '/')
+            out.push_back('/');
+        out += path;
+        return out;
+    }
+
+    std::string RouteRegistry::normalize_owned(const std::string_view path) const {
+        std::string out;
+        out.reserve(path.size());
+        if (norm_ == PathNormalization::collapse_multi_slash) {
+            bool prev_slash = false;
+            for (const char c : path) {
+                if (c == '/' && prev_slash)
+                    continue;
+                prev_slash = c == '/';
+                out.push_back(c);
+            }
+        } else {
+            out.assign(path);
+        }
+        if (norm_ != PathNormalization::none) {
+            while (out.size() > 1 && out.back() == '/')
+                out.pop_back();
+        }
+        return out;
+    }
+
+    std::vector<RouteRegistry::PathSegment> RouteRegistry::parse_segments(
+        const std::string_view normalized) {
+        std::vector<PathSegment> out;
+        std::vector<std::string_view> seen_names;
+        for_each_segment(normalized, [&](const std::string_view seg) {
+            if (seg.size() >= 2 && seg.front() == '{' && seg.back() == '}') {
+                const std::string_view name = seg.substr(1, seg.size() - 2);
+                if (name.empty())
+                    throw std::invalid_argument{"RouteRegistry: empty parameter name in route '"
+                                                + std::string{normalized} + "'"};
+                if (name.find_first_of("{}") != std::string_view::npos)
+                    throw std::invalid_argument{"RouteRegistry: nested braces in route '"
+                                                + std::string{normalized} + "'"};
+                if (std::ranges::find(seen_names, name) != seen_names.end())
+                    throw std::invalid_argument{"RouteRegistry: duplicate parameter name '"
+                                                + std::string{name} + "' in route '"
+                                                + std::string{normalized} + "'"};
+                seen_names.push_back(name);
+                out.push_back(PathSegment{std::string{name}, true});
+            } else {
+                if (seg.find_first_of("%{}") != std::string_view::npos)
+                    throw std::invalid_argument{
+                        "RouteRegistry: '%', '{' and '}' are not allowed in literal route "
+                        "segments ('"
+                        + std::string{normalized} + "', spec §8.6)"};
+                out.push_back(PathSegment{std::string{seg}, false});
+            }
+            return true;
+        });
+        return out;
+    }
+
+    void RouteRegistry::add_route(const HttpMethod method, const std::string_view path,
+                                  ContextHandler handler) {
+        if (frozen_)
+            throw std::logic_error{"RouteRegistry: registration after freeze()"};
+        if (method == HttpMethod::unknown)
+            throw std::invalid_argument{"RouteRegistry: cannot register HttpMethod::unknown"};
+        if (!handler)
+            throw std::invalid_argument{"RouteRegistry: null handler"};
+        if (path.empty() || path.front() != '/')
+            throw std::invalid_argument{"RouteRegistry: route path must start with '/': '"
+                                        + std::string{path} + "'"};
+
+        std::string normalized              = normalize_owned(path);
+        std::vector<PathSegment> segments   = parse_segments(normalized);
+        const bool parametric =
+            std::ranges::any_of(segments, [](const PathSegment& s) { return s.is_param; });
+        const auto idx = std::to_underlying(method);
+
+        if (!parametric) {
+            auto [it, inserted] = exact_.try_emplace(std::move(normalized));
+            if (it->second[idx]) {
+                conflicts_.push_back(RouteConflictError{method, it->first, "duplicate route"});
+                return;
+            }
+            it->second[idx] = std::move(handler);
+            return;
+        }
+
+        const auto same_shape = [](const std::vector<PathSegment>& a,
+                                   const std::vector<PathSegment>& b) {
+            return std::ranges::equal(a, b, [](const PathSegment& x, const PathSegment& y) {
+                return x.is_param == y.is_param && (x.is_param || x.text == y.text);
+            });
+        };
+        for (ParamTemplate& tmpl : parametric_) {
+            if (!same_shape(tmpl.segments, segments))
+                continue;
+            const bool names_match =
+                std::ranges::equal(tmpl.segments, segments,
+                                   [](const PathSegment& x, const PathSegment& y) {
+                                       return x.text == y.text;
+                                   });
+            if (!names_match) {
+                conflicts_.push_back(RouteConflictError{
+                    method, std::move(normalized),
+                    "parametric route already registered with different parameter names"});
+                return;
+            }
+            if (tmpl.by_method[idx]) {
+                conflicts_.push_back(
+                    RouteConflictError{method, std::move(normalized), "duplicate route"});
+                return;
+            }
+            tmpl.by_method[idx] = std::move(handler);
+            return;
+        }
+        ParamTemplate tmpl;
+        tmpl.segments       = std::move(segments);
+        tmpl.by_method[idx] = std::move(handler);
+        parametric_.push_back(std::move(tmpl));
+    }
+
+    std::vector<RouteConflictError> RouteRegistry::freeze() {
+        frozen_ = true;
+        return std::exchange(conflicts_, {});
+    }
+
+    // ── Lookup side — real bodies land in later tasks ───────────────────────
+
+    std::string_view RouteRegistry::normalize_lookup(
+        const std::string_view path, std::pmr::polymorphic_allocator<> /*alloc*/) const {
+        return path;  // Task 6
+    }
+
+    bool RouteRegistry::match_template(const ParamTemplate& /*tmpl*/,
+                                       const std::string_view /*path*/,
+                                       std::pmr::polymorphic_allocator<> /*alloc*/,
+                                       ResolvedRoute::ParamVec& /*out_params*/) {
+        return false;  // Task 7
+    }
+
+    std::vector<HttpMethod> RouteRegistry::allowed_methods(const MethodSlots& /*slots*/) {
+        return {};  // Task 6
+    }
+
+    gears::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError> RouteRegistry::find_route(
+        const HttpMethod /*method*/, const std::string_view path,
+        std::pmr::polymorphic_allocator<> /*arena_alloc*/) const {
+        return gears::err(NotFoundError{"route", std::string{path}});  // Task 6
+    }
+
+}  // namespace demiplane::http

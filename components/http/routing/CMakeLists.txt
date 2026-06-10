@@ -6,6 +6,7 @@
 # The dotted ${DMP_HTTP}.Routing target below is an INTERFACE aggregate.
 ##############################################################################
 add_subdirectory(middleware)
+add_subdirectory(route_registry)
 
 ##############################################################################
 # Unified interface aggregate
@@ -14,5 +15,6 @@ add_library(${DMP_HTTP}.Routing INTERFACE)
 
 target_link_libraries(${DMP_HTTP}.Routing INTERFACE
         ${DMP_HTTP}.Routing.Middleware
+        ${DMP_HTTP}.Routing.RouteRegistry
 )
 ##############################################################################

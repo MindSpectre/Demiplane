@@ -273,7 +273,7 @@ namespace demiplane::nexus {
  * @details When placed in a class, allows the Nexus to automatically
  * use the specified policy when no explicit policy is provided.
  */
-#define NEXUS_REGISTER(Policy) static constexpr Policy nexus_policy
+#define NEXUS_REGISTER(Policy) static constexpr Policy nexus_policy{}
 
 
 #include "../source/nexus.inl"

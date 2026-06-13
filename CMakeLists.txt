@@ -119,6 +119,7 @@ set(Boost_NO_SYSTEM_PATHS ON)
 # set(BOOST_ROOT /opt/vcpkg/installed/x64-linux) # Adjust if necessary
 list(APPEND boost-libs
         container
+        unordered
         stacktrace_backtrace
         thread
         beast

@@ -1,4 +1,23 @@
 ##############################################################################
+# Test HTTP Routing layer
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Routing
+        routing/test_route_registry.cpp
+        routing/test_controller.cpp
+        routing/test_middleware.cpp
+        routing/test_group.cpp
+        routing/test_router.cpp
+        routing/test_routing_allocation_gate.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Routing
+        PRIVATE
+        Demiplane.Component.HTTP.Routing
+        Demiplane.Component.HTTP.Types
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
 # Test HTTP Types layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Types

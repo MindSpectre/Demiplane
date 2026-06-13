@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/asio/awaitable.hpp>
-
 #include <request_context.hpp>
 #include <response.hpp>
 #include <route_registry.hpp>

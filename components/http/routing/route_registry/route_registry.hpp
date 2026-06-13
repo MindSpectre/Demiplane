@@ -2,7 +2,7 @@
 
 #include <array>
 #include <cstddef>
-#include <cstdint>
+#include <demiplane/gears>
 #include <functional>
 #include <memory_resource>
 #include <string>
@@ -12,9 +12,6 @@
 
 #include <boost/container/small_vector.hpp>
 #include <boost/unordered/unordered_flat_map.hpp>
-#include <demiplane/gears>
-#include <gears_outcome.hpp>
-
 #include <errors.hpp>
 #include <http_enums.hpp>
 #include <middleware.hpp>
@@ -46,7 +43,8 @@ namespace demiplane::http {
     /// the arena resets).
     struct ResolvedRoute {
         using ParamVec = boost::container::small_vector<
-            std::pair<std::string_view, std::string_view>, 4,
+            std::pair<std::string_view, std::string_view>,
+            4,
             std::pmr::polymorphic_allocator<std::pair<std::string_view, std::string_view>>>;
 
         const ContextHandler* handler;
@@ -73,8 +71,7 @@ namespace demiplane::http {
      */
     class RouteRegistry : gears::NonCopyable {
     public:
-        explicit RouteRegistry(
-            const PathNormalization norm = PathNormalization::collapse_trailing_slash) noexcept
+        explicit RouteRegistry(const PathNormalization norm = PathNormalization::collapse_trailing_slash) noexcept
             : norm_{norm} {
         }
 
@@ -98,15 +95,14 @@ namespace demiplane::http {
         /// with no handler for `method` yields MethodNotAllowedError carrying
         /// the populated verb set.
         [[nodiscard]] gears::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>
-        find_route(HttpMethod method, std::string_view path,
-                   std::pmr::polymorphic_allocator<> arena_alloc) const;
+        find_route(HttpMethod method, std::string_view path, std::pmr::polymorphic_allocator<> arena_alloc) const;
 
     private:
         struct PathSegment {
             std::string text;  ///< literal text, or the parameter name
             bool is_param = false;
         };
-        using MethodSlots = std::array<ContextHandler, kHttpMethodCount>;
+        using MethodSlots = std::array<ContextHandler, HTTP_METHOD_COUNT>;
 
         struct ParamTemplate {
             std::vector<PathSegment> segments;
@@ -128,16 +124,15 @@ namespace demiplane::http {
         /// Matches `path` against `tmpl`, appending captures to out_params in
         /// segment order. out_params is NOT cleared on a false return — the
         /// caller must pass a fresh (or cleared) vector per template attempt.
-        [[nodiscard]] static bool match_template(const ParamTemplate& tmpl, std::string_view path,
+        [[nodiscard]] static bool match_template(const ParamTemplate& tmpl,
+                                                 std::string_view path,
                                                  std::pmr::polymorphic_allocator<> alloc,
                                                  ResolvedRoute::ParamVec& out_params);
         [[nodiscard]] static std::vector<HttpMethod> allowed_methods(const MethodSlots& slots);
 
         bool frozen_ = false;
-        PathNormalization norm_ = PathNormalization::collapse_trailing_slash;
-        boost::unordered::unordered_flat_map<std::string, MethodSlots, TransparentStringHash,
-                                             std::equal_to<>>
-            exact_;
+        PathNormalization norm_;
+        boost::unordered::unordered_flat_map<std::string, MethodSlots, TransparentStringHash, std::equal_to<>> exact_;
         std::vector<ParamTemplate> parametric_;
         std::vector<RouteConflictError> conflicts_;
     };

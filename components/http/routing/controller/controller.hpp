@@ -1,6 +1,9 @@
 #pragma once
 
 #include <concepts>
+#include <demiplane/gears>
+#include <demiplane/nexus>
+#include <demiplane/scroll>
 #include <functional>
 #include <memory>
 #include <span>
@@ -10,13 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include <boost/asio/awaitable.hpp>
-#include <demiplane/gears>
-#include <gears_outcome.hpp>
-#include <demiplane/nexus>
-#include <demiplane/scroll>
-
 #include <async_outcome.hpp>
+#include <boost/asio/awaitable.hpp>
 #include <errors.hpp>
 #include <middleware.hpp>
 #include <request_context.hpp>
@@ -70,8 +68,7 @@ namespace demiplane::http {
         /// USER middleware. `next` lives in the layer closure inside the
         /// frozen chain, so the const& handed to the middleware (and held by
         /// its suspended frame) stays valid for the request's lifetime.
-        ContextHandler wrap_with_middleware(ContextHandler inner,
-                                            std::span<const Middleware> middlewares);
+        ContextHandler wrap_with_middleware(ContextHandler inner, std::span<const Middleware> middlewares);
 
         /// The bake step (spec §8.1 phase 2): runs configure_routes() exactly
         /// once, then drains the controller's local routes into `registry`
@@ -80,9 +77,8 @@ namespace demiplane::http {
         /// Server::add_controller in PR 5). Throws std::logic_error on a
         /// second bake of the same controller.
         struct ControllerBaker {
-            static void bake_into(RouteRegistry& registry,
-                                  const std::shared_ptr<HttpController>& ctrl,
-                                  std::string_view prefix);
+            static void
+            bake_into(RouteRegistry& registry, const std::shared_ptr<HttpController>& ctrl, std::string_view prefix);
         };
 
     }  // namespace detail
@@ -91,10 +87,8 @@ namespace demiplane::http {
     /// returning AsyncResponse or AsyncOutcome<Response, Es...> where every E
     /// has an ADL to_http_response.
     template <typename F>
-    concept RouteHandler =
-        std::invocable<std::decay_t<F>&, RequestContext>
-        && detail::RouteHandlerTraits<
-            std::invoke_result_t<std::decay_t<F>&, RequestContext>>::valid;
+    concept RouteHandler = std::invocable<std::decay_t<F>&, RequestContext> &&
+                           detail::RouteHandlerTraits<std::invoke_result_t<std::decay_t<F>&, RequestContext>>::valid;
 
     /**
      * @brief Application base class (spec §8.2). Subclasses register routes in
@@ -228,8 +222,8 @@ namespace demiplane::http {
     private:
         friend struct detail::ControllerBaker;
 
-        using BakeFn = std::function<ContextHandler(const std::shared_ptr<HttpController>&,
-                                                    std::span<const Middleware>)>;
+        using BakeFn =
+            std::function<ContextHandler(const std::shared_ptr<HttpController>&, std::span<const Middleware>)>;
         struct LocalRoute {
             HttpMethod method;
             std::string path;
@@ -251,9 +245,9 @@ namespace demiplane::http {
         }
 
         template <std::derived_from<HttpController> C>
-        void member_route(const HttpMethod method, std::string path,
-                          AsyncResponse (C::*m)(RequestContext)) {
-            push_route(method, std::move(path),
+        void member_route(const HttpMethod method, std::string path, AsyncResponse (C::*m)(RequestContext)) {
+            push_route(method,
+                       std::move(path),
                        [m](const std::shared_ptr<HttpController>& self,
                            const std::span<const Middleware> mws) -> ContextHandler {
                            // Plain lambda returning the member coroutine's
@@ -270,9 +264,11 @@ namespace demiplane::http {
 
         template <std::derived_from<HttpController> C, typename... Es>
             requires(detail::HttpRenderableError<Es> && ...)
-        void member_outcome_route(const HttpMethod method, std::string path,
+        void member_outcome_route(const HttpMethod method,
+                                  std::string path,
                                   AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            push_route(method, std::move(path),
+            push_route(method,
+                       std::move(path),
                        [m](const std::shared_ptr<HttpController>& self,
                            const std::span<const Middleware> mws) -> ContextHandler {
                            ContextHandler inner = [typed = typed_self<C>(self),
@@ -288,21 +284,21 @@ namespace demiplane::http {
         void callable_route(const HttpMethod method, std::string path, F&& f) {
             using Fn     = std::decay_t<F>;
             using Traits = detail::RouteHandlerTraits<std::invoke_result_t<Fn&, RequestContext>>;
-            push_route(
-                method, std::move(path),
-                [f = Fn{std::forward<F>(f)}](const std::shared_ptr<HttpController>&,
-                                             const std::span<const Middleware> mws) mutable -> ContextHandler {
-                    ContextHandler inner;
-                    if constexpr (Traits::has_outcome) {
-                        inner = [f](RequestContext ctx) mutable -> AsyncResponse {
-                            auto outcome = co_await f(std::move(ctx));
-                            co_return detail::collapse_outcome(std::move(outcome));
-                        };
-                    } else {
-                        inner = ContextHandler{std::move(f)};  // signature matches exactly
-                    }
-                    return detail::wrap_with_middleware(std::move(inner), mws);
-                });
+            push_route(method,
+                       std::move(path),
+                       [f = Fn{std::forward<F>(f)}](const std::shared_ptr<HttpController>&,
+                                                    const std::span<const Middleware> mws) mutable -> ContextHandler {
+                           ContextHandler inner;
+                           if constexpr (Traits::has_outcome) {
+                               inner = [f](RequestContext ctx) mutable -> AsyncResponse {
+                                   auto outcome = co_await f(std::move(ctx));
+                                   co_return detail::collapse_outcome(std::move(outcome));
+                               };
+                           } else {
+                               inner = ContextHandler{std::move(f)};  // signature matches exactly
+                           }
+                           return detail::wrap_with_middleware(std::move(inner), mws);
+                       });
         }
 
         bool configured_ = false;

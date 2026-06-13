@@ -41,10 +41,9 @@ namespace demiplane::http {
                 ctrl->configured_ = true;
             }
             ctrl->baked_ = true;  // mark baked before draining: a failed bake is not retryable
-            for (HttpController::LocalRoute& route : ctrl->local_routes_) {
+            for (auto& [method, path, bake] : ctrl->local_routes_) {
                 registry.add_route(
-                    route.method, join_path(prefix, route.path),
-                    route.bake(ctrl, std::span<const Middleware>{ctrl->middlewares_}));
+                    method, join_path(prefix, path), bake(ctrl, std::span<const Middleware>{ctrl->middlewares_}));
             }
             ctrl->local_routes_.clear();  // baked closures live in the registry now
         }

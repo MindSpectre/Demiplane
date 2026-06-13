@@ -42,7 +42,7 @@ TEST(HttpEnumsTest, VersionNumeric) {
 }
 
 TEST(HttpEnumsTest, MethodCountCoversAllEnumerators) {
-    static_assert(kHttpMethodCount == 8);
+    static_assert(HTTP_METHOD_COUNT == 8);
     // options is the last enumerator; unknown occupies slot 0.
-    EXPECT_EQ(static_cast<std::size_t>(HttpMethod::options) + 1, kHttpMethodCount);
+    EXPECT_EQ(static_cast<std::size_t>(HttpMethod::options) + 1, HTTP_METHOD_COUNT);
 }

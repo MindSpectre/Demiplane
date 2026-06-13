@@ -13,10 +13,10 @@ namespace demiplane::http {
                 [](ResolvedRoute&&) -> Response { std::unreachable(); },
                 []<typename E>(E&& e) -> Response { return to_http_response(e); });
         }
-        ResolvedRoute& route = resolved.value();
-        for (const auto& [name, value] : route.path_params)
+        auto& [handler, path_params] = resolved.value();
+        for (const auto& [name, value] : path_params)
             ctx.set_path_param(name, value);
-        co_return co_await (*route.handler)(std::move(ctx));
+        co_return co_await (*handler)(std::move(ctx));
     }
 
 }  // namespace demiplane::http

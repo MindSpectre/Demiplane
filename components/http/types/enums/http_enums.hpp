@@ -16,7 +16,7 @@ namespace demiplane::http {
         post,
         put,
         patch,
-        del /* not 'delete' */,
+        del,
         head,
         options,
     };
@@ -25,7 +25,7 @@ namespace demiplane::http {
     /// per-method dispatch arrays in the routing layer. `unknown` can never be
     /// registered (RouteRegistry throws), so its slot stays empty and an
     /// unrecognized incoming verb falls out as 404/405 (spec §8.5).
-    inline constexpr std::size_t kHttpMethodCount = 8;
+    inline constexpr std::size_t HTTP_METHOD_COUNT = 8;
 
     enum class HttpStatus : std::uint16_t {
         ok                     = 200,
@@ -63,7 +63,7 @@ namespace demiplane::http {
         http_3   = 30,
     };
 
-    constexpr std::string_view to_string(HttpMethod m) noexcept {
+    constexpr std::string_view to_string(const HttpMethod m) noexcept {
         switch (m) {
             case HttpMethod::get:
                 return "GET";
@@ -85,7 +85,7 @@ namespace demiplane::http {
         return "UNKNOWN";
     }
 
-    constexpr HttpMethod method_from_beast(boost::beast::http::verb v) noexcept {
+    constexpr HttpMethod method_from_beast(const boost::beast::http::verb v) noexcept {
         using V = boost::beast::http::verb;
         switch (v) {
             case V::get:
@@ -107,7 +107,7 @@ namespace demiplane::http {
         }
     }
 
-    constexpr boost::beast::http::verb method_to_beast(HttpMethod m) noexcept {
+    constexpr boost::beast::http::verb method_to_beast(const HttpMethod m) noexcept {
         using V = boost::beast::http::verb;
         switch (m) {
             case HttpMethod::get:
@@ -130,7 +130,7 @@ namespace demiplane::http {
         return V::unknown;
     }
 
-    constexpr HttpVersion version_from_beast(unsigned v) noexcept {
+    constexpr HttpVersion version_from_beast(const unsigned v) noexcept {
         switch (v) {
             case 10:
                 return HttpVersion::http_1_0;

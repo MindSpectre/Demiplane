@@ -18,6 +18,23 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Routing
 ##############################################################################
 
 ##############################################################################
+# Test HTTP Connection layer
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Connection
+        connection/test_request_arena.cpp
+        connection/test_connection_concepts.cpp
+        connection/test_tcp_connection.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Connection
+        PRIVATE
+        Demiplane.Component.HTTP.Connection
+        Demiplane.Component.HTTP.Types
+        Boost::beast
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
 # Test HTTP Types layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
@@ -37,6 +54,26 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
         PRIVATE
         Demiplane.Component.HTTP.Types
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test HTTP Drivers layer
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Drivers
+        drivers/test_driver_scaffolds.cpp
+        drivers/test_driver_helpers.cpp
+        drivers/test_http11_driver.cpp
+        drivers/test_driver_allocation_gate.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Drivers
+        PRIVATE
+        Demiplane.Component.HTTP.Drivers
+        Demiplane.Component.HTTP.Connection
+        Demiplane.Component.HTTP.Routing
+        Demiplane.Component.HTTP.Types
+        Boost::beast
         ${TEST_LIBS}
 )
 ##############################################################################

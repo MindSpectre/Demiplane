@@ -41,6 +41,25 @@ namespace demiplane::http {
                 return bytes;
             }
         };
+
+        struct BeastRequestBody {
+            std::span<const std::byte> bytes;
+            bool consumed = false;
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() {
+                if (consumed || bytes.empty()) {
+                    consumed = true;
+                    co_return std::nullopt;
+                }
+                consumed = true;
+                co_return bytes;
+            }
+            [[nodiscard]] std::optional<std::size_t> size_hint() const {
+                return bytes.size();
+            }
+            [[nodiscard]] std::optional<std::string_view> buffered_view() const {
+                return std::string_view{reinterpret_cast<const char*>(bytes.data()), bytes.size()};
+            }
+        };
     }  // namespace
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init) storage_ is raw SBO, filled by placement-new below
@@ -53,6 +72,13 @@ namespace demiplane::http {
         return Body{
             emplace_t{},
             std::in_place_type<OwnedBufferPayload>, OwnedBufferPayload{std::move(bytes), false}
+        };
+    }
+
+    Body Body::beast_view(const std::span<const std::byte> bytes) {
+        return Body{
+            emplace_t{},
+            std::in_place_type<BeastRequestBody>, BeastRequestBody{bytes, false}
         };
     }
 

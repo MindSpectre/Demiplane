@@ -45,6 +45,12 @@ namespace demiplane::http {
         }
         static Body owned(std::string bytes);  // OwnedBufferBody
 
+        /// Non-owning view over bytes the caller keeps alive (the request arena
+        /// owns the parsed h1 body — spec §5.2 BeastRequestBody / PR3 D1). The
+        /// span must outlive this Body (the driver keeps the parser/message
+        /// alive across dispatch + write, then resets the arena).
+        static Body beast_view(std::span<const std::byte> bytes);
+
         // Streaming primitive. nullopt when exhausted. (Plain function returning
         // the payload's awaitable — no extra coroutine frame here.)
         [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk();

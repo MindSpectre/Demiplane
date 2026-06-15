@@ -1,3 +1,5 @@
+#include <cstddef>
+#include <span>
 #include <string>
 
 #include <body.hpp>
@@ -130,4 +132,32 @@ TEST(BodyTest, ReadMultipartFilenameDoesNotLeakIntoName) {
     EXPECT_EQ(o.value()[0].filename, "doc.txt");
     EXPECT_EQ(o.value()[0].content_type, "text/plain");
     EXPECT_EQ(o.value()[0].value, "DATA");
+}
+
+TEST(BodyTest, BeastViewBorrowsExternalBytes) {
+    const std::string owner = "borrowed payload";
+    Body b =
+        Body::beast_view(std::span<const std::byte>{reinterpret_cast<const std::byte*>(owner.data()), owner.size()});
+
+    ASSERT_TRUE(b.buffered_view().has_value());
+    EXPECT_EQ(*b.buffered_view(), "borrowed payload");
+    EXPECT_EQ(b.buffered_view()->data(), owner.data());  // zero-copy: same address
+    EXPECT_EQ(b.size_hint().value_or(0), owner.size());
+}
+
+TEST(BodyTest, BeastViewYieldsOneChunkThenEnd) {
+    const std::string owner = "abc";
+    Body b =
+        Body::beast_view(std::span<const std::byte>{reinterpret_cast<const std::byte*>(owner.data()), owner.size()});
+    auto first = run_awaitable(b.read_chunk());
+    ASSERT_TRUE(first.has_value());
+    EXPECT_EQ(first->size(), 3u);
+    EXPECT_FALSE(run_awaitable(b.read_chunk()).has_value());
+}
+
+TEST(BodyTest, BeastViewEmptyYieldsNoChunks) {
+    Body b = Body::beast_view(std::span<const std::byte>{});
+    EXPECT_FALSE(run_awaitable(b.read_chunk()).has_value());
+    ASSERT_TRUE(b.buffered_view().has_value());
+    EXPECT_EQ(*b.buffered_view(), "");
 }

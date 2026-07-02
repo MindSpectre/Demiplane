@@ -8,6 +8,7 @@ add_subdirectory(request_arena)
 add_subdirectory(concepts)
 add_subdirectory(tcp_connection)
 add_subdirectory(quic_connection)
+add_subdirectory(tls_connection)
 
 ##############################################################################
 # Unified interface aggregate
@@ -19,5 +20,6 @@ target_link_libraries(${DMP_HTTP}.Connection INTERFACE
         ${DMP_HTTP}.Connection.Concepts
         ${DMP_HTTP}.Connection.Tcp
         ${DMP_HTTP}.Connection.Quic
+        ${DMP_HTTP}.Connection.Tls
 )
 ##############################################################################

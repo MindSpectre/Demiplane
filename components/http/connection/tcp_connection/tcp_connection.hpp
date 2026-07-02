@@ -52,6 +52,13 @@ namespace demiplane::http {
             return signal_.slot();
         }
 
+        /// Force-cancel this connection's in-flight I/O (graceful shutdown). The
+        /// ConnectionTracker dispatches this onto the connection's strand (D2),
+        /// so emit() is serialized with the serve coroutine's I/O on that strand.
+        void cancel() noexcept {
+            signal_.emit(boost::asio::cancellation_type::terminal);
+        }
+
         [[nodiscard]] boost::asio::ip::address remote_address() const {
             return stream_.socket().remote_endpoint().address();
         }

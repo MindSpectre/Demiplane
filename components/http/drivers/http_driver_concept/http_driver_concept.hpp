@@ -16,7 +16,7 @@ namespace demiplane::http {
      * driver with a connection (later PR). The build/buy line is inside serve().
      */
     template <typename T>
-    concept HttpDriver = requires {
+    concept IsHttpDriver = requires {
         { T::id() } -> std::same_as<Protocol>;
         { T::accepted_alpns() } -> std::same_as<std::span<const std::string_view>>;
     };

@@ -1,0 +1,67 @@
+#pragma once
+
+#include <chrono>
+#include <concepts>
+#include <cstdint>
+#include <demiplane/scroll>
+#include <string>
+#include <utility>
+
+#include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <http3_driver.hpp>
+#include <listener_base.hpp>
+#include <router.hpp>
+#include <tls_config.hpp>
+
+namespace demiplane::http {
+
+    /**
+     * @brief QUIC listener — SCAFFOLD (spec §7.3, D6).
+     *
+     * bind() succeeds as a no-op; run() logs a warning and returns. Pairs with
+     * Http3Driver ONLY (QUIC is the h3 transport). The UDP socket + ngtcp2
+     * handshake land inside these methods in the h3 PR — no surrounding change.
+     * Links no ngtcp2/nghttp3 symbols (continues PR 3 D4).
+     */
+    template <typename Driver>
+    class QuicListener final : public ListenerBase {
+        static_assert(std::same_as<Driver, Http3Driver>, "QuicListener pairs with Http3Driver only (spec §7.3)");
+
+    public:
+        QuicListener(
+            boost::asio::any_io_executor exec, std::string host, std::uint16_t port, TlsConfig tls, Driver driver)
+            : host_{std::move(host)},
+              port_{port} {
+            static_cast<void>(exec);
+            static_cast<void>(tls);
+            static_cast<void>(driver);
+        }
+
+        void bind() override {
+            // Scaffold: no socket yet. The h3 PR opens the UDP socket here.
+        }
+
+        boost::asio::awaitable<void> run(Router& /*router*/) override {
+            COMPONENT_LOG_WRN() << "QuicListener::run() not implemented (scaffold)";
+            co_return;
+        }
+
+        boost::asio::awaitable<void> drain_until(std::chrono::steady_clock::time_point /*deadline*/) override {
+            co_return;
+        }
+
+        [[nodiscard]] std::string bind_address() const override {
+            return host_;
+        }
+        [[nodiscard]] std::uint16_t bound_port() const override {
+            return port_;
+        }
+
+    private:
+        std::string host_;
+        std::uint16_t port_;
+        SCROLL_COMPONENT_PREFIX("QuicListener");
+    };
+
+}  // namespace demiplane::http

@@ -24,12 +24,15 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Connection
         connection/test_request_arena.cpp
         connection/test_connection_concepts.cpp
         connection/test_tcp_connection.cpp
+        connection/test_tls_connection.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Connection
         PRIVATE
         Demiplane.Component.HTTP.Connection
         Demiplane.Component.HTTP.Types
         Boost::beast
+        OpenSSL::SSL
+        OpenSSL::Crypto
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -75,5 +78,33 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Drivers
         Demiplane.Component.HTTP.Types
         Boost::beast
         ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test HTTP Listeners layer
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Listeners
+        listeners/test_connection_tracker.cpp
+        listeners/test_tcp_listener.cpp
+        listeners/test_build_ssl_context.cpp
+        listeners/test_tls_listener.cpp
+        listeners/test_quic_listener.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Listeners
+        PRIVATE
+        Demiplane.Component.HTTP.Listeners
+        Demiplane.Component.HTTP.Connection
+        Demiplane.Component.HTTP.Drivers
+        Demiplane.Component.HTTP.Routing
+        Demiplane.Component.HTTP.Types
+        Demiplane.Component.HTTP.Config
+        Boost::beast
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        ${TEST_LIBS}
+)
+target_include_directories(${UNIT_TESTING_TARGET}.Http.Listeners PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/integration_tests/http
 )
 ##############################################################################

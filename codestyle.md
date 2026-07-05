@@ -437,11 +437,11 @@ concept OneOf = (std::is_same_v<Args, T> || ...);
 
 ### Concept Naming
 
-| Prefix    | Intent                                           | Example                                   |
-|-----------|--------------------------------------------------|-------------------------------------------|
-| `Is*`     | Type predicate — "T is a kind of X"              | `IsFieldDef`, `IsOperator`, `IsQuery`     |
-| `Has*`    | Structural requirement — "T exposes members/ops" | `HasStaticNameMember`, `HasAcceptVisitor` |
-| no prefix | Generic operator-like / variadic relation        | `OneOf`, `OneOfDecayed`                   |
+| Prefix    | Intent                                           | Example                                                        |
+|-----------|--------------------------------------------------|----------------------------------------------------------------|
+| `Is*`     | Type predicate — "T is a kind of X"              | `IsFieldDef`, `IsOperator`, `IsQuery`, `IsHttpDriver`          |
+| `Has*`    | Structural requirement — "T exposes members/ops" | `HasStaticNameMember`, `HasAcceptVisitor`, `HasToHttpResponse` |
+| no prefix | Generic operator-like / variadic relation        | `OneOf`, `OneOfDecayed`                                        |
 
 ### Requires Clause Placement
 

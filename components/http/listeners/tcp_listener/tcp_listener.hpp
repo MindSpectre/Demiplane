@@ -1,0 +1,168 @@
+#pragma once
+
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/redirect_error.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/this_coro.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <boost/beast/core/error.hpp>
+#include <connection_tracker.hpp>
+#include <http_driver_concept.hpp>
+#include <listener_base.hpp>
+#include <router.hpp>
+#include <tcp_connection.hpp>
+
+namespace demiplane::http {
+
+    /**
+     * @brief Plain-TCP listener for one driver (spec §7.3).
+     *
+     * Accepts each connection ONTO A FRESH STRAND (D7 — beast::tcp_stream caches
+     * its executor at construction, so the socket must already be strand-bound),
+     * heap-allocates the (non-movable) TcpConnection as a shared_ptr, registers
+     * it with the tracker, and co_spawns driver.serve() on that strand.
+     *
+     * LIFETIME CONTRACT: the caller MUST co_await drain_until(...) AND then wait
+     * for in_flight() == 0 before destroying the listener — spawned serve
+     * coroutines hold a tracker Handle that references this listener's tracker,
+     * and call driver.serve() through `this`.
+     * // TODO(PR5) WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
+     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The integration
+     * fixture bridges this by polling in_flight() == 0 after drain; the PR5 Server must do the same or await
+     * a completion signal fired by the last Handle::release(). See ConnectionTracker::drain_until.
+     */
+    template <IsHttpDriver Driver>
+    class TcpListener final : public ListenerBase {
+    public:
+        TcpListener(boost::asio::any_io_executor exec,
+                    std::string host,
+                    std::uint16_t port,
+                    Driver driver,
+                    std::size_t arena_size = 8192)
+            : exec_{std::move(exec)},
+              host_{std::move(host)},
+              port_{port},
+              driver_{std::move(driver)},
+              arena_size_{arena_size},
+              acceptor_{exec_} {
+        }
+
+        void bind() override {
+            const boost::asio::ip::tcp::endpoint ep{boost::asio::ip::make_address(host_), port_};
+            acceptor_.open(ep.protocol());
+            acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
+            acceptor_.bind(ep);  // throws boost::system::system_error on failure
+            acceptor_.listen(boost::asio::socket_base::max_listen_connections);
+        }
+
+        boost::asio::awaitable<void> run(Router& router) override {
+            namespace asio = boost::asio;
+            // Cancellation is handled as STATE, not exceptions: with the default
+            // throw_if_cancelled, a stop emitted between suspensions would make
+            // the next co_await throw and skip the acceptor close below (and,
+            // where run()'s completion is awaited through a future, rethrow there).
+            co_await asio::this_coro::throw_if_cancelled(false);
+            const auto cancel_state = co_await asio::this_coro::cancellation_state;
+            std::optional<asio::steady_timer> backoff;  // error path only — lazy
+            unsigned consecutive_errors = 0;
+
+            // TODO(PR5) WARN: multi-worker residual — an emit landing between the
+            // loop-top state check and async_accept installing its cancel handler
+            // is edge-lost; that accept then parks until the next inbound SYN
+            // (self-heals on any connection attempt; the post-loop close still
+            // runs). Unreachable on the single-threaded v1 executor.
+            while (cancel_state.cancelled() == asio::cancellation_type::none) {
+                auto strand = asio::make_strand(exec_);
+                boost::beast::error_code ec;
+                asio::ip::tcp::socket sock =
+                    co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
+                if (ec == asio::error::operation_aborted) {
+                    break;  // stop(): the run-coroutine's cancellation slot was emitted
+                }
+                if (ec == asio::error::bad_descriptor || ec == asio::error::operation_not_supported ||
+                    ec == asio::error::invalid_argument) {
+                    break;  // acceptor unusable — retrying can only repeat the error
+                }
+                if (ec) {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
+                    // A couple of retries are free (accept-storm hiccups resolve
+                    // instantly); persistent failure backs off exponentially so a
+                    // dead-resource state (fd exhaustion) doesn't hot-spin the
+                    // worker. Timer syscalls only on this already-failing path.
+                    if (++consecutive_errors > 2) {
+                        if (!backoff) {
+                            backoff.emplace(exec_);
+                        }
+                        backoff->expires_after(backoff_delay(consecutive_errors));
+                        boost::beast::error_code tec;
+                        co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));
+                        // tec == operation_aborted ⇒ cancelled mid-sleep ⇒ the
+                        // latched state exits the loop above.
+                    }
+                    continue;
+                }
+                consecutive_errors = 0;
+                auto conn          = std::make_shared<TcpConnection>(std::move(sock), arena_size_);
+                auto handle        = tracker_.register_connection(conn, strand);
+                asio::co_spawn(
+                    strand,
+                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
+                        co_await driver_.serve(*conn, router);
+                    },
+                    asio::detached);
+            }
+            // Reached on EVERY exit path (stop, fatal accept error). Close the
+            // acceptor so new SYNs are REFUSED (ECONNREFUSED), not silently
+            // backlogged + left unserved while we drain (spec §14.2; spike S4).
+            boost::beast::error_code ignore;
+            acceptor_.close(ignore);
+            co_return;
+        }
+
+        boost::asio::awaitable<void> drain_until(const std::chrono::steady_clock::time_point deadline) override {
+            co_await tracker_.drain_until(exec_, deadline);
+        }
+
+        [[nodiscard]] std::size_t in_flight() const noexcept override {
+            return tracker_.in_flight();
+        }
+
+        [[nodiscard]] std::string bind_address() const override {
+            return host_;
+        }
+        [[nodiscard]] std::uint16_t bound_port() const override {
+            return acceptor_.local_endpoint().port();
+        }
+
+    private:
+        // TODO: possibly move to the Demiplane::Chrono
+        //  1ms, 2ms, 4ms, ... capped at 1024ms: resource-exhaustion errors
+        //  (EMFILE) resolve on operator timescales, not microseconds.
+        [[nodiscard]] static std::chrono::milliseconds backoff_delay(const unsigned consecutive_errors) noexcept {
+            const unsigned shift = std::min(consecutive_errors - 3u, 10u);
+            return std::chrono::milliseconds{1u << shift};
+        }
+
+        boost::asio::any_io_executor exec_;
+        std::string host_;
+        std::uint16_t port_;
+        Driver driver_;
+        std::size_t arena_size_;
+        boost::asio::ip::tcp::acceptor acceptor_;
+        ConnectionTracker tracker_;
+    };
+
+}  // namespace demiplane::http

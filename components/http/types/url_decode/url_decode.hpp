@@ -20,7 +20,7 @@ namespace demiplane::http {
     /// plus_is_space mode) — the common zero-copy case. Otherwise the result
     /// views arena storage: valid until the arena resets, never individually
     /// freed (monotonic). nullopt on a malformed escape.
-    std::optional<std::string_view> url_decode_arena(std::string_view in, bool plus_is_space,
-                                                     std::pmr::polymorphic_allocator<> alloc);
+    std::optional<std::string_view>
+    url_decode_arena(std::string_view in, bool plus_is_space, std::pmr::polymorphic_allocator<> alloc);
 
 }  // namespace demiplane::http

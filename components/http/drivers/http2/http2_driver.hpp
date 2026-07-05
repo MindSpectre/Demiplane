@@ -25,7 +25,7 @@ namespace demiplane::http {
             return ALPNS;
         }
 
-        template <StreamConnection ConnT>
+        template <IsStreamConnection ConnT>
         boost::asio::awaitable<void> serve(ConnT& conn, Router& /*router*/) {
             COMPONENT_LOG_WRN() << "Http2Driver::serve() not implemented (scaffold)";
             gears::force_non_const(this);

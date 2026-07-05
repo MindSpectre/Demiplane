@@ -28,8 +28,8 @@ namespace {
     };
 }  // namespace
 
-static_assert(HttpDriver<GoodDriver>);
-static_assert(!HttpDriver<MissingAlpns>);
+static_assert(IsHttpDriver<GoodDriver>);
+static_assert(!IsHttpDriver<MissingAlpns>);
 
 TEST(HttpDriverConceptTest, AdvertisesIdAndAlpns) {
     EXPECT_EQ(GoodDriver::id(), Protocol::http1);
@@ -37,9 +37,9 @@ TEST(HttpDriverConceptTest, AdvertisesIdAndAlpns) {
     EXPECT_EQ(GoodDriver::accepted_alpns()[0], "http/1.1");
 }
 
-static_assert(HttpDriver<Http2Driver>);
-static_assert(HttpDriver<Http3Driver>);
-static_assert(Connection<QuicConnection> && !StreamConnection<QuicConnection>);
+static_assert(IsHttpDriver<Http2Driver>);
+static_assert(IsHttpDriver<Http3Driver>);
+static_assert(IsConnection<QuicConnection> && !IsStreamConnection<QuicConnection>);
 
 TEST(DriverScaffoldsTest, Http2AdvertisesH2) {
     EXPECT_EQ(Http2Driver::id(), Protocol::http2);

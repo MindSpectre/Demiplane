@@ -11,7 +11,7 @@
 using namespace demiplane::http;
 // NOLINTBEGIN
 namespace {
-    // Minimal in-line model that satisfies StreamConnection. Proves the concept
+    // Minimal in-line model that satisfies IsStreamConnection. Proves the concept
     // is satisfiable with a plausible shape (TcpConnection is checked in Task 14,
     // TestConnection in Task 9).
     struct FakeStream {};
@@ -47,7 +47,7 @@ namespace {
         }
     };
 
-    struct NoStream {  // satisfies Connection but not StreamConnection
+    struct NoStream {  // satisfies IsConnection but not IsStreamConnection
         std::pmr::polymorphic_allocator<> arena_alloc() {
             return {};
         }
@@ -74,10 +74,10 @@ namespace {
 }  // namespace
 // NOLINTEND
 
-static_assert(Connection<ModelConn>);
-static_assert(StreamConnection<ModelConn>);
-static_assert(Connection<NoStream>);
-static_assert(!StreamConnection<NoStream>);
+static_assert(IsConnection<ModelConn>);
+static_assert(IsStreamConnection<ModelConn>);
+static_assert(IsConnection<NoStream>);
+static_assert(!IsStreamConnection<NoStream>);
 
 TEST(ConnectionConceptsTest, ModelsAreCheckedAtCompileTime) {
     SUCCEED();  // the static_asserts above are the test

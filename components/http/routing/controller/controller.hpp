@@ -31,7 +31,7 @@ namespace demiplane::http {
         /// Response via an ADL-found to_http_response(const E&). A missing
         /// overload fails this concept — the compile error names E (spec §8.3).
         template <typename E>
-        concept HttpRenderableError = requires(const E& e) {
+        concept HasToHttpResponse = requires(const E& e) {
             { to_http_response(e) } -> std::same_as<Response>;
         };
 
@@ -47,7 +47,7 @@ namespace demiplane::http {
         };
         template <typename... Es>
         struct RouteHandlerTraits<boost::asio::awaitable<gears::Outcome<Response, Es...>>> {
-            static constexpr bool valid       = (HttpRenderableError<Es> && ...);
+            static constexpr bool valid       = (HasToHttpResponse<Es> && ...);
             static constexpr bool has_outcome = true;
         };
 
@@ -87,8 +87,8 @@ namespace demiplane::http {
     /// returning AsyncResponse or AsyncOutcome<Response, Es...> where every E
     /// has an ADL to_http_response.
     template <typename F>
-    concept RouteHandler = std::invocable<std::decay_t<F>&, RequestContext> &&
-                           detail::RouteHandlerTraits<std::invoke_result_t<std::decay_t<F>&, RequestContext>>::valid;
+    concept IsRouteHandler = std::invocable<std::decay_t<F>&, RequestContext> &&
+                             detail::RouteHandlerTraits<std::invoke_result_t<std::decay_t<F>&, RequestContext>>::valid;
 
     /**
      * @brief Application base class (spec §8.2). Subclasses register routes in
@@ -136,7 +136,7 @@ namespace demiplane::http {
         void Get(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::get, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Get(std::string path, F&& f) {
             callable_route(HttpMethod::get, std::move(path), std::forward<F>(f));
         }
@@ -149,7 +149,7 @@ namespace demiplane::http {
         void Post(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::post, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Post(std::string path, F&& f) {
             callable_route(HttpMethod::post, std::move(path), std::forward<F>(f));
         }
@@ -162,7 +162,7 @@ namespace demiplane::http {
         void Put(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::put, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Put(std::string path, F&& f) {
             callable_route(HttpMethod::put, std::move(path), std::forward<F>(f));
         }
@@ -175,7 +175,7 @@ namespace demiplane::http {
         void Patch(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::patch, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Patch(std::string path, F&& f) {
             callable_route(HttpMethod::patch, std::move(path), std::forward<F>(f));
         }
@@ -188,7 +188,7 @@ namespace demiplane::http {
         void Delete(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::del, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Delete(std::string path, F&& f) {
             callable_route(HttpMethod::del, std::move(path), std::forward<F>(f));
         }
@@ -201,7 +201,7 @@ namespace demiplane::http {
         void Head(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::head, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Head(std::string path, F&& f) {
             callable_route(HttpMethod::head, std::move(path), std::forward<F>(f));
         }
@@ -214,7 +214,7 @@ namespace demiplane::http {
         void Options(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::options, std::move(path), m);
         }
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void Options(std::string path, F&& f) {
             callable_route(HttpMethod::options, std::move(path), std::forward<F>(f));
         }
@@ -263,7 +263,7 @@ namespace demiplane::http {
         }
 
         template <std::derived_from<HttpController> C, typename... Es>
-            requires(detail::HttpRenderableError<Es> && ...)
+            requires(detail::HasToHttpResponse<Es> && ...)
         void member_outcome_route(const HttpMethod method,
                                   std::string path,
                                   AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
@@ -280,7 +280,7 @@ namespace demiplane::http {
                        });
         }
 
-        template <RouteHandler F>
+        template <IsRouteHandler F>
         void callable_route(const HttpMethod method, std::string path, F&& f) {
             using Fn     = std::decay_t<F>;
             using Traits = detail::RouteHandlerTraits<std::invoke_result_t<Fn&, RequestContext>>;

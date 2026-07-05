@@ -14,15 +14,14 @@ namespace demiplane::http {
 
     namespace detail {
 
-        ContextHandler wrap_with_middleware(ContextHandler inner,
-                                            const std::span<const Middleware> middlewares) {
+        ContextHandler wrap_with_middleware(ContextHandler inner, const std::span<const Middleware> middlewares) {
             for (const Middleware& mw : std::ranges::reverse_view(middlewares)) {
                 NextHandler next = std::move(inner);
                 // Plain lambda: returns the middleware coroutine's awaitable
                 // directly (no wrapper frame). `mw` is copied once at BAKE
                 // time; per request nothing is copied — `next` is handed down
                 // by const& (spec §8.3).
-                inner = [mw, next = std::move(next)](RequestContext ctx) -> AsyncResponse {
+                inner            = [mw, next = std::move(next)](RequestContext ctx) -> AsyncResponse {
                     return mw(std::move(ctx), next);
                 };
             }

@@ -97,12 +97,12 @@ strongest part of the existing design) at the center.
 │   Request, Response, Headers, Body (stream + buffered helpers), │
 │   RequestContext, gears::Outcome<Response, Errors...>           │
 ├─────────────────────────────────────────────────────────────────┤
-│ Protocol Drivers (HttpDriver concept)                           │
+│ Protocol Drivers (IsHttpDriver concept)                         │
 │   Http11Driver — implemented (Boost.Beast under the hood)       │
 │   Http2Driver  — scaffold (nghttp2 vcpkg manifest in place)     │
 │   Http3Driver  — scaffold (ngtcp2 + nghttp3 in place)           │
 ├─────────────────────────────────────────────────────────────────┤
-│ Connections (Connection concept)                                │
+│ Connections (IsConnection concept)                              │
 │   TcpConnection, TlsConnection, QuicConnection (stub)           │
 │   each owns its byte stream + lifecycle for one peer            │
 ├─────────────────────────────────────────────────────────────────┤
@@ -123,10 +123,11 @@ strongest part of the existing design) at the center.
   composition. Registration after `setup()` is `std::logic_error`.
 - **`Server` is a thin orchestrator.** Owns the io_context, listeners, drivers (held inside listeners), the router,
   observer list, controller list. Doesn't loop sessions itself — drivers do that.
-- **The build/buy line is the `HttpDriver::serve()` method.** Whatever happens inside `serve()` is the driver's problem.
+- **The build/buy line is the driver's `serve()` method.** Whatever happens inside `serve()` is the driver's problem.
   `Http11Driver::serve()` uses Beast and looks like a session loop. Future `Http2Driver::serve()` will wrap nghttp2; the
   impedance mismatch lives there, not in the public interface.
-- **No virtual base for `Connection` or `HttpDriver`.** Concept-based duck typing; polymorphism only at the listener
+- **No virtual base for `IsConnection` or `IsHttpDriver` conformers.** Concept-based duck typing; polymorphism only at
+  the listener
   layer (where `Server` holds `unique_ptr<ListenerBase>`). No `dynamic_cast` anywhere in the runtime path.
 - **Per-request arena, both directions.** Beast's `request_parser<..., pmr_allocator>` parses headers/path/body into our
   request-scoped `monotonic_buffer_resource`; `Headers` wraps Beast's parsed `fields` for incoming and arena-owned
@@ -521,7 +522,7 @@ responses are built via `ctx.stream(...)`, which needs the arena and so lives on
 
 ## 6. Connection + Driver Interface
 
-### 6.1 Connection — concept, not class hierarchy
+### 6.1 IsConnection — concept, not class hierarchy
 
 ```cpp
 namespace demiplane::http {
@@ -542,7 +543,7 @@ public:
 };
 
 template <typename T>
-concept Connection = requires (T& t, std::chrono::milliseconds ms) {
+concept IsConnection = requires (T& t, std::chrono::milliseconds ms) {
     { t.arena_alloc() }          -> std::same_as<std::pmr::polymorphic_allocator<>>;
     { t.reset_request_arena() }  -> std::same_as<void>;
     { t.expires_after(ms) }      -> std::same_as<void>;
@@ -554,7 +555,7 @@ concept Connection = requires (T& t, std::chrono::milliseconds ms) {
 };
 
 template <typename T>
-concept StreamConnection = Connection<T> && requires (T& t) {
+concept IsStreamConnection = IsConnection<T> && requires (T& t) {
     typename T::stream_type;
     { t.stream() } -> std::same_as<typename T::stream_type&>;
 };
@@ -568,11 +569,11 @@ Concrete connection types are value classes that compose a `RequestArena` and an
 - `TlsConnection` — `asio::ssl::stream<tcp::socket>` + arena + cancel signal + ALPN result.
 - `QuicConnection` — scaffold only; ngtcp2 state when filled in.
 
-### 6.2 HttpDriver — concept with templated `serve()`
+### 6.2 IsHttpDriver — concept with templated `serve()`
 
 ```cpp
 template <typename T>
-concept HttpDriver = requires {
+concept IsHttpDriver = requires {
     { T::id() }             -> std::same_as<Protocol>;
     { T::accepted_alpns() } -> std::same_as<std::span<const std::string_view>>;
     // serve() is templated on connection type — checked at the listener level.
@@ -603,7 +604,7 @@ public:
         return kAlpns;
     }
 
-    template <StreamConnection ConnT>
+    template <IsStreamConnection ConnT>
     asio::awaitable<void> serve(ConnT& conn, Router& router) {
         auto& stream = conn.stream();   // typed via template deduction
         beast::flat_buffer buffer;
@@ -673,7 +674,7 @@ public:
         return kAlpns;
     }
 
-    template <StreamConnection ConnT>
+    template <IsStreamConnection ConnT>
         requires requires(ConnT c) { { c.is_secure() } -> std::same_as<bool>; }
     asio::awaitable<void> serve(ConnT& conn, Router& router) {
         // Scaffold — fill in with nghttp2.
@@ -807,7 +808,7 @@ protected:
     void Get(std::string path, AsyncOutcome<Response, Errors...> (Controller::*method)(RequestContext));
 
     // Free function / lambda
-    template <typename F> requires Handler<F>
+    template <typename F> requires IsRouteHandler<F>
     void Get(std::string path, F&& handler);
 
     // Same for Post, Put, Patch, Delete, Head, Options.
@@ -1071,13 +1072,13 @@ public:
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
 
-    template <HttpDriver Driver>
+    template <IsHttpDriver Driver>
     Server& add_tcp_listener(std::string bind, Driver driver);
 
-    template <HttpDriver... Drivers>
+    template <IsHttpDriver... Drivers>
     Server& add_tls_listener(std::string bind, TlsConfig tls, Drivers... drivers);
 
-    template <HttpDriver Driver>
+    template <IsHttpDriver Driver>
     Server& add_quic_listener(std::string bind, TlsConfig tls, Driver driver);
 
     template <std::derived_from<HttpController> C>
@@ -1776,37 +1777,38 @@ Coverage:
 
 ## 15. Decisions Log
 
-| Decision                  | Choice                                                                                                                                                                    | Why                                                                                                                                                                               |
-|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Build vs. buy h2/h3       | Hybrid: build h1 (Beast), buy h2 (nghttp2) and h3 (ngtcp2 + nghttp3); v1 ships h1 only with stubs                                                                         | Matches user intent to write h2/h3 themselves later; nglibs reduce attack surface and bugs                                                                                        |
-| Body model                | Streaming truth, buffered convenience helpers                                                                                                                             | Maps to all three protocols; ergonomic for JSON-API common case; opt-in streaming for large payloads                                                                              |
-| Driver interface          | Single coroutine `serve(Connection&, Router&)`                                                                                                                            | One method per driver; protocol complexity stays inside; coroutine-native consistent with rest of codebase                                                                        |
-| Listener model            | ALPN-multiplexed TLS + separate UDP listener for h3                                                                                                                       | Standard production pattern; h1+h2 share port 443 via ALPN; h3 is separate transport entirely                                                                                     |
-| Routing API               | Evolve B: keep controller-merge, add prefix + middleware + verbs                                                                                                          | Controller-merge concept is the strongest part of current design; preserve and extend                                                                                             |
-| Group/middleware scope    | Controller-only middleware (option A); group via `server.in_group(prefix).add_controller(...)`                                                                            | User wants explicit control; repetition resolved via free helper functions                                                                                                        |
-| Error model               | `gears::Outcome<Response, Errors...>` + `catch(...) → 500`                                                                                                                | Project's existing Outcome type; multiple typed errors per handler; catch-all for unexpected only                                                                                 |
-| Error → Response          | ADL `to_http_response(const E&)`                                                                                                                                          | Compile-time checked (missing = build break); zero overhead; lives next to error type                                                                                             |
-| Build-out scope           | Option C: everything except protocol drivers                                                                                                                              | TLS interface + impl, ALPN real, body limits, timeouts, graceful shutdown, JSON config; only h2/h3 protocol bodies stay stubbed                                                   |
-| Allocation strategy       | Per-request arena + Beast allocator redirect + Headers tagged-union facade                                                                                                | Zero framework heap allocs on hot path; user-data allocs unchanged                                                                                                                |
-| Allocation policy         | Zero-additional-alloc **invariant** (arena in both directions), gated by a counting `memory_resource` test                                                                | User's #1 goal is minimal overhead; an invariant + gate keeps it from rotting, unlike an aspirational table. Body = SBO value type; Response stores its arena allocator           |
-| Response construction     | ctx-scoped factories (`ctx.json(...)`) — review option A                                                                                                                  | Threads the arena in automatically; impossible to forget and silently fall back to global heap. Static `ResponseFactory` retained for ctx-less/error path only                    |
-| Error → Response alloc    | `to_http_response` arena-free; 4xx/5xx on the global heap                                                                                                                 | Cold path; keeps the extension point a clean one-arg free function                                                                                                                |
-| `target` representation   | `string_view` into the receive buffer (not an owned `std::string`)                                                                                                        | Zero-copy; avoids the SSO-dangling cache bug; consistent with the rest of the views-into-buffers request model                                                                    |
-| Executor ownership        | Injected (`any_io_executor`); Server owns no `io_context`/threads; `run_standalone` convenience                                                                           | HTTP coexists with logger/DB/S3; caller controls thread↔context topology; also subsumes the per-thread-`io_context` throughput lesson                                             |
-| Shutdown ownership        | `stop()` never stops the executor; caller drives it until `wait_until_stopped()` (§9.7)                                                                                   | The executor is shared with subsystems that must outlive HTTP; stopping it would kill drain/observers mid-flight                                                                  |
-| Connection abstraction    | Concept-based, no virtual hierarchy, no `dynamic_cast`                                                                                                                    | Concrete connection types satisfy `Connection` concept; drivers templated on connection type; polymorphism only at listener layer                                                 |
-| Lifecycle                 | Injected executor; `setup()` (sync bind + spawn loops) / `stop()` (non-blocking, never stops the executor) / `wait_until_stopped()` (block); `run_standalone` convenience | Honest failure surface; testable; coexists with other subsystems on caller-owned executors; see §9.7 contract                                                                     |
-| Observer model            | Single typed `ServerObserver` interface with `exception_ptr` for errors                                                                                                   | Replaces 10-vector mess; UAF structurally impossible (heap-managed exception_ptr)                                                                                                 |
-| Routing perf              | Segment-vector parametric routing, not `std::regex`                                                                                                                       | Original design's headline perf bug; segment vectors are 10x+ faster, simpler, swap-in trie later if needed                                                                       |
-| Config format             | JSON via `ConfigInterface` for v1; YAML follow-up                                                                                                                         | Project's established pattern (FileSinkConfig); YAML adds the format param later                                                                                                  |
-| Hot-reload                | Removed (not stubbed)                                                                                                                                                     | Genuinely hard; restart-on-change is honest; revisit when production deployment demands it                                                                                        |
-| Directory structure       | Co-located per-thing dirs (`types/request/{hpp,cpp}`), no include/source split                                                                                            | User preference; cleaner colocation                                                                                                                                               |
-| Middleware `next` passing | `const NextHandler&` (non-owning)                                                                                                                                         | A by-value `std::function` copy = heap alloc per layer per request; the referent lives in the frozen baked chain and outlives the request                                         |
-| Coroutine frames          | Excluded from the zero-alloc invariant; gated as an exact counted budget (≈3 + middleware depth)                                                                          | `asio::awaitable` frames heap-allocate and HALO cannot elide across `std::function`; an *exact-count* gate still catches accidental extras                                        |
-| Allocation-gate mechanism | Replaced global `operator new`/`delete`, thread-locally armed                                                                                                             | A pmr default-resource counter cannot see plain-container or coroutine-frame allocations — the accidental classes the gate exists for                                             |
-| Path decoding             | Split raw on `/`, decode captured segments only (`+` literal); literals match raw bytes; `%` rejected in route literals                                                   | `%2F` can never become a separator; zero decode work on the no-`%` hot path                                                                                                       |
-| Headers move-assign       | User-defined: adopts the source backing (variant emplace)                                                                                                                 | Defaulted pmr move-assign (POCMA=false) element-copies into the dest's old allocator — `Response r; r = co_await next(ctx);` would silently land arena headers on the global heap |
-| Cancellation fan-out      | One `cancellation_signal` per listener + per-connection signals in the tracker; emits dispatched via the target's strand                                                  | A `cancellation_slot` holds at most one handler; `emit` is not thread-safe against concurrent ops                                                                                 |
+| Decision                  | Choice                                                                                                                                                                      | Why                                                                                                                                                                               |
+|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Build vs. buy h2/h3       | Hybrid: build h1 (Beast), buy h2 (nghttp2) and h3 (ngtcp2 + nghttp3); v1 ships h1 only with stubs                                                                           | Matches user intent to write h2/h3 themselves later; nglibs reduce attack surface and bugs                                                                                        |
+| Body model                | Streaming truth, buffered convenience helpers                                                                                                                               | Maps to all three protocols; ergonomic for JSON-API common case; opt-in streaming for large payloads                                                                              |
+| Driver interface          | Single coroutine `serve(conn, router)`                                                                                                                                      | One method per driver; protocol complexity stays inside; coroutine-native consistent with rest of codebase                                                                        |
+| Listener model            | ALPN-multiplexed TLS + separate UDP listener for h3                                                                                                                         | Standard production pattern; h1+h2 share port 443 via ALPN; h3 is separate transport entirely                                                                                     |
+| Routing API               | Evolve B: keep controller-merge, add prefix + middleware + verbs                                                                                                            | Controller-merge concept is the strongest part of current design; preserve and extend                                                                                             |
+| Group/middleware scope    | Controller-only middleware (option A); group via `server.in_group(prefix).add_controller(...)`                                                                              | User wants explicit control; repetition resolved via free helper functions                                                                                                        |
+| Error model               | `gears::Outcome<Response, Errors...>` + `catch(...) → 500`                                                                                                                  | Project's existing Outcome type; multiple typed errors per handler; catch-all for unexpected only                                                                                 |
+| Error → Response          | ADL `to_http_response(const E&)`                                                                                                                                            | Compile-time checked (missing = build break); zero overhead; lives next to error type                                                                                             |
+| Build-out scope           | Option C: everything except protocol drivers                                                                                                                                | TLS interface + impl, ALPN real, body limits, timeouts, graceful shutdown, JSON config; only h2/h3 protocol bodies stay stubbed                                                   |
+| Allocation strategy       | Per-request arena + Beast allocator redirect + Headers tagged-union facade                                                                                                  | Zero framework heap allocs on hot path; user-data allocs unchanged                                                                                                                |
+| Allocation policy         | Zero-additional-alloc **invariant** (arena in both directions), gated by a counting `memory_resource` test                                                                  | User's #1 goal is minimal overhead; an invariant + gate keeps it from rotting, unlike an aspirational table. Body = SBO value type; Response stores its arena allocator           |
+| Response construction     | ctx-scoped factories (`ctx.json(...)`) — review option A                                                                                                                    | Threads the arena in automatically; impossible to forget and silently fall back to global heap. Static `ResponseFactory` retained for ctx-less/error path only                    |
+| Error → Response alloc    | `to_http_response` arena-free; 4xx/5xx on the global heap                                                                                                                   | Cold path; keeps the extension point a clean one-arg free function                                                                                                                |
+| `target` representation   | `string_view` into the receive buffer (not an owned `std::string`)                                                                                                          | Zero-copy; avoids the SSO-dangling cache bug; consistent with the rest of the views-into-buffers request model                                                                    |
+| Executor ownership        | Injected (`any_io_executor`); Server owns no `io_context`/threads; `run_standalone` convenience                                                                             | HTTP coexists with logger/DB/S3; caller controls thread↔context topology; also subsumes the per-thread-`io_context` throughput lesson                                             |
+| Shutdown ownership        | `stop()` never stops the executor; caller drives it until `wait_until_stopped()` (§9.7)                                                                                     | The executor is shared with subsystems that must outlive HTTP; stopping it would kill drain/observers mid-flight                                                                  |
+| Connection abstraction    | Concept-based, no virtual hierarchy, no `dynamic_cast`                                                                                                                      | Concrete connection types satisfy `IsConnection`; drivers templated on connection type; polymorphism only at listener layer                                                       |
+| Lifecycle                 | Injected executor; `setup()` (sync bind + spawn loops) / `stop()` (non-blocking, never stops the executor) / `wait_until_stopped()` (block); `run_standalone` convenience   | Honest failure surface; testable; coexists with other subsystems on caller-owned executors; see §9.7 contract                                                                     |
+| Observer model            | Single typed `ServerObserver` interface with `exception_ptr` for errors                                                                                                     | Replaces 10-vector mess; UAF structurally impossible (heap-managed exception_ptr)                                                                                                 |
+| Routing perf              | Segment-vector parametric routing, not `std::regex`                                                                                                                         | Original design's headline perf bug; segment vectors are 10x+ faster, simpler, swap-in trie later if needed                                                                       |
+| Config format             | JSON via `ConfigInterface` for v1; YAML follow-up                                                                                                                           | Project's established pattern (FileSinkConfig); YAML adds the format param later                                                                                                  |
+| Hot-reload                | Removed (not stubbed)                                                                                                                                                       | Genuinely hard; restart-on-change is honest; revisit when production deployment demands it                                                                                        |
+| Directory structure       | Co-located per-thing dirs (`types/request/{hpp,cpp}`), no include/source split                                                                                              | User preference; cleaner colocation                                                                                                                                               |
+| Middleware `next` passing | `const NextHandler&` (non-owning)                                                                                                                                           | A by-value `std::function` copy = heap alloc per layer per request; the referent lives in the frozen baked chain and outlives the request                                         |
+| Coroutine frames          | Excluded from the zero-alloc invariant; gated as an exact counted budget (≈3 + middleware depth)                                                                            | `asio::awaitable` frames heap-allocate and HALO cannot elide across `std::function`; an *exact-count* gate still catches accidental extras                                        |
+| Allocation-gate mechanism | Replaced global `operator new`/`delete`, thread-locally armed                                                                                                               | A pmr default-resource counter cannot see plain-container or coroutine-frame allocations — the accidental classes the gate exists for                                             |
+| Path decoding             | Split raw on `/`, decode captured segments only (`+` literal); literals match raw bytes; `%` rejected in route literals                                                     | `%2F` can never become a separator; zero decode work on the no-`%` hot path                                                                                                       |
+| Headers move-assign       | User-defined: adopts the source backing (variant emplace)                                                                                                                   | Defaulted pmr move-assign (POCMA=false) element-copies into the dest's old allocator — `Response r; r = co_await next(ctx);` would silently land arena headers on the global heap |
+| Cancellation fan-out      | One `cancellation_signal` per listener + per-connection signals in the tracker; emits dispatched via the target's strand                                                    | A `cancellation_slot` holds at most one handler; `emit` is not thread-safe against concurrent ops                                                                                 |
+| Concept naming            | `Is*` for role/type-identity concepts (`IsConnection`, `IsStreamConnection`, `IsHttpDriver`, `IsRouteHandler`); `Has*` for single-capability concepts (`HasToHttpResponse`) | Repo-wide convention (codestyle §Concept Naming; DB precedent `IsSqlDialect`/`HasAcceptVisitor`); renamed in PR4's patch round to keep spec and code in lockstep before PR5       |
 
 ## 16. Open Questions
 

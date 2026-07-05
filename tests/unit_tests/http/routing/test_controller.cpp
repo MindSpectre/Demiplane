@@ -273,18 +273,18 @@ namespace {
         co_return Response{};
     });
 
-    static_assert(detail::HttpRenderableError<NotFoundError>);
-    static_assert(detail::HttpRenderableError<myapp::TeapotError>);
-    static_assert(!detail::HttpRenderableError<NotRenderable>);
-    static_assert(RouteHandler<GoodPlain>);
-    static_assert(RouteHandler<GoodOutcome>);
-    static_assert(!RouteHandler<BadReturn>);
-    static_assert(!RouteHandler<BadError>);  // error type without to_http_response
+    static_assert(detail::HasToHttpResponse<NotFoundError>);
+    static_assert(detail::HasToHttpResponse<myapp::TeapotError>);
+    static_assert(!detail::HasToHttpResponse<NotRenderable>);
+    static_assert(IsRouteHandler<GoodPlain>);
+    static_assert(IsRouteHandler<GoodOutcome>);
+    static_assert(!IsRouteHandler<BadReturn>);
+    static_assert(!IsRouteHandler<BadError>);  // error type without to_http_response
 
     // Mixed pack: one renderable + one not — concept must still reject.
     using BadMixedPack = decltype([](RequestContext)
                                       -> AsyncOutcome<Response, NotFoundError, NotRenderable> {
         co_return Response{};
     });
-    static_assert(!RouteHandler<BadMixedPack>);
+    static_assert(!IsRouteHandler<BadMixedPack>);
 }  // namespace

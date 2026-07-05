@@ -16,8 +16,8 @@ namespace demiplane::http {
         /// Decodes `in` into `out`, which must hold >= in.size() chars (the
         /// decoded form never grows). Returns the decoded length, or nullopt
         /// on a truncated/non-hex escape.
-        std::optional<std::size_t> decode_into(const std::string_view in, const bool plus_is_space,
-                                               char* out) noexcept {
+        std::optional<std::size_t>
+        decode_into(const std::string_view in, const bool plus_is_space, char* out) noexcept {
             std::size_t n = 0;
             for (std::size_t i = 0; i < in.size(); ++i) {
                 if (const char c = in[i]; c == '+' && plus_is_space) {
@@ -29,8 +29,8 @@ namespace demiplane::http {
                     const int lo = hex_val(in[i + 2]);
                     if (hi < 0 || lo < 0)
                         return std::nullopt;
-                    out[n++] = static_cast<char>(hi << 4 | lo);
-                    i += 2;
+                    out[n++]  = static_cast<char>(hi << 4 | lo);
+                    i        += 2;
                 } else {
                     out[n++] = c;
                 }
@@ -49,10 +49,10 @@ namespace demiplane::http {
         return out;
     }
 
-    std::optional<std::string_view> url_decode_arena(const std::string_view in, const bool plus_is_space,
-                                                     std::pmr::polymorphic_allocator<> alloc) {
-        const bool needs_rewrite = in.find('%') != std::string_view::npos
-                                   || (plus_is_space && in.find('+') != std::string_view::npos);
+    std::optional<std::string_view>
+    url_decode_arena(const std::string_view in, const bool plus_is_space, std::pmr::polymorphic_allocator<> alloc) {
+        const bool needs_rewrite =
+            in.find('%') != std::string_view::npos || (plus_is_space && in.find('+') != std::string_view::npos);
         if (!needs_rewrite)
             return in;  // zero-copy
         char* buf    = static_cast<char*>(alloc.allocate_bytes(in.size(), 1));

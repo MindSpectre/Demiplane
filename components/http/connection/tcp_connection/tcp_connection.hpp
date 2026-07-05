@@ -52,11 +52,20 @@ namespace demiplane::http {
             return signal_.slot();
         }
 
-        /// Force-cancel this connection's in-flight I/O (graceful shutdown). The
+        /// Force-cancel this connection (graceful-shutdown deadline). The
         /// ConnectionTracker dispatches this onto the connection's strand (D2),
-        /// so emit() is serialized with the serve coroutine's I/O on that strand.
+        /// so it is serialized with the serve coroutine's I/O on that strand.
+        /// LEVEL-TRIGGERED: emit() alone is edge-triggered (fires only a
+        /// currently-installed slot handler, no latching) and the driver binds
+        /// the slot per-op — an emit landing mid router.dispatch / between ops
+        /// would be silently lost and the connection would outlive the drain.
+        /// Closing the stream fails the current AND every future I/O op
+        /// (operation_aborted / bad_descriptor), so the kill always lands at
+        /// the next I/O boundary. Both calls are no-throw (beast's close() is
+        /// socket.close(ec) + a try/catch'd timer cancel internally).
         void cancel() noexcept {
-            signal_.emit(boost::asio::cancellation_type::terminal);
+            signal_.emit(boost::asio::cancellation_type::terminal);  // aborts a slot-bound parked op now
+            stream_.close();                                         // level-trigger for the unbound windows
         }
 
         [[nodiscard]] boost::asio::ip::address remote_address() const {

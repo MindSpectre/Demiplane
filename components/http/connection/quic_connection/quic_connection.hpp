@@ -12,8 +12,8 @@
 namespace demiplane::http {
 
     /// QUIC connection — SCAFFOLD (spec §6.1). ngtcp2 state lands when h3 is
-    /// implemented. Satisfies Connection (arena + lifecycle) but NOT
-    /// StreamConnection (QUIC is not a single byte stream).
+    /// implemented. Satisfies IsConnection (arena + lifecycle) but NOT
+    /// IsStreamConnection (QUIC is not a single byte stream).
     class QuicConnection : gears::Immutable {
     public:
         explicit QuicConnection(const std::size_t arena_size = 8192)

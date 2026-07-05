@@ -2,15 +2,16 @@
 
 #include <chrono>
 #include <cstdint>
+#include <future>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/use_future.hpp>
@@ -45,6 +46,7 @@ namespace http_it {
         std::optional<demiplane::http::Router> router_;
         std::unique_ptr<demiplane::http::ListenerBase> listener_;
         asio::cancellation_signal stop_signal_;
+        std::future<void> run_future_;  // run()'s completion — acceptor provably closed after get()
         std::thread worker_;
         std::uint16_t port_{0};
         bool shut_down_ = false;
@@ -57,14 +59,15 @@ namespace http_it {
         void start(std::unique_ptr<demiplane::http::ListenerBase> listener) {
             ASSERT_TRUE(registry_.freeze().empty()) << "route conflicts in test setup";
             router_.emplace(registry_);
-            listener_ = std::move(listener);
-            // TODO: assign listener_ only AFTER bind() succeeds; if bind() throws, TearDown's drain fut.get() blocks
-            // forever (no worker running).
-            listener_->bind();
-            port_ = listener_->bound_port();
+            // Bind BEFORE adopting the listener or starting the worker: a bind()
+            // throw leaves listener_ null and worker_ unstarted, so TearDown's
+            // shutdown path no-ops instead of waiting on a drain nobody runs.
+            listener->bind();
+            port_ = listener->bound_port();
             ASSERT_GT(port_, 0);
-            asio::co_spawn(
-                ioc_, listener_->run(*router_), asio::bind_cancellation_slot(stop_signal_.slot(), asio::detached));
+            listener_   = std::move(listener);
+            run_future_ = asio::co_spawn(
+                ioc_, listener_->run(*router_), asio::bind_cancellation_slot(stop_signal_.slot(), asio::use_future));
             worker_ = std::thread{[this] { ioc_.run(); }};
         }
 
@@ -90,10 +93,37 @@ namespace http_it {
                 },
                 asio::use_future);
             fut.get();  // blocks the (non-io) test thread until drain completes (§9.7)
+            // The stop emit only CANCELS the pending accept; acceptor_.close()
+            // runs in run()'s final turn, which is queued BEHIND the drain
+            // future's satisfaction. Await run()'s completion so "no new
+            // connections" is provably true when this returns — otherwise a
+            // fresh connect() races the close and lands in the kernel backlog
+            // (deterministic failure on a single-core machine).
+            if (run_future_.valid()) {
+                try {
+                    run_future_.get();
+                } catch (const std::exception& e) {
+                    ADD_FAILURE() << "listener run() escaped with: " << e.what();
+                }
+            }
         }
 
         void TearDown() override {
             graceful_shutdown();
+            // Unwind barrier: drain only DISPATCHES force-cancels; the cancelled
+            // serve() coroutines unwind in later executor turns. Stopping the
+            // io_context with frames still frozen would leave ~io_context (the
+            // last-destroyed member) to destroy them AFTER listener_/tracker are
+            // gone — Handle::release() on freed memory.
+            if (listener_) {
+                const auto cap = std::chrono::steady_clock::now() + std::chrono::seconds{1};
+                while (listener_->in_flight() > 0 && std::chrono::steady_clock::now() < cap) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds{1});
+                }
+                if (listener_->in_flight() > 0) {
+                    ADD_FAILURE() << "in-flight connections failed to unwind within 1s of drain";
+                }
+            }
             ioc_.stop();
             if (worker_.joinable()) {
                 worker_.join();
@@ -110,7 +140,7 @@ namespace http_it {
         }
 
         ParsedResponse send(bhttp::verb verb,
-                            std::string target,
+                            std::string_view target,
                             std::string body              = {},
                             std::string_view content_type = "text/plain",
                             bool keep_alive               = false) {
@@ -127,6 +157,17 @@ namespace http_it {
             ParsedResponse res;
             bhttp::read(socket_, buffer_, res);
             return res;
+        }
+
+        /// Send a request WITHOUT reading the response — for tests that expect
+        /// the server to kill the connection mid-handler (pair with
+        /// read_after_close()).
+        void write_request(const bhttp::verb verb, const std::string_view target, const bool keep_alive = false) {
+            bhttp::request<bhttp::string_body> req{verb, target, 11};
+            req.set(bhttp::field::host, "127.0.0.1");
+            req.keep_alive(keep_alive);
+            req.prepare_payload();
+            bhttp::write(socket_, req);
         }
 
         /// Attempt to read a response; returns the resulting error_code. After the

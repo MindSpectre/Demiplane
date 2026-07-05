@@ -7,7 +7,7 @@
 
 using namespace demiplane::http;
 
-static_assert(StreamConnection<TcpConnection>);
+static_assert(IsStreamConnection<TcpConnection>);
 
 TEST(TcpConnectionTest, MetadataDefaults) {
     boost::asio::io_context ioc;

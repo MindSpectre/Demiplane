@@ -28,7 +28,7 @@ namespace demiplane::http {
      *
      * register_connection() requires only that the concrete connection type has
      * a `void cancel()` method (TcpConnection/TlsConnection provide it) — cancel
-     * is intentionally not on the Connection concept.
+     * is intentionally not on the IsConnection concept.
      */
     class ConnectionTracker : gears::Immutable {
     public:

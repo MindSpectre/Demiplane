@@ -70,7 +70,7 @@ namespace demiplane::http {
             return ALPNS;
         }
 
-        template <StreamConnection ConnT>
+        template <IsStreamConnection ConnT>
         boost::asio::awaitable<void> serve(ConnT& conn, Router& router);
 
     private:
@@ -88,7 +88,7 @@ namespace demiplane::http {
     };
 
 
-    template <StreamConnection ConnT>
+    template <IsStreamConnection ConnT>
     boost::asio::awaitable<void> Http11Driver::serve(ConnT& conn, Router& router) {
         namespace asio = boost::asio;
         namespace http = boost::beast::http;

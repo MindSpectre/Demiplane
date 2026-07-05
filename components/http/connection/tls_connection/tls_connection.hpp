@@ -21,7 +21,7 @@ namespace demiplane::http {
      * @brief TLS connection: ssl::stream<beast::tcp_stream> + per-connection
      *        arena + cancel signal + the ALPN-negotiated protocol (spec §6.1).
      *
-     * Satisfies StreamConnection — Http11Driver::serve drives it unchanged. The
+     * Satisfies IsStreamConnection — Http11Driver::serve drives it unchanged. The
      * TlsListener (PR 4 Task 10) constructs it on a per-connection strand, calls
      * handshake() (which records the negotiated protocol from ALPN), then
      * dispatches to the driver whose id() matches negotiated_protocol().
@@ -41,7 +41,7 @@ namespace demiplane::http {
 
         /// TLS handshake (server role). Records the ALPN-negotiated protocol.
         /// Returns the handshake error_code (empty on success). NOT in the
-        /// Connection concept — the listener calls it before serve().
+        /// IsConnection concept — the listener calls it before serve().
         boost::asio::awaitable<boost::beast::error_code>
         handshake(std::chrono::milliseconds timeout = std::chrono::seconds{10});
 
@@ -67,8 +67,16 @@ namespace demiplane::http {
             return signal_.slot();
         }
 
+        /// Force-cancel this connection (graceful-shutdown deadline); dispatched
+        /// onto the connection's strand by the ConnectionTracker (D2).
+        /// LEVEL-TRIGGERED like TcpConnection::cancel(): emit() covers a parked
+        /// slot-bound op; closing the lowest layer covers the unbound windows —
+        /// including the ENTIRE TLS handshake, which never binds the conn slot
+        /// (the SSL state machine surfaces the transport close as a clean
+        /// handshake error, the same path beast's handshake timeout uses).
         void cancel() noexcept {
             signal_.emit(boost::asio::cancellation_type::terminal);
+            boost::beast::get_lowest_layer(stream_).close();
         }
 
         [[nodiscard]] boost::asio::ip::address remote_address() const {

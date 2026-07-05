@@ -8,7 +8,7 @@
 
 using namespace demiplane::http;
 
-static_assert(StreamConnection<TlsConnection>);
+static_assert(IsStreamConnection<TlsConnection>);
 
 TEST(TlsConnectionTest, MetadataDefaults) {
     boost::asio::io_context ioc;

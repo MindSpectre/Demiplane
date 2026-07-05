@@ -39,7 +39,7 @@ TEST(HttpDriverConceptTest, AdvertisesIdAndAlpns) {
 
 static_assert(IsHttpDriver<Http2Driver>);
 static_assert(IsHttpDriver<Http3Driver>);
-static_assert(Connection<QuicConnection> && !StreamConnection<QuicConnection>);
+static_assert(IsConnection<QuicConnection> && !IsStreamConnection<QuicConnection>);
 
 TEST(DriverScaffoldsTest, Http2AdvertisesH2) {
     EXPECT_EQ(Http2Driver::id(), Protocol::http2);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <memory>
@@ -17,7 +18,9 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/ssl/context.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/strand.hpp>
+#include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/error.hpp>
 #include <build_ssl_context.hpp>
@@ -39,12 +42,14 @@ namespace demiplane::http {
      * to the driver whose id() matches the negotiated protocol (compile-time
      * tuple walk — spike S2). Server-preference order = template arg order.
      *
-     * LIFETIME CONTRACT: drain_until(...) before destroying the listener (the
-     * spawned coroutines hold a tracker Handle into this listener + serve via
-     * `this`). Arena size is fixed at the 8 KB default in v1 (PR 6 wires
-     * request_arena_size).
-     * // TODO(PR5): drain_until dispatches force-cancels but does not await their unwind; "safe to destroy after drain"
-     * holds only on a single-threaded executor in v1. See ConnectionTracker::drain_until.
+     * LIFETIME CONTRACT: drain_until(...) AND then wait for in_flight() == 0
+     * before destroying the listener (the spawned coroutines hold a tracker
+     * Handle into this listener + serve via `this`). Arena size is fixed at the
+     * 8 KB default in v1 (PR 6 wires request_arena_size).
+     * // TODO(PR5) WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
+     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The integration
+     * fixture bridges this by polling in_flight() == 0 after drain; the PR5 Server must do the same or await
+     * a completion signal fired by the last Handle::release(). See ConnectionTracker::drain_until.
      */
     template <IsHttpDriver... Drivers>
     class TlsListener final : public ListenerBase {
@@ -79,7 +84,15 @@ namespace demiplane::http {
 
         boost::asio::awaitable<void> run(Router& router) override {
             namespace asio = boost::asio;
-            for (;;) {
+            // Cancellation as STATE, not exceptions — see TcpListener::run for the
+            // full rationale (incl. the TODO(PR5) WARN about the multi-worker
+            // edge-lost emit window between the state check and accept install).
+            co_await asio::this_coro::throw_if_cancelled(false);
+            const auto cancel_state = co_await asio::this_coro::cancellation_state;
+            std::optional<asio::steady_timer> backoff;  // error path only — lazy
+            unsigned consecutive_errors = 0;
+
+            while (cancel_state.cancelled() == asio::cancellation_type::none) {
                 auto strand = asio::make_strand(exec_);
                 boost::beast::error_code ec;
                 asio::ip::tcp::socket sock =
@@ -87,11 +100,24 @@ namespace demiplane::http {
                 if (ec == asio::error::operation_aborted) {
                     break;
                 }
-                if (ec) {
+                if (ec == asio::error::bad_descriptor || ec == asio::error::operation_not_supported ||
+                    ec == asio::error::invalid_argument) {
+                    break;  // acceptor unusable — retrying can only repeat the error
+                }
+                if (ec) {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
+                    if (++consecutive_errors > 2) {
+                        if (!backoff) {
+                            backoff.emplace(exec_);
+                        }
+                        backoff->expires_after(backoff_delay(consecutive_errors));
+                        boost::beast::error_code tec;
+                        co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));
+                    }
                     continue;
                 }
-                auto conn   = std::make_shared<TlsConnection>(std::move(sock), *ctx_);
-                auto handle = tracker_.register_connection(conn, strand);
+                consecutive_errors = 0;
+                auto conn          = std::make_shared<TlsConnection>(std::move(sock), *ctx_);
+                auto handle        = tracker_.register_connection(conn, strand);
                 asio::co_spawn(
                     strand,
                     [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
@@ -99,15 +125,18 @@ namespace demiplane::http {
                             co_await conn->async_close();
                             co_return;
                         }
+                        // No matching driver: reachable when the client sent NO
+                        // ALPN extension (the select callback never runs → http1
+                        // fallback) and no h1 driver is in the tuple → close.
                         if (const bool handled = co_await try_serve<0>(*conn, router, conn->negotiated_protocol());
-                            !handled) {  // unreachable after a successful ALPN
+                            !handled) {
                             co_await conn->async_close();
                         }
                     },
                     asio::detached);
             }
-            // Refuse new connections during shutdown (spec §14.2; spike S4) — see
-            // TcpListener::run for the rationale.
+            // Reached on EVERY exit path — refuse new connections during shutdown
+            // (spec §14.2; spike S4); see TcpListener::run for the rationale.
             boost::beast::error_code ignore;
             std::ignore = acceptor_.close(ignore);
             co_return;
@@ -115,6 +144,10 @@ namespace demiplane::http {
 
         boost::asio::awaitable<void> drain_until(const std::chrono::steady_clock::time_point deadline) override {
             co_await tracker_.drain_until(exec_, deadline);
+        }
+
+        [[nodiscard]] std::size_t in_flight() const noexcept override {
+            return tracker_.in_flight();
         }
 
         [[nodiscard]] std::string bind_address() const override {
@@ -125,6 +158,13 @@ namespace demiplane::http {
         }
 
     private:
+        // TODO: move to chrono
+        //  1ms, 2ms, 4ms, ... capped at 1024ms — same policy as TcpListener.
+        [[nodiscard]] static std::chrono::milliseconds backoff_delay(const unsigned consecutive_errors) noexcept {
+            const unsigned shift = std::min(consecutive_errors - 3u, 10u);
+            return std::chrono::milliseconds{1u << shift};
+        }
+
         // Concatenate every driver's ALPN ids into the wire format (len-prefixed).
         static std::string build_alpn_wire() {
             std::string wire;

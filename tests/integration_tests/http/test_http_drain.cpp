@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -24,7 +25,13 @@ namespace {
         void configure_routes() override {
             Get("/hello", &DrainController::hello);
             Get("/slow", &DrainController::slow);
+            Get("/very-slow", &DrainController::very_slow);
         }
+
+        // Entry latch: lets a test deterministically wait until a request is
+        // INSIDE router.dispatch (the window where the conn's cancel slot has no
+        // installed handler) before it triggers the drain deadline.
+        std::atomic<bool> very_slow_entered{false};
 
     private:
         AsyncResponse hello(RequestContext ctx) {
@@ -37,12 +44,23 @@ namespace {
             co_await t.async_wait(boost::asio::use_awaitable);
             co_return ctx.ok("slow done");
         }
+        AsyncResponse very_slow(RequestContext ctx) {
+            very_slow_entered.store(true, std::memory_order_release);
+            auto ex = co_await boost::asio::this_coro::executor;
+            boost::asio::steady_timer t{ex};
+            t.expires_after(400ms);
+            co_await t.async_wait(boost::asio::use_awaitable);
+            co_return ctx.ok("slow done");
+        }
     };
 
     class HttpDrainTest : public http_it::HttpIntegrationFixture {
     protected:
+        std::shared_ptr<DrainController> controller_;
+
         void SetUp() override {
-            add_controller(std::make_shared<DrainController>());
+            controller_ = std::make_shared<DrainController>();
+            add_controller(controller_);
             start(make_tcp_listener());
         }
     };
@@ -81,6 +99,31 @@ TEST_F(HttpDrainTest, IdleKeepAliveConnectionForceCancelledAtDeadline) {
 
     const auto ec = client.read_after_close();
     EXPECT_TRUE(ec) << "server should have closed the idle connection on force-cancel";
+}
+
+// A connection whose handler is RUNNING at the drain deadline (not parked in
+// slot-bound driver I/O) must still be force-cancelled. Edge- vs level-trigger
+// regression test: cancellation_signal::emit alone is LOST in this window (the
+// driver binds the conn slot per-op; router.dispatch is unbound), so cancel()
+// must also close the socket — the kill then lands at the handler's next I/O.
+TEST_F(HttpDrainTest, BusyHandlerConnectionKilledAtDrainDeadline) {
+    http_it::TcpClient client{port_};
+    client.write_request(bhttp::verb::get, "/very-slow");
+
+    // Deterministically reach the un-slot-bound dispatch window (a blind sleep
+    // could fire the drain while the request is still parked in read_header,
+    // where the plain emit works and the test would vacuously pass).
+    const auto entry_cap = std::chrono::steady_clock::now() + 2s;
+    while (!controller_->very_slow_entered.load(std::memory_order_acquire) &&
+           std::chrono::steady_clock::now() < entry_cap) {
+        std::this_thread::sleep_for(1ms);
+    }
+    ASSERT_TRUE(controller_->very_slow_entered.load()) << "request never reached the handler";
+
+    graceful_shutdown(100ms);  // deadline fires with ~300ms of handler still to run
+
+    const auto ec = client.read_after_close();
+    EXPECT_TRUE(ec) << "busy connection must be killed at the drain deadline, got a full response instead";
 }
 
 // After shutdown the accept loop has been cancelled AND the acceptor closed, so a

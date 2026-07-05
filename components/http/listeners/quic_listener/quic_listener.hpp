@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <demiplane/scroll>
 #include <string>
@@ -33,9 +34,9 @@ namespace demiplane::http {
             boost::asio::any_io_executor exec, std::string host, std::uint16_t port, TlsConfig tls, Driver driver)
             : host_{std::move(host)},
               port_{port} {
-            static_cast<void>(exec);
-            static_cast<void>(tls);
-            static_cast<void>(driver);
+            gears::unused_value(std::move(exec));
+            gears::unused_value(std::move(tls));
+            gears::unused_value(std::move(driver));
         }
 
         void bind() override {
@@ -49,6 +50,10 @@ namespace demiplane::http {
 
         boost::asio::awaitable<void> drain_until(std::chrono::steady_clock::time_point /*deadline*/) override {
             co_return;
+        }
+
+        [[nodiscard]] std::size_t in_flight() const noexcept override {
+            return 0;  // scaffold: QUIC connections are not tracked (D6)
         }
 
         [[nodiscard]] std::string bind_address() const override {

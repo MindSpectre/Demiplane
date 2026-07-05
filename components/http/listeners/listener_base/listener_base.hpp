@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -38,6 +39,12 @@ namespace demiplane::http {
         /// Wait for in-flight connections to finish, force-cancelling whatever
         /// remains at `deadline`. Delegates to the listener's ConnectionTracker.
         virtual boost::asio::awaitable<void> drain_until(std::chrono::steady_clock::time_point deadline) = 0;
+
+        /// Tracked in-flight connections (serve() coroutines whose tracker Handle
+        /// is still alive). Teardown barrier: after drain_until, wait for this to
+        /// reach 0 before stopping the executor or destroying the listener —
+        /// drain only dispatches force-cancels; the unwinds land in later turns.
+        [[nodiscard]] virtual std::size_t in_flight() const noexcept = 0;
 
         [[nodiscard]] virtual std::string bind_address() const = 0;
         [[nodiscard]] virtual std::uint16_t bound_port() const = 0;  // for tests on :0

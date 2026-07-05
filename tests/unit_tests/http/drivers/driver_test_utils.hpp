@@ -19,7 +19,7 @@
 
 namespace http_driver_test {
 
-    /// StreamConnection over an in-memory beast::test::stream — no kernel
+    /// IsStreamConnection over an in-memory beast::test::stream — no kernel
     /// sockets. expires_after is a no-op (test::stream has no timer; timeout
     /// BEHAVIOR is a later PR).
     class TestConnection {
@@ -66,7 +66,7 @@ namespace http_driver_test {
         boost::asio::cancellation_signal signal_;
     };
 
-    static_assert(demiplane::http::StreamConnection<TestConnection>);
+    static_assert(demiplane::http::IsStreamConnection<TestConnection>);
 
     using ParsedResponse = boost::beast::http::response<boost::beast::http::string_body>;
 

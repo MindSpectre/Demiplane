@@ -20,7 +20,7 @@ namespace demiplane::http {
      * type is chosen at compile time — no dynamic_cast, no per-byte vcall.
      */
     template <typename T>
-    concept Connection = requires(T& t, std::chrono::milliseconds ms) {
+    concept IsConnection = requires(T& t, std::chrono::milliseconds ms) {
         { t.arena_alloc() } -> std::same_as<std::pmr::polymorphic_allocator<>>;
         { t.reset_request_arena() } -> std::same_as<void>;
         { t.expires_after(ms) } -> std::same_as<void>;
@@ -31,10 +31,10 @@ namespace demiplane::http {
         { t.is_secure() } -> std::same_as<bool>;
     };
 
-    /// A Connection that exposes a Beast-compatible byte stream. Http11Driver
+    /// An IsConnection that also exposes a Beast-compatible byte stream. Http11Driver
     /// requires this (it drives async_read/async_write on stream()).
     template <typename T>
-    concept StreamConnection = Connection<T> && requires(T& t) {
+    concept IsStreamConnection = IsConnection<T> && requires(T& t) {
         typename T::stream_type;
         { t.stream() } -> std::same_as<typename T::stream_type&>;
     };

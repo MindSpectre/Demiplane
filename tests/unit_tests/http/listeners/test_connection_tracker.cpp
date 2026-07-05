@@ -15,7 +15,7 @@ using namespace std::chrono_literals;
 
 namespace {
     // Minimal connection model: owns a strand + a cancel flag. cancel() is what
-    // ConnectionTracker requires structurally (D2) — not part of the Connection
+    // ConnectionTracker requires structurally (D2) — not part of the IsConnection
     // concept.
     struct FakeConn {
         boost::asio::strand<boost::asio::io_context::executor_type> strand;
@@ -46,10 +46,11 @@ TEST(ConnectionTrackerTest, DrainReturnsImmediatelyWhenEmpty) {
         ioc,
         tracker.drain_until(ioc.get_executor(), std::chrono::steady_clock::now() + 10s),
         boost::asio::use_future);
+    const auto t0 = std::chrono::steady_clock::now();
     ioc.run();
-    fut.get();  // does not block for 10s; rethrows on error
-    // TODO: assert immediacy — wrap ioc.run() with EXPECT_LT(elapsed, 1s); SUCCEED() alone passes even if drain slept the full deadline.
-    SUCCEED();
+    fut.get();  // rethrows on error
+    // Immediacy: an empty tracker must not sleep toward the 10s deadline.
+    EXPECT_LT(std::chrono::steady_clock::now() - t0, 1s);
 }
 
 TEST(ConnectionTrackerTest, ForceCancelsSurvivorsAtDeadline) {
@@ -86,7 +87,8 @@ TEST(ConnectionTrackerTest, DeadConnectionIsSkippedNotUseAfterFree) {
         tracker.register_connection(c1, c1->strand));
     c1.reset();
 
-    // TODO: add EXPECT_EQ(tracker.in_flight(), 1u) to document the invariant (the skip is currently proven only by ASan).
+    // The entry stays counted while its Handle lives — only the weak_ptr expired.
+    EXPECT_EQ(tracker.in_flight(), 1u);
     auto fut = boost::asio::co_spawn(
         ioc,
         tracker.drain_until(ioc.get_executor(), std::chrono::steady_clock::now() + 50ms),

@@ -5,6 +5,7 @@
 #include <demiplane/gears>
 #include <functional>
 #include <memory_resource>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -33,6 +34,26 @@ namespace demiplane::http {
         HttpMethod method;
         std::string path;
         std::string detail;
+    };
+
+    /// Thrown by Server::setup() when freeze() reports conflicts: every
+    /// duplicate (method, path) registration in ONE exception, so
+    /// misconfigurations surface all at once, not piecemeal (spec §8.7).
+    class RouteConflictAggregateError final : public std::runtime_error {
+    public:
+        explicit RouteConflictAggregateError(std::vector<RouteConflictError> conflicts)
+            : std::runtime_error{format_message(conflicts)},
+              conflicts_{std::move(conflicts)} {
+        }
+
+        [[nodiscard]] const std::vector<RouteConflictError>& conflicts() const noexcept {
+            return conflicts_;
+        }
+
+    private:
+        [[nodiscard]] static std::string format_message(const std::vector<RouteConflictError>& conflicts);
+
+        std::vector<RouteConflictError> conflicts_;
     };
 
     /// One matched route: a pointer to the frozen registry's stored handler —

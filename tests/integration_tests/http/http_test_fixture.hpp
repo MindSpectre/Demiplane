@@ -170,6 +170,15 @@ namespace http_it {
             bhttp::write(socket_, req);
         }
 
+        /// Read one response for a previously write_request()-ed request —
+        /// lets a test trigger server-side events (e.g. graceful shutdown)
+        /// BETWEEN sending and receiving.
+        ParsedResponse read_response() {
+            ParsedResponse res;
+            bhttp::read(socket_, buffer_, res);
+            return res;
+        }
+
         /// Attempt to read a response; returns the resulting error_code. After the
         /// server force-cancels + half-closes, this returns a non-empty ec
         /// (end_of_stream / connection_reset).
@@ -178,6 +187,19 @@ namespace http_it {
             beast::error_code ec;
             bhttp::read(socket_, buffer_, res, ec);
             return ec;
+        }
+
+        /// HEAD request. The response has no body regardless of
+        /// Content-Length, so the parser must be told to skip it.
+        ParsedResponse send_head(const std::string_view target) {
+            bhttp::request<bhttp::empty_body> req{bhttp::verb::head, target, 11};
+            req.set(bhttp::field::host, "127.0.0.1");
+            bhttp::write(socket_, req);
+
+            bhttp::response_parser<bhttp::string_body> parser;
+            parser.skip(true);
+            bhttp::read(socket_, buffer_, parser);
+            return parser.release();
         }
 
     private:

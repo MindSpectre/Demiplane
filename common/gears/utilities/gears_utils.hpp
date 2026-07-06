@@ -11,14 +11,14 @@
 
 namespace demiplane::gears {
     template <typename V>
-    constexpr void unused_value(const V& value) {
-        static_cast<void>(value);
+    constexpr void unused_value(V&& value) {
+        static_cast<void>(std::forward<V>(value));
     }
 
     template <typename V, typename... Rest>
-    consteval void unused_value(const V& value, const Rest&... rest) {
-        static_cast<void>(value);
-        unused_value(rest...);  // Recursively process remaining arguments
+    consteval void unused_value(V&& value, Rest&&... rest) {
+        static_cast<void>(std::forward<V>(value));
+        unused_value(std::forward<Rest>(rest)...);  // Recursively process remaining arguments
     }
 
     /// Compile-time error sink for `if constexpr` chains — fires only when the

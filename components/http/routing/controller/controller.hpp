@@ -108,13 +108,11 @@ namespace demiplane::http {
 
         /// Populate the local route table via the verb DSL. Called exactly
         /// once by the bake step — do not call it yourself.
+        /// Controllers manage their resources via RAII (ctor acquires, dtor
+        /// releases) — there are no framework lifecycle hooks. For async
+        /// cleanup that must run while the executor is still driven, use a
+        /// ServerObserver's on_shutdown_started().
         virtual void configure_routes() = 0;
-
-        /// Lifecycle hooks; the Server wires them in PR 5.
-        virtual void initialize() {
-        }
-        virtual void shutdown() {
-        }
 
         /// Middlewares run in ADDITION ORDER (first added = outermost).
         template <typename Mw>

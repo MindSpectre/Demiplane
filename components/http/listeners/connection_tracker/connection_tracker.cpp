@@ -43,11 +43,11 @@ namespace demiplane::http {
                 e.cancel(conn);               // `conn` kept alive across the dispatch by capture
             }
         }
-        // TODO(PR5) WARN: this only DISPATCHES force-cancels; it does not wait for the cancelled serve() coroutines
+        // WARN: this only DISPATCHES force-cancels; it does not wait for the cancelled serve() coroutines
         // to unwind (in_flight_ -> 0) — on ANY executor: the cancels and the unwinds run in later executor turns, so
         // drain returning never implies the frames are gone. Callers must wait for in_flight() == 0 before destroying
-        // the owning listener (the integration fixture polls it in TearDown; the PR5 Server must poll or await a
-        // completion signal fired by the last Handle::release()).
+        // the owning listener (Server::graceful_shutdown phase 2.5 polls it; the integration fixture polls in
+        // TearDown).
         co_return;
     }
 

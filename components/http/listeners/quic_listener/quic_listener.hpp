@@ -31,24 +31,25 @@ namespace demiplane::http {
 
     public:
         QuicListener(
-            boost::asio::any_io_executor exec, std::string host, std::uint16_t port, TlsConfig tls, Driver driver)
-            : host_{std::move(host)},
-              port_{port} {
-            gears::unused_value(std::move(exec));
-            gears::unused_value(std::move(tls));
-            gears::unused_value(std::move(driver));
+            boost::asio::any_io_executor exec, std::string host, const std::uint16_t port, TlsConfig tls, Driver driver)
+            : exec_{std::move(exec)},
+              host_{std::move(host)},
+              port_{port},
+              tls_{std::move(tls)},
+              driver_{std::move(driver)} {
         }
 
         void bind() override {
             // Scaffold: no socket yet. The h3 PR opens the UDP socket here.
         }
 
-        boost::asio::awaitable<void> run(Router& /*router*/) override {
+        boost::asio::awaitable<void> run([[maybe_unused]] Router& router) override {
             COMPONENT_LOG_WRN() << "QuicListener::run() not implemented (scaffold)";
             co_return;
         }
 
-        boost::asio::awaitable<void> drain_until(std::chrono::steady_clock::time_point /*deadline*/) override {
+        boost::asio::awaitable<void>
+        drain_until([[maybe_unused]] std::chrono::steady_clock::time_point deadline) override {
             co_return;
         }
 
@@ -64,8 +65,11 @@ namespace demiplane::http {
         }
 
     private:
+        boost::asio::any_io_executor exec_;
         std::string host_;
         std::uint16_t port_;
+        TlsConfig tls_;
+        Driver driver_;
         SCROLL_COMPONENT_PREFIX("QuicListener");
     };
 

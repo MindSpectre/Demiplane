@@ -1,8 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <demiplane/chrono>
 #include <memory>
 #include <optional>
 #include <string>
@@ -46,10 +46,10 @@ namespace demiplane::http {
      * before destroying the listener (the spawned coroutines hold a tracker
      * Handle into this listener + serve via `this`). Arena size is fixed at the
      * 8 KB default in v1 (PR 6 wires request_arena_size).
-     * // TODO(PR5) WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
-     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The integration
-     * fixture bridges this by polling in_flight() == 0 after drain; the PR5 Server must do the same or await
-     * a completion signal fired by the last Handle::release(). See ConnectionTracker::drain_until.
+     * WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
+     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The Server
+     * honors this in graceful_shutdown() phase 2.5 by polling in_flight() == 0 after the drain; direct
+     * users (the integration fixture) must do the same. See ConnectionTracker::drain_until.
      */
     template <IsHttpDriver... Drivers>
     class TlsListener final : public ListenerBase {
@@ -85,8 +85,8 @@ namespace demiplane::http {
         boost::asio::awaitable<void> run(Router& router) override {
             namespace asio = boost::asio;
             // Cancellation as STATE, not exceptions — see TcpListener::run for the
-            // full rationale (incl. the TODO(PR5) WARN about the multi-worker
-            // edge-lost emit window between the state check and accept install).
+            // full rationale (incl. the multi-worker WARN: stop emits must be
+            // dispatched onto this run()'s strand, as the Server does — PR 5, D5).
             co_await asio::this_coro::throw_if_cancelled(false);
             const auto cancel_state = co_await asio::this_coro::cancellation_state;
             std::optional<asio::steady_timer> backoff;  // error path only — lazy
@@ -109,7 +109,11 @@ namespace demiplane::http {
                         if (!backoff) {
                             backoff.emplace(exec_);
                         }
-                        backoff->expires_after(backoff_delay(consecutive_errors));
+                        // 1ms, 2ms, 4ms, ... capped at 1024ms — same policy as
+                        // TcpListener. attempt is 0-based; consecutive_errors is >2
+                        // here, so consecutive_errors - 3 never underflows.
+                        backoff->expires_after(chrono::exponential_backoff(
+                            consecutive_errors - 3, std::chrono::milliseconds{1}, std::chrono::milliseconds{1024}));
                         boost::beast::error_code tec;
                         co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));
                     }
@@ -158,13 +162,6 @@ namespace demiplane::http {
         }
 
     private:
-        // TODO: move to chrono
-        //  1ms, 2ms, 4ms, ... capped at 1024ms — same policy as TcpListener.
-        [[nodiscard]] static std::chrono::milliseconds backoff_delay(const unsigned consecutive_errors) noexcept {
-            const unsigned shift = std::min(consecutive_errors - 3u, 10u);
-            return std::chrono::milliseconds{1u << shift};
-        }
-
         // Concatenate every driver's ALPN ids into the wire format (len-prefixed).
         static std::string build_alpn_wire() {
             std::string wire;

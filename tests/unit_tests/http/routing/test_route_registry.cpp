@@ -306,3 +306,18 @@ TEST_F(RouteRegistryLookupTest, SegmentCountMustMatch) {
     EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users", alloc_).is_error());
     EXPECT_TRUE(reg.find_route(HttpMethod::get, "/users/1/extra", alloc_).is_error());
 }
+
+TEST(RouteConflictAggregateErrorTest, AggregatesEveryConflictInWhat) {
+    std::vector<RouteConflictError> conflicts{
+        {HttpMethod::get,  "/users",  "duplicate registration"},
+        {HttpMethod::post, "/orders", "duplicate registration"},
+    };
+    const RouteConflictAggregateError err{std::move(conflicts)};
+
+    ASSERT_EQ(err.conflicts().size(), 2u);
+    const std::string what = err.what();
+    EXPECT_NE(what.find("2 route conflict(s)"), std::string::npos);
+    EXPECT_NE(what.find("GET /users"), std::string::npos);
+    EXPECT_NE(what.find("POST /orders"), std::string::npos);
+    EXPECT_NE(what.find("duplicate registration"), std::string::npos);
+}

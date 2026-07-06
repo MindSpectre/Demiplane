@@ -5,6 +5,7 @@
 # Timeouts/load_server_config and rewrites tls_config into a ConfigInterface.
 ##############################################################################
 add_subdirectory(tls_config)
+add_subdirectory(server_config)
 
 ##############################################################################
 # Unified interface aggregate
@@ -13,5 +14,6 @@ add_library(${DMP_HTTP}.Config INTERFACE)
 
 target_link_libraries(${DMP_HTTP}.Config INTERFACE
         ${DMP_HTTP}.Config.TlsConfig
+        ${DMP_HTTP}.Config.ServerConfig
 )
 ##############################################################################

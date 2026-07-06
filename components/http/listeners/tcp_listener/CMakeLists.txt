@@ -13,6 +13,7 @@ target_link_libraries(${DMP_HTTP}.Listeners.Tcp INTERFACE
         ${DMP_HTTP}.Connection.Tcp
         ${DMP_HTTP}.Drivers.Concept
         ${DMP_HTTP}.Routing.Router
+        Demiplane::Common::Chrono
         Boost::beast
         Boost::asio
 )

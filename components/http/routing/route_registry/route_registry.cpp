@@ -244,4 +244,19 @@ namespace demiplane::http {
         return gears::err(NotFoundError{"route", std::string{normalized}});
     }
 
+    std::string RouteConflictAggregateError::format_message(const std::vector<RouteConflictError>& conflicts) {
+        std::string msg = std::to_string(conflicts.size()) + " route conflict(s):";
+        for (const auto& [method, path, detail] : conflicts) {
+            msg += "\n  ";
+            msg += to_string(method);
+            msg += ' ';
+            msg += path;
+            if (!detail.empty()) {
+                msg += " — ";
+                msg += detail;
+            }
+        }
+        return msg;
+    }
+
 }  // namespace demiplane::http

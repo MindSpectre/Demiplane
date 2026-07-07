@@ -19,7 +19,7 @@ namespace demiplane::http {
      * directly. add_controller() runs the bake step: configure_routes() once,
      * prefix concat, middleware composition, Outcome→Response wiring, conflict
      * recording — and records the controller in the caller-owned sink (the
-     * Server keeps them alive and drives initialize()/shutdown() in PR 5).
+     * Server keeps them alive for the routes' lifetime; controllers are RAII).
      */
     class GroupBinding {
     public:

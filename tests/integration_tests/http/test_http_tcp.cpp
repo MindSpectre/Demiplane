@@ -14,8 +14,6 @@ namespace bhttp = boost::beast::http;
 
 namespace {
 
-    // TODO(PR5): broaden §14.2 coverage — PUT/PATCH/HEAD/OPTIONS verbs, multiple path params, and URL-decoded path/query *values*.
-
     class EchoController final : public HttpController {
     public:
         void configure_routes() override {
@@ -23,6 +21,13 @@ namespace {
             Get("/users/{id}", &EchoController::user);
             Post("/echo", &EchoController::echo);
             Get("/boom", &EchoController::boom);
+            Put("/items/{id}", &EchoController::put_item);
+            Patch("/items/{id}", &EchoController::patch_item);
+            Head("/hello", &EchoController::hello_head);
+            Options("/hello", &EchoController::hello_options);
+            Get("/users/{id}/posts/{post_id}", &EchoController::user_post);
+            Get("/files/{name}", &EchoController::file_name);
+            Get("/search", &EchoController::search);
         }
 
     private:
@@ -42,6 +47,32 @@ namespace {
         }
         AsyncResponse boom(RequestContext) {
             throw std::runtime_error{"handler exploded"};
+        }
+        AsyncResponse put_item(RequestContext ctx) {
+            auto body = co_await ctx.body().read_to_string(1 << 20);
+            co_return ctx.ok("put:" + ctx.path_param<std::string>("id").value_or("?") + ":" + std::move(body).value());
+        }
+        AsyncResponse patch_item(RequestContext ctx) {
+            auto body = co_await ctx.body().read_to_string(1 << 20);
+            co_return ctx.ok("patch:" + ctx.path_param<std::string>("id").value_or("?") + ":" +
+                             std::move(body).value());
+        }
+        AsyncResponse hello_head(RequestContext ctx) {
+            // Empty body — a HEAD response must not carry a payload.
+            co_return ctx.status(HttpStatus::ok).set_header("X-Head-Route", "yes");
+        }
+        AsyncResponse hello_options(RequestContext ctx) {
+            co_return ctx.status(HttpStatus::no_content).set_header("Allow", "GET, HEAD, OPTIONS");
+        }
+        AsyncResponse user_post(RequestContext ctx) {
+            co_return ctx.ok(ctx.path_param<std::string>("id").value_or("?") + "|" +
+                             ctx.path_param<std::string>("post_id").value_or("?"));
+        }
+        AsyncResponse file_name(RequestContext ctx) {
+            co_return ctx.ok("file:" + ctx.path_param<std::string>("name").value_or("?"));
+        }
+        AsyncResponse search(RequestContext ctx) {
+            co_return ctx.ok("q=" + ctx.query_or<std::string>("q", "none"));
         }
     };
 
@@ -104,4 +135,57 @@ TEST_F(HttpTcpTest, KeepAliveServesTwoRequestsOnOneSocket) {
     EXPECT_TRUE(first.keep_alive());
     auto second = client.send(bhttp::verb::get, "/users/7?v=q", {}, "text/plain", /*keep_alive=*/false);
     EXPECT_EQ(second.body(), "user:7 v=q");
+}
+
+TEST_F(HttpTcpTest, PutRoundTripsBodyAndParam) {
+    http_it::TcpClient client{port_};
+    const auto res = client.send(bhttp::verb::put, "/items/7", "new-name");
+    EXPECT_EQ(res.result_int(), 200u);
+    EXPECT_EQ(res.body(), "put:7:new-name");
+}
+
+TEST_F(HttpTcpTest, PatchRoundTripsBodyAndParam) {
+    http_it::TcpClient client{port_};
+    const auto res = client.send(bhttp::verb::patch, "/items/9", "delta");
+    EXPECT_EQ(res.result_int(), 200u);
+    EXPECT_EQ(res.body(), "patch:9:delta");
+}
+
+TEST_F(HttpTcpTest, HeadDispatchesHeadersWithoutBody) {
+    http_it::TcpClient client{port_};
+    const auto res = client.send_head("/hello");
+    EXPECT_EQ(res.result_int(), 200u);
+    EXPECT_EQ(std::string(res["X-Head-Route"]), "yes");
+    EXPECT_TRUE(res.body().empty());
+}
+
+TEST_F(HttpTcpTest, OptionsReturnsAllow) {
+    http_it::TcpClient client{port_};
+    const auto res = client.send(bhttp::verb::options, "/hello");
+    EXPECT_EQ(res.result_int(), 204u);
+    EXPECT_NE(std::string(res["Allow"]).find("GET"), std::string::npos);
+}
+
+TEST_F(HttpTcpTest, MultiplePathParamsCapture) {
+    http_it::TcpClient client{port_};
+    const auto res = client.send(bhttp::verb::get, "/users/42/posts/777");
+    EXPECT_EQ(res.result_int(), 200u);
+    EXPECT_EQ(res.body(), "42|777");
+}
+
+TEST_F(HttpTcpTest, PathParamValuesUrlDecode) {
+    // %20 decodes to space; a raw '+' in a PATH stays literal
+    // (plus_is_space=false — spec §8.6).
+    http_it::TcpClient client{port_};
+    const auto res = client.send(bhttp::verb::get, "/files/a%20b+c");
+    EXPECT_EQ(res.result_int(), 200u);
+    EXPECT_EQ(res.body(), "file:a b+c");
+}
+
+TEST_F(HttpTcpTest, QueryParamValuesUrlDecodePlusAsSpace) {
+    // In a QUERY both %20 and '+' decode to space (plus_is_space=true).
+    http_it::TcpClient client{port_};
+    const auto res = client.send(bhttp::verb::get, "/search?q=a%20b+c");
+    EXPECT_EQ(res.result_int(), 200u);
+    EXPECT_EQ(res.body(), "q=a b c");
 }

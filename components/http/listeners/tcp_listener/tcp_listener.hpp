@@ -1,9 +1,9 @@
 #pragma once
 
-#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <demiplane/chrono>
 #include <memory>
 #include <optional>
 #include <string>
@@ -40,10 +40,10 @@ namespace demiplane::http {
      * for in_flight() == 0 before destroying the listener — spawned serve
      * coroutines hold a tracker Handle that references this listener's tracker,
      * and call driver.serve() through `this`.
-     * // TODO(PR5) WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
-     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The integration
-     * fixture bridges this by polling in_flight() == 0 after drain; the PR5 Server must do the same or await
-     * a completion signal fired by the last Handle::release(). See ConnectionTracker::drain_until.
+     * WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
+     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The Server
+     * honors this in graceful_shutdown() phase 2.5 by polling in_flight() == 0 after the drain; direct
+     * users (the integration fixture) must do the same. See ConnectionTracker::drain_until.
      */
     template <IsHttpDriver Driver>
     class TcpListener final : public ListenerBase {
@@ -80,11 +80,13 @@ namespace demiplane::http {
             std::optional<asio::steady_timer> backoff;  // error path only — lazy
             unsigned consecutive_errors = 0;
 
-            // TODO(PR5) WARN: multi-worker residual — an emit landing between the
-            // loop-top state check and async_accept installing its cancel handler
-            // is edge-lost; that accept then parks until the next inbound SYN
-            // (self-heals on any connection attempt; the post-loop close still
-            // runs). Unreachable on the single-threaded v1 executor.
+            // WARN: multi-worker — an emit landing between the loop-top state
+            // check and async_accept installing its cancel handler would be
+            // edge-lost. The check→install section runs in ONE executor turn,
+            // so the window is closed whenever the emit is serialized with
+            // this coroutine's turns: the Server spawns run() on a dedicated
+            // strand and DISPATCHES the stop emit onto it (PR 5, D5). Direct
+            // users on a multi-threaded executor must do the same.
             while (cancel_state.cancelled() == asio::cancellation_type::none) {
                 auto strand = asio::make_strand(exec_);
                 boost::beast::error_code ec;
@@ -106,7 +108,12 @@ namespace demiplane::http {
                         if (!backoff) {
                             backoff.emplace(exec_);
                         }
-                        backoff->expires_after(backoff_delay(consecutive_errors));
+                        // 1ms, 2ms, 4ms, ... capped at 1024ms: resource-exhaustion
+                        // errors (EMFILE) resolve on operator timescales, not
+                        // microseconds. attempt is 0-based; consecutive_errors is >2
+                        // here, so consecutive_errors - 3 never underflows.
+                        backoff->expires_after(demiplane::chrono::exponential_backoff(
+                            consecutive_errors - 3, std::chrono::milliseconds{1}, std::chrono::milliseconds{1024}));
                         boost::beast::error_code tec;
                         co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));
                         // tec == operation_aborted ⇒ cancelled mid-sleep ⇒ the
@@ -148,14 +155,6 @@ namespace demiplane::http {
         }
 
     private:
-        // TODO: possibly move to the Demiplane::Chrono
-        //  1ms, 2ms, 4ms, ... capped at 1024ms: resource-exhaustion errors
-        //  (EMFILE) resolve on operator timescales, not microseconds.
-        [[nodiscard]] static std::chrono::milliseconds backoff_delay(const unsigned consecutive_errors) noexcept {
-            const unsigned shift = std::min(consecutive_errors - 3u, 10u);
-            return std::chrono::milliseconds{1u << shift};
-        }
-
         boost::asio::any_io_executor exec_;
         std::string host_;
         std::uint16_t port_;

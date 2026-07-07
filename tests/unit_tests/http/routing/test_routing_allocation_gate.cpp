@@ -8,7 +8,10 @@
 
 #include <gtest/gtest.h>
 
+#include <request_context.hpp>
+#include <response.hpp>
 #include <route_registry.hpp>
+#include <router.hpp>
 
 using namespace demiplane::http;
 
@@ -124,4 +127,32 @@ TEST(RoutingAllocationGateTest, PercentDecodedCaptureStaysInTheArena) {
     EXPECT_EQ(allocs, 0u) << "capture decode escaped the arena";
     ASSERT_TRUE(resolved.is_success());
     EXPECT_EQ(resolved.value().path_params[0].second, "report 2026");
+}
+
+TEST(RoutingAllocationGateTest, ObserverHookInvocationIsAllocationFree) {
+    // The Server-wired fan-out lambdas capture one pointer (fits std::function
+    // SBO); INVOKING them per request must never touch the global heap.
+    // set_hooks itself runs once at setup() — build phase, heap is fine there.
+    std::size_t calls = 0;
+    const Router::Hooks hooks{
+        .on_request             = [p = &calls](const RequestContext&) noexcept { ++*p; },
+        .on_response            = [p = &calls](const RequestInfo&, const Response&) noexcept { ++*p; },
+        .on_unhandled_exception = [p = &calls](std::exception_ptr) noexcept { ++*p; },
+    };
+
+    StackArena arena;
+    Request req{Headers::owned(arena.alloc)};
+    req.method = HttpMethod::get;
+    req.target = "/ping";  // string literal — static storage, no alloc
+    RequestContext ctx{std::move(req), arena.alloc};
+    Response resp{arena.alloc};
+    const RequestInfo info{ctx.method(), ctx.target()};
+
+    ArmedRegion region;
+    hooks.on_request(ctx);
+    hooks.on_response(info, resp);
+    const std::size_t allocs = region.finish();
+
+    EXPECT_EQ(allocs, 0u) << "observer hook invocation touched the global heap";
+    EXPECT_EQ(calls, 2u);
 }

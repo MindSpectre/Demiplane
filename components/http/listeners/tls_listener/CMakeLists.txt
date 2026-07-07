@@ -18,6 +18,7 @@ target_link_libraries(${DMP_HTTP}.Listeners.Tls
         ${DMP_HTTP}.Config.TlsConfig
         ${DMP_HTTP}.Drivers.Concept
         ${DMP_HTTP}.Routing.Router
+        Demiplane::Common::Chrono
         Boost::beast
         Boost::asio
         OpenSSL::SSL

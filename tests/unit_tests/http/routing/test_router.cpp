@@ -104,3 +104,73 @@ TEST_F(RouterTest, WrongVerbOnParametricRouteDispatchesTo405) {
     const Response r = run_awaitable(router.dispatch(make_ctx(HttpMethod::del, "/users/42")));
     EXPECT_EQ(r.status, HttpStatus::method_not_allowed);  // GET /users/{id} exists, DELETE doesn't
 }
+
+namespace {
+
+    struct HookLog {
+        std::vector<std::string> events;
+        RequestInfo last_info{};
+        HttpStatus last_status{};
+    };
+
+    Router::Hooks recording_hooks(HookLog& log) {
+        return Router::Hooks{
+            .on_request =
+                [&log](const RequestContext& ctx) noexcept {
+                    log.events.push_back("req:" + std::string{ctx.target()});
+                },
+            .on_response =
+                [&log](const RequestInfo& info, const Response& r) noexcept {
+                    log.events.emplace_back("res");
+                    log.last_info   = info;
+                    log.last_status = r.status;
+                },
+            .on_unhandled_exception = [&log](std::exception_ptr) noexcept { log.events.emplace_back("exc"); },
+        };
+    }
+
+}  // namespace
+
+TEST_F(RouterTest, HooksFireAroundSuccessfulDispatchInOrder) {
+    Router router{registry_};
+    HookLog log;
+    router.set_hooks(recording_hooks(log));
+
+    const Response r = run_awaitable(router.dispatch(make_ctx(HttpMethod::get, "/users/42")));
+
+    EXPECT_EQ(r.status, HttpStatus::ok);
+    ASSERT_EQ(log.events.size(), 2u);
+    EXPECT_EQ(log.events[0], "req:/users/42");
+    EXPECT_EQ(log.events[1], "res");
+    EXPECT_EQ(log.last_info.method, HttpMethod::get);
+    EXPECT_EQ(log.last_info.target, "/users/42");
+    EXPECT_EQ(log.last_status, HttpStatus::ok);
+}
+
+TEST_F(RouterTest, HooksFireForRoutingMisses) {
+    Router router{registry_};
+    HookLog log;
+    router.set_hooks(recording_hooks(log));
+
+    const Response r = run_awaitable(router.dispatch(make_ctx(HttpMethod::get, "/missing")));
+
+    EXPECT_EQ(r.status, HttpStatus::not_found);
+    ASSERT_EQ(log.events.size(), 2u);
+    EXPECT_EQ(log.events[0], "req:/missing");
+    EXPECT_EQ(log.events[1], "res");
+    EXPECT_EQ(log.last_status, HttpStatus::not_found);
+}
+
+TEST_F(RouterTest, ExceptionHookFiresAndExceptionStillPropagates) {
+    Router router{registry_};
+    HookLog log;
+    router.set_hooks(recording_hooks(log));
+
+    EXPECT_THROW(run_awaitable(router.dispatch(make_ctx(HttpMethod::get, "/boom"))), std::runtime_error);
+
+    // on_response is NOT fired — the 500 for a handler escape is synthesized
+    // by the DRIVER after the rethrow (spec §6.3), invisible to the Router.
+    ASSERT_EQ(log.events.size(), 2u);
+    EXPECT_EQ(log.events[0], "req:/boom");
+    EXPECT_EQ(log.events[1], "exc");
+}

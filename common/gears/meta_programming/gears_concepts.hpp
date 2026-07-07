@@ -29,8 +29,7 @@ namespace demiplane::gears {
     concept IsInterface = std::is_abstract_v<T>;
 
     template <typename T>
-    concept IsDuration = std::chrono::__is_duration_v<T>;
-
+    concept IsDuration = gears::is_specialization_of_v<std::remove_cvref_t<T>, std::chrono::duration>;
 
     template <typename T, typename... Args>
     concept OneOf = (std::is_same_v<Args, T> || ...);

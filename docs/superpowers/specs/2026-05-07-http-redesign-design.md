@@ -3,7 +3,8 @@
 **Date:** 2026-05-07
 **Branch:** `component/http-1.1/v1.1`
 **Status:** Reviewed + reconciled 2026-06-09 — design-review fixes applied; ready for implementation (PR 1 plan:
-`docs/superpowers/plans/2026-05-07-http-types-layer.md`)
+`docs/superpowers/plans/2026-05-07-http-types-layer.md`); PR 5 plan:
+`docs/superpowers/plans/2026-07-05-http-server-lifecycle-layer.md`
 **Component:** `components/http/`
 
 ## 1. Context
@@ -786,9 +787,10 @@ public:
     NEXUS_REGISTER(nexus::Resettable);
 
     virtual ~HttpController() = default;
+    // Controllers are RAII (ctor acquires, dtor releases) — no framework
+    // lifecycle hooks (initialize()/shutdown() removed 2026-07-06; async
+    // shutdown-time work belongs in ServerObserver::on_shutdown_started).
     virtual void configure_routes() = 0;
-    virtual void initialize() {}
-    virtual void shutdown() {}
 
     template <typename Mw>
     HttpController& add_middleware(Mw&& mw);
@@ -1066,20 +1068,23 @@ public:
     // client, etc., each pinned to whatever executor/threads the caller chose.
     Server(ServerConfig cfg, asio::any_io_executor exec);
 
-    ~Server();   // requests stop() if still running; never blocks, never
-                 // throws, never touches the executor's lifetime.
+    ~Server();   // RAII backstop: if still active, logs WRN and runs
+                 // stop() + wait_until_stopped() itself (§9.6). Requires a
+                 // driven executor and an off-executor destruction site.
 
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
 
+    // (host, port) split matches the landed listener ctors (PR 5 D7); the
+    // config-driven path is attach_default_listeners (PR 6).
     template <IsHttpDriver Driver>
-    Server& add_tcp_listener(std::string bind, Driver driver);
+    Server& add_tcp_listener(std::string host, std::uint16_t port, Driver driver);
 
     template <IsHttpDriver... Drivers>
-    Server& add_tls_listener(std::string bind, TlsConfig tls, Drivers... drivers);
+    Server& add_tls_listener(std::string host, std::uint16_t port, TlsConfig tls, Drivers... drivers);
 
     template <IsHttpDriver Driver>
-    Server& add_quic_listener(std::string bind, TlsConfig tls, Driver driver);
+    Server& add_quic_listener(std::string host, std::uint16_t port, TlsConfig tls, Driver driver);
 
     template <std::derived_from<HttpController> C>
     Server& add_controller(std::shared_ptr<C> ctrl);
@@ -1088,12 +1093,16 @@ public:
 
     Server& add_observer(std::shared_ptr<ServerObserver> obs);
 
-    void setup();   // sync bind + freeze registry + co_spawn accept loops on
-                    // exec_. Throws on bind failure / route conflict. Does NOT
-                    // spawn threads and does NOT block — the loops go live the
-                    // moment the caller runs the executor.
-    void stop();    // request graceful shutdown; non-blocking, idempotent.
-                    // Runs drain + observers on exec_. NEVER stops the executor.
+    void setup();   // freeze registry + bind ALL listeners (failures aggregated
+                    // into ListenerBindError; bound acceptors released) + AWAIT
+                    // the on_setup_complete observer barrier + co_spawn accept
+                    // loops on exec_. Spawns no threads; blocks ONLY on the
+                    // barrier — with observers, the executor must already be
+                    // driven and setup() must run off-executor (§9.3).
+    void stop();    // request graceful shutdown; non-blocking, idempotent,
+                    // callable from executor threads. Latched if racing setup()
+                    // (§9.4). Runs drain + observers on exec_. NEVER stops the
+                    // executor.
 
     // Block the calling thread until graceful shutdown has fully completed.
     // CONTRACT (§9.7): the caller MUST keep running the injected executor until
@@ -1107,8 +1116,12 @@ public:
     const ServerConfig& config() const noexcept;
 
 private:
-    enum class State : std::uint8_t { build, running, stopping, stopped };
+    // `starting` covers setup()'s live window (observer barrier + loop spawn):
+    // a stop() arriving there LATCHES (stop_requested_) and is honored at
+    // setup()'s tail instead of being silently lost.
+    enum class State : std::uint8_t { build, starting, running, stopping, stopped };
     std::atomic<State> state_{State::build};
+    std::atomic<bool> stop_requested_{false};
 
     ServerConfig cfg_;
     asio::any_io_executor exec_;   // injected; NOT owned, never stopped
@@ -1122,8 +1135,11 @@ private:
 
     // One stop signal PER listener: a cancellation_slot holds at most one
     // handler, so a single shared signal would cancel only the last-spawned
-    // accept loop. (cancellation_signal is immovable — hence unique_ptr.)
-    std::vector<std::unique_ptr<asio::cancellation_signal>> listener_stop_signals_;
+    // accept loop. cancellation_signal is immovable; shared_ptr because the
+    // phase-1 emit lambdas are queued in io_context-owned strand queues and
+    // can outlive the Server — each keeps its signal alive (a late emit fires
+    // on a live-but-orphaned signal, harmlessly).
+    std::vector<std::shared_ptr<asio::cancellation_signal>> listener_stop_signals_;
     std::mutex shutdown_mutex_;
     std::condition_variable shutdown_cv_;
     bool shutdown_complete_ = false;
@@ -1145,6 +1161,14 @@ void run_standalone(ServerConfig cfg, std::size_t threads,
 ### 9.2 ServerObserver
 
 ```cpp
+// Request identity snapshot for on_response: the RequestContext is CONSUMED
+// by value by the handler chain, so it no longer exists when the response is
+// available (PR 5 D3). Views stay valid through the hook call.
+struct RequestInfo {
+    HttpMethod       method;
+    std::string_view target;
+};
+
 class ServerObserver {
 public:
     virtual ~ServerObserver() = default;
@@ -1154,50 +1178,79 @@ public:
     virtual void on_shutdown_complete() noexcept {}
 
     virtual void on_request(const RequestContext&) noexcept {}
-    virtual void on_response(const RequestContext&, const Response&) noexcept {}
+    virtual void on_response(const RequestInfo&, const Response&) noexcept {}
 
     // Captures std::exception_ptr (heap-managed) — fixes the original UAF.
     virtual void on_unhandled_exception(std::exception_ptr) noexcept {}
 };
 ```
 
-Single typed observer interface replaces the current 10 callback vectors. Per-request hooks are sync (request hot path
-doesn't await observer chains); shutdown hooks are async (shutdown awaits observer work).
-
-`exception_ptr` instead of `const exception&` — heap-managed, has its own lifetime, safe to forward into spawned
-coroutines. The original UAF category is structurally impossible.
+Per-request hooks are wired by `Server::setup()` into the `Router` as plain nullable `std::function`s (PR 5 D2) —
+the routing layer carries no server-layer dependency and no observer inheritance. `Router::dispatch` fires
+`on_request` at entry, `on_response` for handler successes and routing-miss 404/405s, and
+`on_unhandled_exception` (then **rethrows**) for handler escapes — so the driver-synthesized 500 and driver-level
+early responses (malformed 400, limit 4xx) are not observed. Hooks may fire concurrently from any executor thread;
+implementations must be thread-safe and allocation-free on the hot path.
 
 ### 9.3 setup()
 
-1. Validate state is `build`.
-2. Validate at least one listener. (Thread count is the caller's concern now — the Server owns no threads.)
-3. `registry_.freeze()` → if conflicts, throw `RouteConflictAggregateError`.
-4. Call `bind()` on every listener synchronously. Bind failures throw.
-5. `co_spawn` each listener's `run(router_)` on `exec_`, each bound to **its own** `listener_stop_signals_[i]->slot()` —
-   a slot holds a single handler, so the signal cannot be shared across listeners (§7.2).
-6. Notify `on_setup_complete` observers (awaited as a barrier on `exec_`).
-7. Set `state_` to `running`.
+1. Validate state is `build`; validate at least one listener. (Thread count is the caller's concern — the Server
+   owns no threads.)
+2. `registry_.freeze()` → if conflicts, throw `RouteConflictAggregateError` (all conflicts in one throw).
+3. Call `bind()` on **every** listener (best-effort-all, so the operator sees every bad endpoint at once); on any
+   failure clear the listener set (RAII closes the acceptors that DID bind — no LISTENING socket is left with no
+   accept loop) and throw `ListenerBindError` aggregating all failures. Controllers need no symmetric unwind —
+   they are RAII.
+4. Wire the observer fan-out hooks into the Router (D2; skipped when no observers).
+5. Set `state_` to `starting` — a `stop()` arriving from here on latches `stop_requested_` instead of no-oping.
+6. **Await** the observers' `on_setup_complete()` as a **barrier** on `exec_` (sequential, add order; per-observer
+   throws fanned to `on_unhandled_exception`): observer-owned resources exist before the first request is served.
+   With observers registered, `setup()` therefore **blocks** and the executor must already be driven by another
+   thread (revised 2026-07-06; connections arriving meanwhile queue in the kernel backlog — `bind()` already
+   `listen()`s — delayed, never lost).
+7. `co_spawn` each listener's `run(router_)` on **its own strand** of `exec_` (D5 — the stop emit must be
+   serialized with the loop's turns), each bound to **its own** `listener_stop_signals_[i]->slot()` — a slot holds
+   a single handler, so the signal cannot be shared across listeners (§7.2).
+8. Set `state_` to `running`; if `stop_requested_` was latched, invoke `stop()` now (no lost stops).
 
-No work guard, no worker threads, no blocking. The accept loops are live the moment the caller's threads run the
-injected executor.
+No work guard, no worker threads. The only blocking point is the step-6 observer barrier.
 
 ### 9.4 stop()
 
-Idempotent. CAS `running` → `stopping`. `co_spawn(graceful_shutdown(), detached)` on `exec_`. Returns immediately. *
-*Never stops the executor** — it may be shared with other subsystems that must outlive HTTP (§9.7).
+Idempotent, thread-safe, callable from executor threads (signal handlers, request handlers). CAS `running` →
+`stopping` → `co_spawn(graceful_shutdown(), detached)` on `exec_`. During `starting` it latches `stop_requested_`
+(honored at setup()'s tail); in `build`/`stopping`/`stopped` it is a no-op. Returns immediately. **Never stops the
+executor** — it may be shared with other subsystems that must outlive HTTP (§9.7).
+
+Caveat (2026-07-06, TSan-found): the executor must outlive the `stop()` *call* itself — `stop()` posts into it, and
+the post's scheduler-signal tail races an executor teardown that begins the instant shutdown completes. Irrelevant in
+injected mode (the §9.7 orchestrator owns both); in `run_standalone` mode it means external threads must not call
+`stop()` — use SIGINT/SIGTERM or call it from within a handler/observer.
 
 ### 9.5 graceful_shutdown()
 
 ```cpp
 asio::awaitable<void> Server::graceful_shutdown() {
-    // Phase 1: cancel accept loops (new connections refused) — one signal per
-    // listener (§9.3); a single shared slot would cancel only the last loop.
-    for (auto& sig : listener_stop_signals_)
-        sig->emit(asio::cancellation_type::terminal);
+    // Phase 1: cancel accept loops — one signal per listener (§9.3), each
+    // emit DISPATCHED onto the strand its run() executes on (D5). The lambda
+    // is queued in an io_context-owned strand queue and can outlive the
+    // Server, so it owns the signal via shared_ptr.
+    for (std::size_t i = 0; i < listeners_.size(); ++i)
+        asio::dispatch(run_strands_[i],
+                       [sig = listener_stop_signals_[i]] { sig->emit(asio::cancellation_type::terminal); });
 
-    // Phase 2: drain in-flight requests up to drain_timeout
+    // Phase 1.5: poll accept-loop completion — acceptors provably closed,
+    // new connections REFUSED from here on (D6).
+    while (live_accept_loops_ > 0) co_await tick(5ms);
+
+    // Phase 2: drain in-flight requests up to drain_timeout (shared deadline).
     auto drain_deadline = std::chrono::steady_clock::now() + cfg_.drain_timeout;
     for (auto& l : listeners_) co_await l->drain_until(drain_deadline);
+
+    // Phase 2.5: unwind barrier (D6) — drain only DISPATCHES force-cancels;
+    // poll Σ in_flight() == 0 before touching listener lifetimes. Unbounded:
+    // a suspended frame can only be freed by completion.
+    while (total_in_flight() > 0) co_await tick(5ms);
 
     // Phase 3: notify async shutdown observers. These run on exec_ — the caller
     // MUST still be driving it (§9.7), so observers can do real async work
@@ -1211,39 +1264,45 @@ asio::awaitable<void> Server::graceful_shutdown() {
         }
     }
 
-    // Phase 4: controller shutdown (sync, reverse-add order)
-    for (auto it = controllers_.rbegin(); it != controllers_.rend(); ++it) {
-        try {
-            (*it)->shutdown();
-        } catch (...) {
-            for (auto& obs : observers_)
-                obs->on_unhandled_exception(std::current_exception());
-        }
-    }
-
-    // Phase 5: notify shutdown_complete observers (sync, noexcept)
+    // Phase 4: notify shutdown_complete observers (sync, noexcept).
+    // (Controllers have no shutdown hook — they are RAII and unwind with the
+    // Server; removed 2026-07-06.)
     for (auto& obs : observers_) obs->on_shutdown_complete();
 
-    // Phase 6: report completion. We do NOT stop or drain the executor — the
+    // Phase 5: report completion. We do NOT stop or drain the executor — the
     // caller owns it. wait_until_stopped() / async_wait_stopped() unblock here.
+    // Latch + notify UNDER the lock: a §9.7-compliant caller may destroy the
+    // Server the moment it observes shutdown_complete_ — a caller reaching
+    // wait_until_stopped() between an unlocked latch and the notify would sail
+    // through the predicate and free the cv under us. With the notify inside
+    // the critical section, this block is the coroutine's LAST touch of *this*.
     {
         std::lock_guard lk{shutdown_mutex_};
         shutdown_complete_ = true;
         state_.store(State::stopped);
+        shutdown_cv_.notify_all();
     }
-    shutdown_cv_.notify_all();
 }
 ```
+
+Phases 1.5–4 run inside a catch-all: an exception escaping any of them is fanned to `on_unhandled_exception` and the
+coroutine still falls through to phase 5 — a detached shutdown that dies early would otherwise strand
+`wait_until_stopped()` forever.
 
 The phase ordering keeps the original review's C2 fix (async stop callbacks no longer dropped): observers run while the
 caller's threads still drive `exec_`, and only after they finish is completion reported.
 
 ### 9.6 ~Server()
 
-If `state_ == running`, call `stop()` (non-blocking). The destructor does **not** wait, joins nothing (it owns no
-threads), and never touches the executor. A correct caller has already `wait_until_stopped()`-ed before destroying the
-Server; the destructor's `stop()` is only a backstop against a leaked-running Server and cannot guarantee in-flight
-requests finish if the executor is about to die. (`run_standalone` sequences this for you.)
+RAII backstop (revised 2026-07-06): if the Server is destroyed while active (`starting`/`running`/`stopping`), the
+destructor logs a WRN and runs `stop()` + `wait_until_stopped()` itself. Rationale: detached coroutine frames (accept
+loops, in-flight `serve()`s, a spawned `graceful_shutdown`) live in the *caller's* executor queues and reference the
+Server's members — no destructor can recall them, only completion unwinds them, so the destructor must either wait for
+that completion or free members under live frames (use-after-free). The typical `main()` declares the executor before
+the Server, so the Server dies first while the executor is still driven and this shuts down cleanly. If the executor is
+not driven — or the destructor runs ON an executor thread — this blocks forever, loudly, which is strictly better than
+heap corruption. A correct caller still runs the §9.7 sequence itself (`run_standalone` does it for you); the
+destructor path is defense for everyone else.
 
 ### 9.7 Shutdown-ordering contract (injected mode)
 
@@ -1777,38 +1836,50 @@ Coverage:
 
 ## 15. Decisions Log
 
-| Decision                  | Choice                                                                                                                                                                      | Why                                                                                                                                                                               |
-|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Build vs. buy h2/h3       | Hybrid: build h1 (Beast), buy h2 (nghttp2) and h3 (ngtcp2 + nghttp3); v1 ships h1 only with stubs                                                                           | Matches user intent to write h2/h3 themselves later; nglibs reduce attack surface and bugs                                                                                        |
-| Body model                | Streaming truth, buffered convenience helpers                                                                                                                               | Maps to all three protocols; ergonomic for JSON-API common case; opt-in streaming for large payloads                                                                              |
-| Driver interface          | Single coroutine `serve(conn, router)`                                                                                                                                      | One method per driver; protocol complexity stays inside; coroutine-native consistent with rest of codebase                                                                        |
-| Listener model            | ALPN-multiplexed TLS + separate UDP listener for h3                                                                                                                         | Standard production pattern; h1+h2 share port 443 via ALPN; h3 is separate transport entirely                                                                                     |
-| Routing API               | Evolve B: keep controller-merge, add prefix + middleware + verbs                                                                                                            | Controller-merge concept is the strongest part of current design; preserve and extend                                                                                             |
-| Group/middleware scope    | Controller-only middleware (option A); group via `server.in_group(prefix).add_controller(...)`                                                                              | User wants explicit control; repetition resolved via free helper functions                                                                                                        |
-| Error model               | `gears::Outcome<Response, Errors...>` + `catch(...) → 500`                                                                                                                  | Project's existing Outcome type; multiple typed errors per handler; catch-all for unexpected only                                                                                 |
-| Error → Response          | ADL `to_http_response(const E&)`                                                                                                                                            | Compile-time checked (missing = build break); zero overhead; lives next to error type                                                                                             |
-| Build-out scope           | Option C: everything except protocol drivers                                                                                                                                | TLS interface + impl, ALPN real, body limits, timeouts, graceful shutdown, JSON config; only h2/h3 protocol bodies stay stubbed                                                   |
-| Allocation strategy       | Per-request arena + Beast allocator redirect + Headers tagged-union facade                                                                                                  | Zero framework heap allocs on hot path; user-data allocs unchanged                                                                                                                |
-| Allocation policy         | Zero-additional-alloc **invariant** (arena in both directions), gated by a counting `memory_resource` test                                                                  | User's #1 goal is minimal overhead; an invariant + gate keeps it from rotting, unlike an aspirational table. Body = SBO value type; Response stores its arena allocator           |
-| Response construction     | ctx-scoped factories (`ctx.json(...)`) — review option A                                                                                                                    | Threads the arena in automatically; impossible to forget and silently fall back to global heap. Static `ResponseFactory` retained for ctx-less/error path only                    |
-| Error → Response alloc    | `to_http_response` arena-free; 4xx/5xx on the global heap                                                                                                                   | Cold path; keeps the extension point a clean one-arg free function                                                                                                                |
-| `target` representation   | `string_view` into the receive buffer (not an owned `std::string`)                                                                                                          | Zero-copy; avoids the SSO-dangling cache bug; consistent with the rest of the views-into-buffers request model                                                                    |
-| Executor ownership        | Injected (`any_io_executor`); Server owns no `io_context`/threads; `run_standalone` convenience                                                                             | HTTP coexists with logger/DB/S3; caller controls thread↔context topology; also subsumes the per-thread-`io_context` throughput lesson                                             |
-| Shutdown ownership        | `stop()` never stops the executor; caller drives it until `wait_until_stopped()` (§9.7)                                                                                     | The executor is shared with subsystems that must outlive HTTP; stopping it would kill drain/observers mid-flight                                                                  |
-| Connection abstraction    | Concept-based, no virtual hierarchy, no `dynamic_cast`                                                                                                                      | Concrete connection types satisfy `IsConnection`; drivers templated on connection type; polymorphism only at listener layer                                                       |
-| Lifecycle                 | Injected executor; `setup()` (sync bind + spawn loops) / `stop()` (non-blocking, never stops the executor) / `wait_until_stopped()` (block); `run_standalone` convenience   | Honest failure surface; testable; coexists with other subsystems on caller-owned executors; see §9.7 contract                                                                     |
-| Observer model            | Single typed `ServerObserver` interface with `exception_ptr` for errors                                                                                                     | Replaces 10-vector mess; UAF structurally impossible (heap-managed exception_ptr)                                                                                                 |
-| Routing perf              | Segment-vector parametric routing, not `std::regex`                                                                                                                         | Original design's headline perf bug; segment vectors are 10x+ faster, simpler, swap-in trie later if needed                                                                       |
-| Config format             | JSON via `ConfigInterface` for v1; YAML follow-up                                                                                                                           | Project's established pattern (FileSinkConfig); YAML adds the format param later                                                                                                  |
-| Hot-reload                | Removed (not stubbed)                                                                                                                                                       | Genuinely hard; restart-on-change is honest; revisit when production deployment demands it                                                                                        |
-| Directory structure       | Co-located per-thing dirs (`types/request/{hpp,cpp}`), no include/source split                                                                                              | User preference; cleaner colocation                                                                                                                                               |
-| Middleware `next` passing | `const NextHandler&` (non-owning)                                                                                                                                           | A by-value `std::function` copy = heap alloc per layer per request; the referent lives in the frozen baked chain and outlives the request                                         |
-| Coroutine frames          | Excluded from the zero-alloc invariant; gated as an exact counted budget (≈3 + middleware depth)                                                                            | `asio::awaitable` frames heap-allocate and HALO cannot elide across `std::function`; an *exact-count* gate still catches accidental extras                                        |
-| Allocation-gate mechanism | Replaced global `operator new`/`delete`, thread-locally armed                                                                                                               | A pmr default-resource counter cannot see plain-container or coroutine-frame allocations — the accidental classes the gate exists for                                             |
-| Path decoding             | Split raw on `/`, decode captured segments only (`+` literal); literals match raw bytes; `%` rejected in route literals                                                     | `%2F` can never become a separator; zero decode work on the no-`%` hot path                                                                                                       |
-| Headers move-assign       | User-defined: adopts the source backing (variant emplace)                                                                                                                   | Defaulted pmr move-assign (POCMA=false) element-copies into the dest's old allocator — `Response r; r = co_await next(ctx);` would silently land arena headers on the global heap |
-| Cancellation fan-out      | One `cancellation_signal` per listener + per-connection signals in the tracker; emits dispatched via the target's strand                                                    | A `cancellation_slot` holds at most one handler; `emit` is not thread-safe against concurrent ops                                                                                 |
-| Concept naming            | `Is*` for role/type-identity concepts (`IsConnection`, `IsStreamConnection`, `IsHttpDriver`, `IsRouteHandler`); `Has*` for single-capability concepts (`HasToHttpResponse`) | Repo-wide convention (codestyle §Concept Naming; DB precedent `IsSqlDialect`/`HasAcceptVisitor`); renamed in PR4's patch round to keep spec and code in lockstep before PR5       |
+| Decision                        | Choice                                                                                                                                                                                                  | Why                                                                                                                                                                                                            |
+|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Build vs. buy h2/h3             | Hybrid: build h1 (Beast), buy h2 (nghttp2) and h3 (ngtcp2 + nghttp3); v1 ships h1 only with stubs                                                                                                       | Matches user intent to write h2/h3 themselves later; nglibs reduce attack surface and bugs                                                                                                                     |
+| Body model                      | Streaming truth, buffered convenience helpers                                                                                                                                                           | Maps to all three protocols; ergonomic for JSON-API common case; opt-in streaming for large payloads                                                                                                           |
+| Driver interface                | Single coroutine `serve(conn, router)`                                                                                                                                                                  | One method per driver; protocol complexity stays inside; coroutine-native consistent with rest of codebase                                                                                                     |
+| Listener model                  | ALPN-multiplexed TLS + separate UDP listener for h3                                                                                                                                                     | Standard production pattern; h1+h2 share port 443 via ALPN; h3 is separate transport entirely                                                                                                                  |
+| Routing API                     | Evolve B: keep controller-merge, add prefix + middleware + verbs                                                                                                                                        | Controller-merge concept is the strongest part of current design; preserve and extend                                                                                                                          |
+| Group/middleware scope          | Controller-only middleware (option A); group via `server.in_group(prefix).add_controller(...)`                                                                                                          | User wants explicit control; repetition resolved via free helper functions                                                                                                                                     |
+| Error model                     | `gears::Outcome<Response, Errors...>` + `catch(...) → 500`                                                                                                                                              | Project's existing Outcome type; multiple typed errors per handler; catch-all for unexpected only                                                                                                              |
+| Error → Response                | ADL `to_http_response(const E&)`                                                                                                                                                                        | Compile-time checked (missing = build break); zero overhead; lives next to error type                                                                                                                          |
+| Build-out scope                 | Option C: everything except protocol drivers                                                                                                                                                            | TLS interface + impl, ALPN real, body limits, timeouts, graceful shutdown, JSON config; only h2/h3 protocol bodies stay stubbed                                                                                |
+| Allocation strategy             | Per-request arena + Beast allocator redirect + Headers tagged-union facade                                                                                                                              | Zero framework heap allocs on hot path; user-data allocs unchanged                                                                                                                                             |
+| Allocation policy               | Zero-additional-alloc **invariant** (arena in both directions), gated by a counting `memory_resource` test                                                                                              | User's #1 goal is minimal overhead; an invariant + gate keeps it from rotting, unlike an aspirational table. Body = SBO value type; Response stores its arena allocator                                        |
+| Response construction           | ctx-scoped factories (`ctx.json(...)`) — review option A                                                                                                                                                | Threads the arena in automatically; impossible to forget and silently fall back to global heap. Static `ResponseFactory` retained for ctx-less/error path only                                                 |
+| Error → Response alloc          | `to_http_response` arena-free; 4xx/5xx on the global heap                                                                                                                                               | Cold path; keeps the extension point a clean one-arg free function                                                                                                                                             |
+| `target` representation         | `string_view` into the receive buffer (not an owned `std::string`)                                                                                                                                      | Zero-copy; avoids the SSO-dangling cache bug; consistent with the rest of the views-into-buffers request model                                                                                                 |
+| Executor ownership              | Injected (`any_io_executor`); Server owns no `io_context`/threads; `run_standalone` convenience                                                                                                         | HTTP coexists with logger/DB/S3; caller controls thread↔context topology; also subsumes the per-thread-`io_context` throughput lesson                                                                          |
+| Shutdown ownership              | `stop()` never stops the executor; caller drives it until `wait_until_stopped()` (§9.7)                                                                                                                 | The executor is shared with subsystems that must outlive HTTP; stopping it would kill drain/observers mid-flight                                                                                               |
+| Connection abstraction          | Concept-based, no virtual hierarchy, no `dynamic_cast`                                                                                                                                                  | Concrete connection types satisfy `IsConnection`; drivers templated on connection type; polymorphism only at listener layer                                                                                    |
+| Lifecycle                       | Injected executor; `setup()` (sync bind + spawn loops) / `stop()` (non-blocking, never stops the executor) / `wait_until_stopped()` (block); `run_standalone` convenience                               | Honest failure surface; testable; coexists with other subsystems on caller-owned executors; see §9.7 contract                                                                                                  |
+| Observer model                  | Single typed `ServerObserver` interface with `exception_ptr` for errors                                                                                                                                 | Replaces 10-vector mess; UAF structurally impossible (heap-managed exception_ptr)                                                                                                                              |
+| Routing perf                    | Segment-vector parametric routing, not `std::regex`                                                                                                                                                     | Original design's headline perf bug; segment vectors are 10x+ faster, simpler, swap-in trie later if needed                                                                                                    |
+| Config format                   | JSON via `ConfigInterface` for v1; YAML follow-up                                                                                                                                                       | Project's established pattern (FileSinkConfig); YAML adds the format param later                                                                                                                               |
+| Hot-reload                      | Removed (not stubbed)                                                                                                                                                                                   | Genuinely hard; restart-on-change is honest; revisit when production deployment demands it                                                                                                                     |
+| Directory structure             | Co-located per-thing dirs (`types/request/{hpp,cpp}`), no include/source split                                                                                                                          | User preference; cleaner colocation                                                                                                                                                                            |
+| Middleware `next` passing       | `const NextHandler&` (non-owning)                                                                                                                                                                       | A by-value `std::function` copy = heap alloc per layer per request; the referent lives in the frozen baked chain and outlives the request                                                                      |
+| Coroutine frames                | Excluded from the zero-alloc invariant; gated as an exact counted budget (≈3 + middleware depth)                                                                                                        | `asio::awaitable` frames heap-allocate and HALO cannot elide across `std::function`; an *exact-count* gate still catches accidental extras                                                                     |
+| Allocation-gate mechanism       | Replaced global `operator new`/`delete`, thread-locally armed                                                                                                                                           | A pmr default-resource counter cannot see plain-container or coroutine-frame allocations — the accidental classes the gate exists for                                                                          |
+| Path decoding                   | Split raw on `/`, decode captured segments only (`+` literal); literals match raw bytes; `%` rejected in route literals                                                                                 | `%2F` can never become a separator; zero decode work on the no-`%` hot path                                                                                                                                    |
+| Headers move-assign             | User-defined: adopts the source backing (variant emplace)                                                                                                                                               | Defaulted pmr move-assign (POCMA=false) element-copies into the dest's old allocator — `Response r; r = co_await next(ctx);` would silently land arena headers on the global heap                              |
+| Cancellation fan-out            | One `cancellation_signal` per listener + per-connection signals in the tracker; emits dispatched via the target's strand                                                                                | A `cancellation_slot` holds at most one handler; `emit` is not thread-safe against concurrent ops                                                                                                              |
+| Concept naming                  | `Is*` for role/type-identity concepts (`IsConnection`, `IsStreamConnection`, `IsHttpDriver`, `IsRouteHandler`); `Has*` for single-capability concepts (`HasToHttpResponse`)                             | Repo-wide convention (codestyle §Concept Naming; DB precedent `IsSqlDialect`/`HasAcceptVisitor`); renamed in PR4's patch round to keep spec and code in lockstep before PR5                                    |
+| Observer per-request hooks      | Fired in `Router::dispatch` via nullable `std::function` hooks the Server wires at `setup()` (PR 5 D2)                                                                                                  | No observer interface below the server layer, no dynamic-inheritance split (user decision 2026-07-05); routing keeps zero server dependency; unset hooks cost one null check                                   |
+| `on_response` signature         | `(const RequestInfo&, const Response&)` — snapshot of {method, target} taken at dispatch entry (PR 5 D3)                                                                                                | The spec's original `(const RequestContext&, …)` was unimplementable: the ctx is consumed by value by the handler chain                                                                                        |
+| `setup()` observer barrier      | AWAITED on `exec_` BEFORE the accept loops spawn (revised 2026-07-06; supersedes PR 5 D4). `setup()` blocks; the executor must already be driven (`run_standalone` and the fixture start workers first) | A detached notification could outlive the Server (UAF) and lets shutdown hooks overtake setup hooks; the barrier also guarantees observer-owned resources exist before the first request                       |
+| `starting` state + latched stop | `setup()` sets `starting` before the barrier/spawn; a racing `stop()` latches `stop_requested_`, honored at setup()'s tail (2026-07-06)                                                                 | Without it a stop() from an observer/early handler CASes against `build`, silently no-ops, and `wait_until_stopped()` hangs forever                                                                            |
+| Destructor policy               | Sync RAII backstop: WRN log + `stop()` + `wait_until_stopped()` when destroyed active (2026-07-06)                                                                                                      | Frames in caller-owned executor queues cannot be recalled — only completion unwinds them; a loud block beats freeing members under live frames (UAF); typical `main()` destroys the Server before the executor |
+| Listener bind failure           | Best-effort-all: bind every listener, aggregate into `ListenerBindError`, clear the listener set before throwing (2026-07-06)                                                                           | Operator sees every bad endpoint at once; a bound-but-loopless acceptor would trap clients in the kernel backlog; controllers are RAII and need no unwind                                                      |
+| Controller lifecycle hooks      | REMOVED — `initialize()`/`shutdown()` deleted; controllers are RAII (2026-07-06)                                                                                                                        | Dead virtuals nobody overrode; ctor/dtor cover sync resources; async shutdown-time work belongs in `ServerObserver::on_shutdown_started`                                                                       |
+| Stop-signal ownership           | `shared_ptr<cancellation_signal>` captured by the phase-1 emit lambdas (2026-07-06)                                                                                                                     | The lambdas queue in io_context-owned strand queues and can outlive the Server (shutdown can complete without yielding when loops are already dead); a late emit on an orphaned signal is harmless             |
+| `async_wait_stopped` cost       | Exponential-backoff poll, 5 ms → 320 ms cap (2026-07-06)                                                                                                                                                | A second Server-side completion primitive (event/channel) re-creates the phase-5 last-touch race; backoff keeps steady-state at ≈3 wakeups/s with bounded detection latency                                    |
+| Accept-loop threading           | One strand per listener `run()`; stop emits dispatched onto that strand (PR 5 D5)                                                                                                                       | `cancellation_signal::emit` must be serialized with the loop's turns on a multi-threaded executor; closes the edge-lost-emit window                                                                            |
+| Drain-unwind completion         | `graceful_shutdown` polls `live_accept_loops_ == 0` (phase 1.5) and `Σ in_flight() == 0` (phase 2.5) on a 5 ms tick (PR 5 D6)                                                                           | Force-cancels are only dispatched; frames unwind in later turns. Polling is the fixture-proven pattern; a tracker completion event adds cross-strand surface for little gain                                   |
+| `ServerConfig` staging          | Plain struct (`request_arena_size`, `drain_timeout`, `path_normalization`) at the final path; PR 6 rewrites in place (PR 5 D1, PR 4 D1)                                                                 | Same staging pattern as `TlsConfig`/`Http11Config`; config layer keeps its own PathNormalization enum so it carries no routing dependency                                                                      |
 
 ## 16. Open Questions
 

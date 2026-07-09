@@ -55,7 +55,7 @@ TEST_F(ServerConcurrencyTest, ThousandRequestsAcrossFourIoWorkers) {
             s.add_controller(ctrl);
             s.add_tcp_listener("127.0.0.1", 0, Http11Driver{Http11Config{}});
         },
-        ServerConfig{},
+        ServerConfig::Builder{}.finalize(),
         /*io_threads=*/4);
 
     std::atomic<std::size_t> failures{0};

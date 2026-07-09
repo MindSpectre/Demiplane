@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 #include <gears_strings.hpp>
 
@@ -11,6 +13,22 @@ namespace demiplane::serialization {
         Secret,    // deserialize only (e.g., passwords)
         Excluded,  // skip both directions
         ReadOnly,  // serialize only
+    };
+
+    /// Key wrapper for the read_field/write_field extension points. A domain
+    /// type (rather than a bare string) so the machinery's unqualified,
+    /// DEPENDENT calls always reach the format overloads: FieldName makes
+    /// demiplane::serialization an ASSOCIATED NAMESPACE of every call, which
+    /// two-phase lookup requires — the format headers (json.hpp) are normally
+    /// included AFTER config_interface.hpp, so ordinary lookup at the template
+    /// definition point sees none of them, and a plain string key carries no
+    /// namespace ADL could find them through.
+    struct FieldName {
+        std::string_view value;
+
+        [[nodiscard]] std::string str() const {
+            return std::string{value};
+        }
     };
 
     namespace detail {

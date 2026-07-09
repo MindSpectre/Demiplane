@@ -21,7 +21,7 @@ namespace demiplane::http {
 
     /// Path normalization policy (spec §8.6), applied at registration AND at
     /// lookup so both sides agree on the canonical form. Owned by the registry
-    /// in PR 2; ServerConfig (PR 6) maps its config enum onto it.
+    /// in PR 2; the Server maps ServerConfig::path_normalization() onto it.
     enum class PathNormalization : std::uint8_t {
         none,                     ///< exact byte match
         collapse_trailing_slash,  ///< "/users/" == "/users"   (default)

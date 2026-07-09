@@ -54,7 +54,7 @@ namespace {
 
         explicit StandaloneRun(const std::size_t threads = 2, const bool with_stop_route = false) {
             runner = std::thread{[this, threads, with_stop_route] {
-                run_standalone(ServerConfig{}, threads, [this, with_stop_route](Server& s) {
+                run_standalone(ServerConfig::Builder{}.finalize(), threads, [this, with_stop_route](Server& s) {
                     server.store(&s, std::memory_order_release);  // valid until run_standalone returns
                     s.add_controller(std::make_shared<http_it::PingController>());
                     if (with_stop_route) {
@@ -128,5 +128,5 @@ TEST(RunStandaloneTest, StopsViaHandlerStop) {
 }
 
 TEST(RunStandaloneTest, ZeroThreadsThrows) {
-    EXPECT_THROW(run_standalone(ServerConfig{}, 0, [](Server&) {}), std::invalid_argument);
+    EXPECT_THROW(run_standalone(ServerConfig::Builder{}.finalize(), 0, [](Server&) {}), std::invalid_argument);
 }

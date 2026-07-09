@@ -69,7 +69,7 @@ namespace demiplane::http {
         for (const auto m : allow) {
             if (!first)
                 v += ", ";
-            v     += to_string(m);
+            v     += to_string_view(m);
             first  = false;
         }
         r.add_header("Allow", v);

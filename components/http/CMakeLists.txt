@@ -30,7 +30,7 @@ add_subdirectory(drivers)
 
 
 ##############################################################################
-# Http Config layer (PR 4 of redesign — plain TlsConfig; PR 6 grows it)
+# Http Config layer (PR 6 of redesign)
 ##############################################################################
 add_subdirectory(config)
 ##############################################################################

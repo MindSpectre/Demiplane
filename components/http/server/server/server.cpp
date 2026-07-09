@@ -37,7 +37,9 @@ namespace demiplane::http {
     Server::Server(ServerConfig cfg, boost::asio::any_io_executor exec)
         : cfg_{std::move(cfg)},
           exec_{std::move(exec)},
-          registry_{map_normalization(cfg.path_normalization)} {
+          // Read the MEMBER, not the moved-from parameter (D8): members
+          // initialize in declaration order, so cfg_ is populated by now.
+          registry_{map_normalization(cfg_.path_normalization())} {
     }
 
     Server::~Server() {
@@ -217,7 +219,7 @@ namespace demiplane::http {
             // Phase 2: drain in-flight requests up to drain_timeout (shared
             // deadline — total wait is bounded by ONE timeout, not one per
             // listener). At the deadline the trackers force-cancel survivors.
-            const auto deadline = std::chrono::steady_clock::now() + cfg_.drain_timeout;
+            const auto deadline = std::chrono::steady_clock::now() + cfg_.drain_timeout();
             for (const auto& listener : listeners_) {
                 co_await listener->drain_until(deadline);
             }

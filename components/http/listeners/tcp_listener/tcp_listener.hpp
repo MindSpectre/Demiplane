@@ -122,6 +122,16 @@ namespace demiplane::http {
                     continue;
                 }
                 consecutive_errors = 0;
+                // Nagle holds every small segment after the first unacked one.
+                // The driver writes one response per request, so a pipelined
+                // batch ships response 1 and then blocks ~40ms on the peer's
+                // delayed ACK before response 2. Measured: 30k → 343k req/s at
+                // pipeline depth 16. Failure to set it is ignored — a socket
+                // that rejects the option still serves correctly, just slower.
+                {
+                    boost::beast::error_code nd_ec;
+                    sock.set_option(asio::ip::tcp::no_delay(true), nd_ec);
+                }
                 auto conn          = std::make_shared<TcpConnection>(std::move(sock), arena_size_);
                 auto handle        = tracker_.register_connection(conn, strand);
                 asio::co_spawn(

@@ -59,6 +59,13 @@ add_combined_library(${DMP_HTTP}
         SOURCES
         export/demiplane/http
         LIBRARIES
+        ${DMP_HTTP}.Types
+        ${DMP_HTTP}.Routing
+        ${DMP_HTTP}.Connection
+        ${DMP_HTTP}.Drivers
+        ${DMP_HTTP}.Listeners
+        ${DMP_HTTP}.Config
+        ${DMP_HTTP}.Server
 )
 
 add_library(Demiplane::Component::Http ALIAS ${DMP_HTTP})

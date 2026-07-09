@@ -50,6 +50,10 @@ PrintLineSeparator()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+# Toggles. Included before the compile options because DMP_KEEP_FRAME_POINTERS
+# decides one of them.
+include(cmake/features.cmake)
+
 list(APPEND general_compile_options
         -Wall -Wextra -Wpedantic
         -Wthread-safety
@@ -60,8 +64,16 @@ list(APPEND general_compile_options
         -fno-stack-protector
         -fvisibility=hidden
         -g
-        $<$<CONFIG:Release>:-fomit-frame-pointer>
 )
+
+# Target compile options land after CMAKE_CXX_FLAGS on the command line, so a
+# preset that merely adds -fno-omit-frame-pointer to the flags loses to this.
+# The `release-perf` preset flips this option instead.
+if (DMP_KEEP_FRAME_POINTERS)
+    list(APPEND general_compile_options -fno-omit-frame-pointer)
+else ()
+    list(APPEND general_compile_options $<$<CONFIG:Release>:-fomit-frame-pointer>)
+endif ()
 
 add_compile_options(
         ${general_compile_options}
@@ -69,10 +81,6 @@ add_compile_options(
 
 message("\tCOMPILE OPTIONS")
 message("Compile options are ${general_compile_options}")
-
-# Add options to enable or disable Boost and Qt5
-# Toggles
-include(cmake/features.cmake)
 
 # Add compile definitions based on options
 if (DMP_ENABLE_LOGGING)
@@ -172,6 +180,15 @@ endif ()
 if (DO_BENCHMARKS)
     message("Benchmarks are enabled")
     add_subdirectory(benchmarks)
+endif ()
+##############################################################################
+
+##############################################################################
+# Examples
+##############################################################################
+if (BUILD_EXAMPLES)
+    message("Examples are enabled")
+    add_subdirectory(examples)
 endif ()
 ##############################################################################
 PrintLineSeparator()

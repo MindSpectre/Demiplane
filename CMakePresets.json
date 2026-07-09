@@ -117,6 +117,18 @@
       "binaryDir": "build/release-lto"
     },
     {
+      "name": "release-perf",
+      "displayName": "Release + perf symbols",
+      "description": "Release codegen with frame pointers, for `perf record -g`. Timing numbers come from the plain `release` preset — this one only exists so profiles symbolize. Note the project already compiles with -g everywhere; DMP_KEEP_FRAME_POINTERS is what suppresses the Release -fomit-frame-pointer.",
+      "inherits": "release",
+      "cacheVariables": {
+        "DMP_KEEP_FRAME_POINTERS": "ON",
+        "DMP_ENABLE_LOGGING": "OFF",
+        "DMP_COMPONENT_LOGGING": "OFF"
+      },
+      "binaryDir": "build/release-perf"
+    },
+    {
       "name": "release-instrprof",
       "displayName": "Release + LLVM Instrumented Profiling",
       "description": "Release build with llvm source-based profiling instrumentation (use for hotspot analysis via llvm-profdata; do not use for timing runs — instrumentation slows things ~2x)",
@@ -300,6 +312,11 @@
     {
       "name": "release-lto",
       "configurePreset": "release-lto",
+      "configuration": "Release"
+    },
+    {
+      "name": "release-perf",
+      "configurePreset": "release-perf",
       "configuration": "Release"
     },
     {

@@ -1,2 +1,61 @@
 #pragma once
 
+/**
+ * Public umbrella for the demiplane HTTP component. Aggregates every public
+ * leaf header of the seven layers (spec §3/§4); consumers link
+ * Demiplane::Component::Http and write `#include <demiplane/http>`.
+ */
+
+// ── Types — protocol-agnostic HTTP primitives (spec §5) ─────────────────────
+#include <async_outcome.hpp>
+#include <body.hpp>
+#include <errors.hpp>
+#include <headers.hpp>
+#include <http_enums.hpp>
+#include <request.hpp>
+#include <request_context.hpp>
+#include <response.hpp>
+#include <response_factory.hpp>
+#include <url_decode.hpp>
+
+// ── Routing (spec §8) ────────────────────────────────────────────────────────
+#include <controller.hpp>
+#include <group.hpp>
+#include <middleware.hpp>
+#include <route_registry.hpp>
+#include <router.hpp>
+
+// ── Connections (spec §6.1) ──────────────────────────────────────────────────
+#include <connection_concepts.hpp>
+#include <quic_connection.hpp>
+#include <request_arena.hpp>
+#include <tcp_connection.hpp>
+#include <tls_connection.hpp>
+
+// ── Protocol drivers (spec §6.2–§6.4) ────────────────────────────────────────
+#include <http11_config.hpp>
+#include <http11_driver.hpp>
+#include <http2_driver.hpp>
+#include <http3_driver.hpp>
+#include <http_driver_concept.hpp>
+
+// ── Listeners / TLS (spec §7) ────────────────────────────────────────────────
+#include <build_ssl_context.hpp>
+#include <connection_tracker.hpp>
+#include <listener_base.hpp>
+#include <quic_listener.hpp>
+#include <tcp_listener.hpp>
+#include <tls_listener.hpp>
+
+// ── Config (spec §10) ────────────────────────────────────────────────────────
+#include <listener_config.hpp>
+#include <load_server_config.hpp>
+#include <server_config.hpp>
+#include <timeouts.hpp>
+#include <tls_config.hpp>
+
+// ── Server orchestration (spec §9) ───────────────────────────────────────────
+#include <attach_default_listeners.hpp>
+#include <run_standalone.hpp>
+#include <server.hpp>
+#include <server_observer.hpp>

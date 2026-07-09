@@ -20,9 +20,10 @@ namespace {
 }  // namespace
 
 TEST(BuildSslContextTest, BuildsFromValidCert) {
-    TlsConfig cfg;
-    cfg.cert_file = http_tls_test::write_temp("cert.pem", http_tls_test::kTestCertPem);
-    cfg.key_file  = http_tls_test::write_temp("key.pem", http_tls_test::kTestKeyPem);
+    const auto cfg = TlsConfig::Builder{}
+                         .cert_file(http_tls_test::write_temp("cert.pem", http_tls_test::kTestCertPem))
+                         .key_file(http_tls_test::write_temp("key.pem", http_tls_test::kTestKeyPem))
+                         .finalize();
 
     const std::string advertised = alpn_wire_http11();
     auto ctx = build_ssl_context(cfg, advertised);  // must not throw
@@ -30,9 +31,10 @@ TEST(BuildSslContextTest, BuildsFromValidCert) {
 }
 
 TEST(BuildSslContextTest, ThrowsOnMissingCert) {
-    TlsConfig cfg;
-    cfg.cert_file = "/nonexistent/path/cert.pem";
-    cfg.key_file  = "/nonexistent/path/key.pem";
+    const auto cfg = TlsConfig::Builder{}
+                         .cert_file("/nonexistent/path/cert.pem")
+                         .key_file("/nonexistent/path/key.pem")
+                         .finalize();
     const std::string advertised = alpn_wire_http11();
     // TODO: tighten to EXPECT_THROW(..., boost::system::system_error) to match build_ssl_context's documented throw type.
     EXPECT_ANY_THROW({ auto ctx = build_ssl_context(cfg, advertised); });

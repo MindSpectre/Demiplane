@@ -11,7 +11,7 @@ namespace demiplane::http {
      * @brief One heap block per CONNECTION, reused across every keep-alive
      *        request on it (spec §6.1).
      *
-     * Allocated once at `size` bytes (ServerConfig::request_arena_size, default
+     * Allocated once at `size` bytes (ServerConfig::request_arena_size(), default
      * 8 KB); reset() rewinds the monotonic resource to the initial block, so
      * the next request reuses the same memory — amortized, not per-request.
      * Requests that exceed the block grow via upstream new_delete blocks.

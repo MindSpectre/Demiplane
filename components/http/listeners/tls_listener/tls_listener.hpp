@@ -44,8 +44,9 @@ namespace demiplane::http {
      *
      * LIFETIME CONTRACT: drain_until(...) AND then wait for in_flight() == 0
      * before destroying the listener (the spawned coroutines hold a tracker
-     * Handle into this listener + serve via `this`). Arena size is fixed at the
-     * 8 KB default in v1 (PR 6 wires request_arena_size).
+     * Handle into this listener + serve via `this`). Each connection's
+     * request arena is sized by the ctor's request_arena_size (the Server passes
+     * ServerConfig::request_arena_size(); the driver-list ctor defaults to 8 KB).
      * WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
      * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The Server
      * honors this in graceful_shutdown() phase 2.5 by polling in_flight() == 0 after the drain; direct
@@ -61,10 +62,20 @@ namespace demiplane::http {
                     const std::uint16_t port,
                     TlsConfig tls,
                     Drivers... drivers)
+            : TlsListener{std::move(exec), std::move(host), port, std::move(tls), 8192, std::move(drivers)...} {
+        }
+
+        TlsListener(boost::asio::any_io_executor exec,
+                    std::string host,
+                    const std::uint16_t port,
+                    TlsConfig tls,
+                    const std::size_t request_arena_size,
+                    Drivers... drivers)
             : exec_{std::move(exec)},
               host_{std::move(host)},
               port_{port},
               tls_config_{std::move(tls)},
+              arena_size_{request_arena_size},
               drivers_{std::move(drivers)...},
               advertised_alpn_{build_alpn_wire()},
               acceptor_{exec_} {
@@ -120,7 +131,7 @@ namespace demiplane::http {
                     continue;
                 }
                 consecutive_errors = 0;
-                auto conn          = std::make_shared<TlsConnection>(std::move(sock), *ctx_);
+                auto conn          = std::make_shared<TlsConnection>(std::move(sock), *ctx_, arena_size_);
                 auto handle        = tracker_.register_connection(conn, strand);
                 asio::co_spawn(
                     strand,
@@ -195,6 +206,7 @@ namespace demiplane::http {
         std::string host_;
         std::uint16_t port_;
         TlsConfig tls_config_;
+        std::size_t arena_size_;
         std::tuple<Drivers...> drivers_;
         std::string advertised_alpn_;  // outlives ctx_ (ALPN cb arg, D4)
         std::optional<boost::asio::ssl::context> ctx_;

@@ -4,7 +4,8 @@
 **Branch:** `component/http-1.1/v1.1`
 **Status:** Reviewed + reconciled 2026-06-09 — design-review fixes applied; ready for implementation (PR 1 plan:
 `docs/superpowers/plans/2026-05-07-http-types-layer.md`); PR 5 plan:
-`docs/superpowers/plans/2026-07-05-http-server-lifecycle-layer.md`
+`docs/superpowers/plans/2026-07-05-http-server-lifecycle-layer.md`; PR 6 plan:
+`docs/superpowers/plans/2026-07-07-http-config-layer.md` (landed)
 **Component:** `components/http/`
 
 ## 1. Context
@@ -1076,7 +1077,7 @@ public:
     Server& operator=(const Server&) = delete;
 
     // (host, port) split matches the landed listener ctors (PR 5 D7); the
-    // config-driven path is attach_default_listeners (PR 6).
+    // config-driven path is attach_default_listeners (PR 6, landed).
     template <IsHttpDriver Driver>
     Server& add_tcp_listener(std::string host, std::uint16_t port, Driver driver);
 
@@ -1342,6 +1343,20 @@ existing `FileSinkConfig`. Validation via `validate()`. Errors surface through O
 
 ### 10.1 Config types
 
+**Landed shape (PR 6):** the sketches below predate implementation; the landed code deviates in a few
+recorded ways. `port` is `std::uint16_t` (not `int`). `ServerConfig` and `ListenerConfig` are Builder-only;
+`TlsConfig` keeps a public no-validation full-ctor escape hatch (scaffold unit tests deliberately build empty
+configs); `Timeouts` keeps its public 3-arg ctor (D6). `tls.key_passphrase` is `FieldPolicy::Secret` — read from
+JSON, never emitted by `dump_server_config` (D3). Every enum field (`ListenerConfig::Transport`, `Protocol`,
+`TlsConfig::MinVersion`, `ServerConfig::PathNormalization`) is string-encoded via non-template ADL
+`read_field`/`write_field` overloads declared next to the enum (`"tcp"|"tls"|"quic"`,
+`"http1"|"http2"|"http3"`, `"tls12"|"tls13"`, `"none"|"collapse_trailing_slash"|"collapse_multi_slash"`);
+unknown strings throw `std::invalid_argument` naming the field (D2) — supersedes this section's original
+int-encoding allowance. The `Protocol` codec lives in `listener_config.hpp` (config layer), not
+`http_enums.hpp`, so the types layer stays free of a serialization/jsoncpp dependency. `ListenerConfig` gained
+`effective_protocols()` (empty `protocols` ⇒ the transport's default: `http1`, or `http3` on `quic`).
+`ServerConfig::drain_timeout` keeps the JSON field name `drain_timeout_ms`.
+
 ```cpp
 class Timeouts final : public serialization::ConfigInterface<Timeouts, Json::Value> {
 public:
@@ -1500,13 +1515,31 @@ Response to_http_response(const ConfigParseError&);
 Response to_http_response(const ConfigSchemaError&);
 ```
 
+**Landed shape (PR 6):** `ServerConfig::deserialize<Json::Value>` — the machinery this section describes — had
+never been instantiated before this PR; it did not compile when exercised (two-phase lookup could not reach the
+format overloads from the extension point's dependent calls). Repaired and locked by
+`tests/unit_tests/serialization/test_config_interface.cpp` (`Demiplane.Tests.Unit.Serialization`, 9 tests) — see
+§16 (D1). `ConfigSchemaError::field_path` is best-effort: today it is always empty (no code path populates it), and
+`detail` names the offending field instead (every `validate()` message and enum-codec throw embeds the field name). The YAML-pointer-style
+`/listeners/1/tls/cert_file` paths this section originally sketched would need a path stack threaded through every
+`read_field` overload's signature — deferred as a strictly additive follow-up; the `field_path` member stays so the
+API doesn't break when it lands (D4).
+
 Implementation:
 
-1. Open and read file → on failure, `ConfigFileError`.
-2. Parse JSON via the existing `Json::CharReader` pipeline → on failure, `ConfigParseError` with line info.
-3. Walk `ServerConfig::fields()` via the framework's parse machinery — missing required field or type mismatch →
-   `ConfigSchemaError` with the YAML-pointer-style `field_path` (e.g. `/listeners/1/tls/cert_file`).
-4. Call `validate()` on populated config. `std::invalid_argument` → caught, rethrown as `ConfigSchemaError`.
+1. Open and read file → on failure, `ConfigFileError`. Rejects non-regular files (a directory would otherwise
+   surface as a confusing parse error) (D9).
+2. Parse JSON via the existing `Json::CharReader` pipeline → on failure, `ConfigParseError`; the line number is
+   best-effort, extracted from jsoncpp's formatted error message (`0` when unextractable) (D9).
+3. Walk `ServerConfig::fields()` via the framework's parse machinery — a missing key keeps the field's declared
+   default; a type mismatch or an unknown enum string → `ConfigSchemaError` (`detail` names the field; `field_path`
+   best-effort, D4). A well-formed non-object top-level JSON value (e.g. `"42"`) is also a `ConfigSchemaError`
+   rather than silently producing an all-defaults config (D9). Unknown JSON keys are ignored (D9).
+4. Call `validate()` on populated config (via `Builder::finalize()`). `std::invalid_argument` → caught, rethrown as
+   `ConfigSchemaError`.
+
+Also resolved in this PR: `build_ssl_context`'s cipher-list TODO — an `SSL_CTX_set_cipher_list` failure now throws
+`boost::system::system_error` carrying the OpenSSL error code and the asio SSL error category (D9).
 
 ### 10.3 Wiring config to runtime
 
@@ -1547,9 +1580,16 @@ run_standalone(cfg.value(), cfg.value().threads(), [&](Server& server) {
 });   // blocks until graceful shutdown; owns context + threads + signal handling
 ```
 
-`attach_default_listeners(Server&, DefaultDrivers={})` walks `cfg.listeners()`, dispatches by transport/protocol set,
-constructs the right driver instances using server-level timeouts/body_limit. For per-listener tuning, the user iterates
-manually.
+`attach_default_listeners(Server&)` — landed with no `DefaultDrivers` parameter (D5) — walks `cfg.listeners()` and
+dispatches by transport/protocol set, deriving `Http11Config` from server-level `timeouts`/`body_limit`
+(`max_header_bytes` keeps its struct default; no `ServerConfig` field maps to it in v1). v1-supported
+`(transport, protocols)` combinations: `tcp+[http1]`; `tls+` any non-empty duplicate-free subset/order of
+`{http1, http2}`, where **JSON order = ALPN server-preference order = template-argument order**; `quic+[http3]`.
+An empty `protocols` list defaults per transport (`http1`; `http3` on `quic`). Any other combination throws
+`std::invalid_argument` (notably `tcp+[http2]` — h2c is unsupported). An empty `listeners` array is a no-op —
+programmatic `add_*_listener` calls compose freely with config-driven ones. `ServerConfig::threads` is forwarded
+by the caller (`run_standalone(cfg, cfg.threads(), …)`, as sketched above); for per-listener tuning beyond what
+`ServerConfig` expresses, the user iterates `cfg.listeners()` manually.
 
 ### 10.4 YAML follow-up (out of v1 scope)
 
@@ -1880,6 +1920,15 @@ Coverage:
 | Accept-loop threading           | One strand per listener `run()`; stop emits dispatched onto that strand (PR 5 D5)                                                                                                                       | `cancellation_signal::emit` must be serialized with the loop's turns on a multi-threaded executor; closes the edge-lost-emit window                                                                            |
 | Drain-unwind completion         | `graceful_shutdown` polls `live_accept_loops_ == 0` (phase 1.5) and `Σ in_flight() == 0` (phase 2.5) on a 5 ms tick (PR 5 D6)                                                                           | Force-cancels are only dispatched; frames unwind in later turns. Polling is the fixture-proven pattern; a tracker completion event adds cross-strand surface for little gain                                   |
 | `ServerConfig` staging          | Plain struct (`request_arena_size`, `drain_timeout`, `path_normalization`) at the final path; PR 6 rewrites in place (PR 5 D1, PR 4 D1)                                                                 | Same staging pattern as `TlsConfig`/`Http11Config`; config layer keeps its own PathNormalization enum so it carries no routing dependency                                                                      |
+| Serialization machinery repair (D1) | Extension-point key becomes `serialization::FieldName` (a `string_view` wrapper) so ADL reaches format overloads from every dependent `read_field`/`write_field` call regardless of include order; `deserialize_one_field` reads directly into `builder.config_.*F::ptr`; new `std::vector<T>` and `std::uint16_t` codecs | The machinery had never been instantiated and did not compile when exercised: two-phase lookup froze at the template definition point, and ordinary ADL from scalar value types never reached `demiplane::serialization`; locked by `Demiplane.Tests.Unit.Serialization` (9 tests) |
+| HTTP config enum encoding (D2)  | Every enum field (`Transport`, `Protocol`, `TlsConfig::MinVersion`, `PathNormalization`) is string-encoded via non-template ADL codecs declared next to the enum; unknown strings throw `std::invalid_argument` naming the field | Satisfies §14.1 "enum string mappings round-trip"; supersedes §16's "int-encoded is acceptable"; a silent fallback would turn a typo into weaker TLS; `Protocol` codec lives in `listener_config.hpp`, not `http_enums.hpp`, so the types layer stays free of jsoncpp |
+| `tls.key_passphrase` policy (D3) | `FieldPolicy::Secret` — deserialize-only | `dump_server_config` never emits passphrases; §14.1's round-trip test uses passphrase-free configs, locked by a dedicated omission test |
+| `ConfigSchemaError::field_path` (D4) | Best-effort — always empty today (no populating code path); `detail` names the offending field | Full JSON-pointer paths need a path stack threaded through every `read_field` overload signature; deferred as a strictly additive follow-up; member stays for API stability |
+| `attach_default_listeners` shape (D5) | `attach_default_listeners(Server&)`, no `DefaultDrivers` param; v1 combos `tcp+[http1]`, `tls+` non-empty duplicate-free subset/order of `{http1, http2}` (JSON order = ALPN preference = template-arg order), `quic+[http3]`; unsupported combos throw | `Http11Config` is fully derivable from `ServerConfig` (body_limit + 3 phase timeouts); YAGNI beyond that until a second driver grows real config |
+| Config constructability split (D6) | `ServerConfig`/`ListenerConfig` Builder-only; `TlsConfig` keeps a public no-validation full-ctor escape hatch; `Timeouts` keeps its public 3-arg ctor | Every `ServerConfig` default is valid (`Builder{}.finalize()` replaces the old `ServerConfig{}` at all call sites); scaffold unit tests deliberately build empty `TlsConfig`s that `validate()` must reject on the loading path |
+| `TlsListener` arena ctor (D7)   | Delegating ctor pair `{exec, host, port, tls, [request_arena_size,] drivers...}`; `Server::add_tls_listener` forwards `cfg_.request_arena_size()` | A defaulted parameter cannot follow a variadic pack; `QuicListener` stays arena-less (scaffold owns no connections) |
+| Moved-from ctor read fix (D8)   | `Server`'s ctor now initializes `registry_{map_normalization(cfg_.path_normalization())}` from the member, not the already-moved-from constructor parameter | Latent bug, benign only because moving a plain-struct-shaped config copied scalars; the accessor rewrite touched this line anyway |
+| `load_server_config` hardening (D9) | Rejects non-regular files and non-object top-level JSON; parse-error line numbers best-effort (0 if unextractable); unknown JSON keys ignored; `build_ssl_context`'s cipher-list check now throws `boost::system::system_error` (OpenSSL error code + asio SSL category) on `SSL_CTX_set_cipher_list` failure | A directory path or a bare `"42"` top-level JSON would otherwise surface as a confusing parse error or silently produce an all-defaults config; the cipher-list TODO was the last staged PR 6 marker in the listener layer |
 
 ## 16. Open Questions
 
@@ -1887,10 +1936,14 @@ None blocking implementation. Things to revisit when their layer is touched:
 
 - **`std::pmr::polymorphic_allocator<>`'s exact integration with Beast's `Allocator` template parameter** — should be
   straightforward (`pmr::polymorphic_allocator<char>` is allocator-compliant) but warrants a small spike at PR 3 start.
-- **`ConfigInterface` field-type coverage** — the reference usage (`FileSinkConfig`) demonstrates
-  enum-like/path/bool/string/uint64 fields only. `ServerConfig` additionally needs `std::chrono::milliseconds`,
-  `std::vector<ListenerConfig>` (nested configs), and `std::optional<TlsConfig>`; enum string-encoding is also
-  unverified (int-encoded is acceptable for v1). Verify — and extend the serialization layer if needed — at PR 6 start.
+- **`ConfigInterface` field-type coverage — RESOLVED (PR 6, D1/D2).** Verification found the machinery had never
+  been instantiated and did not compile when exercised: two-phase lookup could not reach the format overloads
+  through the extension point's dependent calls. Repaired via a `serialization::FieldName` ADL-anchoring key type
+  (§10.1 "Landed shape"); `deserialize_one_field` now reads directly into the field's storage; new
+  `std::vector<T>` and `std::uint16_t` codecs cover `std::vector<ListenerConfig>` and `port`; nested configs with
+  private framework constructors work held directly, in `std::optional`, and in `std::vector`. Locked by
+  `tests/unit_tests/serialization/test_config_interface.cpp` (`Demiplane.Tests.Unit.Serialization`, 9 tests). Enum
+  fields are string-encoded (D2), superseding this question's "int-encoded is acceptable for v1" allowance.
 - **OpenSSL ALPN callback context lifetime** — the `arg` parameter must outlive the SSL context. Storing it as a member
   of `TlsListener` should suffice; verify with a brief test at PR 4 start.
 

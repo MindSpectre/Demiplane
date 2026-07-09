@@ -4,14 +4,14 @@
 using namespace demiplane::http;
 
 TEST(HttpEnumsTest, MethodToString) {
-    EXPECT_EQ(to_string(HttpMethod::get), std::string_view{"GET"});
-    EXPECT_EQ(to_string(HttpMethod::post), std::string_view{"POST"});
-    EXPECT_EQ(to_string(HttpMethod::put), std::string_view{"PUT"});
-    EXPECT_EQ(to_string(HttpMethod::patch), std::string_view{"PATCH"});
-    EXPECT_EQ(to_string(HttpMethod::del), std::string_view{"DELETE"});
-    EXPECT_EQ(to_string(HttpMethod::head), std::string_view{"HEAD"});
-    EXPECT_EQ(to_string(HttpMethod::options), std::string_view{"OPTIONS"});
-    EXPECT_EQ(to_string(HttpMethod::unknown), std::string_view{"UNKNOWN"});
+    EXPECT_EQ(to_string_view(HttpMethod::get), std::string_view{"GET"});
+    EXPECT_EQ(to_string_view(HttpMethod::post), std::string_view{"POST"});
+    EXPECT_EQ(to_string_view(HttpMethod::put), std::string_view{"PUT"});
+    EXPECT_EQ(to_string_view(HttpMethod::patch), std::string_view{"PATCH"});
+    EXPECT_EQ(to_string_view(HttpMethod::del), std::string_view{"DELETE"});
+    EXPECT_EQ(to_string_view(HttpMethod::head), std::string_view{"HEAD"});
+    EXPECT_EQ(to_string_view(HttpMethod::options), std::string_view{"OPTIONS"});
+    EXPECT_EQ(to_string_view(HttpMethod::unknown), std::string_view{"UNKNOWN"});
 }
 
 TEST(HttpEnumsTest, MethodFromBeast) {

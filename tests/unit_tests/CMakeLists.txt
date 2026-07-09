@@ -194,3 +194,16 @@ target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
 )
 ##############################################################################
 
+##############################################################################
+# Test Serialization (ConfigInterface machinery + JSON field codecs)
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Serialization
+        serialization/test_config_interface.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Serialization
+        PRIVATE
+        Demiplane::Common::Serialization
+        ${TEST_LIBS}
+)
+##############################################################################
+

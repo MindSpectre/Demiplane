@@ -83,7 +83,7 @@ namespace http_it {
         bool torn_down_ = false;
 
         void start_server(const std::function<void(demiplane::http::Server&)>& configure,
-                          demiplane::http::ServerConfig cfg = {},
+                          demiplane::http::ServerConfig cfg = demiplane::http::ServerConfig::Builder{}.finalize(),
                           const std::size_t io_threads      = 1) {
             server_.emplace(cfg, ioc_.get_executor());
             configure(*server_);

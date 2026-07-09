@@ -45,6 +45,7 @@ add_integration_test(${INTEGRATION_TESTING_TARGET}.Http.Server
         test_http_server_observer.cpp
         test_http_run_standalone.cpp
         test_http_server_concurrency.cpp
+        test_http_config_wiring.cpp
         LINK_LIBS
         Demiplane.Component.HTTP.Server
         Demiplane.Component.HTTP.Listeners

@@ -5,9 +5,9 @@
 
 namespace demiplane::http {
 
-    /// Per-driver HTTP/1.1 limits + phase timeouts (spec §6.3). ServerConfig
-    /// (PR 6) constructs these from loaded config; for now callers build them
-    /// directly.
+    /// Per-driver HTTP/1.1 limits + phase timeouts (spec §6.3).
+    /// attach_default_listeners derives one from ServerConfig (body_limit +
+    /// phase timeouts); direct construction remains for per-driver tuning.
     struct Http11Config {
         std::size_t max_header_bytes = 16 * 1024;
         std::size_t max_body_bytes   = 16 * 1024 * 1024;

@@ -63,7 +63,7 @@ namespace demiplane::http {
         http_3   = 30,
     };
 
-    constexpr std::string_view to_string(const HttpMethod m) noexcept {
+    constexpr std::string_view to_string_view(const HttpMethod m) noexcept {
         switch (m) {
             case HttpMethod::get:
                 return "GET";

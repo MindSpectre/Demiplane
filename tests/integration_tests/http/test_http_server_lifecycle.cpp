@@ -69,7 +69,7 @@ namespace {
 }  // namespace
 
 TEST_F(ServerLifecycleTest, StopBeforeSetupIsANoOp) {
-    Server server{ServerConfig{}, ioc_.get_executor()};
+    Server server{ServerConfig::Builder{}.finalize(), ioc_.get_executor()};
     server.stop();  // documented no-op (spec §9.7 corollary)
     EXPECT_FALSE(server.is_running());
     server.wait_until_stopped();  // returns immediately — setup() never ran
@@ -86,7 +86,7 @@ TEST_F(ServerLifecycleTest, StopIsIdempotentAndWaitReturnsAgain) {
 }
 
 TEST_F(ServerLifecycleTest, SetupWithoutListenersThrows) {
-    Server server{ServerConfig{}, ioc_.get_executor()};
+    Server server{ServerConfig::Builder{}.finalize(), ioc_.get_executor()};
     server.add_controller(std::make_shared<http_it::PingController>());
     EXPECT_THROW(server.setup(), std::logic_error);
     EXPECT_FALSE(server.is_running());
@@ -111,7 +111,7 @@ TEST_F(ServerLifecycleTest, SetupThrowsWhenPortInUse) {
         probe, {boost::asio::ip::make_address("127.0.0.1"), 0}};  // open+bind+listen
     const auto port = taken.local_endpoint().port();
 
-    server_.emplace(ServerConfig{}, ioc_.get_executor());
+    server_.emplace(ServerConfig::Builder{}.finalize(), ioc_.get_executor());
     server_->add_controller(std::make_shared<http_it::PingController>());
     server_->add_tcp_listener("127.0.0.1", port, Http11Driver{Http11Config{}});
     // Bind failures are collected best-effort-all and aggregated; acceptors
@@ -122,7 +122,7 @@ TEST_F(ServerLifecycleTest, SetupThrowsWhenPortInUse) {
 }
 
 TEST_F(ServerLifecycleTest, ConflictingRoutesThrowAggregateAtSetup) {
-    server_.emplace(ServerConfig{}, ioc_.get_executor());
+    server_.emplace(ServerConfig::Builder{}.finalize(), ioc_.get_executor());
     server_->add_controller(std::make_shared<DupController>());
     server_->add_controller(std::make_shared<DupController>());
     server_->add_tcp_listener("127.0.0.1", 0, Http11Driver{Http11Config{}});
@@ -169,8 +169,9 @@ TEST_F(ServerLifecycleTest, NewConnectionsRefusedAfterShutdown) {
 }
 
 TEST_F(ServerLifecycleTest, DrainDeadlineForceCancelsStragglers) {
-    ServerConfig cfg;
-    cfg.drain_timeout = std::chrono::milliseconds{100};  // << the 500ms /hang handler
+    const auto cfg = ServerConfig::Builder{}
+                         .drain_timeout(std::chrono::milliseconds{100})  // << the 500ms /hang handler
+                         .finalize();
     auto latch        = std::make_shared<http_it::LatchController>();
     start_server(
         [&](Server& s) {

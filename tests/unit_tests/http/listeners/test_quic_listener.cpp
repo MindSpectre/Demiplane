@@ -18,7 +18,7 @@ static_assert(std::derived_from<QuicListener<Http3Driver>, ListenerBase>);
 
 TEST(QuicListenerTest, ScaffoldBindsAndRunsImmediately) {
     boost::asio::io_context ioc;
-    QuicListener<Http3Driver> listener{ioc.get_executor(), "127.0.0.1", 8443, TlsConfig{},
+    QuicListener<Http3Driver> listener{ioc.get_executor(), "127.0.0.1", 8443, TlsConfig{"", ""},
                                        Http3Driver{}};
     listener.bind();  // no-op success
     EXPECT_EQ(listener.bind_address(), "127.0.0.1");

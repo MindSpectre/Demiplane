@@ -103,17 +103,15 @@ namespace demiplane::http {
         Server& add_tcp_listener(std::string host, const std::uint16_t port, Driver driver) {
             require_build("add_tcp_listener");
             listeners_.push_back(std::make_unique<TcpListener<Driver>>(
-                exec_, std::move(host), port, std::move(driver), cfg_.request_arena_size));
+                exec_, std::move(host), port, std::move(driver), cfg_.request_arena_size()));
             return *this;
         }
 
         template <IsHttpDriver... Drivers>
         Server& add_tls_listener(std::string host, const std::uint16_t port, TlsConfig tls, Drivers... drivers) {
             require_build("add_tls_listener");
-            // Arena size stays at the TlsListener 8 KB default until PR 6
-            // wires request_arena_size through (PR 4 note in tls_listener.hpp).
             listeners_.push_back(std::make_unique<TlsListener<Drivers...>>(
-                exec_, std::move(host), port, std::move(tls), std::move(drivers)...));
+                exec_, std::move(host), port, std::move(tls), cfg_.request_arena_size(), std::move(drivers)...));
             return *this;
         }
 

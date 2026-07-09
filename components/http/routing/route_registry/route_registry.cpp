@@ -248,7 +248,7 @@ namespace demiplane::http {
         std::string msg = std::to_string(conflicts.size()) + " route conflict(s):";
         for (const auto& [method, path, detail] : conflicts) {
             msg += "\n  ";
-            msg += to_string(method);
+            msg += to_string_view(method);
             msg += ' ';
             msg += path;
             if (!detail.empty()) {

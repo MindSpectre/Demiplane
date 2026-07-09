@@ -108,3 +108,40 @@ target_include_directories(${UNIT_TESTING_TARGET}.Http.Listeners PRIVATE
         ${CMAKE_SOURCE_DIR}/tests/integration_tests/http
 )
 ##############################################################################
+
+##############################################################################
+# Test HTTP Config layer
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Config
+        config/test_timeouts.cpp
+        config/test_tls_config.cpp
+        config/test_listener_config.cpp
+        config/test_server_config.cpp
+        config/test_load_server_config.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Config
+        PRIVATE
+        Demiplane.Component.HTTP.Config
+        Demiplane.Component.HTTP.Types
+        JsonCpp::JsonCpp
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test HTTP Server layer (unit — attach_default_listeners; the Server
+# lifecycle itself is integration-tested)
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Server
+        server/test_attach_default_listeners.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Server
+        PRIVATE
+        Demiplane.Component.HTTP.Server
+        Demiplane.Component.HTTP.Config
+        Demiplane.Component.HTTP.Drivers
+        Demiplane.Component.HTTP.Types
+        Boost::asio
+        ${TEST_LIBS}
+)
+##############################################################################

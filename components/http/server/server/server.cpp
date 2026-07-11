@@ -34,7 +34,7 @@ namespace demiplane::http {
         return msg;
     }
 
-    Server::Server(ServerConfig cfg, boost::asio::any_io_executor exec)
+    Server::Server(ServerConfig cfg, Executor exec)
         : cfg_{std::move(cfg)},
           exec_{std::move(exec)},
           // Read the MEMBER, not the moved-from parameter (D8): members

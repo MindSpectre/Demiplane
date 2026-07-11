@@ -8,8 +8,8 @@
 #include <string>
 #include <utility>
 
-#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
+#include <executor.hpp>
 #include <http3_driver.hpp>
 #include <listener_base.hpp>
 #include <router.hpp>
@@ -30,8 +30,7 @@ namespace demiplane::http {
         static_assert(std::same_as<Driver, Http3Driver>, "QuicListener pairs with Http3Driver only (spec §7.3)");
 
     public:
-        QuicListener(
-            boost::asio::any_io_executor exec, std::string host, const std::uint16_t port, TlsConfig tls, Driver driver)
+        QuicListener(Executor exec, std::string host, const std::uint16_t port, TlsConfig tls, Driver driver)
             : exec_{std::move(exec)},
               host_{std::move(host)},
               port_{port},
@@ -65,7 +64,7 @@ namespace demiplane::http {
         }
 
     private:
-        boost::asio::any_io_executor exec_;
+        Executor exec_;
         std::string host_;
         std::uint16_t port_;
         TlsConfig tls_;

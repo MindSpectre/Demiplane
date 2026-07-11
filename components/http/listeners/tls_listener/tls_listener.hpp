@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -25,6 +24,7 @@
 #include <boost/beast/core/error.hpp>
 #include <build_ssl_context.hpp>
 #include <connection_tracker.hpp>
+#include <executor.hpp>
 #include <http_driver_concept.hpp>
 #include <listener_base.hpp>
 #include <router.hpp>
@@ -57,15 +57,11 @@ namespace demiplane::http {
         static_assert(sizeof...(Drivers) >= 1, "TlsListener needs at least one driver");
 
     public:
-        TlsListener(boost::asio::any_io_executor exec,
-                    std::string host,
-                    const std::uint16_t port,
-                    TlsConfig tls,
-                    Drivers... drivers)
+        TlsListener(Executor exec, std::string host, const std::uint16_t port, TlsConfig tls, Drivers... drivers)
             : TlsListener{std::move(exec), std::move(host), port, std::move(tls), 8192, std::move(drivers)...} {
         }
 
-        TlsListener(boost::asio::any_io_executor exec,
+        TlsListener(Executor exec,
                     std::string host,
                     const std::uint16_t port,
                     TlsConfig tls,
@@ -101,13 +97,13 @@ namespace demiplane::http {
             co_await asio::this_coro::throw_if_cancelled(false);
             const auto cancel_state = co_await asio::this_coro::cancellation_state;
             std::optional<asio::steady_timer> backoff;  // error path only — lazy
-            unsigned consecutive_errors = 0;
+            std::uint32_t consecutive_errors = 0;
 
             while (cancel_state.cancelled() == asio::cancellation_type::none) {
-                auto strand = asio::make_strand(exec_);
+                Strand strand = asio::make_strand(exec_);
                 boost::beast::error_code ec;
-                asio::ip::tcp::socket sock =
-                    co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
+                // Socket, not tcp::socket — see TcpListener::run.
+                Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
                 if (ec == asio::error::operation_aborted) {
                     break;
                 }
@@ -136,19 +132,28 @@ namespace demiplane::http {
                 asio::co_spawn(
                     strand,
                     [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
-                        if (co_await conn->handshake()) {  // ALPN mismatch / TLS failure → close
-                            co_await conn->async_close();
-                            co_return;
+                        try {
+                            // TODO: squash branches?
+                            if (auto err_code = co_await conn->handshake()) {  // ALPN mismatch / TLS failure → close
+                                co_await conn->async_close();
+                            }
+                            // No matching driver: reachable when the client sent NO
+                            // ALPN extension (the select callback never runs → http1
+                            // fallback) and no h1 driver is in the tuple → close.
+                            else if (const bool handled =
+                                         co_await try_serve<0>(*conn, router, conn->negotiated_protocol());
+                                     !handled) {
+                                co_await conn->async_close();
+                            }
+                        } catch (...) {  // the watchdog must be released on every exit
                         }
-                        // No matching driver: reachable when the client sent NO
-                        // ALPN extension (the select callback never runs → http1
-                        // fallback) and no h1 driver is in the tuple → close.
-                        if (const bool handled = co_await try_serve<0>(*conn, router, conn->negotiated_protocol());
-                            !handled) {
-                            co_await conn->async_close();
-                        }
+                        conn->end_watchdog();  // strand-serialized with the watchdog's turns
                     },
                     asio::detached);
+                // Deadline supervisor (see listener_base.hpp). The handshake keeps
+                // its own beast timeout; the watchdog idles (deadline = max) until
+                // a driver stamps per-phase deadlines.
+                asio::co_spawn(strand, deadline_watchdog(conn), asio::detached);
             }
             // Reached on EVERY exit path — refuse new connections during shutdown
             // (spec §14.2; spike S4); see TcpListener::run for the rationale.
@@ -202,7 +207,7 @@ namespace demiplane::http {
             }
         }
 
-        boost::asio::any_io_executor exec_;
+        Executor exec_;
         std::string host_;
         std::uint16_t port_;
         TlsConfig tls_config_;
@@ -210,7 +215,7 @@ namespace demiplane::http {
         std::tuple<Drivers...> drivers_;
         std::string advertised_alpn_;  // outlives ctx_ (ALPN cb arg, D4)
         std::optional<boost::asio::ssl::context> ctx_;
-        boost::asio::ip::tcp::acceptor acceptor_;
+        Acceptor acceptor_;
         ConnectionTracker tracker_;
     };
 

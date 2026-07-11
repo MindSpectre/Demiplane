@@ -1,8 +1,10 @@
 #pragma once
 
+#include <charconv>
 #include <memory>
 #include <memory_resource>
 #include <span>
+#include <string>
 #include <string_view>
 
 #include <body.hpp>
@@ -11,6 +13,7 @@
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/use_awaitable.hpp>
+#include <boost/asio/write.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http.hpp>
 #include <connection_concepts.hpp>
@@ -24,13 +27,23 @@
 namespace demiplane::http {
 
     namespace detail {
-        // Split allocators (PR3 D1, spike-validated): pmr BODY allocator (arena),
-        // std::allocator FIELDS (so req.base() is http::fields, compatible with
-        // the landed Headers::view_of_beast).
+        // BOTH allocators are the request arena. The fields allocator used to be
+        // std::allocator (so req.base() was a plain http::fields for the landed
+        // Headers::view_of_beast); that cost ~4 global-heap malloc/free per
+        // request — one Beast node per header line plus the target. Headers now
+        // views the pmr fields type directly (see BeastFields in headers.hpp).
         using Http11Body =
             boost::beast::http::basic_string_body<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>>;
-        using Http11Request = boost::beast::http::request<Http11Body>;
-        using Http11Parser  = boost::beast::http::request_parser<Http11Body, std::allocator<char>>;
+        using Http11Request = boost::beast::http::request<Http11Body, BeastFields>;
+        using Http11Parser  = boost::beast::http::request_parser<Http11Body, std::pmr::polymorphic_allocator<char>>;
+
+        /// Response headers serialized out of the request arena. Beast allocates
+        /// one `basic_fields` node per header; with the default std::allocator
+        /// that is a global-heap malloc/free per header per response, ~3.2 per
+        /// request measured — and the headers are ALREADY in the arena, so those
+        /// nodes were pure copy-out waste.
+        using ArenaFields    = boost::beast::http::basic_fields<std::pmr::polymorphic_allocator<char>>;
+        using Http11Response = boost::beast::http::response<boost::beast::http::buffer_body, ArenaFields>;
 
         /// Wrap a parsed Beast request as a RequestContext. The request body is
         /// a non-owning view over the parser's arena-backed bytes — the parser
@@ -40,8 +53,9 @@ namespace demiplane::http {
 
         /// Translate our Response into a zero-copy buffer_body message whose
         /// body bytes point at `resp.body` — `resp` MUST outlive the returned
-        /// message and its write.
-        boost::beast::http::response<boost::beast::http::buffer_body> make_beast_response(Response& resp);
+        /// message and its write. Field nodes come from `resp`'s allocator (the
+        /// request arena on the hot path, new_delete on the error paths).
+        Http11Response make_beast_response(Response& resp);
 
         bool is_malformed_request(const boost::beast::error_code& ec) noexcept;
     }  // namespace detail
@@ -51,8 +65,12 @@ namespace demiplane::http {
      *
      * One keep-alive session loop per connection: parse (body into the request
      * arena), build a RequestContext, dispatch through the Router, stamp
-     * Date/Server, write the Response zero-copy. The bug-fix battery lands here
-     * (body/header limits, per-phase timeouts, handler-exception → 500,
+     * Date/Server, flat-serialize the Response into a per-connection batch
+     * buffer that flushes once the input runs dry (one write per pipelined
+     * BATCH). Reads still go through beast's parser; writes bypass beast's
+     * serializer entirely (see serialize_response). The bug-fix battery lands
+     * here (body/header limits, per-phase deadlines via set_deadline_after +
+     * the listener's deadline_watchdog, handler-exception → 500,
      * cancellation-aware I/O).
      */
     class Http11Driver {
@@ -76,9 +94,18 @@ namespace demiplane::http {
     private:
         static void stamp_common_headers(Response& resp);
 
+        /// Flat-render `resp` (status line, headers, Content-Length,
+        /// Connection: close when !keep_alive, CRLF, body) APPENDING to `out`.
+        /// Byte-identical to what beast's serializer emitted; measured ~15%
+        /// cheaper per request than http::async_write's lazy buffers_cat /
+        /// buffers_suffix view machinery (~11% of ALL cycles at depth 1).
+        static void serialize_response(Response& resp, std::string& out);
+
+        /// Write `out` fully and clear it (cleared even on error — callers
+        /// break/close, nothing may resend the bytes).
         template <typename Stream>
         static boost::asio::awaitable<boost::beast::error_code>
-        write_response(Stream& stream, Response& resp, boost::asio::cancellation_slot slot);
+        flush(Stream& stream, std::string& out, boost::asio::cancellation_slot slot);
 
         Http11Config cfg_;
         // No SCROLL_COMPONENT_PREFIX / COMPONENT_LOG_* here: the h1 driver does
@@ -103,22 +130,39 @@ namespace demiplane::http {
         // every request — the same reuse rationale as the per-connection arena.
         boost::beast::flat_buffer buffer;
 
+        // Session-scope response accumulator: pipelined requests batch their
+        // responses here and flush with ONE write once the input buffer runs
+        // dry (drogon's model; writes were 1.02 sendmsg per RESPONSE before,
+        // 0.06 per response after — the whole of the former 12x gap at
+        // pipeline depth 16). Plain heap string, NOT arena: it must survive
+        // per-request arena resets; capacity amortizes across the session.
+        std::string outbuf;
+        outbuf.reserve(4096);
+
         while (true) {
             conn.reset_request_arena();
-            std::pmr::polymorphic_allocator<char> body_alloc{conn.arena_alloc().resource()};
+            std::pmr::polymorphic_allocator<char> arena_alloc{conn.arena_alloc().resource()};
 
+            // Body AND fields out of the arena. The parser is a loop-scope local,
+            // so it is destroyed at the end of this iteration — before the next
+            // iteration's reset_request_arena() invalidates the arena block.
             detail::Http11Parser parser{
-                std::piecewise_construct, std::forward_as_tuple(body_alloc), std::forward_as_tuple()};
+                std::piecewise_construct, std::forward_as_tuple(arena_alloc), std::forward_as_tuple(arena_alloc)};
             parser.header_limit(static_cast<std::uint32_t>(cfg_.max_header_bytes));
             parser.body_limit(cfg_.max_body_bytes);
 
             boost::beast::error_code ec;
 
-            // Phase 1: header (also the idle wait between keep-alive requests)
+            // Phase 1: header (also the idle wait between keep-alive requests).
+            // Deadline STORE, not beast expires_after: the per-op stream timeout
+            // armed timer.async_wait + cancel + an aborted-handler dispatch
+            // around every read AND write — removing it measured +18% rps at
+            // pipeline depth 1. The listener's deadline_watchdog enforces this
+            // at ~500ms granularity (config timeouts are seconds).
             // TODO: cfg_.idle_timeout is currently unused — maybe wire it in here so
             //  a kept-alive connection waiting for its NEXT request uses idle_timeout,
             //  while header_timeout bounds only a header that is already mid-arrival.
-            conn.expires_after(cfg_.header_timeout);
+            conn.set_deadline_after(cfg_.header_timeout);
             co_await http::async_read_header(
                 stream,
                 buffer,
@@ -130,7 +174,7 @@ namespace demiplane::http {
                 Response r   = ResponseFactory::bad_request("Request Header Fields Too Large");
                 r.keep_alive = false;
                 stamp_common_headers(r);
-                co_await write_response(stream, r, conn.cancel_slot());
+                serialize_response(r, outbuf);  // post-loop flush sends it in order
                 break;
             }
             // Beast checks Content-Length against body_limit eagerly at header-parse
@@ -139,7 +183,7 @@ namespace demiplane::http {
                 Response r   = ResponseFactory::payload_too_large();
                 r.keep_alive = false;
                 stamp_common_headers(r);
-                co_await write_response(stream, r, conn.cancel_slot());
+                serialize_response(r, outbuf);  // post-loop flush sends it in order
                 break;
             }
             if (ec) {
@@ -147,23 +191,30 @@ namespace demiplane::http {
                     Response r   = ResponseFactory::bad_request("Bad Request");
                     r.keep_alive = false;
                     stamp_common_headers(r);
-                    co_await write_response(stream, r, conn.cancel_slot());
+                    serialize_response(r, outbuf);  // post-loop flush sends it in order
                 }
                 break;  // malformed → 400 (written above); transport error → just close
             }
 
-            // Phase 2: body
-            conn.expires_after(cfg_.body_timeout);
-            co_await http::async_read(
-                stream,
-                buffer,
-                parser,
-                asio::bind_cancellation_slot(conn.cancel_slot(), asio::redirect_error(asio::use_awaitable, ec)));
+            // Phase 2: body — skipped entirely when the header already completed
+            // the message (GET/HEAD/DELETE with no Content-Length and no chunked
+            // encoding, i.e. most requests). async_read on a done parser is not
+            // free: it still builds a composed-operation state on the heap and
+            // still re-enters the socket. Measured at 1.24 recvmsg per request
+            // against Drogon's 1.02, plus one allocation.
+            if (!parser.is_done()) {
+                conn.set_deadline_after(cfg_.body_timeout);
+                co_await http::async_read(
+                    stream,
+                    buffer,
+                    parser,
+                    asio::bind_cancellation_slot(conn.cancel_slot(), asio::redirect_error(asio::use_awaitable, ec)));
+            }
             if (ec == http::error::body_limit) {
                 Response r   = ResponseFactory::payload_too_large();
                 r.keep_alive = false;
                 stamp_common_headers(r);
-                co_await write_response(stream, r, conn.cancel_slot());
+                serialize_response(r, outbuf);  // post-loop flush sends it in order
                 break;
             }
             if (ec) {
@@ -171,7 +222,7 @@ namespace demiplane::http {
                     Response r   = ResponseFactory::bad_request("Bad Request");
                     r.keep_alive = false;
                     stamp_common_headers(r);
-                    co_await write_response(stream, r, conn.cancel_slot());
+                    serialize_response(r, outbuf);  // post-loop flush sends it in order
                 }
                 break;
             }
@@ -194,23 +245,67 @@ namespace demiplane::http {
             response.version      = HttpVersion::http_1_1;
             stamp_common_headers(response);
 
-            if (const boost::beast::error_code write_ec = co_await write_response(stream, response, conn.cancel_slot());
-                write_ec || !keep_alive)
-                break;
+            // Batching: flush only when no more pipelined bytes are buffered
+            // (or keep-alive ends / the batch cap is reached).
+            // buffer.size() > 0 means the next request is at least partially
+            // here already — parse it first, answer the whole batch with ONE
+            // write. A trickle sender can delay the batch only until its own
+            // bytes complete; the header deadline above bounds that window.
+            serialize_response(response, outbuf);
+            if (!keep_alive || buffer.size() == 0 || outbuf.size() >= 256 * 1024) {
+                if (const boost::beast::error_code write_ec = co_await flush(stream, outbuf, conn.cancel_slot());
+                    write_ec || !keep_alive)
+                    break;
+            }
         }
+        // Flush anything still batched (error paths serialize without writing;
+        // a transport error mid-flush already cleared outbuf).
+        if (!outbuf.empty())
+            co_await flush(stream, outbuf, conn.cancel_slot());
         co_await conn.async_close();
+    }
+
+    // Body is APPENDED (not gather-written) so a pipelined batch flushes as
+    // ONE contiguous buffer; for the small-response regime this copy is far
+    // cheaper than beast's per-write view walking. Revisit for large bodies
+    // (a size threshold could gather-write the body instead of copying).
+    inline void Http11Driver::serialize_response(Response& resp, std::string& out) {
+        namespace http = boost::beast::http;
+        out.append(resp.version == HttpVersion::http_1_0 ? "HTTP/1.0 " : "HTTP/1.1 ");
+        char nbuf[20];
+        const auto code    = static_cast<unsigned>(resp.status);
+        const auto [cp, _] = std::to_chars(nbuf, nbuf + sizeof nbuf, code);
+        out.append(nbuf, cp);
+        out.push_back(' ');
+        const auto reason = http::obsolete_reason(static_cast<http::status>(code));
+        out.append(reason.data(), reason.size());
+        out.append("\r\n");
+        for (const auto& [name, value] : resp.headers) {
+            out.append(name);
+            out.append(": ");
+            out.append(value);
+            out.append("\r\n");
+        }
+        const std::string_view body = resp.body.buffered_view().value_or(std::string_view{});
+        out.append("Content-Length: ");
+        const auto [lp, _2] = std::to_chars(nbuf, nbuf + sizeof nbuf, body.size());
+        out.append(nbuf, lp);
+        out.append("\r\n");
+        if (!resp.keep_alive)
+            out.append("Connection: close\r\n");
+        out.append("\r\n");
+        out.append(body);
     }
 
     template <typename Stream>
     boost::asio::awaitable<boost::beast::error_code>
-    Http11Driver::write_response(Stream& stream, Response& resp, const boost::asio::cancellation_slot slot) {
+    Http11Driver::flush(Stream& stream, std::string& out, const boost::asio::cancellation_slot slot) {
         namespace asio = boost::asio;
-        namespace http = boost::beast::http;
-
-        auto msg = detail::make_beast_response(resp);
         boost::beast::error_code ec;
-        co_await http::async_write(
-            stream, msg, asio::bind_cancellation_slot(slot, asio::redirect_error(asio::use_awaitable, ec)));
-        co_return ec;  // checked by serve()'s normal path; error paths break regardless
+        co_await asio::async_write(stream,
+                                   asio::buffer(out.data(), out.size()),
+                                   asio::bind_cancellation_slot(slot, asio::redirect_error(asio::use_awaitable, ec)));
+        out.clear();  // cleared even on error: callers break/close, nothing may resend it
+        co_return ec;
     }
 }  // namespace demiplane::http

@@ -9,7 +9,6 @@
 #include <string>
 #include <utility>
 
-#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -21,6 +20,7 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/error.hpp>
 #include <connection_tracker.hpp>
+#include <executor.hpp>
 #include <http_driver_concept.hpp>
 #include <listener_base.hpp>
 #include <router.hpp>
@@ -48,11 +48,11 @@ namespace demiplane::http {
     template <IsHttpDriver Driver>
     class TcpListener final : public ListenerBase {
     public:
-        TcpListener(boost::asio::any_io_executor exec,
+        TcpListener(Executor exec,
                     std::string host,
-                    std::uint16_t port,
+                    const std::uint16_t port,
                     Driver driver,
-                    std::size_t arena_size = 8192)
+                    const std::size_t arena_size = 8192)
             : exec_{std::move(exec)},
               host_{std::move(host)},
               port_{port},
@@ -88,10 +88,12 @@ namespace demiplane::http {
             // strand and DISPATCHES the stop emit onto it (PR 5, D5). Direct
             // users on a multi-threaded executor must do the same.
             while (cancel_state.cancelled() == asio::cancellation_type::none) {
-                auto strand = asio::make_strand(exec_);
+                Strand strand = asio::make_strand(exec_);
                 boost::beast::error_code ec;
-                asio::ip::tcp::socket sock =
-                    co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
+                // Yields a Socket (strand-bound), not a tcp::socket — assigning to
+                // tcp::socket would convert the executor back into any_io_executor
+                // and re-erase the whole hot path.
+                Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
                 if (ec == asio::error::operation_aborted) {
                     break;  // stop(): the run-coroutine's cancellation slot was emitted
                 }
@@ -123,23 +125,31 @@ namespace demiplane::http {
                 }
                 consecutive_errors = 0;
                 // Nagle holds every small segment after the first unacked one.
-                // The driver writes one response per request, so a pipelined
-                // batch ships response 1 and then blocks ~40ms on the peer's
-                // delayed ACK before response 2. Measured: 30k → 343k req/s at
-                // pipeline depth 16. Failure to set it is ignored — a socket
-                // that rejects the option still serves correctly, just slower.
+                // The driver batches pipelined responses into one write, but a
+                // batch boundary (and every non-pipelined exchange) is still a
+                // small segment that would wait ~40ms on the peer's delayed ACK.
+                // Measured before batching: 30k → 343k req/s at depth 16.
+                // Failure to set it is ignored — a socket that rejects the
+                // option still serves correctly, just slower.
                 {
                     boost::beast::error_code nd_ec;
                     sock.set_option(asio::ip::tcp::no_delay(true), nd_ec);
                 }
-                auto conn          = std::make_shared<TcpConnection>(std::move(sock), arena_size_);
-                auto handle        = tracker_.register_connection(conn, strand);
+                auto conn   = std::make_shared<TcpConnection>(std::move(sock), arena_size_);
+                auto handle = tracker_.register_connection(conn, strand);
                 asio::co_spawn(
                     strand,
                     [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
-                        co_await driver_.serve(*conn, router);
+                        try {
+                            co_await driver_.serve(*conn, router);
+                        } catch (...) {  // serve() is noexcept in practice; the watchdog
+                        }  // must still be released if that ever changes
+                        conn->end_watchdog();  // strand-serialized with the watchdog's turns
                     },
                     asio::detached);
+                // Deadline supervisor for this connection (see listener_base.hpp).
+                // Holds its own shared_ptr — safe past the tracker Handle's release.
+                asio::co_spawn(strand, deadline_watchdog(conn), asio::detached);
             }
             // Reached on EVERY exit path (stop, fatal accept error). Close the
             // acceptor so new SYNs are REFUSED (ECONNREFUSED), not silently
@@ -165,12 +175,12 @@ namespace demiplane::http {
         }
 
     private:
-        boost::asio::any_io_executor exec_;
+        Executor exec_;
         std::string host_;
         std::uint16_t port_;
         Driver driver_;
         std::size_t arena_size_;
-        boost::asio::ip::tcp::acceptor acceptor_;
+        Acceptor acceptor_;
         ConnectionTracker tracker_;
     };
 

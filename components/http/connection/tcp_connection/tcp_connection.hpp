@@ -8,26 +8,32 @@
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/beast/core/tcp_stream.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <executor.hpp>
 #include <http_enums.hpp>
 #include <request_arena.hpp>
 
 namespace demiplane::http {
 
     /**
-     * @brief Plain-TCP connection: beast::tcp_stream + per-connection arena +
-     *        cancel signal (spec §6.1).
+     * @brief Plain-TCP connection: strand-bound beast stream + per-connection
+     *        arena + cancel signal (spec §6.1).
+     *
+     * The stream is `Stream`, not `beast::tcp_stream`. The latter hard-codes
+     * `any_io_executor`, which put a type-erased dispatch on every I/O op of the
+     * request hot path — 14.25% of cycles by `perf`. See <executor.hpp>.
      *
      * Non-movable (composes the immovable RequestArena + cancellation_signal);
      * the TcpListener (later PR) constructs it in place / on the heap per accept.
      */
     class TcpConnection : gears::Immutable {
     public:
-        using stream_type = boost::beast::tcp_stream;
+        using stream_type = Stream;
 
-        explicit TcpConnection(boost::asio::ip::tcp::socket socket, const std::size_t arena_size = 8192)
+        explicit TcpConnection(Socket socket, const std::size_t arena_size = 8192)
             : stream_{std::move(socket)},
-              arena_{arena_size} {
+              arena_{arena_size},
+              watchdog_timer_{stream_.get_executor()} {
         }
 
         [[nodiscard]] stream_type& stream() noexcept {
@@ -42,8 +48,35 @@ namespace demiplane::http {
             arena_.reset();
         }
 
-        void expires_after(const std::chrono::milliseconds ms) {
-            stream_.expires_after(ms);
+        /// Per-phase I/O deadline (IsConnection). A plain store: the driver and
+        /// the listener's deadline_watchdog both run on this connection's
+        /// strand, so no atomics. Replaces beast's expires_after — that armed
+        /// timer.async_wait + cancel + an aborted-handler dispatch around EVERY
+        /// I/O op (~18% of hot-path throughput measured); the watchdog costs
+        /// one timer op per tick per connection instead.
+        void set_deadline_after(const std::chrono::milliseconds ms) noexcept {
+            deadline_ = std::chrono::steady_clock::now() + ms;
+        }
+
+        [[nodiscard]] std::chrono::steady_clock::time_point deadline() const noexcept {
+            return deadline_;
+        }
+
+        /// Watchdog plumbing (strand-confined, driven by listener_base's
+        /// deadline_watchdog). serve-wrapper calls end_watchdog() when the
+        /// session coroutine finishes; the watchdog wakes and exits.
+        [[nodiscard]] boost::asio::steady_timer& watchdog_timer() noexcept {
+            return watchdog_timer_;
+        }
+        [[nodiscard]] bool serve_finished() const noexcept {
+            return serve_finished_;
+        }
+        void end_watchdog() noexcept {
+            serve_finished_ = true;
+            try {
+                watchdog_timer_.cancel();
+            } catch (...) {  // cancel() throws only on closed services during teardown
+            }
         }
 
         boost::asio::awaitable<void> async_close();
@@ -84,6 +117,10 @@ namespace demiplane::http {
         stream_type stream_;
         RequestArena arena_;
         boost::asio::cancellation_signal signal_;
+        // Strand-confined deadline state (driver writes, watchdog reads).
+        std::chrono::steady_clock::time_point deadline_{std::chrono::steady_clock::time_point::max()};
+        boost::asio::steady_timer watchdog_timer_;
+        bool serve_finished_ = false;
     };
 
 }  // namespace demiplane::http

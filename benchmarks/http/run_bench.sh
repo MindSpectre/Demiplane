@@ -35,7 +35,7 @@ CLIENT_CPUS_PRIMARY="4-11"
 CLIENT_CPUS_CONTROL="4,5,10,11"
 SERVER_THREADS=4
 
-OUT="${OUT:-$ROOT/benchmarks/http/results}"
+OUT="${OUT:-$ROOT/benchmark_results/http}"   # gitignored, on real disk
 mkdir -p "$OUT"
 
 command -v taskset >/dev/null || { echo "taskset not found"; exit 1; }
@@ -55,7 +55,20 @@ stop_server() {
     # Wait for the listen socket to clear so the next bind() does not race.
     for _ in $(seq 1 50); do ss -ltn "sport = :$PORT" 2>/dev/null | grep -q LISTEN || break; sleep 0.1; done
 }
-trap 'stop_server' EXIT
+# Backstop: a `timeout` or Ctrl-C kills this shell, not its grandchildren. An
+# orphaned bomber saturates every core until it finishes its request budget.
+# NB: pkill -x matches the process NAME (comm, truncated to 15 chars), not the
+# command line. `pkill -f 'Demiplane.Benchmarks.Http'` also matches any shell whose
+# argv contains that string -- including the one running this script, and any
+# `cmake --build --target Demiplane.Benchmarks.Http.*` invocation. Do not use -f here.
+cleanup() { stop_server; pkill -9 -x 'Demiplane.Bench' 2>/dev/null; }
+trap cleanup EXIT INT TERM
+
+# Results are small JSON, but keep the convention: never default onto tmpfs.
+fs=$(findmnt -no FSTYPE --target "$(dirname "$OUT")" 2>/dev/null || echo unknown)
+case "$fs" in
+    tmpfs|ramfs) echo "WARNING: $OUT is on $fs (RAM-backed)" >&2 ;;
+esac
 
 # start_server <binary> <port>
 start_server() {

@@ -20,10 +20,13 @@ namespace demiplane::http {
         return RequestContext{std::move(request), arena};
     }
 
-    boost::beast::http::response<boost::beast::http::buffer_body> detail::make_beast_response(Response& resp) {
+    detail::Http11Response detail::make_beast_response(Response& resp) {
         namespace http = boost::beast::http;
 
-        http::response<http::buffer_body> msg;
+        // Field nodes are bump-allocated out of resp's arena. Beast's default
+        // std::allocator would malloc/free one per header, per response.
+        const std::pmr::polymorphic_allocator<char> field_alloc{resp.alloc.resource()};
+        Http11Response msg{std::piecewise_construct, std::forward_as_tuple(), std::forward_as_tuple(field_alloc)};
         msg.result(static_cast<unsigned>(resp.status));
         msg.version(version_to_beast(resp.version));
         for (const auto& [name, value] : resp.headers)

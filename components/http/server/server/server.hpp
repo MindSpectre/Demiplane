@@ -16,10 +16,10 @@
 #include <utility>
 #include <vector>
 
-#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/cancellation_signal.hpp>
 #include <controller.hpp>
+#include <executor.hpp>
 #include <group.hpp>
 #include <http_driver_concept.hpp>
 #include <listener_base.hpp>
@@ -86,7 +86,7 @@ namespace demiplane::http {
     public:
         NEXUS_REGISTER(nexus::Immortal);
 
-        Server(ServerConfig cfg, boost::asio::any_io_executor exec);
+        Server(ServerConfig cfg, Executor exec);
 
         /// RAII backstop (spec §9.6): if the Server is destroyed while active,
         /// runs stop() + wait_until_stopped() itself — the typical main()
@@ -206,7 +206,7 @@ namespace demiplane::http {
         [[nodiscard]] static PathNormalization map_normalization(ServerConfig::PathNormalization n) noexcept;
 
         ServerConfig cfg_;
-        boost::asio::any_io_executor exec_;  // injected; NOT owned, never stopped
+        Executor exec_;  // injected; NOT owned, never stopped
         std::atomic<State> state_{State::build};
 
         RouteRegistry registry_;
@@ -221,7 +221,7 @@ namespace demiplane::http {
         // because the phase-1 emit lambdas are queued in io_context-owned
         // strand queues and can outlive the Server — each keeps its signal
         // alive, so a late emit fires on a live-but-orphaned signal harmlessly.
-        std::vector<boost::asio::any_io_executor> run_strands_;
+        std::vector<Strand> run_strands_;
         std::vector<std::shared_ptr<boost::asio::cancellation_signal>> stop_signals_;
         std::atomic<std::size_t> live_accept_loops_{0};
         std::atomic<bool> stop_requested_{false};  // stop() during State::starting

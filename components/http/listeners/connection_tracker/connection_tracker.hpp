@@ -10,9 +10,9 @@
 #include <mutex>
 #include <utility>
 
-#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/dispatch.hpp>
+#include <executor.hpp>
 namespace demiplane::http {
 
     /**
@@ -72,8 +72,10 @@ namespace demiplane::http {
             std::list<Entry>::iterator it_;
         };
 
+        /// `strand` is the CONNECTION's strand, not the bare executor — cancel()
+        /// must be serialized with that connection's in-flight I/O.
         template <typename Conn>
-        Handle register_connection(const std::shared_ptr<Conn>& conn, boost::asio::any_io_executor strand) {
+        Handle register_connection(const std::shared_ptr<Conn>& conn, Strand strand) {
             auto thunk = [strand = std::move(strand)](const std::shared_ptr<void>& c) {
                 boost::asio::dispatch(strand, [c] { std::static_pointer_cast<Conn>(c)->cancel(); });
             };
@@ -85,8 +87,7 @@ namespace demiplane::http {
 
         /// Poll the counter until it reaches 0 or `deadline` passes, then
         /// force-cancel every surviving connection. Runs on `ex`.
-        boost::asio::awaitable<void> drain_until(boost::asio::any_io_executor ex,
-                                                 std::chrono::steady_clock::time_point deadline);
+        boost::asio::awaitable<void> drain_until(Executor ex, std::chrono::steady_clock::time_point deadline);
 
         [[nodiscard]] std::size_t in_flight() const noexcept {
             return in_flight_.load(std::memory_order_acquire);

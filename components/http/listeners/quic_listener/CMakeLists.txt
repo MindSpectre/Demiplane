@@ -9,6 +9,7 @@ target_include_directories(${DMP_HTTP}.Listeners.Quic INTERFACE
 
 target_link_libraries(${DMP_HTTP}.Listeners.Quic INTERFACE
         ${DMP_HTTP}.Listeners.Base
+        ${DMP_HTTP}.Types.Executor
         ${DMP_HTTP}.Drivers.Http3
         ${DMP_HTTP}.Config.TlsConfig
         ${DMP_HTTP}.Routing.Router

@@ -10,6 +10,7 @@
 #include <async_outcome.hpp>
 #include <body.hpp>
 #include <errors.hpp>
+#include <executor.hpp>
 #include <headers.hpp>
 #include <http_enums.hpp>
 #include <request.hpp>

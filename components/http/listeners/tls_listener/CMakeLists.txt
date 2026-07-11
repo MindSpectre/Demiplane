@@ -15,6 +15,7 @@ target_link_libraries(${DMP_HTTP}.Listeners.Tls
         ${DMP_HTTP}.Listeners.Base
         ${DMP_HTTP}.Listeners.ConnectionTracker
         ${DMP_HTTP}.Connection.Tls
+        ${DMP_HTTP}.Types.Executor
         ${DMP_HTTP}.Config.TlsConfig
         ${DMP_HTTP}.Drivers.Concept
         ${DMP_HTTP}.Routing.Router

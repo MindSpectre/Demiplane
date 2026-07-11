@@ -23,7 +23,12 @@ namespace demiplane::http {
     concept IsConnection = requires(T& t, std::chrono::milliseconds ms) {
         { t.arena_alloc() } -> std::same_as<std::pmr::polymorphic_allocator<>>;
         { t.reset_request_arena() } -> std::same_as<void>;
-        { t.expires_after(ms) } -> std::same_as<void>;
+        // Deadline STORE, not a beast per-op timeout. beast's expires_after arms
+        // timer.async_wait + cancel + an aborted-handler dispatch around EVERY
+        // I/O op — measured at ~18% of throughput on the h1 hot path. Drivers
+        // stamp a per-phase deadline (plain store, strand-serialized) and the
+        // listener's deadline_watchdog enforces it at ~tick granularity.
+        { t.set_deadline_after(ms) } -> std::same_as<void>;
         { t.async_close() } -> std::same_as<boost::asio::awaitable<void>>;
         { t.cancel_slot() } -> std::same_as<boost::asio::cancellation_slot>;
         { t.remote_address() } -> std::same_as<boost::asio::ip::address>;

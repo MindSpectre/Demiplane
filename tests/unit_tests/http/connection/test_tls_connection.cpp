@@ -1,9 +1,11 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
+#include <boost/asio/strand.hpp>
 #include <gtest/gtest.h>
 
 #include <connection_concepts.hpp>
+#include <executor.hpp>
 #include <tls_connection.hpp>
 
 using namespace demiplane::http;
@@ -13,7 +15,7 @@ static_assert(IsStreamConnection<TlsConnection>);
 TEST(TlsConnectionTest, MetadataDefaults) {
     boost::asio::io_context ioc;
     boost::asio::ssl::context ctx{boost::asio::ssl::context::tls_server};
-    boost::asio::ip::tcp::socket sock{ioc};
+    Socket sock{boost::asio::make_strand(ioc.get_executor())};
     TlsConnection conn{std::move(sock), ctx};
     EXPECT_TRUE(conn.is_secure());
     // Before the handshake, the negotiated protocol defaults to http1.

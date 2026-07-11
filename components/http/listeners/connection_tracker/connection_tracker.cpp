@@ -17,7 +17,7 @@ namespace demiplane::http {
         tracker_ = nullptr;
     }
 
-    boost::asio::awaitable<void> ConnectionTracker::drain_until(const boost::asio::any_io_executor ex,
+    boost::asio::awaitable<void> ConnectionTracker::drain_until(const Executor ex,
                                                                 const std::chrono::steady_clock::time_point deadline) {
         using namespace std::chrono_literals;
         boost::asio::steady_timer timer{ex};

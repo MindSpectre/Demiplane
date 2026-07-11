@@ -23,7 +23,7 @@ namespace demiplane::http {
     Headers Headers::owned(const std::pmr::polymorphic_allocator<> alloc) {
         return Headers{OwnedBacking{alloc}};
     }
-    Headers Headers::view_of_beast(const boost::beast::http::fields& fields) {
+    Headers Headers::view_of_beast(const BeastFields& fields) {
         return Headers{BeastBacking{&fields}};
     }
 

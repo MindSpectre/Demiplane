@@ -1,7 +1,23 @@
 # HTTP/1.1 throughput: `demiplane::http` vs Drogon
 
-Measured 2026-07-09. All numbers below are reproducible with `run_bench.sh` and
-`run_perf.sh` in this directory.
+Round 1 measured 2026-07-09 (findings 1–3 below); round 2 measured 2026-07-10
+(findings 4–7, fixes shipped). All numbers are reproducible with `run_bench.sh`
+and `run_perf.sh` in this directory.
+
+## Current standing (2026-07-10, after findings 4–6 shipped)
+
+Median of 3 × 20M requests, zero failures:
+
+|                      | demiplane     | drogon        | drogon faster by | was (07-09) |
+|----------------------|---------------|---------------|------------------|-------------|
+| pipeline 1, primary  | 386,753 rps   | 481,284 rps   | **1.24x**        | 2.08x       |
+| pipeline 16, primary | 1,561,308 rps | 3,361,018 rps | **2.15x**        | 12.0x       |
+| pipeline 1, control  | 428,634 rps   | 444,305 rps   | **1.04x**        | 1.92x       |
+
+Tail latency flipped in demiplane's favor: p99 at pipeline 1 primary is 720µs
+vs drogon's 1088µs (control: 360µs vs 4928µs). Note drogon's control number is
+client-starved (below its primary), so the control ratio flatters demiplane;
+the primary ratio is the honest contended comparison.
 
 ## Binaries
 
@@ -169,6 +185,101 @@ Note `nf_tables` (host firewall on loopback) taxes both servers per packet. It
 inflates kernel share and is environmental; absolute numbers would be higher with
 it off, and the gap would likely widen, since Drogon is the more kernel-bound of
 the two.
+
+## Round 2 — 2026-07-10
+
+Hardware-counter ground truth (`perf stat` attached to the server, 6M requests,
+pipeline 1, before the round-2 fixes):
+
+| per request  | demiplane | drogon | ratio            |
+|--------------|-----------|--------|------------------|
+| cycles       | 73,239    | 44,667 | 1.64x            |
+| instructions | 71,622    | 37,586 | **1.91x**        |
+| IPC          | 0.98      | 0.84   | demiplane better |
+| ctx switches | ~0        | ~0     | —                |
+
+The rps gap equals the cycles/request gap exactly, and it is instruction
+COUNT, not stalls: demiplane's IPC is higher. Splitting by DSO: kernel
+cycles/request were near-equal (41.4k vs 36.4k, 1.14x) while userspace was
+29.4k vs 7.2k — **4.07x**. Syscalls/request likewise near-equal (interposer:
+1.0 sendmsg + ~1.2 recvmsg + 0.45 epoll_wait vs drogon's 1.0 write + 1.0
+readv + 0.82 epoll_wait; timerfd ≈ 0.02). The entire deficit was userspace
+work per request — TCP was exonerated.
+
+## Finding 4 — beast's per-op stream timeouts (+18%)
+
+`basic_stream::expires_after` is not a passive deadline: with an expiry set,
+EVERY `async_read_some`/`async_write_some` arms `timer.async_wait(...)` at
+initiation and `timer.cancel()` at completion, and the cancel posts the
+aborted timeout-handler through the strand as an extra dispatch
+(`impl/basic_stream.hpp`: `transfer_op`). Per request that was ~2 timer-queue
+inserts + 2 cancels + 2 extra executor dispatches stacked on the 2 real I/O
+ops. Removing the two `expires_after` calls alone: 288.5k → 341.5k rps.
+
+Shipped as: `Connection::set_deadline_after()` (a plain strand-confined store,
+~one clock read per phase) + a per-connection `deadline_watchdog` coroutine
+(`listener_base.hpp`) ticking every 500ms and force-cancelling past-deadline
+connections through the existing `conn->cancel()` kill path. One timer op per
+tick per CONNECTION instead of two per REQUEST. Enforcement granularity is
+the tick; config timeouts are seconds. Idle-kill verified firing at 10.0s
+(header_timeout=10s) with a clean FIN.
+
+## Finding 5 — beast's write serializer (+15%)
+
+`http::async_write(msg)` walks lazy `buffers_cat/buffers_suffix/buffers_prefix`
+views on every write — 11.4% of ALL cycles (≈30% of userspace), the single
+largest userspace bucket. Drogon's equivalent (render headers into a flat
+buffer, write) costs ~0.9%. Replaced with `Http11Driver::serialize_response`:
+flat-render the status line + headers + body into a per-connection buffer,
+byte-identical output (still 124 bytes for /ping). In isolation: 288.5k →
+331.5k rps. `detail::make_beast_response` is now unused by `serve()` (kept —
+it is unit-tested; delete when convenient).
+
+## Finding 6 — pipelined response batching (the 12x, closed to 2.15x)
+
+Finding 2's fix: responses now accumulate in the per-connection buffer and
+flush with ONE write when the input buffer holds no more pipelined bytes
+(drogon's model), when keep-alive ends, or at a 256 KiB batch cap. Error
+responses serialize into the same buffer (order preserved) and a post-loop
+flush covers every exit path. Pipeline 16: 342k → 1.56M rps; pipeline 1
+behavior unchanged (the buffer is always dry there → flush per request).
+
+Combined effect of findings 4+5+6 at pipeline 1: 288.5k → 386.8k rps (+34%),
+p999 1424µs → 928µs.
+
+## Finding 7 — asio is NOT the ceiling (control experiment)
+
+A ~120-line raw-asio probe with demiplane's EXACT topology — one shared
+io_context, 4 worker threads, strand per connection, one `awaitable<void>`
+coroutine per connection, hand parser, flat writes, batching, no timers —
+measured under the identical harness:
+
+|           | pipeline 1 | pipeline 16 |
+|-----------|------------|-------------|
+| raw asio  | 481k rps   | 5.84M rps   |
+| drogon    | 481k rps   | 3.36M rps   |
+| demiplane | 387k rps   | 1.56M rps   |
+
+Same-topology asio+coroutines+strands MATCHES drogon at depth 1 and beats it
+1.7x at depth 16. The remaining demiplane gap (~10k cycles/request) is not
+asio and not the executor topology; it sits in the beast read path and
+framework glue: `async_read_header`'s composed-op ceremony per message, the
+per-message `request_parser` construction, per-op `bind_cancellation_slot`,
+and the coroutine frames running on `awaitable<void>` =
+`awaitable<void, any_io_executor>` — the awaitable layer type-erases the
+executor again regardless of the socket's concrete strand type (visible as
+`awaitable_thread<any_io_executor>::pump` in the profile; this is why the
+executor de-erasure of the socket types alone moved only ~1%).
+
+Next levers, in expected-value order, if the remaining 1.24x matters:
+
+1. Parse from a raw buffer loop (beast `basic_parser::put` on buffered bytes;
+   composed async op only at the actual syscall boundary) — removes the
+   per-message op ceremony that dominates the depth-16 gap.
+2. `awaitable<T, io_context::executor_type>` through the driver/router path.
+3. Per-thread io_context (drogon's topology) — eliminates strands entirely;
+   measured 2–3x for AsyncResourcePool, but conflicts with the injected-
+   executor design (spec §9), so it is an architecture decision, not a patch.
 
 ## Reproducing
 

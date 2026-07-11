@@ -99,17 +99,22 @@ namespace {
     // Build a parsed GET request of the driver's exact type, with `target`,
     // OUTSIDE any armed region.
     detail::Http11Request make_get(const std::pmr::polymorphic_allocator<> arena, const std::string_view target) {
-        std::pmr::polymorphic_allocator<char> body_alloc{arena.resource()};
-        detail::Http11Request req{std::piecewise_construct, std::forward_as_tuple(body_alloc), std::forward_as_tuple()};
+        // Fields as well as body come from the arena — Http11Request's fields are
+        // BeastFields (pmr). A default-constructed pmr allocator would silently
+        // fall back to new_delete and every header node would hit the global heap.
+        std::pmr::polymorphic_allocator<char> arena_alloc{arena.resource()};
+        detail::Http11Request req{
+            std::piecewise_construct, std::forward_as_tuple(arena_alloc), std::forward_as_tuple(arena_alloc)};
         req.method(http::verb::get);
         req.target(target);
         req.version(11);
         return req;
     }
 
-    // Measure global allocs across build_request_context -> dispatch. STOPS
-    // before make_beast_response (the Beast-fields translation boundary, which
-    // allocates one node per header by construction).
+    // Measure global allocs across build_request_context -> dispatch ->
+    // make_beast_response. The Beast translation used to be excluded because it
+    // allocated one std::allocator node per header by construction; its fields
+    // are now arena-backed, so it is inside the armed region and gated too.
     std::size_t measure(Router& router, std::string target, StackArena& arena) {
         boost::asio::io_context ioc;
         auto fut = boost::asio::co_spawn(
@@ -117,11 +122,10 @@ namespace {
             [&]() -> boost::asio::awaitable<std::size_t> {
                 detail::Http11Request req = make_get(arena.alloc, target);  // before arming
                 ArmedRegion region;
-                RequestContext ctx  = detail::build_request_context(req, arena.alloc);
-                Response resp       = co_await router.dispatch(std::move(ctx));
-                const std::size_t n = region.finish();    // STOP before Beast translation
-                (void)detail::make_beast_response(resp);  // exercised, not counted
-                co_return n;
+                RequestContext ctx = detail::build_request_context(req, arena.alloc);
+                Response resp      = co_await router.dispatch(std::move(ctx));
+                (void)detail::make_beast_response(resp);
+                co_return region.finish();
             },
             boost::asio::use_future);
         ioc.run();

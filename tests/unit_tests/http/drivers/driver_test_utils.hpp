@@ -20,8 +20,8 @@
 namespace http_driver_test {
 
     /// IsStreamConnection over an in-memory beast::test::stream — no kernel
-    /// sockets. expires_after is a no-op (test::stream has no timer; timeout
-    /// BEHAVIOR is a later PR).
+    /// sockets. set_deadline_after is a no-op (no watchdog runs here; deadline
+    /// enforcement is the listener's deadline_watchdog, integration-tested).
     class TestConnection {
     public:
         using stream_type = boost::beast::test::stream;
@@ -40,7 +40,7 @@ namespace http_driver_test {
         void reset_request_arena() {
             arena_.reset();
         }
-        void expires_after(std::chrono::milliseconds) noexcept {
+        void set_deadline_after(std::chrono::milliseconds) noexcept {
         }
         boost::asio::awaitable<void> async_close() {
             stream_.close();

@@ -82,6 +82,21 @@ add_compile_options(
 message("\tCOMPILE OPTIONS")
 message("Compile options are ${general_compile_options}")
 
+# Boost.Asio recycles handler/coroutine memory in a per-thread, per-purpose slot
+# cache. The default of 2 slots is too few for the h1 hot path, which frees three
+# differently-sized awaitable frames per request (Router::dispatch, the handler,
+# write_response); on a size miss thread_info_base::allocate EVICTS a cached chunk
+# and falls back to operator new.
+#
+# This MUST be global. `max_mem_index = 6 * cache_size` sizes thread_info_base
+# itself, which is embedded in io_context. Two TUs disagreeing on the value give
+# that struct two layouts — silent memory corruption, not a link error. So it goes
+# here rather than on any single target, and Demiplane.Component.HTTP re-exports it
+# INTERFACE so external consumers of the umbrella inherit it too.
+set(DMP_ASIO_RECYCLE_CACHE "4" CACHE STRING "Asio per-thread recycled-memory slots per purpose tag")
+add_compile_definitions(BOOST_ASIO_RECYCLING_ALLOCATOR_CACHE_SIZE=${DMP_ASIO_RECYCLE_CACHE})
+message("Asio recycling allocator cache size: ${DMP_ASIO_RECYCLE_CACHE} (tree-wide; ABI-visible, see comment)")
+
 # Add compile definitions based on options
 if (DMP_ENABLE_LOGGING)
     message("Scroll logging is enabled")

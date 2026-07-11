@@ -10,15 +10,16 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/ssl/stream.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/beast/core/error.hpp>
-#include <boost/beast/core/tcp_stream.hpp>
+#include <executor.hpp>
 #include <http_enums.hpp>
 #include <request_arena.hpp>
 
 namespace demiplane::http {
 
     /**
-     * @brief TLS connection: ssl::stream<beast::tcp_stream> + per-connection
+     * @brief TLS connection: ssl::stream<Stream> + per-connection
      *        arena + cancel signal + the ALPN-negotiated protocol (spec §6.1).
      *
      * Satisfies IsStreamConnection — Http11Driver::serve drives it unchanged. The
@@ -30,13 +31,12 @@ namespace demiplane::http {
      */
     class TlsConnection : gears::Immutable {
     public:
-        using stream_type = boost::asio::ssl::stream<boost::beast::tcp_stream>;
+        using stream_type = boost::asio::ssl::stream<Stream>;
 
-        TlsConnection(boost::asio::ip::tcp::socket socket,
-                      boost::asio::ssl::context& ctx,
-                      const std::size_t arena_size = 8192)
+        TlsConnection(Socket socket, boost::asio::ssl::context& ctx, const std::size_t arena_size = 8192)
             : stream_{std::move(socket), ctx},
-              arena_{arena_size} {
+              arena_{arena_size},
+              watchdog_timer_{stream_.get_executor()} {
         }
 
         /// TLS handshake (server role). Records the ALPN-negotiated protocol.
@@ -57,8 +57,30 @@ namespace demiplane::http {
             arena_.reset();
         }
 
-        void expires_after(const std::chrono::milliseconds ms) {
-            boost::beast::get_lowest_layer(stream_).expires_after(ms);
+        /// Per-phase I/O deadline (IsConnection) — see TcpConnection: a plain
+        /// strand-confined store enforced by the listener's deadline_watchdog.
+        /// The TLS HANDSHAKE keeps its own beast per-op timeout internally
+        /// (once per connection, off the request hot path).
+        void set_deadline_after(const std::chrono::milliseconds ms) noexcept {
+            deadline_ = std::chrono::steady_clock::now() + ms;
+        }
+
+        [[nodiscard]] std::chrono::steady_clock::time_point deadline() const noexcept {
+            return deadline_;
+        }
+
+        [[nodiscard]] boost::asio::steady_timer& watchdog_timer() noexcept {
+            return watchdog_timer_;
+        }
+        [[nodiscard]] bool serve_finished() const noexcept {
+            return serve_finished_;
+        }
+        void end_watchdog() noexcept {
+            serve_finished_ = true;
+            try {
+                watchdog_timer_.cancel();
+            } catch (...) {  // cancel() throws only on closed services during teardown
+            }
         }
 
         boost::asio::awaitable<void> async_close();
@@ -96,6 +118,10 @@ namespace demiplane::http {
         RequestArena arena_;
         boost::asio::cancellation_signal signal_;
         Protocol negotiated_protocol_ = Protocol::http1;
+        // Strand-confined deadline state (driver writes, watchdog reads).
+        std::chrono::steady_clock::time_point deadline_{std::chrono::steady_clock::time_point::max()};
+        boost::asio::steady_timer watchdog_timer_;
+        bool serve_finished_ = false;
     };
 
 }  // namespace demiplane::http

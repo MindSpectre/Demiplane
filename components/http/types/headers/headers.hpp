@@ -127,6 +127,9 @@ namespace demiplane::http {
             std::pmr::vector<std::pair<std::pmr::string, std::pmr::string>> entries;
             explicit OwnedBacking(const std::pmr::polymorphic_allocator<> a)
                 : entries(a) {
+                // One up-front bump allocation (arena on the hot path) instead
+                // of grow-reallocate-move on the first few add()s.
+                entries.reserve(4);
             }
         };
         std::variant<BeastBacking, OwnedBacking> backing_;

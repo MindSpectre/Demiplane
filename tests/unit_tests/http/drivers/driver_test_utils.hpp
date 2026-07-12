@@ -42,7 +42,7 @@ namespace http_driver_test {
         }
         void set_deadline_after(std::chrono::milliseconds) noexcept {
         }
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, demiplane::http::Strand> async_close() {
             stream_.close();
             co_return;
         }
@@ -88,7 +88,7 @@ namespace http_driver_test {
 
         std::vector<ParsedResponse> responses;
 
-        asio::co_spawn(ioc, driver.serve(conn, router), asio::detached);
+        asio::co_spawn(ioc.get_executor(), driver.serve(conn, router), asio::detached);
         asio::co_spawn(
             ioc,
             [&]() -> asio::awaitable<void> {

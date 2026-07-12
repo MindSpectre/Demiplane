@@ -1,8 +1,6 @@
 #include "http11_driver.hpp"
 
 #include <cassert>
-#include <chrono>
-#include <cstdio>
 #include <string_view>
 #include <utility>
 
@@ -53,41 +51,6 @@ namespace demiplane::http {
                ec == he::error::bad_version || ec == he::error::bad_field || ec == he::error::bad_value ||
                ec == he::error::bad_content_length || ec == he::error::bad_transfer_encoding ||
                ec == he::error::bad_chunk || ec == he::error::bad_chunk_extension || ec == he::error::bad_obs_fold;
-    }
-
-    void Http11Driver::stamp_common_headers(Response& resp) {
-        if (!resp.headers.contains("Date")) {
-            // TODO Move out this standard to the common::chrono
-            // TODO: cache the formatted IMF-fixdate and rebuild it at most once per
-            //  second — re-running gmtime_r + snprintf on every response is wasted
-            //  work when many responses fall within the same wall-clock second.
-
-            // IMF-fixdate (RFC 9110 §5.6.7) uses FIXED English day/month names.
-            // Build them from tables rather than strftime("%a"/"%b"), which honor
-            // the process's global LC_TIME locale — a reusable server must not
-            // emit a locale-dependent (non-compliant) Date header.
-            static constexpr const char* days[]   = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-            static constexpr const char* months[] = {
-                "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-            const std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            std::tm tm{};
-            ::gmtime_r(&t, &tm);
-            char buf[32];
-            const int n = std::snprintf(buf,
-                                        sizeof buf,
-                                        "%s, %02d %s %04d %02d:%02d:%02d GMT",
-                                        days[tm.tm_wday],
-                                        tm.tm_mday,
-                                        months[tm.tm_mon],
-                                        tm.tm_year + 1900,
-                                        tm.tm_hour,
-                                        tm.tm_min,
-                                        tm.tm_sec);
-            if (n > 0)
-                resp.set_header("Date", std::string_view{buf, static_cast<std::size_t>(n)});
-        }
-        if (!resp.headers.contains("Server"))
-            resp.set_header("Server", "Demiplane");
     }
 
 }  // namespace demiplane::http

@@ -7,52 +7,10 @@
 #include <string>
 
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/redirect_error.hpp>
-#include <boost/asio/this_coro.hpp>
-#include <boost/asio/use_awaitable.hpp>
+#include <executor.hpp>
 #include <router.hpp>
 
 namespace demiplane::http {
-
-    /**
-     * @brief Deadline supervisor for one connection; runs on its strand.
-     *
-     * Replaces beast's per-op stream timeouts on the request hot path. Those
-     * arm timer.async_wait + cancel + an aborted-handler dispatch around EVERY
-     * I/O op — removing them measured +18% throughput at pipeline depth 1.
-     * This watchdog costs one timer op per `tick` per CONNECTION instead: the
-     * driver stamps conn.set_deadline_after(phase_timeout) (a plain store) and
-     * the watchdog force-cancels once the deadline passes — the same
-     * strand-serialized conn.cancel() kill path the tracker's drain uses.
-     * Enforcement granularity is `tick`, not per-op-exact; config timeouts are
-     * seconds, so half-second slack is inside their tolerance.
-     *
-     * Lifecycle: the serve wrapper calls conn->end_watchdog() when the session
-     * coroutine finishes; that cancels the pending wait and the loop exits on
-     * the flag. All state is strand-confined — no atomics. After a deadline
-     * kill the loop keeps ticking (cancel is idempotent) until serve() unwinds
-     * and sets the flag; it never outlives `conn` (it owns a shared_ptr).
-     */
-    template <typename Conn>
-    boost::asio::awaitable<void>
-    deadline_watchdog(std::shared_ptr<Conn> conn,
-                      const std::chrono::milliseconds tick = std::chrono::milliseconds{500}) {
-        namespace asio = boost::asio;
-        // Cancellation as state: an executor-level cancel must not throw out of
-        // a detached coroutine mid-teardown.
-        co_await asio::this_coro::throw_if_cancelled(false);
-        const auto cancel_state = co_await asio::this_coro::cancellation_state;
-        auto& timer             = conn->watchdog_timer();
-        boost::system::error_code ec;  // aborted wakes are a signal here, not an error
-        while (!conn->serve_finished() && cancel_state.cancelled() == asio::cancellation_type::none) {
-            timer.expires_after(tick);
-            co_await timer.async_wait(asio::redirect_error(asio::use_awaitable, ec));
-            if (conn->serve_finished())
-                break;
-            if (std::chrono::steady_clock::now() >= conn->deadline())
-                conn->cancel();  // level-triggered kill; serve() unwinds and sets the flag
-        }
-    }
 
     /**
      * @brief Type-erased listener interface (spec §7.1).

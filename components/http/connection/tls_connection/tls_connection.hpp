@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <utility>
@@ -35,14 +36,13 @@ namespace demiplane::http {
 
         TlsConnection(Socket socket, boost::asio::ssl::context& ctx, const std::size_t arena_size = 8192)
             : stream_{std::move(socket), ctx},
-              arena_{arena_size},
-              watchdog_timer_{stream_.get_executor()} {
+              arena_{arena_size} {
         }
 
         /// TLS handshake (server role). Records the ALPN-negotiated protocol.
         /// Returns the handshake error_code (empty on success). NOT in the
         /// IsConnection concept — the listener calls it before serve().
-        boost::asio::awaitable<boost::beast::error_code>
+        boost::asio::awaitable<boost::beast::error_code, Strand>
         handshake(std::chrono::milliseconds timeout = std::chrono::seconds{10});
 
         [[nodiscard]] stream_type& stream() noexcept {
@@ -57,33 +57,22 @@ namespace demiplane::http {
             arena_.reset();
         }
 
-        /// Per-phase I/O deadline (IsConnection) — see TcpConnection: a plain
-        /// strand-confined store enforced by the listener's deadline_watchdog.
-        /// The TLS HANDSHAKE keeps its own beast per-op timeout internally
-        /// (once per connection, off the request hot path).
+        /// Per-phase I/O deadline (IsConnection) — see TcpConnection: relaxed
+        /// atomic (driver writes on the connection's context, the tracker
+        /// sweep reads from the listener's home context). The TLS HANDSHAKE
+        /// keeps its own beast per-op timeout internally (once per
+        /// connection, off the request hot path).
         void set_deadline_after(const std::chrono::milliseconds ms) noexcept {
-            deadline_ = std::chrono::steady_clock::now() + ms;
+            deadline_.store((std::chrono::steady_clock::now() + ms).time_since_epoch().count(),
+                            std::memory_order_relaxed);
         }
 
         [[nodiscard]] std::chrono::steady_clock::time_point deadline() const noexcept {
-            return deadline_;
+            return std::chrono::steady_clock::time_point{
+                std::chrono::steady_clock::duration{deadline_.load(std::memory_order_relaxed)}};
         }
 
-        [[nodiscard]] boost::asio::steady_timer& watchdog_timer() noexcept {
-            return watchdog_timer_;
-        }
-        [[nodiscard]] bool serve_finished() const noexcept {
-            return serve_finished_;
-        }
-        void end_watchdog() noexcept {
-            serve_finished_ = true;
-            try {
-                watchdog_timer_.cancel();
-            } catch (...) {  // cancel() throws only on closed services during teardown
-            }
-        }
-
-        boost::asio::awaitable<void> async_close();
+        boost::asio::awaitable<void, Strand> async_close();
 
         [[nodiscard]] boost::asio::cancellation_slot cancel_slot() noexcept {
             return signal_.slot();
@@ -118,10 +107,9 @@ namespace demiplane::http {
         RequestArena arena_;
         boost::asio::cancellation_signal signal_;
         Protocol negotiated_protocol_ = Protocol::http1;
-        // Strand-confined deadline state (driver writes, watchdog reads).
-        std::chrono::steady_clock::time_point deadline_{std::chrono::steady_clock::time_point::max()};
-        boost::asio::steady_timer watchdog_timer_;
-        bool serve_finished_ = false;
+        // Driver writes (own context), tracker sweep reads (home context).
+        std::atomic<std::chrono::steady_clock::duration::rep> deadline_{
+            std::chrono::steady_clock::time_point::max().time_since_epoch().count()};
     };
 
 }  // namespace demiplane::http

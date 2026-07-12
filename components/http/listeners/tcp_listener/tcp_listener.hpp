@@ -48,17 +48,21 @@ namespace demiplane::http {
     template <IsHttpDriver Driver>
     class TcpListener final : public ListenerBase {
     public:
-        TcpListener(Executor exec,
+        /// `execs` — one or more executors; connections are placed on them
+        /// round-robin (one io_context per thread is the intended topology,
+        /// README Finding 13). front() is the listener's home: acceptor,
+        /// error backoff, and the drain poll live there. Must be non-empty.
+        TcpListener(std::vector<Executor> execs,
                     std::string host,
                     const std::uint16_t port,
                     Driver driver,
                     const std::size_t arena_size = 8192)
-            : exec_{std::move(exec)},
+            : execs_{std::move(execs)},
               host_{std::move(host)},
               port_{port},
               driver_{std::move(driver)},
               arena_size_{arena_size},
-              acceptor_{exec_} {
+              acceptor_{execs_.front()} {
         }
 
         void bind() override {
@@ -75,6 +79,10 @@ namespace demiplane::http {
             // throw_if_cancelled, a stop emitted between suspensions would make
             // the next co_await throw and skip the acceptor close below (and,
             // where run()'s completion is awaited through a future, rethrow there).
+            // Deadline enforcement: ONE sweep for all of this listener's
+            // connections (per-connection timers stall single-runner workers —
+            // README Finding 13). Idempotent across run() restarts.
+            tracker_.start_sweep(execs_.front());
             co_await asio::this_coro::throw_if_cancelled(false);
             const auto cancel_state = co_await asio::this_coro::cancellation_state;
             std::optional<asio::steady_timer> backoff;  // error path only — lazy
@@ -88,7 +96,13 @@ namespace demiplane::http {
             // strand and DISPATCHES the stop emit onto it (PR 5, D5). Direct
             // users on a multi-threaded executor must do the same.
             while (cancel_state.cancelled() == asio::cancellation_type::none) {
-                Strand strand = asio::make_strand(exec_);
+                // Round-robin placement: each connection's strand comes from
+                // the next executor in the set — with io_context-per-thread
+                // callers this spreads connections across worker loops with
+                // no shared scheduler between them (Finding 13). The accept
+                // loop is serialized, so a plain index suffices.
+                Strand strand = execs_[next_exec_];
+                next_exec_    = (next_exec_ + 1) % execs_.size();
                 boost::beast::error_code ec;
                 // Yields a Socket (strand-bound), not a tcp::socket — assigning to
                 // tcp::socket would convert the executor back into any_io_executor
@@ -108,7 +122,7 @@ namespace demiplane::http {
                     // worker. Timer syscalls only on this already-failing path.
                     if (++consecutive_errors > 2) {
                         if (!backoff) {
-                            backoff.emplace(exec_);
+                            backoff.emplace(execs_.front());
                         }
                         // 1ms, 2ms, 4ms, ... capped at 1024ms: resource-exhaustion
                         // errors (EMFILE) resolve on operator timescales, not
@@ -139,17 +153,13 @@ namespace demiplane::http {
                 auto handle = tracker_.register_connection(conn, strand);
                 asio::co_spawn(
                     strand,
-                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
+                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void, Strand> {
                         try {
                             co_await driver_.serve(*conn, router);
-                        } catch (...) {  // serve() is noexcept in practice; the watchdog
-                        }  // must still be released if that ever changes
-                        conn->end_watchdog();  // strand-serialized with the watchdog's turns
+                        } catch (...) {  // serve() is noexcept in practice (driver catch-all)
+                        }
                     },
                     asio::detached);
-                // Deadline supervisor for this connection (see listener_base.hpp).
-                // Holds its own shared_ptr — safe past the tracker Handle's release.
-                asio::co_spawn(strand, deadline_watchdog(conn), asio::detached);
             }
             // Reached on EVERY exit path (stop, fatal accept error). Close the
             // acceptor so new SYNs are REFUSED (ECONNREFUSED), not silently
@@ -160,7 +170,7 @@ namespace demiplane::http {
         }
 
         boost::asio::awaitable<void> drain_until(const std::chrono::steady_clock::time_point deadline) override {
-            co_await tracker_.drain_until(exec_, deadline);
+            co_await tracker_.drain_until(execs_.front(), deadline);
         }
 
         [[nodiscard]] std::size_t in_flight() const noexcept override {
@@ -175,7 +185,8 @@ namespace demiplane::http {
         }
 
     private:
-        Executor exec_;
+        std::vector<Executor> execs_;
+        std::size_t next_exec_ = 0;
         std::string host_;
         std::uint16_t port_;
         Driver driver_;

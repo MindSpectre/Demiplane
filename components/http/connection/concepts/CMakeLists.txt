@@ -11,6 +11,7 @@ target_include_directories(${DMP_HTTP}.Connection.Concepts INTERFACE
 
 target_link_libraries(${DMP_HTTP}.Connection.Concepts INTERFACE
         ${DMP_HTTP}.Types.Enums
+        ${DMP_HTTP}.Types.Executor
         Boost::asio
 )
 ##############################################################################

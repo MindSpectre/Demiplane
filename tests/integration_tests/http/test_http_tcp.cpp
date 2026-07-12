@@ -1,6 +1,14 @@
+#include <chrono>
+#include <deque>
 #include <memory>
 #include <string>
+#include <thread>
+#include <vector>
 
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/dispatch.hpp>
+#include <boost/asio/executor_work_guard.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/beast/http/verb.hpp>
 #include <gtest/gtest.h>
 
@@ -188,4 +196,70 @@ TEST_F(HttpTcpTest, QueryParamValuesUrlDecodePlusAsSpace) {
     const auto res = client.send(bhttp::verb::get, "/search?q=a%20b+c");
     EXPECT_EQ(res.result_int(), 200u);
     EXPECT_EQ(res.body(), "q=a b c");
+}
+
+// ── Round-robin placement across io_contexts (Finding 13) ────────────────────
+// 2 contexts, only ctx0 driven at first: connections 0,2 land on ctx0 (served
+// immediately), 1,3 land on the parked ctx1 (nothing until it runs). Proves
+// the listener really distributes strands across the executor set.
+TEST(TcpListenerDistribution, RoundRobinPlacesConnectionsAcrossContexts) {
+    namespace asio = boost::asio;
+    using namespace std::chrono_literals;
+
+    std::deque<asio::io_context> ctxs;
+    auto& ctx0 = ctxs.emplace_back();
+    auto& ctx1 = ctxs.emplace_back();
+    auto g0    = asio::make_work_guard(ctx0);
+    auto g1    = asio::make_work_guard(ctx1);
+
+    RouteRegistry registry;
+    std::vector<std::shared_ptr<HttpController>> controllers;
+    GroupBinding{registry, controllers, ""}.add_controller(std::make_shared<EchoController>());
+    ASSERT_TRUE(registry.freeze().empty());
+    Router router{registry};
+
+    TcpListener<Http11Driver> listener{
+        std::vector{ctx0.get_executor(), ctx1.get_executor()},
+        "127.0.0.1", 0, Http11Driver{Http11Config{}}
+    };
+    listener.bind();
+    asio::cancellation_signal stop;
+    auto run_done =
+        asio::co_spawn(ctx0, listener.run(router), asio::bind_cancellation_slot(stop.slot(), asio::use_future));
+
+    std::thread w0{[&ctx0] { ctx0.run(); }};
+
+    // Sequential connects ⇒ deterministic accept order ⇒ deterministic
+    // round-robin placement (the accept loop is serialized).
+    std::vector<std::unique_ptr<http_it::TcpClient>> clients;
+    for (int i = 0; i < 4; ++i) {
+        clients.push_back(std::make_unique<http_it::TcpClient>(listener.bound_port()));
+        clients.back()->write_request(bhttp::verb::get, "/hello");
+    }
+
+    // ctx0's connections respond while ctx1 is parked...
+    EXPECT_EQ(clients[0]->read_response().body(), "hello world");
+    EXPECT_EQ(clients[2]->read_response().body(), "hello world");
+    std::this_thread::sleep_for(50ms);
+    // ...and ctx1's have not been served at all (their serve coroutines are
+    // queued on the undriven context).
+    EXPECT_EQ(clients[1]->available(), 0u);
+    EXPECT_EQ(clients[3]->available(), 0u);
+
+    // Drive ctx1: the parked connections serve normally.
+    std::thread w1{[&ctx1] { ctx1.run(); }};
+    EXPECT_EQ(clients[1]->read_response().body(), "hello world");
+    EXPECT_EQ(clients[3]->read_response().body(), "hello world");
+
+    // Teardown: stop accepting (emit serialized with the loop via ctx0),
+    // then stop both contexts and join.
+    asio::dispatch(ctx0, [&stop] { stop.emit(asio::cancellation_type::terminal); });
+    run_done.wait();
+    clients.clear();
+    g0.reset();
+    g1.reset();
+    ctx0.stop();
+    ctx1.stop();
+    w0.join();
+    w1.join();
 }

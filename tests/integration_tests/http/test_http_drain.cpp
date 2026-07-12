@@ -41,7 +41,7 @@ namespace {
             auto ex = co_await boost::asio::this_coro::executor;
             boost::asio::steady_timer t{ex};
             t.expires_after(150ms);
-            co_await t.async_wait(boost::asio::use_awaitable);
+            co_await t.async_wait(use_strand_awaitable);
             co_return ctx.ok("slow done");
         }
         AsyncResponse very_slow(RequestContext ctx) {
@@ -49,7 +49,7 @@ namespace {
             auto ex = co_await boost::asio::this_coro::executor;
             boost::asio::steady_timer t{ex};
             t.expires_after(400ms);
-            co_await t.async_wait(boost::asio::use_awaitable);
+            co_await t.async_wait(use_strand_awaitable);
             co_return ctx.ok("slow done");
         }
     };

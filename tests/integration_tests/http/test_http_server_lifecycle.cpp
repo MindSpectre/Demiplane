@@ -42,7 +42,7 @@ TEST_F(ServerLifecycleTest, ServesAndStopsGracefully) {
     // §9.7: stop() must NOT stop the caller's executor — it may be shared
     // with subsystems that outlive HTTP. Prove it still executes work.
     std::promise<void> ran;
-    boost::asio::post(ioc_, [&ran] { ran.set_value(); });
+    boost::asio::post(control_context(), [&ran] { ran.set_value(); });
     ASSERT_EQ(ran.get_future().wait_for(1s), std::future_status::ready);
 }
 
@@ -69,7 +69,7 @@ namespace {
 }  // namespace
 
 TEST_F(ServerLifecycleTest, StopBeforeSetupIsANoOp) {
-    Server server{ServerConfig::Builder{}.finalize(), ioc_.get_executor()};
+    Server server{ServerConfig::Builder{}.finalize(), bootstrap_executor()};
     server.stop();  // documented no-op (spec §9.7 corollary)
     EXPECT_FALSE(server.is_running());
     server.wait_until_stopped();  // returns immediately — setup() never ran
@@ -86,7 +86,7 @@ TEST_F(ServerLifecycleTest, StopIsIdempotentAndWaitReturnsAgain) {
 }
 
 TEST_F(ServerLifecycleTest, SetupWithoutListenersThrows) {
-    Server server{ServerConfig::Builder{}.finalize(), ioc_.get_executor()};
+    Server server{ServerConfig::Builder{}.finalize(), bootstrap_executor()};
     server.add_controller(std::make_shared<http_it::PingController>());
     EXPECT_THROW(server.setup(), std::logic_error);
     EXPECT_FALSE(server.is_running());
@@ -111,7 +111,7 @@ TEST_F(ServerLifecycleTest, SetupThrowsWhenPortInUse) {
         probe, {boost::asio::ip::make_address("127.0.0.1"), 0}};  // open+bind+listen
     const auto port = taken.local_endpoint().port();
 
-    server_.emplace(ServerConfig::Builder{}.finalize(), ioc_.get_executor());
+    server_.emplace(ServerConfig::Builder{}.finalize(), bootstrap_executor());
     server_->add_controller(std::make_shared<http_it::PingController>());
     server_->add_tcp_listener("127.0.0.1", port, Http11Driver{Http11Config{}});
     // Bind failures are collected best-effort-all and aggregated; acceptors
@@ -122,7 +122,7 @@ TEST_F(ServerLifecycleTest, SetupThrowsWhenPortInUse) {
 }
 
 TEST_F(ServerLifecycleTest, ConflictingRoutesThrowAggregateAtSetup) {
-    server_.emplace(ServerConfig::Builder{}.finalize(), ioc_.get_executor());
+    server_.emplace(ServerConfig::Builder{}.finalize(), bootstrap_executor());
     server_->add_controller(std::make_shared<DupController>());
     server_->add_controller(std::make_shared<DupController>());
     server_->add_tcp_listener("127.0.0.1", 0, Http11Driver{Http11Config{}});
@@ -198,13 +198,81 @@ TEST_F(ServerLifecycleTest, DrainDeadlineForceCancelsStragglers) {
     EXPECT_TRUE(ec) << "expected the force-cancelled connection to be dead, got a clean read";
 }
 
+// ── Multi-context topology (Finding 13): the same shutdown contracts must
+// hold when connections are spread round-robin across 4 io_contexts. ────────
+
+TEST_F(ServerLifecycleTest, GracefulShutdownAcrossMultipleContexts) {
+    auto latch = std::make_shared<http_it::LatchController>();
+    start_server(
+        [&](Server& s) {
+            s.add_controller(latch);
+            s.add_tcp_listener("127.0.0.1", 0, Http11Driver{Http11Config{}});
+        },
+        ServerConfig::Builder{}.finalize(),
+        /*io_threads=*/4);
+
+    // More in-flight requests than contexts — round-robin guarantees every
+    // context serves at least one when the drain runs.
+    std::vector<std::unique_ptr<http_it::TcpClient>> clients;
+    for (int i = 0; i < 5; ++i) {
+        clients.push_back(std::make_unique<http_it::TcpClient>(port()));
+        clients.back()->write_request(bhttp::verb::get, "/slow");
+    }
+    while (!latch->slow_entered.load(std::memory_order_acquire)) {
+        std::this_thread::sleep_for(1ms);
+    }
+    server_->stop();
+    server_->wait_until_stopped();
+
+    // Every in-flight request completed during the drain, regardless of
+    // which context its connection landed on.
+    for (auto& c : clients) {
+        const auto res = c->read_response();
+        EXPECT_EQ(res.result_int(), 200u);
+        EXPECT_EQ(res.body(), "slow done");
+    }
+}
+
+TEST_F(ServerLifecycleTest, DrainForceCancelAcrossContexts) {
+    const auto cfg = ServerConfig::Builder{}
+                         .drain_timeout(std::chrono::milliseconds{100})  // << the 500ms /hang handler
+                         .finalize();
+    auto latch = std::make_shared<http_it::LatchController>();
+    start_server(
+        [&](Server& s) {
+            s.add_controller(latch);
+            s.add_tcp_listener("127.0.0.1", 0, Http11Driver{Http11Config{}});
+        },
+        cfg,
+        /*io_threads=*/4);
+
+    std::vector<std::unique_ptr<http_it::TcpClient>> clients;
+    for (int i = 0; i < 5; ++i) {
+        clients.push_back(std::make_unique<http_it::TcpClient>(port()));
+        clients.back()->write_request(bhttp::verb::get, "/hang");
+    }
+    while (!latch->hang_entered.load(std::memory_order_acquire)) {
+        std::this_thread::sleep_for(1ms);
+    }
+    const auto t0 = std::chrono::steady_clock::now();
+    server_->stop();
+    server_->wait_until_stopped();  // phase 2.5 barrier spans ALL contexts
+    EXPECT_LT(std::chrono::steady_clock::now() - t0, 5s);
+
+    // Every straggler was force-cancelled through its own connection's
+    // strand — sockets dead on every context.
+    for (auto& c : clients) {
+        EXPECT_TRUE(c->read_after_close()) << "expected a force-cancelled dead socket";
+    }
+}
+
 TEST_F(ServerLifecycleTest, AsyncWaitStoppedCompletesWithShutdown) {
     start_server(add_ping_tcp);
     // The awaitable twin (§9.1) — for callers already ON the executor, where
     // the blocking wait_until_stopped() would deadlock the shutdown it awaits.
     std::promise<void> stopped;
     boost::asio::co_spawn(
-        ioc_,
+        control_context(),
         [this]() -> boost::asio::awaitable<void> { co_await server_->async_wait_stopped(); },
         [&stopped](std::exception_ptr) { stopped.set_value(); });
     auto fut = stopped.get_future();

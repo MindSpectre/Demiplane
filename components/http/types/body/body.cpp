@@ -9,7 +9,7 @@ namespace demiplane::http {
 
     namespace {
         struct EmptyPayload {
-            [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() const {
+            [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() const {
                 gears::force_non_static(this);
                 co_return std::nullopt;
             }
@@ -26,7 +26,7 @@ namespace demiplane::http {
         struct OwnedBufferPayload {
             std::string bytes;
             bool consumed = false;
-            boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() {
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() {
                 if (consumed || bytes.empty()) {
                     consumed = true;
                     co_return std::nullopt;
@@ -45,7 +45,7 @@ namespace demiplane::http {
         struct BeastRequestBody {
             std::span<const std::byte> bytes;
             bool consumed = false;
-            boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() {
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() {
                 if (consumed || bytes.empty()) {
                     consumed = true;
                     co_return std::nullopt;
@@ -105,7 +105,7 @@ namespace demiplane::http {
         vt_->destroy(storage_);
     }
 
-    boost::asio::awaitable<std::optional<std::span<const std::byte>>> Body::read_chunk() {
+    boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> Body::read_chunk() {
         return vt_->read_chunk(obj());
     }
     std::optional<std::size_t> Body::size_hint() const {
@@ -117,8 +117,8 @@ namespace demiplane::http {
 
     // ── Buffered helpers ─────────────────────────────────────────────────
     namespace {
-        boost::asio::awaitable<gears::Outcome<std::string, BodyLimitExceeded>> drain(Body& body,
-                                                                                     const std::size_t limit) {
+        boost::asio::awaitable<gears::Outcome<std::string, BodyLimitExceeded>, Strand> drain(Body& body,
+                                                                                             const std::size_t limit) {
             std::string out;
             while (true) {
                 const auto chunk = co_await body.read_chunk();

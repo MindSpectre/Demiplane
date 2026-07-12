@@ -4,20 +4,29 @@ Round 1 measured 2026-07-09 (findings 1–3 below); round 2 measured 2026-07-10
 (findings 4–7, fixes shipped). All numbers are reproducible with `run_bench.sh`
 and `run_perf.sh` in this directory.
 
-## Current standing (2026-07-10, after findings 4–6 shipped)
+## Current standing (2026-07-12 evening, after Finding 13 shipped)
 
-Median of 3 × 20M requests, zero failures:
+Median of 3 × 20M requests, zero failures (box ran ~5% slower than in the
+morning matrix — compare ratios):
 
-|                      | demiplane     | drogon        | drogon faster by | was (07-09) |
-|----------------------|---------------|---------------|------------------|-------------|
-| pipeline 1, primary  | 386,753 rps   | 481,284 rps   | **1.24x**        | 2.08x       |
-| pipeline 16, primary | 1,561,308 rps | 3,361,018 rps | **2.15x**        | 12.0x       |
-| pipeline 1, control  | 428,634 rps   | 444,305 rps   | **1.04x**        | 1.92x       |
+|                      | demiplane         | drogon        | ratio                      | was (07-09) |
+|----------------------|-------------------|---------------|----------------------------|-------------|
+| pipeline 1, primary  | 440,144 rps       | 458,021 rps   | drogon **1.04x** faster    | 2.08x       |
+| pipeline 16, primary | **3,160,341 rps** | 3,041,914 rps | **demiplane 1.04x faster** | 12.0x       |
+| pipeline 1, control  | **479,220 rps**   | (anomalous*)  | —                          | 1.92x       |
 
-Tail latency flipped in demiplane's favor: p99 at pipeline 1 primary is 720µs
-vs drogon's 1088µs (control: 360µs vs 4928µs). Note drogon's control number is
-client-starved (below its primary), so the control ratio flatters demiplane;
-the primary ratio is the honest contended comparison.
+*drogon's single control rep collapsed to 122k rps with 5ms tails while its
+primary reps were normal — external contamination, not comparable.
+
+**Pipeline-1 gap progression: 2.08x → 1.20x → 1.15x → 1.13x → 1.04x.**
+demiplane beats drogon at pipeline 16 (p99 103µs vs 150µs) and holds the best
+tail latency at every depth. Topology is now io_context-per-thread with
+round-robin connection placement (Finding 13): per-connection serialization
+is the single-runner home context (no strands), deadline enforcement is one
+tracker sweep per listener (no per-connection timers).
+
+For where these numbers sit against other frameworks (crow, oat++, Go
+net/http, fasthttp, axum), see Finding 10.
 
 ## Binaries
 
@@ -280,6 +289,286 @@ Next levers, in expected-value order, if the remaining 1.24x matters:
 3. Per-thread io_context (drogon's topology) — eliminates strands entirely;
    measured 2–3x for AsyncResourcePool, but conflicts with the injected-
    executor design (spec §9), so it is an architecture decision, not a patch.
+
+## Finding 8 — the read loop, shipped (2026-07-11)
+
+Lever 1 above, implemented in `Http11Driver::serve`: `parser.put()` drives the
+SAME beast parser (limits, chunked, RFC correctness untouched) synchronously
+over buffered bytes; `async_read_some` fires only when the parser reports
+`need_more` — one async op per SYSCALL instead of one composed op per MESSAGE,
+with `eager()` folding the body into the same loop. Eof mapping reproduces the
+composed ops' semantics (fresh message → `end_of_stream`, mid-message →
+`partial_message`). New driver tests cover trickled headers, eof mid-header,
+and a malformed request mid-pipeline (response order preserved).
+
+Effect: pipeline 1 387k → 392k (+4% — the per-request syscall boundary is
+irreducible at depth 1); pipeline 16 **1.56M → 2.43M (+56%)**, p50 162µs →
+130µs. The depth-16 gap fell from 2.15x to 1.31x.
+
+## Finding 9 — framework floors: stdexec measured, asio re-measured (2026-07-11)
+
+Same bomber, same cores, same 124-byte response, run back-to-back on the same
+day (drogon same-day median: 470k / 3.19M):
+
+| floor probe                                  | pipeline 1 | pipeline 16 |
+|----------------------------------------------|------------|-------------|
+| stdexec + io_uring (4 rings, SO_REUSEPORT)   | ~532k      | 6.11M       |
+| raw asio epoll (shared io_context + strands) | ~465k      | 5.72M       |
+| raw asio io_uring (same topology, see below) | **150k**   | **2.21M**   |
+| demiplane (asio + beast, after Finding 8)    | 392k       | 2.43M       |
+
+`stdexec_probe.cpp`: hand-rolled accept/recv/send senders against stdexec's
+internal `__io_task_facade` seam (stdexec has NO public socket senders — its
+networking story is `sio`, immature, no TLS). CAVEAT: the probe runs one
+io_uring context per thread with SO_REUSEPORT (stdexec's ring is a
+single-runner by design), so TWO variables differ from the asio probe —
+io_uring vs epoll AND per-thread rings vs shared-context+strands.
+
+The missing control landed 2026-07-11 after installing liburing-devel:
+`raw_asio_probe` rebuilt with `-DBOOST_ASIO_HAS_IO_URING
+-DBOOST_ASIO_DISABLE_EPOLL` (verified: the process holds an io_uring fd, no
+eventpoll). Result: **150k / 2.21M — 3.1x/2.6x SLOWER than asio's own epoll
+backend**, p50 528µs → 1664µs. So the attribution flips: stdexec's edge is
+NOT "io_uring is faster" in general — asio's io_uring integration (one ring
+shared by all threads behind the reactor lock, an SQE round-trip per op, no
+speculative non-blocking attempt first) collapses under this workload, while
+per-thread rings with batch completion processing (stdexec's design) beat
+everything. io_uring pays off only with ring-per-thread architecture.
+Practical consequence: do NOT enable `BOOST_ASIO_HAS_IO_URING` for the
+demiplane server; asio-epoll is the right asio backend here.
+
+Read: NEITHER framework is demiplane's bottleneck — both floors sit above
+drogon and far above demiplane. The remaining demiplane gap vs its own asio
+floor (~16% at depth 1) is framework glue (router dispatch, RequestContext
+construction, per-message parser construction, remaining mallocs, Date), not
+the async runtime. A migration to stdexec would buy the std::execution
+trajectory, not the missing 16% — and it means hand-owning sockets and TLS
+(no asio-ssl equivalent) for a codebase whose measured costs are elsewhere.
+Seastar was excluded without a probe: it is a whole-process framework (owns
+main(), per-core shared-nothing reactors, own allocator) — adopting it
+replaces the injected-executor design (spec §9) and everything in common/,
+not just this component, to chase a floor asio demonstrably already reaches.
+
+## Finding 10 — external framework baselines (2026-07-11)
+
+Same harness as everything above (server `taskset -c 0-3`, 4 workers; bomber
+on 4-11, 8 threads, 256 conns; medians of 2 reps, 10M requests at pipeline 1 /
+20M at pipeline 16; single-rep demiplane+drogon anchors run in the same
+session). Zero failed requests in every run.
+
+| server                       | pipe 1   | p99    | pipe 16   | p99       | resp bytes |
+|------------------------------|----------|--------|-----------|-----------|------------|
+| axum 0.8 (tokio/hyper, Rust) | **449k** | 1088µs | 3.19M     | 158µs     | 120        |
+| drogon (anchor)              | 446k     | 1520µs | **3.20M** | 140µs     | 124        |
+| oat++ 1.4 (async API)        | 424k     | 768µs  | 99k*      | —         | 87         |
+| Go fasthttp                  | 405k     | 1600µs | 3.09M     | 236µs     | 123        |
+| demiplane (anchor)           | 385k     | 848µs  | 2.51M     | **128µs** | 124        |
+| crow master                  | 298k     | 984µs  | 99k*      | —         | 87         |
+| Go net/http (stdlib)         | 276k     | 3808µs | 335k      | 3392µs    | ~110       |
+
+The box ran ~2-5% slower than on 07-10 (demiplane anchor 385k vs 392k, drogon
+446k vs 470k) — compare within this table, not across days.
+
+*crow and oat++ collapse to 99k rps at pipeline 16 with an identical
+41ms-per-batch signature: **neither sets `TCP_NODELAY` on accepted sockets**
+(zero mentions in either codebase — not even an option), so pipelined batches
+hit the classic Nagle + delayed-ACK stall. This is Finding 1 again, shipping
+in released frameworks. Control: an `LD_PRELOAD` shim forcing `TCP_NODELAY`
+in `accept4()` lifts crow to 383k and oat++ to 481k at pipeline 16 — i.e.
+the collapse was 100% the socket default, but even fixed, neither batches
+pipelined responses, which is what separates the ~400k tier from the 3M tier
+(Finding 6).
+
+Probe notes, for fairness:
+
+- axum runs a manual accept loop (the documented serve-with-hyper pattern)
+  so it gets `TCP_NODELAY` like everyone else, and hyper's
+  `pipeline_flush(true)` (its own batching option, off by default).
+- Go servers run `GOMAXPROCS(4)`; net/http sets NODELAY by default but never
+  batches (335k at p16); fasthttp batches natively.
+- Response bodies are all "pong"; header sets differ per framework (crow and
+  oat++ send no Date — 87 bytes vs our 124), so per-response work differs
+  slightly in their favor.
+- userver was skipped: it needs a large sudo-installed system dependency set
+  and a ~30min build, and like seastar it is a whole-framework adoption
+  (own task engine, coroutine scheduler, DI) — not a drop-in probe.
+
+Read: the ~450k pipeline-1 cluster (axum == drogon, with oat++ and fasthttp
+just behind) is the practical wall for shipped frameworks on this box — only
+the glue-free floor probes (raw asio 465-468k, stdexec 532k) exceed it, so
+demiplane's remaining 14% to drogon is the last of the framework glue, not a
+structural deficit. At pipeline 16 demiplane's 2.51M is in the batching elite
+(only drogon/axum/fasthttp are ahead, all within 1.27x) and it has the best
+p99 of the entire field at both depths' top tier. The "modern framework"
+comparison flatters no one: Rust's flagship stack lands exactly on drogon,
+Go's stdlib is 1.4-9.6x behind, and two popular C++ frameworks ship with a
+Nagle footgun that demiplane fixed in Finding 1.
+
+Sources/scripts: `benchmark_results/http/frameworks/` (gitignored) —
+`crow_probe.cpp`, `oatpp_probe.cpp`, `axum_probe/`, `go_*_probe.go`,
+`nodelay_shim.c`, `run_frameworks.sh`, `run_nodelay_control.sh`,
+`results*.jsonl`.
+
+## Finding 11 — the glue round: Date cache, stamping fold, dispatch/flush de-coroutining (2026-07-11, shipped)
+
+Round 4 attacked the ~8.9k cycles/request of per-request glue between
+demiplane (54.2k cycles/req) and drogon (45.3k) — each lever measured in
+isolation with `percall_stat.sh` (6M requests, pipeline 1, release-perf
+build; drogon's cycles/req held at 45.3-45.7k across every A/B run):
+
+| lever                    | change                                                                                                                                                                                                    | cycles/req | Δ                   |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|---------------------|
+| (baseline)               | —                                                                                                                                                                                                         | 54,217     | —                   |
+| L1 Date cache            | per-second `thread_local` IMF-fixdate (`types/http_date`), replaces gmtime_r+snprintf per response                                                                                                        | 52,617     | **−1,600**          |
+| L2 stamping fold         | Date/Server presence detected during `serialize_response`'s existing header pass (deleted `stamp_common_headers`: 2 contains + 2 erase_if scans, 2 arena string pairs); `OwnedBacking` reserves 4 entries | 51,591     | **−1,026**          |
+| L3 dispatch de-coroutine | no-hooks `Router::dispatch` is a plain function tail-forwarding the handler's awaitable (was: a wrapper coroutine frame per request)                                                                      | 51,232     | −359 (−1,300 instr) |
+| L5a flush inline         | `flush()` coroutine member replaced by inline `async_write` at both call sites                                                                                                                            | 51,040     | −192 (−461 instr)   |
+
+Total: **−3,177 cycles/req (−5.9%), −6,938 instructions/req (−14%)**. The
+profile pre-round showed the Date snprintf at 1.42% of ALL cycles
+(`__printf_buffer` + `__printf_buffer_write`) — Finding 3's 0.8% estimate was
+low. Full-matrix effect (median of 3 × 20M): pipeline-1 primary 392k → 415k;
+pipeline-16 primary 2.43M → **3.42M (+41%, now ahead of drogon's 3.33M)**;
+pipeline-1 control 423k → **463k — at the raw-asio floor**. The pipeline-16
+jump is outsized because the removed per-request frames/scans were the only
+work between batched responses.
+
+Allocation gate tightened: the no-hooks hot path (context build → route →
+handler frame → beast translation) now does **zero global-heap allocations**
+(`BareRouteDispatchAddsNoGlobalHeap`) — the handler's coroutine frame recycles
+via asio's frame cache; the dispatch frame that used to be the +1 is gone.
+
+Levers assessed and closed with evidence:
+
+- **Parser reuse (user ask)**: beast `request_parser` has no reset facility;
+  reconstruction per message is already arena-bump + member init and the ctor
+  does not register at a 0.02% profile floor. What DOES show (~0.5%) is
+  beast's field-table insertion **during parsing** — inherent to using
+  beast's parser, only removable by hand-rolling one. Not worth it at this
+  gap.
+- **Router lookup (user ask)**: already optimal pre-round —
+  `boost::unordered_flat_map`, transparent string_view hash, zero-alloc exact
+  match, method dispatch by array index. The router's cost was the dispatch
+  coroutine wrapper (L3), not the lookup.
+- **Status-line fast path**: `obsolete_reason`/`to_chars` below the 0.02%
+  profile floor — skipped.
+
+Remaining vs drogon (~5.4k cycles/req): asio's per-op machinery through the
+type-erased `any_io_executor` awaitable frames + strand/executor dispatch
+(the largest visible cluster), beast field-table parsing inserts, and
+`RequestContext` move ceremony. Next levers if ever needed:
+`awaitable<T, io_context::executor_type>` for `AsyncResponse` (public handler
+API change), per-thread io_context (spec §9 decision, the only path past the
+~465k shared-loop floor — see Finding 9/10).
+
+## Finding 12 — awaitable de-erasure + the topology price tag (2026-07-12)
+
+Two questions answered the same day.
+
+**(a) De-erasing the awaitable frames (shipped).** Finding 7 noted that the
+concrete-executor work (any_io_executor removed from sockets/streams) won only
+~1% because `awaitable<T>` defaults to `awaitable<T, any_io_executor>` — the
+coroutine FRAMES re-erased the executor on every await
+(`awaitable_thread<any_io_executor>::pump`, `any_executor_base::execute`).
+This round finished the job: `AsyncResponse`/`AsyncOutcome`/`AsyncVoid` are
+now `awaitable<..., Strand>` (async_outcome.hpp), the request-path coroutines
+(serve, dispatch, handlers, body reads, deadline_watchdog, connection
+close/handshake) are all Strand-typed, and ops inside them use the
+`use_strand_awaitable` token (executor.hpp). Verified: zero
+`any_io_executor` / `any_executor_base` symbols in the post-change profile.
+
+Effect (percall_stat, same-session drogon control): cycles/req ratio vs
+drogon 1.117 → 1.106, instr ratio 1.134 → 1.120 — **~1% of total, as the
+earlier de-erasure predicted**. The win is real but small because asio's
+recycling allocator had already absorbed the frame allocations; what remains
+is virtual-dispatch removal on the pump path.
+
+API note: handler coroutines are now typed on the connection strand — code
+inside a handler must await Strand-compatible awaitables (use
+`use_strand_awaitable` for raw asio ops). Erased `awaitable<T>` from
+elsewhere (e.g. generic helpers like `chrono::async_sleep_for`) cannot be
+awaited in a handler anymore; that friction is the deliberate price of the
+last 1%.
+
+**(b) Per-thread io_context probe (the spec §9 price tag).** Why was
+per-thread rejected? Because it replaces §9's injected-executor design
+(Server owns ONE io_context; users can inject their own) with per-thread
+accept loops + thread-local connection tracking — an architecture change.
+What it buys was never isolated on asio: the stdexec probe conflated
+ring-per-thread with io_uring. `raw_asio_perthread_probe.cpp` (io_context{1}
+per thread + SO_REUSEPORT acceptors, no strands) vs the shared probe,
+back-to-back same session, 2 reps, 20M requests:
+
+| topology (asio-epoll both)            | pipeline 1          | pipeline 16       |
+|---------------------------------------|---------------------|-------------------|
+| shared io_context + strand per conn   | 489.6k              | 5.74M             |
+| io_context per thread (+SO_REUSEPORT) | **545.2k (+11.4%)** | **6.19M (+7.8%)** |
+
+So the shared scheduler (one epoll + reactor mutex + strand dispatch) costs
+**~11% at the floor** — essentially ALL of stdexec's previous +14% edge
+(io_uring itself contributed nothing; consistent with Finding 9's asio-uring
+collapse). This is the number the §9 decision should weigh: per-thread
+topology is the only remaining structural lever, worth ~11% ceiling-lift,
+orthogonal to framework choice (asio does it fine), and independent of
+everything shipped so far.
+
+## Finding 13 — io_context-per-thread shipped: the topology, its two traps, and the sweep (2026-07-12)
+
+Finding 12(b) priced per-thread asio-epoll at +11% on the strandless probe.
+Shipping it into demiplane hit TWO traps the probe couldn't show, both found
+by measurement:
+
+1. **Per-connection watchdog timers stall single-runner workers.** The
+   round-4 deadline watchdog (one coroutine + steady_timer per connection,
+   500ms tick) cost pipeline-1 throughput a catastrophic **35%** under
+   per-thread contexts (290k vs 448k without it), with 4–8ms p99 tails; the
+   damage scaled with wakeup frequency (5s tick still lost 3%). On the shared
+   context the same timers were harmless — 4 threads absorbed the wakeups.
+   Fix: deadline enforcement moved into the ConnectionTracker — ONE sweep
+   coroutine per listener walks the (already mutex-guarded) entry list every
+   500ms and force-cancels expired connections through their own executors;
+   connections' `deadline_` became a relaxed atomic (bare store on x86) and
+   the per-connection watchdog machinery (timer member, serve_finished,
+   end_watchdog) was deleted. 512 timer wakeups/sec became 2. Idle-kill
+   verified: FIN at 10.5s (10s header deadline + tick).
+2. **Strands on single-runner contexts are pure loss.** Keeping
+   strand-per-connection over per-thread contexts LOST throughput vs the
+   shared baseline (424k vs 447k): every completion pays a strand-queue
+   round-trip that shared-context work-stealing used to hide. `Strand` is now
+   an alias for the bare `Executor` (executor.hpp) — serialization IS the
+   connection's single-runner home context. This changes the concurrency
+   contract: **each injected executor must be driven by at most one thread**
+   (Server doc, spec §9 amendment).
+
+Also measured: the `io_context{1}` concurrency hint is a consistent LOSS in
+demiplane (290k with timers, 440k vs 454k in the final config) despite the
+bare probe liking it — run_standalone uses default-hint contexts.
+
+Architecture shipped: `Server(cfg, vector<Executor>)` (old single-executor
+ctor delegates; ctor validates non-empty), listeners take the executor set
+and place connections round-robin (`execs_[next_++ % N]` at accept), accept
+loop + acceptor + backoff + drain poll live on `execs.front()` (the "home"),
+Server control flow (setup barrier, observers, graceful_shutdown, waits) on
+`execs.front()`. run_standalone: N default-hint io_contexts, guard + jthread
+each, SIGINT on the control context, §9.7 teardown per context. Shutdown
+needed NO redesign: signals stay per-listener (emit dispatched onto the run
+executor), tracker was already mutex+atomic, per-conn cancels already
+dispatch through each connection's own executor; the tracker's internals
+moved into a shared_ptr'd State so the sweep can never dangle.
+
+Result (medians of 3×20M, same-session drogon):
+
+|                      | pipeline 1          | pipeline 16     |
+|----------------------|---------------------|-----------------|
+| shared (F12)         | 1.13x behind drogon | 1.03x ahead     |
+| **per-thread (F13)** | **1.04x behind**    | **1.04x ahead** |
+
+Same-conditions spot A/B during bring-up: shared 412k → per-thread 454k
+(**+10.2%**, matching the probe's +11.4% prediction). Verified: all 11 HTTP
+suites in debug + ASan + TSan (BUILD_COMPONENTS=ON), zero failed requests,
+byte-identical responses, idle-kill, new multi-context lifecycle tests
+(graceful + force-cancel drain across 4 contexts) and a round-robin
+placement proof (2 contexts, drive one, only its connections respond).
 
 ## Reproducing
 

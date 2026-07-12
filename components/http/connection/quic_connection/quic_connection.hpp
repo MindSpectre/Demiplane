@@ -6,6 +6,7 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <executor.hpp>
 #include <http_enums.hpp>
 #include <request_arena.hpp>
 
@@ -33,7 +34,7 @@ namespace demiplane::http {
             gears::force_non_const(this);
         }
 
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, Strand> async_close() {
             gears::force_non_const(this);
             co_return;
         }

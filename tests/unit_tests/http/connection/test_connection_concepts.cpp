@@ -27,7 +27,7 @@ namespace {
         }
         void set_deadline_after(std::chrono::milliseconds) {
         }
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, Strand> async_close() {
             co_return;
         }
         boost::asio::cancellation_slot cancel_slot() {
@@ -55,7 +55,7 @@ namespace {
         }
         void set_deadline_after(std::chrono::milliseconds) {
         }
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, Strand> async_close() {
             co_return;
         }
         boost::asio::cancellation_slot cancel_slot() {

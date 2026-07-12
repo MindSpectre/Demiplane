@@ -22,12 +22,13 @@ namespace demiplane::http {
         }
     }  // namespace
 
-    boost::asio::awaitable<boost::beast::error_code> TlsConnection::handshake(std::chrono::milliseconds timeout) {
+    boost::asio::awaitable<boost::beast::error_code, Strand>
+    TlsConnection::handshake(std::chrono::milliseconds timeout) {
         boost::beast::get_lowest_layer(stream_).expires_after(timeout);
 
         boost::beast::error_code ec;
         co_await stream_.async_handshake(boost::asio::ssl::stream_base::server,
-                                         boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+                                         boost::asio::redirect_error(use_strand_awaitable, ec));
         if (ec) {
             co_return ec;
         }
@@ -39,11 +40,11 @@ namespace demiplane::http {
         co_return ec;  // empty (success)
     }
 
-    boost::asio::awaitable<void> TlsConnection::async_close() {
+    boost::asio::awaitable<void, Strand> TlsConnection::async_close() {
         boost::beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds{5});
         boost::beast::error_code ec;
         // Best-effort TLS close-notify; peer may already be gone.
-        co_await stream_.async_shutdown(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+        co_await stream_.async_shutdown(boost::asio::redirect_error(use_strand_awaitable, ec));
         std::ignore =
             boost::beast::get_lowest_layer(stream_).socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
         co_return;

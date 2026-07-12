@@ -43,6 +43,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Connection
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         types/test_http_enums.cpp
         types/test_url_decode.cpp
+        types/test_http_date.cpp
         types/test_headers.cpp
         types/test_body.cpp
         types/test_response.cpp

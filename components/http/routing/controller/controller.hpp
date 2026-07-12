@@ -41,12 +41,12 @@ namespace demiplane::http {
             static constexpr bool valid = false;
         };
         template <>
-        struct RouteHandlerTraits<boost::asio::awaitable<Response>> {
+        struct RouteHandlerTraits<boost::asio::awaitable<Response, Strand>> {
             static constexpr bool valid       = true;
             static constexpr bool has_outcome = false;
         };
         template <typename... Es>
-        struct RouteHandlerTraits<boost::asio::awaitable<gears::Outcome<Response, Es...>>> {
+        struct RouteHandlerTraits<boost::asio::awaitable<gears::Outcome<Response, Es...>, Strand>> {
             static constexpr bool valid       = (HasToHttpResponse<Es> && ...);
             static constexpr bool has_outcome = true;
         };

@@ -4,7 +4,7 @@
 
 namespace demiplane::http {
 
-    boost::asio::awaitable<void> TcpConnection::async_close() {
+    boost::asio::awaitable<void, Strand> TcpConnection::async_close() {
         boost::beast::error_code ec;
         std::ignore = stream_.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
         // Best-effort half-close; the socket closes when the stream is destroyed.

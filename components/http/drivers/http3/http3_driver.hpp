@@ -26,7 +26,7 @@ namespace demiplane::http {
         }
 
         template <IsConnection ConnT>
-        boost::asio::awaitable<void> serve(ConnT& conn, Router& /*router*/) {
+        AsyncVoid serve(ConnT& conn, Router& /*router*/) {
             COMPONENT_LOG_WRN() << "Http3Driver::serve() not implemented (scaffold)";
             gears::force_non_const(this);
             co_await conn.async_close();

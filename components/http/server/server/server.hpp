@@ -60,21 +60,29 @@ namespace demiplane::http {
     /**
      * @brief Thin lifecycle orchestrator over the landed layers (spec §9).
      *
-     * The Server is HANDED an executor and owns no io_context and no threads
-     * (spec §3/§9.1): the caller decides the thread↔context topology, and HTTP
-     * coexists with the logger / DB pool / S3 client on caller-owned executors.
-     * setup() binds synchronously, awaits the observers' on_setup_complete()
-     * as a BARRIER (observer-owned resources exist before the first request is
-     * served; the executor must already be driven when observers are
-     * registered), then co_spawns each listener's accept loop onto ITS OWN
-     * strand of the injected executor (D5 — a stop emit is only safe when
+     * The Server is HANDED one or more executors and owns no io_context and
+     * no threads (spec §3/§9.1): the caller decides the thread↔context
+     * topology, and HTTP coexists with the logger / DB pool / S3 client on
+     * caller-owned executors. Connections are distributed round-robin across
+     * the injected executors by the listeners (one io_context per worker
+     * thread — the throughput topology, README Finding 13); execs.front() is
+     * the CONTROL executor: setup barriers, observers, and the shutdown
+     * coroutine run there. CONTRACT: each injected executor is driven by AT
+     * MOST ONE thread — per-connection serialization is the connection's
+     * single-runner home context (Strand is a bare-executor alias, see
+     * executor.hpp). Every executor must be driven for the §9.7 contract
+     * below. setup() binds synchronously, awaits the observers'
+     * on_setup_complete() as a BARRIER (observer-owned resources exist before
+     * the first request is served; the control executor must already be
+     * driven when observers are registered), then co_spawns each listener's
+     * accept loop onto ITS OWN strand (D5 — a stop emit is only safe when
      * serialized with the loop's turns) bound to ITS OWN cancellation signal
      * (a slot holds one handler, spec §7.2). stop() is non-blocking +
-     * idempotent and NEVER stops the executor. Shutdown ordering contract
-     * (§9.7): after stop(), keep driving the executor until
-     * wait_until_stopped() / async_wait_stopped() returns — only THEN tear the
-     * executor down. wait_until_stopped() must be called from a thread NOT
-     * driving the executor (use async_wait_stopped() there).
+     * idempotent and NEVER stops the executors. Shutdown ordering contract
+     * (§9.7): after stop(), keep driving ALL executors until
+     * wait_until_stopped() / async_wait_stopped() returns — only THEN tear
+     * them down. wait_until_stopped() must be called from a thread NOT
+     * driving any executor (use async_wait_stopped() there).
      *
      * Build phase (add_* / in_group) is single-threaded by contract; any
      * registration after setup() throws std::logic_error. A correct caller
@@ -86,7 +94,13 @@ namespace demiplane::http {
     public:
         NEXUS_REGISTER(nexus::Immortal);
 
+        /// Single-executor convenience — delegates to the vector overload.
         Server(ServerConfig cfg, Executor exec);
+
+        /// One or more executors; connections are distributed round-robin
+        /// across them (one io_context per thread is the intended topology).
+        /// Throws std::invalid_argument when `execs` is empty.
+        Server(ServerConfig cfg, std::vector<Executor> execs);
 
         /// RAII backstop (spec §9.6): if the Server is destroyed while active,
         /// runs stop() + wait_until_stopped() itself — the typical main()
@@ -103,7 +117,7 @@ namespace demiplane::http {
         Server& add_tcp_listener(std::string host, const std::uint16_t port, Driver driver) {
             require_build("add_tcp_listener");
             listeners_.push_back(std::make_unique<TcpListener<Driver>>(
-                exec_, std::move(host), port, std::move(driver), cfg_.request_arena_size()));
+                execs_, std::move(host), port, std::move(driver), cfg_.request_arena_size()));
             return *this;
         }
 
@@ -111,7 +125,7 @@ namespace demiplane::http {
         Server& add_tls_listener(std::string host, const std::uint16_t port, TlsConfig tls, Drivers... drivers) {
             require_build("add_tls_listener");
             listeners_.push_back(std::make_unique<TlsListener<Drivers...>>(
-                exec_, std::move(host), port, std::move(tls), cfg_.request_arena_size(), std::move(drivers)...));
+                execs_, std::move(host), port, std::move(tls), cfg_.request_arena_size(), std::move(drivers)...));
             return *this;
         }
 
@@ -119,7 +133,7 @@ namespace demiplane::http {
         Server& add_quic_listener(std::string host, const std::uint16_t port, TlsConfig tls, Driver driver) {
             require_build("add_quic_listener");
             listeners_.push_back(std::make_unique<QuicListener<Driver>>(
-                exec_, std::move(host), port, std::move(tls), std::move(driver)));
+                execs_, std::move(host), port, std::move(tls), std::move(driver)));
             return *this;
         }
 
@@ -206,7 +220,10 @@ namespace demiplane::http {
         [[nodiscard]] static PathNormalization map_normalization(ServerConfig::PathNormalization n) noexcept;
 
         ServerConfig cfg_;
-        Executor exec_;  // injected; NOT owned, never stopped
+        // Injected; NOT owned, never stopped. Non-empty (ctor-validated).
+        // front() is the control executor (setup barrier, observers, the
+        // shutdown coroutine); listeners round-robin connections over all.
+        std::vector<Executor> execs_;
         std::atomic<State> state_{State::build};
 
         RouteRegistry registry_;

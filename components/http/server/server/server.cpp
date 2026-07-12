@@ -35,11 +35,17 @@ namespace demiplane::http {
     }
 
     Server::Server(ServerConfig cfg, Executor exec)
+        : Server{std::move(cfg), std::vector<Executor>{std::move(exec)}} {
+    }
+
+    Server::Server(ServerConfig cfg, std::vector<Executor> execs)
         : cfg_{std::move(cfg)},
-          exec_{std::move(exec)},
+          execs_{std::move(execs)},
           // Read the MEMBER, not the moved-from parameter (D8): members
           // initialize in declaration order, so cfg_ is populated by now.
           registry_{map_normalization(cfg_.path_normalization())} {
+        if (execs_.empty())
+            throw std::invalid_argument{"Server: at least one executor is required"};
     }
 
     Server::~Server() {
@@ -111,14 +117,14 @@ namespace demiplane::http {
             // lost. REQUIRES the injected executor to be driven by some OTHER
             // thread; per-observer throws are fanned to on_unhandled_exception
             // inside notify_setup_observers().
-            boost::asio::co_spawn(exec_, notify_setup_observers(), boost::asio::use_future).get();
+            boost::asio::co_spawn(execs_.front(), notify_setup_observers(), boost::asio::use_future).get();
         }
 
         run_strands_.reserve(listeners_.size());
         stop_signals_.reserve(listeners_.size());
         live_accept_loops_.store(listeners_.size(), std::memory_order_release);
         for (const auto& listener : listeners_) {
-            run_strands_.emplace_back(boost::asio::make_strand(exec_));
+            run_strands_.emplace_back(execs_[run_strands_.size() % execs_.size()]);
             stop_signals_.emplace_back(std::make_shared<boost::asio::cancellation_signal>());
             boost::asio::co_spawn(
                 run_strands_.back(),
@@ -167,7 +173,7 @@ namespace demiplane::http {
 
     void Server::begin_shutdown() {
         COMPONENT_LOG_INF() << "stop requested — spawning graceful shutdown";
-        boost::asio::co_spawn(exec_, graceful_shutdown(), boost::asio::detached);
+        boost::asio::co_spawn(execs_.front(), graceful_shutdown(), boost::asio::detached);
     }
 
     void Server::wait_until_stopped() {
@@ -188,7 +194,7 @@ namespace demiplane::http {
             if (const auto s = state_.load(std::memory_order_acquire); s == State::stopped || s == State::build) {
                 co_return;
             }
-            co_await demiplane::chrono::async_sleep_for(exec_, delay);
+            co_await demiplane::chrono::async_sleep_for(execs_.front(), delay);
             delay = std::min<std::chrono::milliseconds>(delay * 2, MAX_POLL_TICK);
         }
     }
@@ -213,7 +219,7 @@ namespace demiplane::http {
             // on every exit path, so from here new connections are provably
             // REFUSED, not backlogged (spec §14.2).
             while (live_accept_loops_.load(std::memory_order_acquire) > 0) {
-                co_await demiplane::chrono::async_sleep_for(exec_, POLL_TICK);
+                co_await demiplane::chrono::async_sleep_for(execs_.front(), POLL_TICK);
             }
 
             // Phase 2: drain in-flight requests up to drain_timeout (shared
@@ -235,7 +241,7 @@ namespace demiplane::http {
                                     << " connection(s) force-cancelled — waiting for unwind";
             }
             while (total_in_flight() > 0) {
-                co_await demiplane::chrono::async_sleep_for(exec_, POLL_TICK);
+                co_await demiplane::chrono::async_sleep_for(execs_.front(), POLL_TICK);
             }
 
             // Phase 3: async shutdown observers — awaited ON the still-driven

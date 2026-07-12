@@ -13,9 +13,9 @@ using namespace demiplane::http;
 
 namespace {
     template <typename T>
-    T run_awaitable(boost::asio::awaitable<T> aw) {
+    T run_awaitable(boost::asio::awaitable<T, demiplane::http::Strand> aw) {
         boost::asio::io_context ioc;
-        auto fut = boost::asio::co_spawn(ioc, std::move(aw), boost::asio::use_future);
+        auto fut = boost::asio::co_spawn(ioc.get_executor(), std::move(aw), boost::asio::use_future);
         ioc.run();
         return fut.get();
     }

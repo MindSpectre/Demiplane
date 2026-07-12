@@ -53,7 +53,7 @@ namespace demiplane::http {
 
         // Streaming primitive. nullopt when exhausted. (Plain function returning
         // the payload's awaitable — no extra coroutine frame here.)
-        [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk();
+        [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk();
 
         [[nodiscard]] std::optional<std::size_t> size_hint() const;
 
@@ -76,7 +76,7 @@ namespace demiplane::http {
         static constexpr std::size_t INLINE_SIZE = 48;
 
         struct VTable {
-            boost::asio::awaitable<std::optional<std::span<const std::byte>>> (*read_chunk)(void*);
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> (*read_chunk)(void*);
             std::optional<std::size_t> (*size_hint)(const void*);
             std::optional<std::string_view> (*buffered_view)(const void*);
             void (*move)(void* dst, void* src) noexcept;  // move-construct dst, destroy src

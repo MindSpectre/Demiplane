@@ -30,8 +30,9 @@ namespace demiplane::http {
         static_assert(std::same_as<Driver, Http3Driver>, "QuicListener pairs with Http3Driver only (spec §7.3)");
 
     public:
-        QuicListener(Executor exec, std::string host, const std::uint16_t port, TlsConfig tls, Driver driver)
-            : exec_{std::move(exec)},
+        QuicListener(
+            std::vector<Executor> execs, std::string host, const std::uint16_t port, TlsConfig tls, Driver driver)
+            : execs_{std::move(execs)},
               host_{std::move(host)},
               port_{port},
               tls_{std::move(tls)},
@@ -64,7 +65,7 @@ namespace demiplane::http {
         }
 
     private:
-        Executor exec_;
+        std::vector<Executor> execs_;
         std::string host_;
         std::uint16_t port_;
         TlsConfig tls_;

@@ -7,6 +7,7 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <executor.hpp>
 #include <http_enums.hpp>
 
 namespace demiplane::http {
@@ -27,9 +28,9 @@ namespace demiplane::http {
         // timer.async_wait + cancel + an aborted-handler dispatch around EVERY
         // I/O op — measured at ~18% of throughput on the h1 hot path. Drivers
         // stamp a per-phase deadline (plain store, strand-serialized) and the
-        // listener's deadline_watchdog enforces it at ~tick granularity.
+        // tracker's deadline sweep enforces it at ~tick granularity.
         { t.set_deadline_after(ms) } -> std::same_as<void>;
-        { t.async_close() } -> std::same_as<boost::asio::awaitable<void>>;
+        { t.async_close() } -> std::same_as<boost::asio::awaitable<void, Strand>>;
         { t.cancel_slot() } -> std::same_as<boost::asio::cancellation_slot>;
         { t.remote_address() } -> std::same_as<boost::asio::ip::address>;
         { t.negotiated_protocol() } -> std::same_as<Protocol>;

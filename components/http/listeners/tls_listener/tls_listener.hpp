@@ -57,24 +57,27 @@ namespace demiplane::http {
         static_assert(sizeof...(Drivers) >= 1, "TlsListener needs at least one driver");
 
     public:
-        TlsListener(Executor exec, std::string host, const std::uint16_t port, TlsConfig tls, Drivers... drivers)
-            : TlsListener{std::move(exec), std::move(host), port, std::move(tls), 8192, std::move(drivers)...} {
+        TlsListener(
+            std::vector<Executor> execs, std::string host, const std::uint16_t port, TlsConfig tls, Drivers... drivers)
+            : TlsListener{std::move(execs), std::move(host), port, std::move(tls), 8192, std::move(drivers)...} {
         }
 
-        TlsListener(Executor exec,
+        /// `execs` — connection placement set, round-robin; front() is the
+        /// home (acceptor, backoff, drain poll). See TcpListener.
+        TlsListener(std::vector<Executor> execs,
                     std::string host,
                     const std::uint16_t port,
                     TlsConfig tls,
                     const std::size_t request_arena_size,
                     Drivers... drivers)
-            : exec_{std::move(exec)},
+            : execs_{std::move(execs)},
               host_{std::move(host)},
               port_{port},
               tls_config_{std::move(tls)},
               arena_size_{request_arena_size},
               drivers_{std::move(drivers)...},
               advertised_alpn_{build_alpn_wire()},
-              acceptor_{exec_} {
+              acceptor_{execs_.front()} {
         }
 
         void bind() override {
@@ -94,13 +97,15 @@ namespace demiplane::http {
             // Cancellation as STATE, not exceptions — see TcpListener::run for the
             // full rationale (incl. the multi-worker WARN: stop emits must be
             // dispatched onto this run()'s strand, as the Server does — PR 5, D5).
+            tracker_.start_sweep(execs_.front());  // one deadline sweep per listener (Finding 13)
             co_await asio::this_coro::throw_if_cancelled(false);
             const auto cancel_state = co_await asio::this_coro::cancellation_state;
             std::optional<asio::steady_timer> backoff;  // error path only — lazy
             std::uint32_t consecutive_errors = 0;
 
             while (cancel_state.cancelled() == asio::cancellation_type::none) {
-                Strand strand = asio::make_strand(exec_);
+                Strand strand = execs_[next_exec_];  // round-robin, see TcpListener
+                next_exec_    = (next_exec_ + 1) % execs_.size();
                 boost::beast::error_code ec;
                 // Socket, not tcp::socket — see TcpListener::run.
                 Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
@@ -114,7 +119,7 @@ namespace demiplane::http {
                 if (ec) {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
                     if (++consecutive_errors > 2) {
                         if (!backoff) {
-                            backoff.emplace(exec_);
+                            backoff.emplace(execs_.front());
                         }
                         // 1ms, 2ms, 4ms, ... capped at 1024ms — same policy as
                         // TcpListener. attempt is 0-based; consecutive_errors is >2
@@ -131,7 +136,7 @@ namespace demiplane::http {
                 auto handle        = tracker_.register_connection(conn, strand);
                 asio::co_spawn(
                     strand,
-                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
+                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void, Strand> {
                         try {
                             // TODO: squash branches?
                             if (auto err_code = co_await conn->handshake()) {  // ALPN mismatch / TLS failure → close
@@ -145,15 +150,10 @@ namespace demiplane::http {
                                      !handled) {
                                 co_await conn->async_close();
                             }
-                        } catch (...) {  // the watchdog must be released on every exit
+                        } catch (...) {  // serve()/handshake throws end the session quietly
                         }
-                        conn->end_watchdog();  // strand-serialized with the watchdog's turns
                     },
                     asio::detached);
-                // Deadline supervisor (see listener_base.hpp). The handshake keeps
-                // its own beast timeout; the watchdog idles (deadline = max) until
-                // a driver stamps per-phase deadlines.
-                asio::co_spawn(strand, deadline_watchdog(conn), asio::detached);
             }
             // Reached on EVERY exit path — refuse new connections during shutdown
             // (spec §14.2; spike S4); see TcpListener::run for the rationale.
@@ -163,7 +163,7 @@ namespace demiplane::http {
         }
 
         boost::asio::awaitable<void> drain_until(const std::chrono::steady_clock::time_point deadline) override {
-            co_await tracker_.drain_until(exec_, deadline);
+            co_await tracker_.drain_until(execs_.front(), deadline);
         }
 
         [[nodiscard]] std::size_t in_flight() const noexcept override {
@@ -195,7 +195,7 @@ namespace demiplane::http {
 
         // Walk the driver tuple; the first whose id() == proto serves the conn.
         template <std::size_t I>
-        boost::asio::awaitable<bool> try_serve(TlsConnection& conn, Router& router, Protocol proto) {
+        boost::asio::awaitable<bool, Strand> try_serve(TlsConnection& conn, Router& router, Protocol proto) {
             if constexpr (I < sizeof...(Drivers)) {
                 if (auto& drv = std::get<I>(drivers_); std::remove_reference_t<decltype(drv)>::id() == proto) {
                     co_await drv.serve(conn, router);
@@ -207,7 +207,8 @@ namespace demiplane::http {
             }
         }
 
-        Executor exec_;
+        std::vector<Executor> execs_;
+        std::size_t next_exec_ = 0;
         std::string host_;
         std::uint16_t port_;
         TlsConfig tls_config_;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <utility>
@@ -32,8 +33,7 @@ namespace demiplane::http {
 
         explicit TcpConnection(Socket socket, const std::size_t arena_size = 8192)
             : stream_{std::move(socket)},
-              arena_{arena_size},
-              watchdog_timer_{stream_.get_executor()} {
+              arena_{arena_size} {
         }
 
         [[nodiscard]] stream_type& stream() noexcept {
@@ -48,38 +48,26 @@ namespace demiplane::http {
             arena_.reset();
         }
 
-        /// Per-phase I/O deadline (IsConnection). A plain store: the driver and
-        /// the listener's deadline_watchdog both run on this connection's
-        /// strand, so no atomics. Replaces beast's expires_after — that armed
-        /// timer.async_wait + cancel + an aborted-handler dispatch around EVERY
-        /// I/O op (~18% of hot-path throughput measured); the watchdog costs
-        /// one timer op per tick per connection instead.
+        /// Per-phase I/O deadline (IsConnection). Written by the driver on the
+        /// connection's own context; READ by the ConnectionTracker's sweep
+        /// from the listener's home context — hence the relaxed atomic (a bare
+        /// store/load on x86, still effectively free on the hot path).
+        /// Replaces beast's expires_after — that armed timer.async_wait +
+        /// cancel + an aborted-handler dispatch around EVERY I/O op (~18% of
+        /// hot-path throughput measured). Enforcement is the tracker sweep:
+        /// ONE timer per listener, not per connection — per-connection timers
+        /// measurably stall single-runner workers (README Finding 13).
         void set_deadline_after(const std::chrono::milliseconds ms) noexcept {
-            deadline_ = std::chrono::steady_clock::now() + ms;
+            deadline_.store((std::chrono::steady_clock::now() + ms).time_since_epoch().count(),
+                            std::memory_order_relaxed);
         }
 
         [[nodiscard]] std::chrono::steady_clock::time_point deadline() const noexcept {
-            return deadline_;
+            return std::chrono::steady_clock::time_point{
+                std::chrono::steady_clock::duration{deadline_.load(std::memory_order_relaxed)}};
         }
 
-        /// Watchdog plumbing (strand-confined, driven by listener_base's
-        /// deadline_watchdog). serve-wrapper calls end_watchdog() when the
-        /// session coroutine finishes; the watchdog wakes and exits.
-        [[nodiscard]] boost::asio::steady_timer& watchdog_timer() noexcept {
-            return watchdog_timer_;
-        }
-        [[nodiscard]] bool serve_finished() const noexcept {
-            return serve_finished_;
-        }
-        void end_watchdog() noexcept {
-            serve_finished_ = true;
-            try {
-                watchdog_timer_.cancel();
-            } catch (...) {  // cancel() throws only on closed services during teardown
-            }
-        }
-
-        boost::asio::awaitable<void> async_close();
+        boost::asio::awaitable<void, Strand> async_close();
 
         [[nodiscard]] boost::asio::cancellation_slot cancel_slot() noexcept {
             return signal_.slot();
@@ -117,10 +105,9 @@ namespace demiplane::http {
         stream_type stream_;
         RequestArena arena_;
         boost::asio::cancellation_signal signal_;
-        // Strand-confined deadline state (driver writes, watchdog reads).
-        std::chrono::steady_clock::time_point deadline_{std::chrono::steady_clock::time_point::max()};
-        boost::asio::steady_timer watchdog_timer_;
-        bool serve_finished_ = false;
+        // Driver writes (own context), tracker sweep reads (home context).
+        std::atomic<std::chrono::steady_clock::duration::rep> deadline_{
+            std::chrono::steady_clock::time_point::max().time_since_epoch().count()};
     };
 
 }  // namespace demiplane::http

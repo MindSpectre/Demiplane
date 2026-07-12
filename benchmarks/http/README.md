@@ -4,26 +4,24 @@ Round 1 measured 2026-07-09 (findings 1–3 below); round 2 measured 2026-07-10
 (findings 4–7, fixes shipped). All numbers are reproducible with `run_bench.sh`
 and `run_perf.sh` in this directory.
 
-## Current standing (2026-07-12 evening, after Finding 13 shipped)
+## Current standing (2026-07-13, after Finding 15 shipped)
 
-Median of 3 × 20M requests, zero failures (box ran ~5% slower than in the
-morning matrix — compare ratios):
+Median of 3 × 20M requests, zero failures. **demiplane is now FASTER than
+drogon at every depth and in both core layouts:**
 
-|                      | demiplane         | drogon        | ratio                      | was (07-09) |
-|----------------------|-------------------|---------------|----------------------------|-------------|
-| pipeline 1, primary  | 440,144 rps       | 458,021 rps   | drogon **1.04x** faster    | 2.08x       |
-| pipeline 16, primary | **3,160,341 rps** | 3,041,914 rps | **demiplane 1.04x faster** | 12.0x       |
-| pipeline 1, control  | **479,220 rps**   | (anomalous*)  | —                          | 1.92x       |
+|                      | demiplane         | drogon        | demiplane faster by | was (07-09)  |
+|----------------------|-------------------|---------------|---------------------|--------------|
+| pipeline 1, primary  | **475,650 rps**   | 467,859 rps   | **1.02x**           | 2.08x behind |
+| pipeline 16, primary | **3,589,475 rps** | 3,039,676 rps | **1.18x**           | 12.0x behind |
+| pipeline 1, control  | **504,428 rps**   | 472,906 rps   | **1.07x**           | 1.92x behind |
 
-*drogon's single control rep collapsed to 122k rps with 5ms tails while its
-primary reps were normal — external contamination, not comparable.
-
-**Pipeline-1 gap progression: 2.08x → 1.20x → 1.15x → 1.13x → 1.04x.**
-demiplane beats drogon at pipeline 16 (p99 103µs vs 150µs) and holds the best
-tail latency at every depth. Topology is now io_context-per-thread with
-round-robin connection placement (Finding 13): per-connection serialization
-is the single-runner home context (no strands), deadline enforcement is one
-tracker sweep per listener (no per-connection timers).
+**Pipeline-1 progression: 2.08x behind → 1.20x → 1.15x → 1.13x → 1.04x →
+1.02x AHEAD.** Tail latency is demiplane's at every depth (p99 976µs vs
+1120µs at p1 primary, 85µs vs 134µs at p16). The control number (504k) is
+above the shared-topology raw-asio floor entirely — only the strandless
+per-thread probes (528-545k) remain ahead. Architecture: io_context-per-
+thread, round-robin placement, no strands, tracker-sweep deadlines
+(Finding 13); raw-socket TCP path + slim RequestContext (Finding 15).
 
 For where these numbers sit against other frameworks (crow, oat++, Go
 net/http, fasthttp, axum), see Finding 10.
@@ -569,6 +567,68 @@ suites in debug + ASan + TSan (BUILD_COMPONENTS=ON), zero failed requests,
 byte-identical responses, idle-kill, new multi-context lifecycle tests
 (graceful + force-cancel drain across 4 contexts) and a round-robin
 placement proof (2 contexts, drive one, only its connections respond).
+
+## Finding 14 — immediate executors: measured, rejected (2026-07-12)
+
+asio 1.30+ lets a completion token carry an "immediate executor"
+(`bind_immediate_executor`): ops that complete speculatively at initiation
+(data already readable / socket writable) dispatch their handler INLINE on
+the initiating thread instead of being posted through the scheduler queue.
+On paper this attacks the largest remaining profile bucket (the per-op
+scheduler round-trip). `raw_asio_immediate_probe.cpp` — the per-thread probe
+with every socket token immediate-bound to the connection's own single-runner
+executor — measured against the plain per-thread probe, back-to-back:
+
+|                      | pipeline 1            | pipeline 16         |
+|----------------------|-----------------------|---------------------|
+| per-thread plain     | 528k / 514k           | 6.18M / 5.39M       |
+| per-thread immediate | 480k / 434k (−9…−16%) | 5.65M / 4.97M (−8%) |
+
+Correct (zero failures, no unbounded recursion) but consistently SLOWER.
+Read: posting completions is not pure overhead here — it lets the runner
+drain an epoll batch, queue everything, and execute handlers back-to-back
+with warm i-cache, and lets the next epoll_wait gather more events before
+processing; inline resumption interleaves initiation and completion stacks
+and defeats that batching. Same lesson family as the io_context{1} hint
+(Finding 13): scheduler "shortcuts" lose to scheduler batching on this
+workload. NOT wired into the driver; probe kept in-tree as evidence.
+
+Also this session: `BOOST_ASIO_NO_DEPRECATED` is now defined tree-wide (root
+CMakeLists) — fallout was three `std::ignore =` on `shutdown()`/`close()`
+overloads that return void under the modern API.
+
+## Finding 15 — the last two levers: SBO shrink + raw-socket TCP (2026-07-13, shipped)
+
+The Finding-14 profile split the remaining gap into buckets; the two
+addressable ones landed, each A/B'd against a same-minute stash-measured
+baseline (one variable at a time):
+
+1. **RequestContext SBO shrink (4→1)**: `ParamEntry` is 64 B, so 4-slot
+   inline storage on path_params + query_params + the 4-slot bag put ~600 B
+   inside every RequestContext — paid on each by-value move through the
+   handler chain and inflating every handler coroutine frame. Exact routes
+   carry ZERO entries; overflow lands in the request arena. Effect:
+   **+2.6% p1, +4.7% p16** (bigger than predicted — frame size and cache
+   pressure, not just the moves; p999 1888→1216µs).
+2. **Raw-socket TCP path**: `TcpConnection::stream_type` is now the bare
+   `Socket`, not `beast::basic_stream` — with per-op timeouts long gone
+   (deadline sweep) and writes flat-rendered, the beast wrapper was pure
+   forwarding shell (~1.3% of cycles). The driver only needs
+   AsyncRead/WriteStream, which the socket is. TlsConnection keeps beast's
+   stream under `ssl::stream` — its handshake timeout is load-bearing there
+   (once per connection, off the hot path). Effect: **+3.5% p1, +2.2% p16**.
+   Idle-kill re-verified (10.4s); `cancel()` uses the error_code close form.
+
+Combined round: **+6.1% p1, +7.2% p16** over the committed Finding-14 state
+— which flipped the last remaining deficit. Full matrix (3×20M): demiplane
+**475.7k vs drogon 467.9k at pipeline-1 primary (1.02x AHEAD — first time)**,
+3.59M vs 3.04M at p16 (1.18x), 504.4k vs 472.9k control (1.07x). All 11
+suites debug + ASan green, zero failed requests, byte-identical responses.
+
+What remains vs the strandless per-thread probe floor (528-545k): beast
+parser field-object construction (~1%, removable only by hand-rolling the
+parser) and irreducible asio per-op machinery. The framework glue war is
+over — everything measurable and removable has been removed.
 
 ## Reproducing
 

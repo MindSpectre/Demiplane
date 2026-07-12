@@ -18,7 +18,6 @@
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/error.hpp>
@@ -158,7 +157,7 @@ namespace demiplane::http {
             // Reached on EVERY exit path — refuse new connections during shutdown
             // (spec §14.2; spike S4); see TcpListener::run for the rationale.
             boost::beast::error_code ignore;
-            std::ignore = acceptor_.close(ignore);
+            acceptor_.close(ignore);  // void under BOOST_ASIO_NO_DEPRECATED
             co_return;
         }
 

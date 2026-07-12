@@ -97,6 +97,12 @@ set(DMP_ASIO_RECYCLE_CACHE "4" CACHE STRING "Asio per-thread recycled-memory slo
 add_compile_definitions(BOOST_ASIO_RECYCLING_ALLOCATOR_CACHE_SIZE=${DMP_ASIO_RECYCLE_CACHE})
 message("Asio recycling allocator cache size: ${DMP_ASIO_RECYCLE_CACHE} (tree-wide; ABI-visible, see comment)")
 
+# Fail compilation on any use of asio's deprecated interfaces (io_service,
+# null_buffers, executor query shims, ...). Keeps the tree on the modern API
+# surface — a prerequisite for the newer completion machinery (immediate
+# executors) and for future asio upgrades.
+add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
+
 # Add compile definitions based on options
 if (DMP_ENABLE_LOGGING)
     message("Scroll logging is enabled")

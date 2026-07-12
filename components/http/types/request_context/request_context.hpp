@@ -153,7 +153,13 @@ namespace demiplane::http {
         std::pmr::polymorphic_allocator<> alloc_;
 
         using ParamEntry = std::pair<std::pmr::string, std::pmr::string>;
-        using ParamVec   = boost::container::small_vector<ParamEntry, 4, std::pmr::polymorphic_allocator<ParamEntry>>;
+        // Inline capacity 1, not 4 (README Finding 15): ParamEntry is 64 B, so
+        // 4-slot inline storage on TWO vectors plus the bag put ~600 B inside
+        // every RequestContext — paid on each by-value move through the
+        // handler chain and in every handler coroutine frame. Exact-match
+        // routes carry ZERO entries; overflow beyond 1 lands in the request
+        // arena (bump alloc), so multi-param routes pay one cheap arena grow.
+        using ParamVec   = boost::container::small_vector<ParamEntry, 1, std::pmr::polymorphic_allocator<ParamEntry>>;
 
         ParamVec path_params_{std::pmr::polymorphic_allocator<ParamEntry>{alloc_}};
         mutable bool query_parsed_ = false;
@@ -190,7 +196,7 @@ namespace demiplane::http {
             BagEntry(const BagEntry&)            = delete;
             BagEntry& operator=(const BagEntry&) = delete;
         };
-        boost::container::small_vector<BagEntry, 4, std::pmr::polymorphic_allocator<BagEntry>> bag_{
+        boost::container::small_vector<BagEntry, 1, std::pmr::polymorphic_allocator<BagEntry>> bag_{
             std::pmr::polymorphic_allocator<BagEntry>{alloc_}};
 
         BagEntry* find_bag_entry(const std::type_index key) {

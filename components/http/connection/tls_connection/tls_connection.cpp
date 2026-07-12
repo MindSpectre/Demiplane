@@ -45,8 +45,8 @@ namespace demiplane::http {
         boost::beast::error_code ec;
         // Best-effort TLS close-notify; peer may already be gone.
         co_await stream_.async_shutdown(boost::asio::redirect_error(use_strand_awaitable, ec));
-        std::ignore =
-            boost::beast::get_lowest_layer(stream_).socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+        boost::beast::get_lowest_layer(stream_).socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send,
+                                                                  ec);  // void under BOOST_ASIO_NO_DEPRECATED
         co_return;
     }
 

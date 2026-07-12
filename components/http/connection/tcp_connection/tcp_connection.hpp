@@ -29,7 +29,14 @@ namespace demiplane::http {
      */
     class TcpConnection : gears::Immutable {
     public:
-        using stream_type = Stream;
+        // Raw Socket, NOT beast::basic_stream (README Finding 15): with the
+        // per-op timeouts long gone (deadline sweep) and the write path flat,
+        // the beast wrapper was pure forwarding shell — ~1.3% of all cycles
+        // of read_some/write_some/rate-policy plumbing per op. The driver
+        // only needs AsyncReadStream/AsyncWriteStream, which the socket is.
+        // (TlsConnection keeps beast's stream underneath ssl::stream — its
+        // handshake timeout machinery is load-bearing there, once per conn.)
+        using stream_type = Socket;
 
         explicit TcpConnection(Socket socket, const std::size_t arena_size = 8192)
             : stream_{std::move(socket)},
@@ -82,15 +89,15 @@ namespace demiplane::http {
         /// would be silently lost and the connection would outlive the drain.
         /// Closing the stream fails the current AND every future I/O op
         /// (operation_aborted / bad_descriptor), so the kill always lands at
-        /// the next I/O boundary. Both calls are no-throw (beast's close() is
-        /// socket.close(ec) + a try/catch'd timer cancel internally).
+        /// the next I/O boundary. Both calls are no-throw (error_code form).
         void cancel() noexcept {
             signal_.emit(boost::asio::cancellation_type::terminal);  // aborts a slot-bound parked op now
-            stream_.close();                                         // level-trigger for the unbound windows
+            boost::system::error_code ignore;
+            stream_.close(ignore);  // level-trigger for the unbound windows
         }
 
         [[nodiscard]] boost::asio::ip::address remote_address() const {
-            return stream_.socket().remote_endpoint().address();
+            return stream_.remote_endpoint().address();
         }
 
         [[nodiscard]] static Protocol negotiated_protocol() noexcept {

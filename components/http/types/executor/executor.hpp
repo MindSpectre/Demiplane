@@ -44,7 +44,8 @@ namespace demiplane::http {
     /// Accepted socket + the beast stream wrapping it. Both are bound to the
     /// connection's Strand, so the driver's I/O dispatches straight to it.
     using Socket = boost::asio::basic_stream_socket<boost::asio::ip::tcp, Strand>;
-    using Stream = boost::beast::basic_stream<boost::asio::ip::tcp, Strand, boost::beast::unlimited_rate_policy>;
+    using Stream =
+        boost::beast::basic_stream<boost::asio::ip::tcp, Strand /*,boost::beast::unlimited_rate_policy is default*/>;
 
     /// The acceptor lives at listener scope, not connection scope, so it takes
     /// the bare executor. `async_accept(strand, ...)` is what binds the accepted

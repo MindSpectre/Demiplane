@@ -52,8 +52,10 @@ TEST(LoggerProviderTest, FormatStyleLogging) {
 
     testing::internal::CaptureStdout();
 
-    std::string username = "alice";
-    int count            = 42;
+    // maybe_unused: with DMP_ENABLE_LOGGING off the LOG_* macros expand to
+    // nothing and these become unused (-Werror in such presets).
+    [[maybe_unused]] std::string username = "alice";
+    [[maybe_unused]] int count            = 42;
 
     LOG_DIRECT_FMT_INF(logger, "", "User {} has {} items", username, count);
     LOG_DIRECT_FMT_DBG(logger, "", "Debug message with value {}", 123);

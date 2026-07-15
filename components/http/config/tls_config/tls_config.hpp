@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <demiplane/gears>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -9,7 +10,6 @@
 
 #include <config_interface.hpp>
 #include <json/json.hpp>
-
 namespace demiplane::http {
 
     /**
@@ -25,24 +25,29 @@ namespace demiplane::http {
     public:
         enum class MinVersion : std::uint8_t { tls12, tls13 };
 
-        constexpr TlsConfig(std::string cert_file,
-                            std::string key_file,
-                            std::string key_passphrase     = "",
-                            std::string dh_params_file     = "",
-                            std::string ca_file            = "",
+
+        template <gears::IsStringLike StringTp1 = std::string,
+                  gears::IsStringLike StringTp2 = std::string,
+                  gears::IsStringLike StringTp3 = std::string,
+                  gears::IsStringLike StringTp4 = std::string,
+                  gears::IsStringLike StringTp5 = std::string>
+        constexpr TlsConfig(StringTp1&& cert_file,
+                            StringTp2&& key_file,
+                            StringTp3&& key_passphrase     = "",
+                            StringTp4&& dh_params_file     = "",
+                            StringTp5&& ca_file            = "",
                             const MinVersion min_version   = MinVersion::tls12,
                             const bool session_cache       = true,
                             const bool require_client_cert = false) noexcept
-            : cert_file_{std::move(cert_file)},
-              key_file_{std::move(key_file)},
-              key_passphrase_{std::move(key_passphrase)},
-              dh_params_file_{std::move(dh_params_file)},
-              ca_file_{std::move(ca_file)},
+            : cert_file_{std::forward<StringTp1>(cert_file)},
+              key_file_{std::forward<StringTp2>(key_file)},
+              key_passphrase_{std::forward<StringTp3>(key_passphrase)},
+              dh_params_file_{std::forward<StringTp4>(dh_params_file)},
+              ca_file_{std::forward<StringTp5>(ca_file)},
               min_version_{min_version},
               session_cache_{session_cache},
               require_client_cert_{require_client_cert} {
         }
-
         constexpr void validate() const override {
             if (cert_file_.empty()) {
                 throw std::invalid_argument("tls.cert_file must be set");
@@ -144,8 +149,8 @@ namespace demiplane::http {
             v = TlsConfig::MinVersion::tls13;
             return true;
         }
-        throw std::invalid_argument{
-            "config field '" + k + "': unknown min_version '" + raw + R"(' (expected "tls12" or "tls13"))"};
+        throw std::invalid_argument{"config field '" + k + "': unknown min_version '" + raw +
+                                    R"(' (expected "tls12" or "tls13"))"};
     }
 
     class TlsConfig::Builder {

@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include <boost/asio/awaitable.hpp>
@@ -15,7 +16,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/error.hpp>
@@ -52,15 +52,22 @@ namespace demiplane::http {
         /// round-robin (one io_context per thread is the intended topology,
         /// README Finding 13). front() is the listener's home: acceptor,
         /// error backoff, and the drain poll live there. Must be non-empty.
-        TcpListener(std::vector<Executor> execs,
-                    std::string host,
+        /// Forwarding ctor (same shape as TlsListener): each argument is
+        /// constructed into its member directly — no by-value relay moves.
+        /// `host` is only IsStringLike-constrained: literals/string_views
+        /// construct host_ in place, no std::string temporary at call sites.
+        template <typename VectorExecutorTp, gears::IsStringLike StringTp, typename DriverTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                         std::is_same_v<std::remove_cvref_t<DriverTp>, Driver>
+        TcpListener(VectorExecutorTp&& execs,
+                    StringTp&& host,
                     const std::uint16_t port,
-                    Driver driver,
+                    DriverTp&& driver,
                     const std::size_t arena_size = 8192)
-            : execs_{std::move(execs)},
-              host_{std::move(host)},
+            : execs_{std::forward<VectorExecutorTp>(execs)},
+              host_{std::forward<StringTp>(host)},
               port_{port},
-              driver_{std::move(driver)},
+              driver_{std::forward<DriverTp>(driver)},
               arena_size_{arena_size},
               acceptor_{execs_.front()} {
         }
@@ -108,14 +115,14 @@ namespace demiplane::http {
                 // tcp::socket would convert the executor back into any_io_executor
                 // and re-erase the whole hot path.
                 Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
-                if (ec == asio::error::operation_aborted) {
+                if (ec == asio::error::operation_aborted) [[unlikely]] {
                     break;  // stop(): the run-coroutine's cancellation slot was emitted
                 }
                 if (ec == asio::error::bad_descriptor || ec == asio::error::operation_not_supported ||
-                    ec == asio::error::invalid_argument) {
+                    ec == asio::error::invalid_argument) [[unlikely]] {
                     break;  // acceptor unusable — retrying can only repeat the error
                 }
-                if (ec) {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
+                if (ec) [[unlikely]] {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
                     // A couple of retries are free (accept-storm hiccups resolve
                     // instantly); persistent failure backs off exponentially so a
                     // dead-resource state (fd exhaustion) doesn't hot-spin the
@@ -128,7 +135,7 @@ namespace demiplane::http {
                         // errors (EMFILE) resolve on operator timescales, not
                         // microseconds. attempt is 0-based; consecutive_errors is >2
                         // here, so consecutive_errors - 3 never underflows.
-                        backoff->expires_after(demiplane::chrono::exponential_backoff(
+                        backoff->expires_after(chrono::exponential_backoff(
                             consecutive_errors - 3, std::chrono::milliseconds{1}, std::chrono::milliseconds{1024}));
                         boost::beast::error_code tec;
                         co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));

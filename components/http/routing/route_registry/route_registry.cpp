@@ -159,7 +159,8 @@ namespace demiplane::http {
         if (norm_ == PathNormalization::none)
             // ReSharper disable once CppDFALocalValueEscapesFunction
             return path;
-        if (norm_ == PathNormalization::collapse_multi_slash && path.find("//") != std::string_view::npos) {
+        if (norm_ == PathNormalization::collapse_multi_slash && path.find("//") != std::string_view::npos)
+            [[unlikely]] {
             // Rare path: rewrite into the request arena — never the global heap.
             const auto buf  = static_cast<char*>(alloc.allocate_bytes(path.size(), 1));
             std::size_t n   = 0;
@@ -224,8 +225,8 @@ namespace demiplane::http {
         const std::string_view normalized = normalize_lookup(path, arena_alloc);
         const auto idx                    = std::to_underlying(method);
 
-        if (const auto it = exact_.find(normalized); it != exact_.end()) {
-            if (const ContextHandler& h = it->second[idx]) {
+        if (const auto it = exact_.find(normalized); it != exact_.end()) [[likely]] {
+            if (const ContextHandler& h = it->second[idx]) [[likely]] {
                 return ResolvedRoute{&h, ResolvedRoute::ParamVec{arena_alloc}};
             }
             return gears::err(MethodNotAllowedError{allowed_methods(it->second)});

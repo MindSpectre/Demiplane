@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <demiplane/scroll>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include <boost/asio/awaitable.hpp>
@@ -30,13 +31,21 @@ namespace demiplane::http {
         static_assert(std::same_as<Driver, Http3Driver>, "QuicListener pairs with Http3Driver only (spec §7.3)");
 
     public:
+        /// Forwarding ctor (same shape as TlsListener): each argument is
+        /// constructed into its member directly — no by-value relay moves.
+        /// `host` is only IsStringLike-constrained: literals/string_views
+        /// construct host_ in place, no std::string temporary at call sites.
+        template <typename VectorExecutorTp, gears::IsStringLike StringTp, typename TlsConfigTp, typename DriverTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                         std::is_same_v<std::remove_cvref_t<TlsConfigTp>, TlsConfig> &&
+                         std::is_same_v<std::remove_cvref_t<DriverTp>, Driver>
         QuicListener(
-            std::vector<Executor> execs, std::string host, const std::uint16_t port, TlsConfig tls, Driver driver)
-            : execs_{std::move(execs)},
-              host_{std::move(host)},
+            VectorExecutorTp&& execs, StringTp&& host, const std::uint16_t port, TlsConfigTp&& tls, DriverTp&& driver)
+            : execs_{std::forward<VectorExecutorTp>(execs)},
+              host_{std::forward<StringTp>(host)},
               port_{port},
-              tls_{std::move(tls)},
-              driver_{std::move(driver)} {
+              tls_{std::forward<TlsConfigTp>(tls)},
+              driver_{std::forward<DriverTp>(driver)} {
         }
 
         void bind() override {

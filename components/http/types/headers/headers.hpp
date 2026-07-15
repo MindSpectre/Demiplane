@@ -49,7 +49,10 @@ namespace demiplane::http {
         using value_type = std::pair<std::string_view, std::string_view>;
 
         // ── Factories ────────────────────────────────────────────────────
-        static Headers owned(std::pmr::polymorphic_allocator<> alloc);
+        /// Allocates the entry vector's first block through `alloc`; the only
+        /// possible throw is an unrecoverable bad_alloc
+        /// (GEARS_UNRECOVERABLE_NOEXCEPT — terminate by default).
+        static Headers owned(std::pmr::polymorphic_allocator<> alloc) GEARS_UNRECOVERABLE_NOEXCEPT;
         /// Non-owning view. `fields` MUST outlive the returned Headers.
         static Headers view_of_beast(const BeastFields& fields);
 
@@ -95,7 +98,7 @@ namespace demiplane::http {
         // ── Iteration (O(1) per step) ─────────────────────────────────────
         class const_iterator {
         public:
-            using value_type        = Headers::value_type;
+            using value_type        = value_type;
             using reference         = value_type;
             using difference_type   = std::ptrdiff_t;
             // input, not forward: operator* returns a proxy pair by value.

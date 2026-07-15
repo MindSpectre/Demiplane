@@ -5,6 +5,8 @@ option(DO_BENCHMARKS "Benchmarks activated" ON)
 option(BUILD_EXAMPLES "Build example apps" ON)
 option(DMP_ENABLE_LOGGING "Enable end user logging" ON)
 option(DMP_KEEP_FRAME_POINTERS "Keep frame pointers in Release (perf call graphs)" OFF)
+option(DMP_UNRECOVERABLE_EXCEPTIONS_TERMINATE
+        "GEARS_UNRECOVERABLE_NOEXCEPT expands to noexcept: unrecoverable exceptions (bad_alloc) terminate instead of unwinding" ON)
 
 if (DMP_ENABLE_LOGGING)
     option(DMP_COMPONENT_LOGGING "Enable logging in components" ON)

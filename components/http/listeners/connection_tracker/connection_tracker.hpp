@@ -81,9 +81,12 @@ namespace demiplane::http {
         /// listener's death.
         class Handle : gears::NonCopyable {
         public:
-            Handle(std::shared_ptr<State> state, const std::list<Entry>::iterator it) noexcept
-                : state_{std::move(state)},
-                  it_{it} {
+            template <typename StateSharedPtrTp, typename ListIteratorTp>
+                requires std::is_same_v<std::remove_cvref_t<StateSharedPtrTp>, std::shared_ptr<State>> &&
+                             std::is_same_v<std::remove_cvref_t<ListIteratorTp>, std::list<Entry>::iterator>
+            Handle(StateSharedPtrTp&& state, ListIteratorTp&& it) noexcept
+                : state_{std::forward<StateSharedPtrTp>(state)},
+                  it_{std::forward<ListIteratorTp>(it)} {
             }
             Handle(Handle&& o) noexcept
                 : state_{std::move(o.state_)},
@@ -128,18 +131,24 @@ namespace demiplane::http {
 
         /// Spawn the deadline sweep (idempotent; call at accept-loop start).
         /// Runs detached on `ex` until the tracker dies or `stop` is set.
-        void start_sweep(Executor ex, std::chrono::milliseconds tick = std::chrono::milliseconds{500});
+        void start_sweep(const Executor& ex, std::chrono::milliseconds tick = std::chrono::milliseconds{500});
 
         /// Poll the counter until it reaches 0 or `deadline` passes, then
         /// force-cancel every surviving connection. Runs on `ex`.
-        boost::asio::awaitable<void> drain_until(Executor ex, std::chrono::steady_clock::time_point deadline);
+        /// `ex` BY VALUE, never by reference: this is a COROUTINE — its frame
+        /// stores reference parameters as references, so a caller's temporary
+        /// executor dies at the first suspension (ASan: stack-use-after-scope
+        /// on resume). Executor is a cheap handle; the frame must own a copy.
+        [[nodiscard]] boost::asio::awaitable<void> drain_until(Executor ex,
+                                                               std::chrono::steady_clock::time_point deadline) const;
 
         [[nodiscard]] std::size_t in_flight() const noexcept {
             return state_->in_flight.load(std::memory_order_acquire);
         }
 
     private:
-        static boost::asio::awaitable<void>
+        // `ex` by value — coroutine, same dangling-reference rule as drain_until.
+        [[nodiscard]] static boost::asio::awaitable<void>
         sweep(std::weak_ptr<State> weak, Executor ex, std::chrono::milliseconds tick);
 
         std::shared_ptr<State> state_ = std::make_shared<State>();

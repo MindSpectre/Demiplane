@@ -103,6 +103,15 @@ message("Asio recycling allocator cache size: ${DMP_ASIO_RECYCLE_CACHE} (tree-wi
 # executors) and for future asio upgrades.
 add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
 
+# GEARS_UNRECOVERABLE_NOEXCEPT (gears_macros.hpp) → noexcept: allocation
+# failure in functions so marked terminates instead of unwinding. ABI-visible
+# for the same reason as the recycling-cache size above — tree-wide, never
+# per-target.
+if (DMP_UNRECOVERABLE_EXCEPTIONS_TERMINATE)
+    add_compile_definitions(DMP_UNRECOVERABLE_EXCEPTIONS_TERMINATE)
+    message("Unrecoverable exceptions terminate: GEARS_UNRECOVERABLE_NOEXCEPT = noexcept (tree-wide; ABI-visible)")
+endif ()
+
 # Add compile definitions based on options
 if (DMP_ENABLE_LOGGING)
     message("Scroll logging is enabled")

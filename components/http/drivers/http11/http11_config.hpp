@@ -14,8 +14,9 @@ namespace demiplane::http {
 
         std::chrono::milliseconds header_timeout = std::chrono::seconds{10};
         std::chrono::milliseconds body_timeout   = std::chrono::seconds{30};
-        // Reserved: in v1 the keep-alive idle wait reuses header_timeout (the
-        // driver does not yet honor a separate idle_timeout).
+        // Bounds the keep-alive wait for the NEXT request (empty input buffer
+        // at message start). header_timeout takes over once a message is
+        // mid-arrival; body_timeout once its header completes.
         std::chrono::milliseconds idle_timeout   = std::chrono::seconds{60};
     };
 

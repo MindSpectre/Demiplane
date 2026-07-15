@@ -55,8 +55,8 @@ namespace demiplane::http {
             in.find('%') != std::string_view::npos || (plus_is_space && in.find('+') != std::string_view::npos);
         if (!needs_rewrite)
             return in;  // zero-copy
-        char* buf    = static_cast<char*>(alloc.allocate_bytes(in.size(), 1));
-        const auto n = decode_into(in, plus_is_space, buf);
+        const auto buf = static_cast<char*>(alloc.allocate_bytes(in.size(), 1));
+        const auto n   = decode_into(in, plus_is_space, buf);
         if (!n)
             return std::nullopt;  // arena bytes wasted; malformed escapes are rare on validated segments
         return std::string_view{buf, *n};

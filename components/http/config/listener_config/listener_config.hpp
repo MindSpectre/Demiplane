@@ -21,7 +21,6 @@ namespace demiplane::http {
     // Lives HERE, not in http_enums.hpp: the types layer must not grow a
     // serialization/jsoncpp dependency. ADL finds these from the machinery
     // (Protocol's innermost enclosing namespace is demiplane::http).
-
     [[nodiscard]] constexpr std::string_view to_string_view(const Protocol p) noexcept {
         switch (p) {
             case Protocol::http1:
@@ -58,8 +57,8 @@ namespace demiplane::http {
             v = Protocol::http3;
             return true;
         }
-        throw std::invalid_argument{
-            "config field '" + k + "': unknown protocol '" + raw + R"(' (expected "http1"|"http2"|"http3"))"};
+        throw std::invalid_argument{"config field '" + k + "': unknown protocol '" + raw +
+                                    R"(' (expected "http1"|"http2"|"http3"))"};
     }
 
     /**
@@ -197,8 +196,8 @@ namespace demiplane::http {
             v = ListenerConfig::Transport::quic;
             return true;
         }
-        throw std::invalid_argument{
-            "config field '" + k + "': unknown transport '" + raw + R"(' (expected "tcp"|"tls"|"quic"))"};
+        throw std::invalid_argument{"config field '" + k + "': unknown transport '" + raw +
+                                    R"(' (expected "tcp"|"tls"|"quic"))"};
     }
 
     class ListenerConfig::Builder {
@@ -206,7 +205,7 @@ namespace demiplane::http {
         Builder() = default;
 
         template <typename Self>
-        auto&& bind_address(this Self&& self, std::string value) noexcept {
+        constexpr auto&& bind_address(this Self&& self, std::string value) noexcept {
             self.config_.bind_address_ = std::move(value);
             return std::forward<Self>(self);
         }
@@ -224,18 +223,18 @@ namespace demiplane::http {
         }
 
         template <typename Self>
-        auto&& protocols(this Self&& self, std::vector<Protocol> value) noexcept {
+        constexpr auto&& protocols(this Self&& self, std::vector<Protocol> value) noexcept {
             self.config_.protocols_ = std::move(value);
             return std::forward<Self>(self);
         }
 
         template <typename Self>
-        auto&& tls(this Self&& self, TlsConfig value) noexcept {
+        constexpr auto&& tls(this Self&& self, TlsConfig value) noexcept {
             self.config_.tls_ = std::move(value);
             return std::forward<Self>(self);
         }
 
-        [[nodiscard]] ListenerConfig finalize() && {
+        [[nodiscard]] constexpr ListenerConfig finalize() && {
             config_.validate();
             return std::move(config_);
         }

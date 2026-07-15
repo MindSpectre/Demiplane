@@ -30,10 +30,9 @@ namespace demiplane::http {
         for (const auto& [name, value] : resp.headers)
             msg.insert(name, value);
 
-        // TODO
-        //  v1 writes only non-streaming responses, so buffered_view() is always
-        //  present (Empty/Owned/BeastView). A future streaming body returns
-        //  nullopt here — assert rather than silently truncate to an empty body.
+        // v1 writes only non-streaming responses, so buffered_view() is always
+        // present (Empty/Owned/BeastView). A future streaming body returns
+        // nullopt here — assert rather than silently truncate to an empty body.
         assert(resp.body.buffered_view().has_value() &&
                "make_beast_response: streaming response bodies not supported yet");
         const std::string_view bytes = resp.body.buffered_view().value_or(std::string_view{});

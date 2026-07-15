@@ -15,11 +15,13 @@ namespace demiplane::http {
     }  // namespace
 
     AsyncResponse Router::dispatch(RequestContext ctx) const {
-        if (hooks_.on_request || hooks_.on_response || hooks_.on_unhandled_exception)
+        // [unlikely]: the hookless fast path is THE design target (zero-alloc,
+        // no dispatch frame); hook users enter a full coroutine anyway.
+        if (hooks_.on_request || hooks_.on_response || hooks_.on_unhandled_exception) [[unlikely]]
             return dispatch_with_hooks(std::move(ctx));
 
         auto resolved = registry_->find_route(ctx.method(), ctx.path(), ctx.arena_alloc());
-        if (!resolved)
+        if (!resolved) [[unlikely]]
             return ready_response(
                 std::move(resolved).visit([](ResolvedRoute&&) -> Response { std::unreachable(); },
                                           []<typename E>(E&& e) -> Response { return to_http_response(e); }));

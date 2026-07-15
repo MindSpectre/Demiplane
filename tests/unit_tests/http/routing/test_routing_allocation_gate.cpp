@@ -7,7 +7,6 @@
 #include <string>
 
 #include <gtest/gtest.h>
-
 #include <request_context.hpp>
 #include <response.hpp>
 #include <route_registry.hpp>
@@ -120,7 +119,7 @@ TEST(RoutingAllocationGateTest, ParametricMatchWithTrailingSlashIsAllocationFree
     StackArena arena;
 
     ArmedRegion region;
-    auto resolved = reg.find_route(HttpMethod::get, "/users/12345/posts/678/", arena.alloc);
+    auto resolved            = reg.find_route(HttpMethod::get, "/users/12345/posts/678/", arena.alloc);
     const std::size_t allocs = region.finish();
 
     EXPECT_EQ(allocs, 0u) << "parametric find_route touched the global heap";
@@ -153,7 +152,7 @@ TEST(RoutingAllocationGateTest, ObserverHookInvocationIsAllocationFree) {
     const Router::Hooks hooks{
         .on_request             = [p = &calls](const RequestContext&) noexcept { ++*p; },
         .on_response            = [p = &calls](const RequestInfo&, const Response&) noexcept { ++*p; },
-        .on_unhandled_exception = [p = &calls](std::exception_ptr) noexcept { ++*p; },
+        .on_unhandled_exception = [p = &calls](const std::exception_ptr&) noexcept { ++*p; },
     };
 
     StackArena arena;

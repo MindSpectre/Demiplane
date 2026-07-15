@@ -11,7 +11,7 @@
 namespace demiplane::http {
 
     namespace {
-        Protocol protocol_from_alpn(std::string_view alpn) noexcept {
+        Protocol protocol_from_alpn(const std::string_view alpn) noexcept {
             if (alpn == "h2") {
                 return Protocol::http2;
             }
@@ -23,7 +23,7 @@ namespace demiplane::http {
     }  // namespace
 
     boost::asio::awaitable<boost::beast::error_code, Strand>
-    TlsConnection::handshake(std::chrono::milliseconds timeout) {
+    TlsConnection::handshake(const std::chrono::milliseconds timeout) {
         boost::beast::get_lowest_layer(stream_).expires_after(timeout);
 
         boost::beast::error_code ec;
@@ -35,7 +35,7 @@ namespace demiplane::http {
 
         const unsigned char* proto = nullptr;
         unsigned int len           = 0;
-        ::SSL_get0_alpn_selected(stream_.native_handle(), &proto, &len);
+        SSL_get0_alpn_selected(stream_.native_handle(), &proto, &len);
         negotiated_protocol_ = protocol_from_alpn(std::string_view{reinterpret_cast<const char*>(proto), len});
         co_return ec;  // empty (success)
     }

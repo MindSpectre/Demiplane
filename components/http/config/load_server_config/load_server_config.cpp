@@ -27,8 +27,8 @@ namespace demiplane::http {
         }
     }  // namespace
 
-    gears::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError> load_server_config(
-        const std::string_view path) {
+    gears::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>
+    load_server_config(const std::string_view path) {
         std::string path_str{path};
 
         if (std::error_code fs_ec; !std::filesystem::is_regular_file(path_str, fs_ec)) {

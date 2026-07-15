@@ -6,7 +6,6 @@
 #include <demiplane/chrono>
 #include <deque>
 #include <functional>
-#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -18,7 +17,6 @@
 #include <boost/asio/this_coro.hpp>
 #include <controller.hpp>
 #include <gtest/gtest.h>
-#include <http11_config.hpp>
 #include <http11_driver.hpp>
 #include <request_context.hpp>
 #include <server.hpp>
@@ -37,10 +35,10 @@ namespace http_it {
         }
 
     private:
-        demiplane::http::AsyncResponse ping(demiplane::http::RequestContext ctx) {
+        static demiplane::http::AsyncResponse ping(demiplane::http::RequestContext ctx) {
             co_return ctx.ok("pong");
         }
-        demiplane::http::AsyncResponse boom(demiplane::http::RequestContext) {
+        static demiplane::http::AsyncResponse boom(demiplane::http::RequestContext) {
             throw std::runtime_error{"handler exploded"};
         }
     };
@@ -100,7 +98,7 @@ namespace http_it {
                 guards_.emplace_back(boost::asio::make_work_guard(ctx));
                 execs.push_back(ctx.get_executor());
             }
-            server_.emplace(cfg, execs);
+            server_.emplace(std::move(cfg), execs);
             configure(*server_);
             // Workers BEFORE setup(): with observers registered, setup()
             // blocks on the on_setup_complete barrier, which needs a driven

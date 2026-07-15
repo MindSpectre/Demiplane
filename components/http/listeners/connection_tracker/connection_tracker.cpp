@@ -22,7 +22,7 @@ namespace demiplane::http {
         state_ = nullptr;
     }
 
-    void ConnectionTracker::start_sweep(Executor ex, const std::chrono::milliseconds tick) {
+    void ConnectionTracker::start_sweep(const Executor& ex, const std::chrono::milliseconds tick) {
         if (sweep_started_) {
             return;
         }
@@ -30,8 +30,9 @@ namespace demiplane::http {
         boost::asio::co_spawn(ex, sweep(state_, ex, tick), boost::asio::detached);
     }
 
-    boost::asio::awaitable<void>
-    ConnectionTracker::sweep(std::weak_ptr<State> weak, const Executor ex, const std::chrono::milliseconds tick) {
+    boost::asio::awaitable<void> ConnectionTracker::sweep(const std::weak_ptr<State> weak,
+                                                          const Executor ex,  // by value — coroutine (see header)
+                                                          const std::chrono::milliseconds tick) {
         boost::asio::steady_timer timer{ex};
         boost::system::error_code ec;  // wake errors are exit signals, not failures
         for (;;) {
@@ -49,9 +50,9 @@ namespace demiplane::http {
             std::vector<std::pair<std::shared_ptr<void>, std::function<void(const std::shared_ptr<void>&)>>> expired;
             {
                 std::lock_guard lk{state->mu};
-                for (const auto& e : state->entries) {
-                    if (auto conn = e.conn.lock(); conn && e.deadline(conn) <= now) {
-                        expired.emplace_back(std::move(conn), e.cancel);
+                for (const auto& [conn_weak, cancel_func, deadline] : state->entries) {
+                    if (auto conn = conn_weak.lock(); conn && deadline(conn) <= now) [[unlikely]] {
+                        expired.emplace_back(std::move(conn), cancel_func);
                     }
                 }
             }
@@ -61,8 +62,8 @@ namespace demiplane::http {
         }
     }
 
-    boost::asio::awaitable<void> ConnectionTracker::drain_until(const Executor ex,
-                                                                const std::chrono::steady_clock::time_point deadline) {
+    boost::asio::awaitable<void>  // ex by value — coroutine (see header)
+    ConnectionTracker::drain_until(const Executor ex, const std::chrono::steady_clock::time_point deadline) const {
         using namespace std::chrono_literals;
         boost::asio::steady_timer timer{ex};
 

@@ -11,7 +11,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/ssl/stream.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/beast/core/error.hpp>
 #include <executor.hpp>
 #include <http_enums.hpp>

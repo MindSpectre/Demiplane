@@ -7,9 +7,8 @@
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/http/verb.hpp>
-#include <gtest/gtest.h>
-
 #include <controller.hpp>
+#include <gtest/gtest.h>
 #include <request_context.hpp>
 
 #include "http_test_fixture.hpp"
@@ -34,11 +33,11 @@ namespace {
         std::atomic<bool> very_slow_entered{false};
 
     private:
-        AsyncResponse hello(RequestContext ctx) {
+        static AsyncResponse hello(RequestContext ctx) {
             co_return ctx.ok("hello world");
         }
-        AsyncResponse slow(RequestContext ctx) {
-            auto ex = co_await boost::asio::this_coro::executor;
+        static AsyncResponse slow(RequestContext ctx) {
+            const auto ex = co_await boost::asio::this_coro::executor;
             boost::asio::steady_timer t{ex};
             t.expires_after(150ms);
             co_await t.async_wait(use_strand_awaitable);
@@ -46,7 +45,7 @@ namespace {
         }
         AsyncResponse very_slow(RequestContext ctx) {
             very_slow_entered.store(true, std::memory_order_release);
-            auto ex = co_await boost::asio::this_coro::executor;
+            const auto ex = co_await boost::asio::this_coro::executor;
             boost::asio::steady_timer t{ex};
             t.expires_after(400ms);
             co_await t.async_wait(use_strand_awaitable);
@@ -74,12 +73,12 @@ TEST_F(HttpDrainTest, InFlightRequestCompletesDuringDrain) {
     std::thread caller{[&] {
         http_it::TcpClient client{port_};
         auto res = client.send(bhttp::verb::get, "/slow");
-        status = static_cast<int>(res.result_int());
-        body   = res.body();
+        status   = static_cast<int>(res.result_int());
+        body     = res.body();
     }};
 
-    std::this_thread::sleep_for(50ms);   // let the request reach the slow handler
-    graceful_shutdown(2s);               // drain must wait for the in-flight /slow
+    std::this_thread::sleep_for(50ms);  // let the request reach the slow handler
+    graceful_shutdown(2s);              // drain must wait for the in-flight /slow
     caller.join();
 
     EXPECT_EQ(status, 200);
@@ -95,7 +94,7 @@ TEST_F(HttpDrainTest, IdleKeepAliveConnectionForceCancelledAtDeadline) {
     ASSERT_TRUE(res.keep_alive());
     // Connection now idle: the driver is awaiting the next request header.
 
-    graceful_shutdown(100ms);            // short drain → force-cancel the idle conn
+    graceful_shutdown(100ms);  // short drain → force-cancel the idle conn
 
     const auto ec = client.read_after_close();
     EXPECT_TRUE(ec) << "server should have closed the idle connection on force-cancel";

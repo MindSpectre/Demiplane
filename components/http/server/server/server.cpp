@@ -35,7 +35,7 @@ namespace demiplane::http {
     }
 
     Server::Server(ServerConfig cfg, Executor exec)
-        : Server{std::move(cfg), std::vector<Executor>{std::move(exec)}} {
+        : Server{std::move(cfg), std::vector{std::move(exec)}} {
     }
 
     Server::Server(ServerConfig cfg, std::vector<Executor> execs)
@@ -194,7 +194,7 @@ namespace demiplane::http {
             if (const auto s = state_.load(std::memory_order_acquire); s == State::stopped || s == State::build) {
                 co_return;
             }
-            co_await demiplane::chrono::async_sleep_for(execs_.front(), delay);
+            co_await chrono::async_sleep_for(execs_.front(), delay);
             delay = std::min<std::chrono::milliseconds>(delay * 2, MAX_POLL_TICK);
         }
     }
@@ -219,7 +219,7 @@ namespace demiplane::http {
             // on every exit path, so from here new connections are provably
             // REFUSED, not backlogged (spec §14.2).
             while (live_accept_loops_.load(std::memory_order_acquire) > 0) {
-                co_await demiplane::chrono::async_sleep_for(execs_.front(), POLL_TICK);
+                co_await chrono::async_sleep_for(execs_.front(), POLL_TICK);
             }
 
             // Phase 2: drain in-flight requests up to drain_timeout (shared
@@ -241,7 +241,7 @@ namespace demiplane::http {
                                     << " connection(s) force-cancelled — waiting for unwind";
             }
             while (total_in_flight() > 0) {
-                co_await demiplane::chrono::async_sleep_for(execs_.front(), POLL_TICK);
+                co_await chrono::async_sleep_for(execs_.front(), POLL_TICK);
             }
 
             // Phase 3: async shutdown observers — awaited ON the still-driven

@@ -31,15 +31,15 @@ namespace {
         }
 
     private:
-        http::AsyncResponse ping(http::RequestContext ctx) {
+        static http::AsyncResponse ping(http::RequestContext ctx) {
             co_return ctx.ok("pong");
         }
 
-        http::AsyncResponse json(http::RequestContext ctx) {
+        static http::AsyncResponse json(http::RequestContext ctx) {
             co_return ctx.json(R"({"status":"ok"})");
         }
 
-        http::AsyncResponse user(http::RequestContext ctx) {
+        static http::AsyncResponse user(http::RequestContext ctx) {
             co_return ctx.ok("user " + ctx.path_param_or<std::string>("id", std::string{"?"}));
         }
     };

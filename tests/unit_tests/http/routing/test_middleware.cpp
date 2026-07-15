@@ -2,9 +2,8 @@
 #include <string>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include <controller.hpp>
+#include <gtest/gtest.h>
 #include <response_factory.hpp>
 #include <route_registry.hpp>
 
@@ -33,15 +32,14 @@ namespace {
             handler_ran = true;
             co_return ctx.ok("handled");
         }
-        AsyncResponse with_id(RequestContext ctx) {
+        static AsyncResponse with_id(RequestContext ctx) {
             const auto* id = ctx.get<RequestId>();
             co_return ctx.ok(id ? std::to_string(id->value) : "none");
         }
     };
 
     Middleware tracer(std::vector<std::string>& trace, std::string tag) {
-        return [&trace, tag = std::move(tag)](RequestContext ctx,
-                                              const NextHandler& next) -> AsyncResponse {
+        return [&trace, tag = std::move(tag)](RequestContext ctx, const NextHandler& next) -> AsyncResponse {
             trace.push_back(tag + ":before");
             auto r = co_await next(std::move(ctx));
             trace.push_back(tag + ":after");
@@ -120,7 +118,6 @@ TEST_F(MiddlewareTest, AddBasicMiddlewareAppendsInOrder) {
     bake_and_freeze();
 
     (void)invoke("/traced");
-    const std::vector<std::string> expected{"log:before", "auth:before", "auth:after",
-                                            "log:after"};
+    const std::vector<std::string> expected{"log:before", "auth:before", "auth:after", "log:after"};
     EXPECT_EQ(trace, expected);
 }

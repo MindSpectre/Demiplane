@@ -104,24 +104,30 @@ namespace demiplane::http {
         }
 
         // ── Type-keyed middleware bag (arena-backed) ──────────────────────
+        // Forwarding sink: the payload is constructed in its arena slot
+        // directly from the argument — no by-value relay copy+move. The bag
+        // key is the DECAYED type, so set(lvalue)/set(rvalue)/set<T>(...) all
+        // address the same entry.
         template <typename T>
-        void set(T value) {
-            static_assert(std::is_move_constructible_v<T>);
-            const std::type_index key{typeid(T)};
+        void set(T&& value) {
+            using D = std::remove_cvref_t<T>;
+            static_assert(std::is_constructible_v<D, T&&>);
+            const std::type_index key{typeid(D)};
             if (auto* e = find_bag_entry(key)) {
                 // Construct the new payload BEFORE destroying the old one, so a
-                // throwing move leaves the existing payload intact (strong
-                // guarantee) rather than a live destroyer over destroyed bytes.
-                void* mem = alloc_.allocate_bytes(sizeof(T), alignof(T));
-                ::new (mem) T(std::move(value));
+                // throwing construction leaves the existing payload intact
+                // (strong guarantee) rather than a live destroyer over
+                // destroyed bytes.
+                void* mem = alloc_.allocate_bytes(sizeof(D), alignof(D));
+                ::new (mem) D(std::forward<T>(value));
                 e->destroyer(e->ptr);
                 e->ptr       = mem;
-                e->destroyer = +[](void* p) noexcept { static_cast<T*>(p)->~T(); };
+                e->destroyer = +[](void* p) noexcept { static_cast<D*>(p)->~D(); };
                 return;
             }
-            void* mem = alloc_.allocate_bytes(sizeof(T), alignof(T));
-            ::new (mem) T(std::move(value));
-            bag_.push_back(BagEntry{key, mem, +[](void* p) noexcept { static_cast<T*>(p)->~T(); }});
+            void* mem = alloc_.allocate_bytes(sizeof(D), alignof(D));
+            ::new (mem) D(std::forward<T>(value));
+            bag_.push_back(BagEntry{key, mem, +[](void* p) noexcept { static_cast<D*>(p)->~D(); }});
         }
         template <typename T>
         T* get() {
@@ -139,16 +145,49 @@ namespace demiplane::http {
         }
 
         // ── Arena-bound response factories (hot path; spec §5.4) ──────────
-        Response ok(std::string body = "", std::string_view ct = "text/plain");
-        Response json(std::string body);
-        Response created(std::string body = "", std::string_view ct = "application/json");
-        Response no_content();
-        Response redirect(std::string_view location, HttpStatus status = HttpStatus::found);
-        Response status(HttpStatus s, std::string body = "", std::string_view ct = "text/plain");
+        // Forwarding: `body` (string literal, string_view, std::string
+        // lvalue/rvalue) travels as-is into Body's SBO payload, where the
+        // std::string is constructed ONCE, in place — the old by-value chain
+        // moved it three times. Only possible throw is an unrecoverable
+        // bad_alloc (GEARS_UNRECOVERABLE_NOEXCEPT — terminate by default).
+        template <gears::IsStringViewLike StringTp = std::string_view>
+        Response ok(StringTp&& body = {}, const std::string_view ct = "text/plain") GEARS_UNRECOVERABLE_NOEXCEPT {
+            return make_response(HttpStatus::ok, ct, true, std::forward<StringTp>(body));
+        }
+        template <gears::IsStringViewLike StringTp>
+        Response json(StringTp&& body) GEARS_UNRECOVERABLE_NOEXCEPT {
+            return make_response(HttpStatus::ok, "application/json", true, std::forward<StringTp>(body));
+        }
+        template <gears::IsStringViewLike StringTp = std::string_view>
+        Response created(StringTp&& body           = {},
+                         const std::string_view ct = "application/json") GEARS_UNRECOVERABLE_NOEXCEPT {
+            return make_response(HttpStatus::created, ct, true, std::forward<StringTp>(body));
+        }
+        Response no_content() const;
+        Response redirect(std::string_view location, HttpStatus status = HttpStatus::found) const;
+        template <gears::IsStringViewLike StringTp = std::string_view>
+        Response status(const HttpStatus s,
+                        StringTp&& body           = {},
+                        const std::string_view ct = "text/plain") GEARS_UNRECOVERABLE_NOEXCEPT {
+            return make_response(s, ct, true, std::forward<StringTp>(body));
+        }
 
         ~RequestContext();
 
     private:
+        // IsStringViewLike, not just IsStringLike: the body must be viewable
+        // without consuming for the empty check below.
+        template <gears::IsStringViewLike StringTp>
+        Response make_response(const HttpStatus s, const std::string_view ct, const bool with_ct, StringTp&& body) {
+            Response r{alloc_};  // alloc + headers bound to the arena
+            r.status = s;
+            if (with_ct)
+                r.add_header("Content-Type", ct);
+            if (!std::string_view{body}.empty()) [[likely]]
+                r.body = Body::owned(std::forward<StringTp>(body));
+            return r;
+        }
+
         Request request_;
         std::pmr::polymorphic_allocator<> alloc_;
 

@@ -37,18 +37,18 @@ namespace {
         }
 
     private:
-        http::AsyncResponse hello(http::RequestContext ctx) {
+        static http::AsyncResponse hello(http::RequestContext ctx) {
             co_return ctx.ok("hello, " + ctx.path_param_or<std::string>("name", std::string{"world"}) + "\n");
         }
 
-        http::AsyncResponse healthz(http::RequestContext ctx) {
+        static http::AsyncResponse healthz(http::RequestContext ctx) {
             co_return ctx.json(R"({"status":"ok"})");
         }
 
         /// Oversize bodies short-circuit as BodyLimitExceeded; the bake layer
         /// converts the typed error into a 413 via errors.hpp's ADL
         /// to_http_response — the handler never builds an error response.
-        http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
+        static http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
             auto body = co_await ctx.body().read_to_string(64 * 1024);
             if (body.is_error()) {
                 co_return demiplane::gears::err(body.error<http::BodyLimitExceeded>());
@@ -73,11 +73,11 @@ namespace {
                                                                           http::ConfigParseError,
                                                                           http::ConfigSchemaError>& loaded) {
         if (loaded.holds_error<http::ConfigFileError>()) {
-            const auto& e = loaded.error<http::ConfigFileError>();
-            std::cerr << "config: cannot read " << e.path << ": " << e.reason << '\n';
+            const auto& [path, reason] = loaded.error<http::ConfigFileError>();
+            std::cerr << "config: cannot read " << path << ": " << reason << '\n';
         } else if (loaded.holds_error<http::ConfigParseError>()) {
-            const auto& e = loaded.error<http::ConfigParseError>();
-            std::cerr << "config: parse error at " << e.path << ':' << e.line << ": " << e.detail << '\n';
+            const auto& [path, line, detail] = loaded.error<http::ConfigParseError>();
+            std::cerr << "config: parse error at " << path << ':' << line << ": " << detail << '\n';
         } else {
             const auto& e = loaded.error<http::ConfigSchemaError>();
             std::cerr << "config: invalid value in " << e.path << ": " << e.detail << '\n';

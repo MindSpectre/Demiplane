@@ -29,9 +29,7 @@
 #include <atomic>
 #include <charconv>
 #include <chrono>
-#include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <exception>
 #include <iomanip>
 #include <iostream>
@@ -89,12 +87,11 @@ namespace {
     }
 
     // ── Per-thread state, cache-line isolated ────────────────────────────────
-    struct alignas(64) ThreadStats {
+    struct alignas(std::hardware_constructive_interference_size) ThreadStats {
         std::uint64_t ok                = 0;
         std::uint64_t failed            = 0;
         std::uint64_t bytes             = 0;
         std::vector<std::uint64_t> hist = std::vector<std::uint64_t>(kBuckets, 0);
-        char pad[64]{};
     };
 
     // ── Shared run state ─────────────────────────────────────────────────────
@@ -172,7 +169,7 @@ namespace {
 
         // Returns bytes of one complete response starting at `p`, or 0 if the
         // buffer does not yet hold a full response.
-        std::size_t response_length(const std::string_view p) const {
+        static std::size_t response_length(const std::string_view p) {
             const std::size_t head = p.find("\r\n\r\n");
             if (head == std::string_view::npos)
                 return 0;

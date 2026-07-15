@@ -8,7 +8,6 @@
 #include <boost/asio/post.hpp>
 #include <boost/beast/http/verb.hpp>
 #include <gtest/gtest.h>
-
 #include <http11_config.hpp>
 #include <http11_driver.hpp>
 #include <route_registry.hpp>  // RouteConflictAggregateError
@@ -56,7 +55,7 @@ namespace {
         }
 
     private:
-        AsyncResponse h(RequestContext ctx) {
+        static AsyncResponse h(RequestContext ctx) {
             co_return ctx.ok("dup");
         }
     };
@@ -80,7 +79,7 @@ TEST_F(ServerLifecycleTest, StopIsIdempotentAndWaitReturnsAgain) {
     server_->stop();
     server_->stop();  // second call: CAS fails, silently ignored
     server_->wait_until_stopped();
-    server_->stop();  // after stopped: still a no-op
+    server_->stop();                // after stopped: still a no-op
     server_->wait_until_stopped();  // shutdown_complete_ latched — immediate
     EXPECT_FALSE(server_->is_running());
 }
@@ -108,7 +107,8 @@ TEST_F(ServerLifecycleTest, SetupThrowsWhenPortInUse) {
     // LISTENING sockets on one port — the second bind is EADDRINUSE.
     boost::asio::io_context probe;
     const boost::asio::ip::tcp::acceptor taken{
-        probe, {boost::asio::ip::make_address("127.0.0.1"), 0}};  // open+bind+listen
+        probe, {boost::asio::ip::make_address("127.0.0.1"), 0}
+    };  // open+bind+listen
     const auto port = taken.local_endpoint().port();
 
     server_.emplace(ServerConfig::Builder{}.finalize(), bootstrap_executor());
@@ -172,7 +172,7 @@ TEST_F(ServerLifecycleTest, DrainDeadlineForceCancelsStragglers) {
     const auto cfg = ServerConfig::Builder{}
                          .drain_timeout(std::chrono::milliseconds{100})  // << the 500ms /hang handler
                          .finalize();
-    auto latch        = std::make_shared<http_it::LatchController>();
+    auto latch = std::make_shared<http_it::LatchController>();
     start_server(
         [&](Server& s) {
             s.add_controller(latch);
@@ -274,12 +274,12 @@ TEST_F(ServerLifecycleTest, AsyncWaitStoppedCompletesWithShutdown) {
     boost::asio::co_spawn(
         control_context(),
         [this]() -> boost::asio::awaitable<void> { co_await server_->async_wait_stopped(); },
-        [&stopped](std::exception_ptr) { stopped.set_value(); });
+        [&stopped](const std::exception_ptr&) { stopped.set_value(); });
     auto fut = stopped.get_future();
     EXPECT_EQ(fut.wait_for(50ms), std::future_status::timeout);  // still running — must not complete early
     server_->stop();
     ASSERT_EQ(fut.wait_for(5s), std::future_status::ready);  // completes once shutdown finishes
-    server_->wait_until_stopped();                            // latched — returns immediately
+    server_->wait_until_stopped();                           // latched — returns immediately
     EXPECT_FALSE(server_->is_running());
 }
 

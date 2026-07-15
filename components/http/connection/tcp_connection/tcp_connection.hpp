@@ -3,13 +3,13 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <demiplane/gears>
 #include <utility>
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <executor.hpp>
 #include <http_enums.hpp>
 #include <request_arena.hpp>
@@ -38,8 +38,13 @@ namespace demiplane::http {
         // handshake timeout machinery is load-bearing there, once per conn.)
         using stream_type = Socket;
 
-        explicit TcpConnection(Socket socket, const std::size_t arena_size = 8192)
-            : stream_{std::move(socket)},
+        /// Allocates the request arena; the only possible throw is an
+        /// unrecoverable bad_alloc (GEARS_UNRECOVERABLE_NOEXCEPT — terminate
+        /// by default).
+        template <typename SocketTp>
+            requires std::is_same_v<std::remove_cvref_t<SocketTp>, Socket>
+        explicit TcpConnection(SocketTp&& socket, const std::size_t arena_size = 8192) GEARS_UNRECOVERABLE_NOEXCEPT
+            : stream_{std::forward<SocketTp>(socket)},
               arena_{arena_size} {
         }
 

@@ -630,7 +630,31 @@ parser field-object construction (~1%, removable only by hand-rolling the
 parser) and irreducible asio per-op machinery. The framework glue war is
 over — everything measurable and removable has been removed.
 
-## Reproducing
+## Finding 16 — hygiene round: idle_timeout wired, hints/forwarding perf-neutral (2026-07-13)
+
+Not a perf finding — recorded because it changes a verification expectation
+and closes the "free perf" levers with numbers.
+
+1. **`idle_timeout` is now honored** (was reserved; the keep-alive idle wait
+   reused header_timeout). Deadlines are armed at the points where serve()
+   can actually park: empty buffer at message start → idle_timeout; parking
+   mid-message → header/body timeout, armed once per phase (absolute
+   deadlines, tricklers can't roll the window). A message that never parks
+   mid-arrival still arms exactly ONE deadline per request — no extra
+   clock reads on the hot path. **Kill timings change**: silent idle
+   connection dies at ~60.5s (idle default 60s + sweep tick), mid-header
+   trickler at ~10.5s — both live-verified. The old "idle-kill ~10.4s"
+   checks in Findings 13/15 measured header_timeout doubling as idle;
+   drogon's bench server always had idle=60s, so this also makes the
+   comparison honest.
+2. **[[likely]]/[[unlikely]] on the request path + perfect-forwarding
+   response bodies** (ctx.ok/json/... → Body::owned construct the body
+   string ONCE, in place in the SBO slot; RequestContext::set<T> forwards):
+   same-minute stash A/B at 6M — baseline 489.7k p1 / 3.72M p16 vs
+   488.6k/3.70M and 488.0k/3.76M after. **Perf-neutral** (±0.4% p1, ±1%
+   p16): the branch predictor was already perfect on a steady bench load and
+   arena-backed string moves were never the bottleneck. Kept anyway: the
+   hints pay on cold/mixed workloads and both cost nothing.
 
 ```
 cmake --preset release -B build/bench -DDMP_ENABLE_LOGGING=OFF -DDMP_COMPONENT_LOGGING=OFF

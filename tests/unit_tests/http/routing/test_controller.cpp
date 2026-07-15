@@ -1,11 +1,10 @@
+#include <demiplane/gears>
 #include <memory>
 #include <stdexcept>
 #include <string>
 
-#include <gtest/gtest.h>
-
 #include <controller.hpp>
-#include <demiplane/gears>
+#include <gtest/gtest.h>
 #include <response_factory.hpp>
 #include <route_registry.hpp>
 
@@ -32,10 +31,10 @@ namespace {
         }
 
     private:
-        AsyncResponse list(RequestContext ctx) {
+        static AsyncResponse list(RequestContext ctx) {
             co_return ctx.ok("list");
         }
-        AsyncResponse create(RequestContext ctx) {
+        static AsyncResponse create(RequestContext ctx) {
             co_return ctx.created("made");
         }
     };
@@ -59,15 +58,16 @@ namespace {
         }
 
     private:
-        AsyncResponse h(RequestContext ctx) {
+        static AsyncResponse h(RequestContext ctx) {
             co_return ctx.ok("k");
         }
     };
 
     class OtherController final : public HttpController {
     public:
-        void configure_routes() override {}
-        AsyncResponse handler(RequestContext ctx) {
+        void configure_routes() override {
+        }
+        static AsyncResponse handler(RequestContext ctx) {
             co_return ctx.ok("other");
         }
     };
@@ -120,8 +120,13 @@ TEST_F(ControllerTest, AllSevenVerbsPlusCallables) {
     bake(ctrl);
     ASSERT_TRUE(registry_.freeze().empty());
 
-    for (const auto m : {HttpMethod::get, HttpMethod::post, HttpMethod::put, HttpMethod::patch,
-                         HttpMethod::del, HttpMethod::head, HttpMethod::options}) {
+    for (const auto m : {HttpMethod::get,
+                         HttpMethod::post,
+                         HttpMethod::put,
+                         HttpMethod::patch,
+                         HttpMethod::del,
+                         HttpMethod::head,
+                         HttpMethod::options}) {
         EXPECT_TRUE(registry_.find_route(m, "/k", alloc_).is_success());
     }
     EXPECT_EQ(*invoke(HttpMethod::get, "/lambda").body.buffered_view(), "lambda");
@@ -151,10 +156,9 @@ TEST_F(ControllerTest, LateRegistrationThrows) {
 TEST_F(ControllerTest, AddMiddlewareAfterBakeThrows) {
     auto ctrl = std::make_shared<PlainController>();
     bake(ctrl);
-    EXPECT_THROW(ctrl->add_middleware(
-                     [](RequestContext ctx, const NextHandler& next) -> AsyncResponse {
-                         co_return co_await next(std::move(ctx));
-                     }),
+    EXPECT_THROW(ctrl->add_middleware([](RequestContext ctx, const NextHandler& next) -> AsyncResponse {
+        co_return co_await next(std::move(ctx));
+    }),
                  std::logic_error);
 }
 
@@ -173,8 +177,8 @@ namespace myapp {
 
     // User-defined ADL conversion — lives next to the error type (spec §5.5).
     inline demiplane::http::Response to_http_response(const TeapotError& e) {
-        return demiplane::http::ResponseFactory::custom(
-            demiplane::http::HttpStatus::unprocessable_entity, "teapot:" + e.blend);
+        return demiplane::http::ResponseFactory::custom(demiplane::http::HttpStatus::unprocessable_entity,
+                                                        "teapot:" + e.blend);
     }
 
 }  // namespace myapp
@@ -194,13 +198,13 @@ namespace {
         }
 
     private:
-        AsyncOutcome<Response, NotFoundError> get_user(RequestContext ctx) {
+        static AsyncOutcome<Response, NotFoundError> get_user(RequestContext ctx) {
             if (const auto id = ctx.path_param<int>("id"); id && *id == 42)
                 co_return ctx.ok("user-42");
             co_return demiplane::gears::err(NotFoundError{"user", "?"});
         }
 
-        AsyncOutcome<Response, BadRequestError, ForbiddenError> create_user(RequestContext ctx) {
+        static AsyncOutcome<Response, BadRequestError, ForbiddenError> create_user(RequestContext ctx) {
             const auto mode = ctx.query<std::string>("mode");
             if (mode == "bad")
                 co_return demiplane::gears::err(BadRequestError{"bad mode"});
@@ -246,13 +250,11 @@ TEST_F(OutcomeControllerTest, MultiErrorPackEachAlternative) {
 TEST_F(OutcomeControllerTest, UserDefinedErrorTypeViaLambda) {
     auto resolved = registry_.find_route(HttpMethod::get, "/tea", alloc_);
     ASSERT_TRUE(resolved.is_success());
-    const Response err = run_awaitable(
-        (*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea")));
+    const Response err = run_awaitable((*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea")));
     EXPECT_EQ(err.status, HttpStatus::unprocessable_entity);
     EXPECT_EQ(*err.body.buffered_view(), "teapot:earl-grey");
 
-    const Response ok = run_awaitable(
-        (*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea?brew=true")));
+    const Response ok = run_awaitable((*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea?brew=true")));
     EXPECT_EQ(ok.status, HttpStatus::ok);
     EXPECT_EQ(*ok.body.buffered_view(), "brewing");
 }
@@ -263,15 +265,9 @@ namespace {
     struct NotRenderable {};
 
     using GoodPlain   = decltype([](RequestContext) -> AsyncResponse { co_return Response{}; });
-    using GoodOutcome = decltype([](RequestContext)
-                                     -> AsyncOutcome<Response, NotFoundError> {
-        co_return Response{};
-    });
+    using GoodOutcome = decltype([](RequestContext) -> AsyncOutcome<Response, NotFoundError> { co_return Response{}; });
     using BadReturn   = decltype([](RequestContext) { return 42; });
-    using BadError    = decltype([](RequestContext)
-                                     -> AsyncOutcome<Response, NotRenderable> {
-        co_return Response{};
-    });
+    using BadError    = decltype([](RequestContext) -> AsyncOutcome<Response, NotRenderable> { co_return Response{}; });
 
     static_assert(detail::HasToHttpResponse<NotFoundError>);
     static_assert(detail::HasToHttpResponse<myapp::TeapotError>);
@@ -282,9 +278,7 @@ namespace {
     static_assert(!IsRouteHandler<BadError>);  // error type without to_http_response
 
     // Mixed pack: one renderable + one not — concept must still reject.
-    using BadMixedPack = decltype([](RequestContext)
-                                      -> AsyncOutcome<Response, NotFoundError, NotRenderable> {
-        co_return Response{};
-    });
+    using BadMixedPack =
+        decltype([](RequestContext) -> AsyncOutcome<Response, NotFoundError, NotRenderable> { co_return Response{}; });
     static_assert(!IsRouteHandler<BadMixedPack>);
 }  // namespace

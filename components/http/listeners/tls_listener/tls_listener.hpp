@@ -56,25 +56,48 @@ namespace demiplane::http {
         static_assert(sizeof...(Drivers) >= 1, "TlsListener needs at least one driver");
 
     public:
-        TlsListener(
-            std::vector<Executor> execs, std::string host, const std::uint16_t port, TlsConfig tls, Drivers... drivers)
-            : TlsListener{std::move(execs), std::move(host), port, std::move(tls), 8192, std::move(drivers)...} {
+        template <typename VectorExecutorTp,
+                  gears::IsStringLike StringTp,
+                  typename TlsConfigTp,
+                  IsHttpDriver... DriversTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                     std::is_same_v<std::remove_cvref_t<TlsConfigTp>, TlsConfig>
+        TlsListener(VectorExecutorTp&& execs,
+                    StringTp&& host,
+                    const std::uint16_t port,
+                    TlsConfigTp&& tls,
+                    DriversTp&&... drivers)
+            : TlsListener{std::forward<VectorExecutorTp>(execs),
+                          std::forward<StringTp>(host),
+                          port,
+                          std::forward<TlsConfigTp>(tls),
+                          8192,
+                          std::forward<DriversTp>(drivers)...} {
         }
 
         /// `execs` — connection placement set, round-robin; front() is the
         /// home (acceptor, backoff, drain poll). See TcpListener.
-        TlsListener(std::vector<Executor> execs,
-                    std::string host,
+        /// `host` is only IsStringLike-constrained (no exact-type clause):
+        /// literals/string_views construct host_ in place — better than
+        /// forcing callers through a std::string temporary.
+        template <typename VectorExecutorTp,
+                  gears::IsStringLike StringTp,
+                  typename TlsConfigTp,
+                  IsHttpDriver... DriversTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                         std::is_same_v<std::remove_cvref_t<TlsConfigTp>, TlsConfig>
+        TlsListener(VectorExecutorTp&& execs,
+                    StringTp&& host,
                     const std::uint16_t port,
-                    TlsConfig tls,
+                    TlsConfigTp&& tls,
                     const std::size_t request_arena_size,
-                    Drivers... drivers)
-            : execs_{std::move(execs)},
-              host_{std::move(host)},
+                    DriversTp&&... drivers)
+            : execs_{std::forward<VectorExecutorTp>(execs)},
+              host_{std::forward<StringTp>(host)},
               port_{port},
-              tls_config_{std::move(tls)},
+              tls_config_{std::forward<TlsConfigTp>(tls)},
               arena_size_{request_arena_size},
-              drivers_{std::move(drivers)...},
+              drivers_{std::forward<DriversTp>(drivers)...},
               advertised_alpn_{build_alpn_wire()},
               acceptor_{execs_.front()} {
         }
@@ -108,14 +131,14 @@ namespace demiplane::http {
                 boost::beast::error_code ec;
                 // Socket, not tcp::socket — see TcpListener::run.
                 Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
-                if (ec == asio::error::operation_aborted) {
+                if (ec == asio::error::operation_aborted) [[unlikely]] {
                     break;
                 }
                 if (ec == asio::error::bad_descriptor || ec == asio::error::operation_not_supported ||
-                    ec == asio::error::invalid_argument) {
+                    ec == asio::error::invalid_argument) [[unlikely]] {
                     break;  // acceptor unusable — retrying can only repeat the error
                 }
-                if (ec) {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
+                if (ec) [[unlikely]] {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
                     if (++consecutive_errors > 2) {
                         if (!backoff) {
                             backoff.emplace(execs_.front());
@@ -137,16 +160,15 @@ namespace demiplane::http {
                     strand,
                     [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void, Strand> {
                         try {
-                            // TODO: squash branches?
-                            if (auto err_code = co_await conn->handshake()) {  // ALPN mismatch / TLS failure → close
-                                co_await conn->async_close();
-                            }
-                            // No matching driver: reachable when the client sent NO
-                            // ALPN extension (the select callback never runs → http1
-                            // fallback) and no h1 driver is in the tuple → close.
-                            else if (const bool handled =
-                                         co_await try_serve<0>(*conn, router, conn->negotiated_protocol());
-                                     !handled) {
+                            // Close on either failure mode (short-circuit — a
+                            // failed handshake never reaches try_serve):
+                            //  - handshake error: ALPN mismatch / TLS failure;
+                            //  - no matching driver: reachable when the client
+                            //    sent NO ALPN extension (the select callback
+                            //    never runs → http1 fallback) and no h1 driver
+                            //    is in the tuple.
+                            if (co_await conn->handshake() ||
+                                !co_await try_serve<0>(*conn, router, conn->negotiated_protocol())) {
                                 co_await conn->async_close();
                             }
                         } catch (...) {  // serve()/handshake throws end the session quietly

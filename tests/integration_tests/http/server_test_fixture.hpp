@@ -43,12 +43,18 @@ namespace http_it {
         }
     };
 
-    /// Timed handlers with entry latches so tests can deterministically wait
-    /// until a request is IN FLIGHT before triggering shutdown.
+    /// Timed handlers with entry COUNTERS so tests can deterministically wait
+    /// until every request they issued is IN FLIGHT before triggering shutdown.
+    ///
+    /// Counters, not flags: a flag only proves that ONE handler was entered,
+    /// which says nothing about the other connections a multi-client test
+    /// opened. Those may still be sitting in the kernel accept backlog when
+    /// stop() closes the acceptor — the kernel then RSTs them and the client
+    /// read fails with ECONNRESET. Wait for the FULL count instead.
     class LatchController final : public demiplane::http::HttpController {
     public:
-        std::atomic<bool> slow_entered{false};
-        std::atomic<bool> hang_entered{false};
+        std::atomic<int> slow_entries{0};
+        std::atomic<int> hang_entries{0};
 
         void configure_routes() override {
             Get("/slow", &LatchController::slow);  // finishes inside any sane drain window
@@ -57,14 +63,14 @@ namespace http_it {
 
     private:
         demiplane::http::AsyncResponse slow(demiplane::http::RequestContext ctx) {
-            slow_entered.store(true, std::memory_order_release);
+            slow_entries.fetch_add(1, std::memory_order_release);
             boost::asio::steady_timer t{co_await boost::asio::this_coro::executor};
             t.expires_after(std::chrono::milliseconds{150});
             co_await t.async_wait(demiplane::http::use_strand_awaitable);
             co_return ctx.ok("slow done");
         }
         demiplane::http::AsyncResponse hang(demiplane::http::RequestContext ctx) {
-            hang_entered.store(true, std::memory_order_release);
+            hang_entries.fetch_add(1, std::memory_order_release);
             boost::asio::steady_timer t{co_await boost::asio::this_coro::executor};
             t.expires_after(std::chrono::milliseconds{500});
             co_await t.async_wait(demiplane::http::use_strand_awaitable);

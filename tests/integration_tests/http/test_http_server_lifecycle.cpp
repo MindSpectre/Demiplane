@@ -145,7 +145,7 @@ TEST_F(ServerLifecycleTest, GracefulShutdownCompletesInFlightRequests) {
 
     http_it::TcpClient client{port()};
     client.write_request(bhttp::verb::get, "/slow");
-    while (!latch->slow_entered.load(std::memory_order_acquire)) {
+    while (latch->slow_entries.load(std::memory_order_acquire) < 1) {
         std::this_thread::sleep_for(1ms);  // request provably in flight
     }
     server_->stop();
@@ -182,7 +182,7 @@ TEST_F(ServerLifecycleTest, DrainDeadlineForceCancelsStragglers) {
 
     http_it::TcpClient client{port()};
     client.write_request(bhttp::verb::get, "/hang");
-    while (!latch->hang_entered.load(std::memory_order_acquire)) {
+    while (latch->hang_entries.load(std::memory_order_acquire) < 1) {
         std::this_thread::sleep_for(1ms);
     }
     const auto t0 = std::chrono::steady_clock::now();
@@ -213,12 +213,16 @@ TEST_F(ServerLifecycleTest, GracefulShutdownAcrossMultipleContexts) {
 
     // More in-flight requests than contexts — round-robin guarantees every
     // context serves at least one when the drain runs.
+    constexpr int kClients = 5;
     std::vector<std::unique_ptr<http_it::TcpClient>> clients;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < kClients; ++i) {
         clients.push_back(std::make_unique<http_it::TcpClient>(port()));
         clients.back()->write_request(bhttp::verb::get, "/slow");
     }
-    while (!latch->slow_entered.load(std::memory_order_acquire)) {
+    // ALL of them, not just one: a connection that has not been accept()ed yet
+    // when stop() closes the acceptor is discarded from the kernel backlog with
+    // an RST, and the read_response() below would throw ECONNRESET.
+    while (latch->slow_entries.load(std::memory_order_acquire) < kClients) {
         std::this_thread::sleep_for(1ms);
     }
     server_->stop();
@@ -246,12 +250,16 @@ TEST_F(ServerLifecycleTest, DrainForceCancelAcrossContexts) {
         cfg,
         /*io_threads=*/4);
 
+    constexpr int kClients = 5;
     std::vector<std::unique_ptr<http_it::TcpClient>> clients;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < kClients; ++i) {
         clients.push_back(std::make_unique<http_it::TcpClient>(port()));
         clients.back()->write_request(bhttp::verb::get, "/hang");
     }
-    while (!latch->hang_entered.load(std::memory_order_acquire)) {
+    // ALL of them: waiting on a single entry would let this test pass for the
+    // wrong reason — a never-accept()ed connection is RST from the backlog and
+    // looks just as "dead" below as a genuinely force-cancelled one.
+    while (latch->hang_entries.load(std::memory_order_acquire) < kClients) {
         std::this_thread::sleep_for(1ms);
     }
     const auto t0 = std::chrono::steady_clock::now();

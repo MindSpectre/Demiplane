@@ -1,15 +1,15 @@
 #include <array>
 #include <ctime>
+#include <demiplane/chrono>
 #include <span>
 #include <string_view>
 
 #include <gtest/gtest.h>
 #include <http_date.hpp>
-
 namespace {
 
-    using demiplane::http::format_imf_fixdate;
-    using demiplane::http::IMF_FIXDATE_LEN;
+    using demiplane::chrono::format_imf_fixdate;
+    using demiplane::chrono::IMF_FIXDATE_LEN;
     using demiplane::http::imf_fixdate_now;
 
     std::string_view render(const std::time_t t, std::array<char, IMF_FIXDATE_LEN + 1>& buf) {

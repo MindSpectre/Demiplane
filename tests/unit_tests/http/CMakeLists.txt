@@ -59,6 +59,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
         PRIVATE
         Demiplane.Component.HTTP.Types
+        Demiplane::Common::Chrono
         ${TEST_LIBS}
 )
 ##############################################################################

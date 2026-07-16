@@ -3,9 +3,11 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include <boost/asio/awaitable.hpp>
+#include <executor.hpp>
 #include <router.hpp>
 
 namespace demiplane::http {

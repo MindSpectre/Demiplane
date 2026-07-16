@@ -20,6 +20,22 @@
 #include <route_registry.hpp>
 #include <router.hpp>
 
+// The armed global operator new/delete below collide with TSan's runtime
+// at LINK time (tsan_cxx.a defines them strongly; ASan interposes weakly
+// and coexists), and allocation counting is meaningless under a sanitizer
+// allocator anyway — compile the gates out under TSan.
+#if defined(__has_feature)
+    #if __has_feature(thread_sanitizer)
+        #define DMP_ALLOC_GATE_DISABLED 1
+    #endif
+#endif
+#if !defined(DMP_ALLOC_GATE_DISABLED) && defined(__SANITIZE_THREAD__)
+    #define DMP_ALLOC_GATE_DISABLED 1
+#endif
+
+#ifndef DMP_ALLOC_GATE_DISABLED
+
+
 using namespace demiplane::http;
 namespace http = boost::beast::http;
 
@@ -99,29 +115,33 @@ namespace {
     // Build a parsed GET request of the driver's exact type, with `target`,
     // OUTSIDE any armed region.
     detail::Http11Request make_get(const std::pmr::polymorphic_allocator<> arena, const std::string_view target) {
-        std::pmr::polymorphic_allocator<char> body_alloc{arena.resource()};
-        detail::Http11Request req{std::piecewise_construct, std::forward_as_tuple(body_alloc), std::forward_as_tuple()};
+        // Fields as well as body come from the arena — Http11Request's fields are
+        // BeastFields (pmr). A default-constructed pmr allocator would silently
+        // fall back to new_delete and every header node would hit the global heap.
+        std::pmr::polymorphic_allocator<char> arena_alloc{arena.resource()};
+        detail::Http11Request req{
+            std::piecewise_construct, std::forward_as_tuple(arena_alloc), std::forward_as_tuple(arena_alloc)};
         req.method(http::verb::get);
         req.target(target);
         req.version(11);
         return req;
     }
 
-    // Measure global allocs across build_request_context -> dispatch. STOPS
-    // before make_beast_response (the Beast-fields translation boundary, which
-    // allocates one node per header by construction).
+    // Measure global allocs across build_request_context -> dispatch ->
+    // make_beast_response. The Beast translation used to be excluded because it
+    // allocated one std::allocator node per header by construction; its fields
+    // are now arena-backed, so it is inside the armed region and gated too.
     std::size_t measure(Router& router, std::string target, StackArena& arena) {
         boost::asio::io_context ioc;
         auto fut = boost::asio::co_spawn(
-            ioc,
-            [&]() -> boost::asio::awaitable<std::size_t> {
+            ioc.get_executor(),
+            [&]() -> boost::asio::awaitable<std::size_t, Strand> {
                 detail::Http11Request req = make_get(arena.alloc, target);  // before arming
                 ArmedRegion region;
-                RequestContext ctx  = detail::build_request_context(req, arena.alloc);
-                Response resp       = co_await router.dispatch(std::move(ctx));
-                const std::size_t n = region.finish();    // STOP before Beast translation
-                (void)detail::make_beast_response(resp);  // exercised, not counted
-                co_return n;
+                RequestContext ctx = detail::build_request_context(req, arena.alloc);
+                Response resp      = co_await router.dispatch(std::move(ctx));
+                (void)detail::make_beast_response(resp);
+                co_return region.finish();
             },
             boost::asio::use_future);
         ioc.run();
@@ -188,3 +208,20 @@ TEST(DriverAllocationGateTest, OneUserBodyStringIsExactlyOneAlloc) {
     EXPECT_EQ(with_body, baseline + 1) << "framework added allocations beyond the single user-body string ("
                                        << with_body << " vs " << baseline << "+1)";
 }
+
+TEST(DriverAllocationGateTest, BareRouteDispatchAddsNoGlobalHeap) {
+    // Absolute gate on the no-hooks hot path inside the armed region: ZERO
+    // global-heap allocations. build_request_context, route lookup, response
+    // fields, and make_beast_response are arena-backed; dispatch is a plain
+    // function (the no-hooks fast path — its coroutine frame used to be one
+    // count here); and the HANDLER's frame is satisfied from asio's recycling
+    // cache (warmed by co_spawn's own machinery — exactly how steady-state
+    // serving behaves, where freed frames recycle request-to-request).
+    RouteRegistry reg;
+    std::vector<std::shared_ptr<HttpController>> sink;
+    Router r = freeze_router(reg, sink);
+    StackArena arena;
+    EXPECT_EQ(measure(r, "/empty", arena), 0u) << "the no-hooks dispatch hot path must not touch the global heap";
+}
+
+#endif  // !DMP_ALLOC_GATE_DISABLED

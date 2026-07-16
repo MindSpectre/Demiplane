@@ -8,8 +8,10 @@
 # no Demiplane::Component::Http::Types alias.
 ##############################################################################
 add_subdirectory(enums)
+add_subdirectory(executor)
 add_subdirectory(async_outcome)
 add_subdirectory(url_decode)
+add_subdirectory(http_date)
 add_subdirectory(headers)
 add_subdirectory(errors)
 add_subdirectory(body)
@@ -25,8 +27,10 @@ add_library(${DMP_HTTP}.Types INTERFACE)
 
 target_link_libraries(${DMP_HTTP}.Types INTERFACE
         ${DMP_HTTP}.Types.Enums
+        ${DMP_HTTP}.Types.Executor
         ${DMP_HTTP}.Types.AsyncOutcome
         ${DMP_HTTP}.Types.UrlDecode
+        ${DMP_HTTP}.Types.HttpDate
         ${DMP_HTTP}.Types.Headers
         ${DMP_HTTP}.Types.Errors
         ${DMP_HTTP}.Types.ErrorResponses

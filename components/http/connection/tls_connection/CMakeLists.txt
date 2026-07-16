@@ -12,6 +12,7 @@ target_link_libraries(${DMP_HTTP}.Connection.Tls
         ${DMP_HTTP}.Connection.RequestArena
         ${DMP_HTTP}.Connection.Concepts
         ${DMP_HTTP}.Types.Enums
+        ${DMP_HTTP}.Types.Executor
         Boost::beast
         Boost::asio
         OpenSSL::SSL

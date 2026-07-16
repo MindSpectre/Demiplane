@@ -43,6 +43,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Connection
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         types/test_http_enums.cpp
         types/test_url_decode.cpp
+        types/test_http_date.cpp
         types/test_headers.cpp
         types/test_body.cpp
         types/test_response.cpp
@@ -52,11 +53,13 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         types/test_allocation_gate.cpp
 )
 # Dotted aggregate of all the per-type Http Types leaf targets (no :: alias).
-# NOT Demiplane::Component::Http — that umbrella aggregates only the old
-# Handler lib until PR 7 and would not propagate the Types include dirs.
+# Deliberately NOT the Demiplane.Component.HTTP umbrella: per-layer links
+# catch under-linking regressions in each layer's CMake (PR 7 D4); umbrella
+# propagation is guarded by the dedicated ...Http.Umbrella target below.
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
         PRIVATE
         Demiplane.Component.HTTP.Types
+        Demiplane::Common::Chrono
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -142,6 +145,26 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Server
         Demiplane.Component.HTTP.Drivers
         Demiplane.Component.HTTP.Types
         Boost::asio
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test the public umbrella (PR 7): <demiplane/http> + the combined
+# Demiplane.Component.HTTP library must expose every layer with NO other link.
+# This target deliberately links nothing else (gtest aside) — it is the only
+# place the consumer-facing contract (one include, one library) is compiled.
+# It does NOT isolate per-layer LIBRARIES drops: the layer aggregates
+# PUBLIC-link each other, so only .Connection and .Server are load-bearing
+# here (see the measured caveat in umbrella/test_umbrella.cpp). Per-layer
+# under-linking is guarded by the per-layer dotted links on the targets above (D4).
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Http.Umbrella
+        umbrella/test_umbrella.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.Http.Umbrella
+        PRIVATE
+        Demiplane.Component.HTTP
         ${TEST_LIBS}
 )
 ##############################################################################

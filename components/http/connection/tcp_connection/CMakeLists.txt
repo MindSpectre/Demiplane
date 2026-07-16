@@ -1,5 +1,5 @@
 ##############################################################################
-# Http Connection — TcpConnection (plain TCP over beast::tcp_stream)
+# Http Connection — TcpConnection (plain TCP over a strand-bound beast stream)
 ##############################################################################
 add_library(${DMP_HTTP}.Connection.Tcp STATIC
         tcp_connection.cpp
@@ -14,6 +14,7 @@ target_link_libraries(${DMP_HTTP}.Connection.Tcp
         ${DMP_HTTP}.Connection.RequestArena
         ${DMP_HTTP}.Connection.Concepts
         ${DMP_HTTP}.Types.Enums
+        ${DMP_HTTP}.Types.Executor
         Boost::beast
         Boost::asio
 )

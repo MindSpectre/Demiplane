@@ -1,9 +1,8 @@
-#include <gtest/gtest.h>
-
 #include <chrono>
 #include <stdexcept>
 #include <vector>
 
+#include <gtest/gtest.h>
 #include <http_enums.hpp>
 #include <json/json.hpp>
 #include <listener_config.hpp>
@@ -28,25 +27,24 @@ TEST(ServerConfigTest, DefaultsMatchSpec) {
 }
 
 TEST(ServerConfigTest, RoundTripPreservesNestedListeners) {
-    const auto cfg =
-        ServerConfig::Builder{}
-            .threads(4)
-            .body_limit(65536)
-            .request_arena_size(16384)
-            .drain_timeout(5s)
-            .path_normalization(ServerConfig::PathNormalization::collapse_multi_slash)
-            .timeouts(Timeouts{5s, 10s, 30s})
-            .add_listener(ListenerConfig::Builder{}.bind_address("127.0.0.1").port(8080).finalize())
-            .add_listener(ListenerConfig::Builder{}
-                              .bind_address("127.0.0.1")
-                              .port(8443)
-                              .transport(ListenerConfig::Transport::tls)
-                              .protocols({Protocol::http1})
-                              .tls(TlsConfig::Builder{}.cert_file("c.pem").key_file("k.pem").finalize())
-                              .finalize())
-            .finalize();
+    const auto cfg = ServerConfig::Builder{}
+                         .threads(4)
+                         .body_limit(65536)
+                         .request_arena_size(16384)
+                         .drain_timeout(5s)
+                         .path_normalization(ServerConfig::PathNormalization::collapse_multi_slash)
+                         .timeouts(Timeouts{5s, 10s, 30s})
+                         .add_listener(ListenerConfig::Builder{}.bind_address("127.0.0.1").port(8080).finalize())
+                         .add_listener(ListenerConfig::Builder{}
+                                           .bind_address("127.0.0.1")
+                                           .port(8443)
+                                           .transport(ListenerConfig::Transport::tls)
+                                           .protocols({Protocol::http1})
+                                           .tls(TlsConfig::Builder{}.cert_file("c.pem").key_file("k.pem").finalize())
+                                           .finalize())
+                         .finalize();
 
-    const Json::Value json = cfg.serialize<Json::Value>();
+    const auto json = cfg.serialize<Json::Value>();
     EXPECT_EQ(json["path_normalization"].asString(), "collapse_multi_slash");
     ASSERT_TRUE(json["listeners"].isArray());
     ASSERT_EQ(json["listeners"].size(), 2u);

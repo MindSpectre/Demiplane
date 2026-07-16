@@ -7,7 +7,7 @@ namespace demiplane::http {
 
     namespace {
         constexpr unsigned char lower(const unsigned char c) noexcept {
-            return (c >= 'A' && c <= 'Z') ? static_cast<unsigned char>(c + 32) : c;
+            return c >= 'A' && c <= 'Z' ? static_cast<unsigned char>(c + 32) : c;
         }
         bool does_equal(const std::string_view a, const std::string_view b) noexcept {
             if (a.size() != b.size())
@@ -20,10 +20,10 @@ namespace demiplane::http {
         }
     }  // namespace
 
-    Headers Headers::owned(const std::pmr::polymorphic_allocator<> alloc) {
+    Headers Headers::owned(const std::pmr::polymorphic_allocator<> alloc) GEARS_UNRECOVERABLE_NOEXCEPT {
         return Headers{OwnedBacking{alloc}};
     }
-    Headers Headers::view_of_beast(const boost::beast::http::fields& fields) {
+    Headers Headers::view_of_beast(const BeastFields& fields) {
         return Headers{BeastBacking{&fields}};
     }
 

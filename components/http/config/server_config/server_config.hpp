@@ -99,8 +99,7 @@ namespace demiplane::http {
         std::size_t threads_ = 1;
         // Timeouts' framework default ctor is private — the member default
         // goes through its public full ctor.
-        Timeouts timeouts_ =
-            Timeouts{std::chrono::seconds{10}, std::chrono::seconds{30}, std::chrono::seconds{60}};
+        Timeouts timeouts_   = Timeouts{std::chrono::seconds{10}, std::chrono::seconds{30}, std::chrono::seconds{60}};
         std::size_t body_limit_         = 16 * 1024 * 1024;
         std::size_t request_arena_size_ = 8192;
         std::chrono::milliseconds drain_timeout_{std::chrono::seconds{30}};
@@ -121,13 +120,13 @@ namespace demiplane::http {
         return "collapse_trailing_slash";
     }
 
-    inline void write_field(Json::Value& out, const serialization::FieldName key,
-                            const ServerConfig::PathNormalization v) {
+    inline void
+    write_field(Json::Value& out, const serialization::FieldName key, const ServerConfig::PathNormalization v) {
         out[key.str()] = std::string{to_string_view(v)};
     }
 
-    inline bool read_field(const Json::Value& in, const serialization::FieldName key,
-                           ServerConfig::PathNormalization& v) {
+    inline bool
+    read_field(const Json::Value& in, const serialization::FieldName key, ServerConfig::PathNormalization& v) {
         const std::string k = key.str();
         if (!in.isMember(k)) {
             return false;
@@ -154,13 +153,13 @@ namespace demiplane::http {
         Builder() = default;
 
         template <typename Self>
-        auto&& listeners(this Self&& self, std::vector<ListenerConfig> value) noexcept {
+        constexpr auto&& listeners(this Self&& self, std::vector<ListenerConfig> value) noexcept {
             self.config_.listeners_ = std::move(value);
             return std::forward<Self>(self);
         }
 
         template <typename Self>
-        auto&& add_listener(this Self&& self, ListenerConfig value) noexcept {
+        constexpr auto&& add_listener(this Self&& self, ListenerConfig value) noexcept {
             self.config_.listeners_.push_back(std::move(value));
             return std::forward<Self>(self);
         }
@@ -172,7 +171,7 @@ namespace demiplane::http {
         }
 
         template <typename Self>
-        auto&& timeouts(this Self&& self, Timeouts value) noexcept {
+        constexpr auto&& timeouts(this Self&& self, Timeouts value) noexcept {
             self.config_.timeouts_ = std::move(value);
             return std::forward<Self>(self);
         }
@@ -201,7 +200,7 @@ namespace demiplane::http {
             return std::forward<Self>(self);
         }
 
-        [[nodiscard]] ServerConfig finalize() && {
+        [[nodiscard]] constexpr ServerConfig finalize() && {
             config_.validate();
             return std::move(config_);
         }

@@ -44,7 +44,7 @@ namespace {
 
             add_controller(std::make_shared<TlsApiController>());
             start(std::make_unique<TlsListener<Http11Driver>>(
-                ioc_.get_executor(), "127.0.0.1", 0, tls, Http11Driver{Http11Config{}}));
+                std::vector{ioc_.get_executor()}, "127.0.0.1", 0, tls, Http11Driver{Http11Config{}}));
         }
     };
 

@@ -25,9 +25,9 @@ namespace {
         }
         void reset_request_arena() {
         }
-        void expires_after(std::chrono::milliseconds) {
+        void set_deadline_after(std::chrono::milliseconds) {
         }
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, Strand> async_close() {
             co_return;
         }
         boost::asio::cancellation_slot cancel_slot() {
@@ -53,9 +53,9 @@ namespace {
         }
         void reset_request_arena() {
         }
-        void expires_after(std::chrono::milliseconds) {
+        void set_deadline_after(std::chrono::milliseconds) {
         }
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, Strand> async_close() {
             co_return;
         }
         boost::asio::cancellation_slot cancel_slot() {

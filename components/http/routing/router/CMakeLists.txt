@@ -10,6 +10,7 @@ target_include_directories(${DMP_HTTP}.Routing.Router PUBLIC
 target_link_libraries(${DMP_HTTP}.Routing.Router
         PUBLIC
         ${DMP_HTTP}.Routing.RouteRegistry
+        ${DMP_HTTP}.Types.AsyncOutcome
         Boost::asio
         PRIVATE
         ${DMP_HTTP}.Types.ErrorResponses

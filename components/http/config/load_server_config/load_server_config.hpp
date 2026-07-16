@@ -1,12 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <demiplane/gears>
 #include <string>
 #include <string_view>
 
-#include <demiplane/gears>
 #include <json/json.h>
-
 #include <server_config.hpp>
 
 namespace demiplane::http {
@@ -50,8 +49,8 @@ namespace demiplane::http {
      * Unknown JSON keys are ignored (the fields() walk reads known names
      * only). An empty file is a parse error, not an empty config.
      */
-    gears::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError> load_server_config(
-        std::string_view path);
+    gears::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>
+    load_server_config(std::string_view path);
 
     /// Round-trip companion (spec §10.2): serialize — which validates first.
     /// Secret fields (tls.key_passphrase) are omitted by policy (plan D3).

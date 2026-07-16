@@ -2,10 +2,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include <controller.hpp>
 #include <group.hpp>
+#include <gtest/gtest.h>
 #include <route_registry.hpp>
 #include <router.hpp>
 
@@ -26,19 +25,18 @@ namespace {
         }
 
     private:
-        AsyncResponse get_user(RequestContext ctx) {
+        static AsyncResponse get_user(RequestContext ctx) {
             co_return ctx.ok("user:" + std::to_string(ctx.path_param<int>("id").value_or(-1)));
         }
-        AsyncResponse create(RequestContext ctx) {
+        static AsyncResponse create(RequestContext ctx) {
             co_return ctx.created("made");
         }
-        AsyncResponse boom(RequestContext) {
+        static AsyncResponse boom(RequestContext) {
             throw std::runtime_error{"handler exploded"};
         }
-        AsyncResponse two_params(RequestContext ctx) {
-            co_return ctx.ok(ctx.path_param<std::string>("a").value_or("")
-                             + ","
-                             + ctx.path_param<std::string>("b").value_or(""));
+        static AsyncResponse two_params(RequestContext ctx) {
+            co_return ctx.ok(ctx.path_param<std::string>("a").value_or("") + "," +
+                             ctx.path_param<std::string>("b").value_or(""));
         }
     };
 
@@ -50,8 +48,7 @@ protected:
     std::vector<std::shared_ptr<HttpController>> controllers_;
 
     void SetUp() override {
-        GroupBinding{registry_, controllers_, ""}.add_controller(
-            std::make_shared<ApiController>());
+        GroupBinding{registry_, controllers_, ""}.add_controller(std::make_shared<ApiController>());
         ASSERT_TRUE(registry_.freeze().empty());
     }
 };
@@ -80,16 +77,14 @@ TEST_F(RouterTest, WrongVerbDispatchesTo405WithAllowHeader) {
 
 TEST_F(RouterTest, QueryStringDoesNotConfuseRouting) {
     const Router router{registry_};
-    const Response r = run_awaitable(
-        router.dispatch(make_ctx(HttpMethod::get, "/users/7?verbose=1&x=%20")));
+    const Response r = run_awaitable(router.dispatch(make_ctx(HttpMethod::get, "/users/7?verbose=1&x=%20")));
     EXPECT_EQ(*r.body.buffered_view(), "user:7");
 }
 
 TEST_F(RouterTest, HandlerExceptionsPropagateToCaller) {
     // The exception catch-all → 500 belongs to the h1 driver (PR 3, spec §6.3).
     const Router router{registry_};
-    EXPECT_THROW(run_awaitable(router.dispatch(make_ctx(HttpMethod::get, "/boom"))),
-                 std::runtime_error);
+    EXPECT_THROW(run_awaitable(router.dispatch(make_ctx(HttpMethod::get, "/boom"))), std::runtime_error);
 }
 
 TEST_F(RouterTest, DispatchInjectsMultiplePathParams) {
@@ -125,7 +120,7 @@ namespace {
                     log.last_info   = info;
                     log.last_status = r.status;
                 },
-            .on_unhandled_exception = [&log](std::exception_ptr) noexcept { log.events.emplace_back("exc"); },
+            .on_unhandled_exception = [&log](const std::exception_ptr&) noexcept { log.events.emplace_back("exc"); },
         };
     }
 

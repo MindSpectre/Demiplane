@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <utility>
@@ -11,14 +12,14 @@
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/beast/core/error.hpp>
-#include <boost/beast/core/tcp_stream.hpp>
+#include <executor.hpp>
 #include <http_enums.hpp>
 #include <request_arena.hpp>
 
 namespace demiplane::http {
 
     /**
-     * @brief TLS connection: ssl::stream<beast::tcp_stream> + per-connection
+     * @brief TLS connection: ssl::stream<Stream> + per-connection
      *        arena + cancel signal + the ALPN-negotiated protocol (spec §6.1).
      *
      * Satisfies IsStreamConnection — Http11Driver::serve drives it unchanged. The
@@ -30,11 +31,9 @@ namespace demiplane::http {
      */
     class TlsConnection : gears::Immutable {
     public:
-        using stream_type = boost::asio::ssl::stream<boost::beast::tcp_stream>;
+        using stream_type = boost::asio::ssl::stream<Stream>;
 
-        TlsConnection(boost::asio::ip::tcp::socket socket,
-                      boost::asio::ssl::context& ctx,
-                      const std::size_t arena_size = 8192)
+        TlsConnection(Socket socket, boost::asio::ssl::context& ctx, const std::size_t arena_size = 8192)
             : stream_{std::move(socket), ctx},
               arena_{arena_size} {
         }
@@ -42,7 +41,7 @@ namespace demiplane::http {
         /// TLS handshake (server role). Records the ALPN-negotiated protocol.
         /// Returns the handshake error_code (empty on success). NOT in the
         /// IsConnection concept — the listener calls it before serve().
-        boost::asio::awaitable<boost::beast::error_code>
+        boost::asio::awaitable<boost::beast::error_code, Strand>
         handshake(std::chrono::milliseconds timeout = std::chrono::seconds{10});
 
         [[nodiscard]] stream_type& stream() noexcept {
@@ -57,11 +56,22 @@ namespace demiplane::http {
             arena_.reset();
         }
 
-        void expires_after(const std::chrono::milliseconds ms) {
-            boost::beast::get_lowest_layer(stream_).expires_after(ms);
+        /// Per-phase I/O deadline (IsConnection) — see TcpConnection: relaxed
+        /// atomic (driver writes on the connection's context, the tracker
+        /// sweep reads from the listener's home context). The TLS HANDSHAKE
+        /// keeps its own beast per-op timeout internally (once per
+        /// connection, off the request hot path).
+        void set_deadline_after(const std::chrono::milliseconds ms) noexcept {
+            deadline_.store((std::chrono::steady_clock::now() + ms).time_since_epoch().count(),
+                            std::memory_order_relaxed);
         }
 
-        boost::asio::awaitable<void> async_close();
+        [[nodiscard]] std::chrono::steady_clock::time_point deadline() const noexcept {
+            return std::chrono::steady_clock::time_point{
+                std::chrono::steady_clock::duration{deadline_.load(std::memory_order_relaxed)}};
+        }
+
+        boost::asio::awaitable<void, Strand> async_close();
 
         [[nodiscard]] boost::asio::cancellation_slot cancel_slot() noexcept {
             return signal_.slot();
@@ -96,6 +106,9 @@ namespace demiplane::http {
         RequestArena arena_;
         boost::asio::cancellation_signal signal_;
         Protocol negotiated_protocol_ = Protocol::http1;
+        // Driver writes (own context), tracker sweep reads (home context).
+        std::atomic<std::chrono::steady_clock::duration::rep> deadline_{
+            std::chrono::steady_clock::time_point::max().time_since_epoch().count()};
     };
 
 }  // namespace demiplane::http

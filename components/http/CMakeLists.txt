@@ -59,6 +59,22 @@ add_combined_library(${DMP_HTTP}
         SOURCES
         export/demiplane/http
         LIBRARIES
+        ${DMP_HTTP}.Types
+        ${DMP_HTTP}.Routing
+        ${DMP_HTTP}.Connection
+        ${DMP_HTTP}.Drivers
+        ${DMP_HTTP}.Listeners
+        ${DMP_HTTP}.Config
+        ${DMP_HTTP}.Server
+)
+
+# Asio's thread_info_base is sized by this macro (max_mem_index = 6 * cache_size)
+# and lives inside io_context. A consumer TU that compiles it at the default 2
+# against ours gets a differently-laid-out struct — silent corruption. The root
+# CMakeLists sets it tree-wide; this re-exports it to anyone linking the umbrella.
+# Both read DMP_ASIO_RECYCLE_CACHE, so they cannot drift.
+target_compile_definitions(${DMP_HTTP} INTERFACE
+        BOOST_ASIO_RECYCLING_ALLOCATOR_CACHE_SIZE=${DMP_ASIO_RECYCLE_CACHE}
 )
 
 add_library(Demiplane::Component::Http ALIAS ${DMP_HTTP})

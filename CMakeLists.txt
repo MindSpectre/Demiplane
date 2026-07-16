@@ -50,6 +50,10 @@ PrintLineSeparator()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+# Toggles. Included before the compile options because DMP_KEEP_FRAME_POINTERS
+# decides one of them.
+include(cmake/features.cmake)
+
 list(APPEND general_compile_options
         -Wall -Wextra -Wpedantic
         -Wthread-safety
@@ -60,8 +64,16 @@ list(APPEND general_compile_options
         -fno-stack-protector
         -fvisibility=hidden
         -g
-        $<$<CONFIG:Release>:-fomit-frame-pointer>
 )
+
+# Target compile options land after CMAKE_CXX_FLAGS on the command line, so a
+# preset that merely adds -fno-omit-frame-pointer to the flags loses to this.
+# The `release-perf` preset flips this option instead.
+if (DMP_KEEP_FRAME_POINTERS)
+    list(APPEND general_compile_options -fno-omit-frame-pointer)
+else ()
+    list(APPEND general_compile_options $<$<CONFIG:Release>:-fomit-frame-pointer>)
+endif ()
 
 add_compile_options(
         ${general_compile_options}
@@ -70,9 +82,35 @@ add_compile_options(
 message("\tCOMPILE OPTIONS")
 message("Compile options are ${general_compile_options}")
 
-# Add options to enable or disable Boost and Qt5
-# Toggles
-include(cmake/features.cmake)
+# Boost.Asio recycles handler/coroutine memory in a per-thread, per-purpose slot
+# cache. The default of 2 slots is too few for the h1 hot path, which frees three
+# differently-sized awaitable frames per request (Router::dispatch, the handler,
+# write_response); on a size miss thread_info_base::allocate EVICTS a cached chunk
+# and falls back to operator new.
+#
+# This MUST be global. `max_mem_index = 6 * cache_size` sizes thread_info_base
+# itself, which is embedded in io_context. Two TUs disagreeing on the value give
+# that struct two layouts — silent memory corruption, not a link error. So it goes
+# here rather than on any single target, and Demiplane.Component.HTTP re-exports it
+# INTERFACE so external consumers of the umbrella inherit it too.
+set(DMP_ASIO_RECYCLE_CACHE "4" CACHE STRING "Asio per-thread recycled-memory slots per purpose tag")
+add_compile_definitions(BOOST_ASIO_RECYCLING_ALLOCATOR_CACHE_SIZE=${DMP_ASIO_RECYCLE_CACHE})
+message("Asio recycling allocator cache size: ${DMP_ASIO_RECYCLE_CACHE} (tree-wide; ABI-visible, see comment)")
+
+# Fail compilation on any use of asio's deprecated interfaces (io_service,
+# null_buffers, executor query shims, ...). Keeps the tree on the modern API
+# surface — a prerequisite for the newer completion machinery (immediate
+# executors) and for future asio upgrades.
+add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
+
+# GEARS_UNRECOVERABLE_NOEXCEPT (gears_macros.hpp) → noexcept: allocation
+# failure in functions so marked terminates instead of unwinding. ABI-visible
+# for the same reason as the recycling-cache size above — tree-wide, never
+# per-target.
+if (DMP_UNRECOVERABLE_EXCEPTIONS_TERMINATE)
+    add_compile_definitions(DMP_UNRECOVERABLE_EXCEPTIONS_TERMINATE)
+    message("Unrecoverable exceptions terminate: GEARS_UNRECOVERABLE_NOEXCEPT = noexcept (tree-wide; ABI-visible)")
+endif ()
 
 # Add compile definitions based on options
 if (DMP_ENABLE_LOGGING)
@@ -172,6 +210,15 @@ endif ()
 if (DO_BENCHMARKS)
     message("Benchmarks are enabled")
     add_subdirectory(benchmarks)
+endif ()
+##############################################################################
+
+##############################################################################
+# Examples
+##############################################################################
+if (BUILD_EXAMPLES)
+    message("Examples are enabled")
+    add_subdirectory(examples)
 endif ()
 ##############################################################################
 PrintLineSeparator()

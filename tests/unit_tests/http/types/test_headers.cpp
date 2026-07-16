@@ -10,6 +10,19 @@
 
 using namespace demiplane::http;
 
+namespace {
+    template <class F>
+    concept ViewableAsBeast = requires(F& f) { Headers::view_of_beast(f); };
+
+    // view_of_beast stores a pointer to `fields`. Beast's basic_fields has an
+    // implicit converting ctor from a differently-allocated basic_fields, so
+    // passing a plain http::fields would bind a temporary and dangle. The
+    // deleted overload must reject it at compile time, not at runtime.
+    static_assert(ViewableAsBeast<BeastFields>, "the pmr fields type must be viewable");
+    static_assert(!ViewableAsBeast<boost::beast::http::fields>,
+                  "std::allocator fields must NOT bind — it would view a destroyed temporary");
+}  // namespace
+
 class HeadersTest : public ::testing::Test {
 protected:
     std::pmr::monotonic_buffer_resource resource_{4096};
@@ -67,7 +80,10 @@ TEST_F(HeadersTest, IterationInsertionOrder) {
 }
 
 TEST_F(HeadersTest, BeastBackingViewsParsedFields) {
-    boost::beast::http::fields fields;
+    // BeastFields (pmr), not http::fields: view_of_beast stores a POINTER, and a
+    // plain http::fields would only bind through an implicit conversion to a
+    // temporary. That overload is deleted; this is the supported shape.
+    BeastFields fields{std::pmr::polymorphic_allocator<char>{&resource_}};
     fields.insert("Content-Type", "text/plain");
     fields.insert("X-Custom", "value");
     Headers h = Headers::view_of_beast(fields);
@@ -81,7 +97,7 @@ TEST_F(HeadersTest, BeastBackingViewsParsedFields) {
 }
 
 TEST_F(HeadersTest, MutationPromotesBeastToOwnedViaBoundAllocator) {
-    boost::beast::http::fields fields;
+    BeastFields fields{std::pmr::polymorphic_allocator<char>{&resource_}};
     fields.insert("Content-Type", "text/plain");
     Headers h = Headers::view_of_beast(fields);
     h.promote_to_owned(alloc_);   // explicit allocator — never the global heap

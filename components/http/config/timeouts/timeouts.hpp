@@ -6,7 +6,6 @@
 #include <utility>
 
 #include <config_interface.hpp>
-#include <json/json.hpp>
 
 namespace demiplane::http {
 
@@ -17,8 +16,8 @@ namespace demiplane::http {
      * plain integers interpreted as milliseconds. attach_default_listeners
      * maps these onto Http11Config's per-phase timeouts.
      *
-     * idle_ms is accepted and mapped but RESERVED in v1: the h1 driver reuses
-     * the header timeout for keep-alive idle (see http11_config.hpp).
+     * idle_ms bounds the keep-alive wait for the next request; header_ms and
+     * body_ms bound a message already mid-arrival (see http11_config.hpp).
      */
     class Timeouts final : public serialization::ConfigInterface<Timeouts, Json::Value> {
     public:
@@ -93,9 +92,9 @@ namespace demiplane::http {
             return std::forward<Self>(self);
         }
 
-        [[nodiscard]] Timeouts finalize() && {
+        [[nodiscard]] constexpr Timeouts finalize() && {
             config_.validate();
-            return std::move(config_);
+            return config_;
         }
 
     private:

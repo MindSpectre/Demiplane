@@ -10,5 +10,6 @@ target_include_directories(${DMP_HTTP}.Types.AsyncOutcome INTERFACE
 target_link_libraries(${DMP_HTTP}.Types.AsyncOutcome INTERFACE
         Boost::asio
         Demiplane::Common::Gears
+        ${DMP_HTTP}.Types.Executor
 )
 ##############################################################################

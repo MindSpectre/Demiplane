@@ -19,13 +19,23 @@
   ],
   "default-features": [
     "abseil-benchmarks",
-    "pg-benchmarks"
+    "pg-benchmarks",
+    "drogon-benchmarks"
   ],
   "features": {
     "abseil-benchmarks": {
       "description": "Abseil logging benchmarks for comparative profiling",
       "dependencies": [
         "abseil"
+      ]
+    },
+    "drogon-benchmarks": {
+      "description": "Drogon reference server for HTTP/1.1 throughput comparison",
+      "dependencies": [
+        {
+          "name": "drogon",
+          "default-features": false
+        }
       ]
     },
     "pg-benchmarks": {

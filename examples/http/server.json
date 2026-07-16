@@ -1,0 +1,22 @@
+{
+  "listeners": [
+    {
+      "bind": "127.0.0.1",
+      "port": 8080,
+      "transport": "tcp",
+      "protocols": [
+        "http1"
+      ]
+    }
+  ],
+  "threads": 2,
+  "timeouts": {
+    "header_ms": 10000,
+    "body_ms": 30000,
+    "idle_ms": 60000
+  },
+  "body_limit": 1048576,
+  "request_arena_size": 8192,
+  "drain_timeout_ms": 5000,
+  "path_normalization": "collapse_trailing_slash"
+}

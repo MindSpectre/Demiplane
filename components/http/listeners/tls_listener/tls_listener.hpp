@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -19,12 +18,12 @@
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/error.hpp>
 #include <build_ssl_context.hpp>
 #include <connection_tracker.hpp>
+#include <executor.hpp>
 #include <http_driver_concept.hpp>
 #include <listener_base.hpp>
 #include <router.hpp>
@@ -57,28 +56,50 @@ namespace demiplane::http {
         static_assert(sizeof...(Drivers) >= 1, "TlsListener needs at least one driver");
 
     public:
-        TlsListener(boost::asio::any_io_executor exec,
-                    std::string host,
+        template <typename VectorExecutorTp,
+                  gears::IsStringLike StringTp,
+                  typename TlsConfigTp,
+                  IsHttpDriver... DriversTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                     std::is_same_v<std::remove_cvref_t<TlsConfigTp>, TlsConfig>
+        TlsListener(VectorExecutorTp&& execs,
+                    StringTp&& host,
                     const std::uint16_t port,
-                    TlsConfig tls,
-                    Drivers... drivers)
-            : TlsListener{std::move(exec), std::move(host), port, std::move(tls), 8192, std::move(drivers)...} {
+                    TlsConfigTp&& tls,
+                    DriversTp&&... drivers)
+            : TlsListener{std::forward<VectorExecutorTp>(execs),
+                          std::forward<StringTp>(host),
+                          port,
+                          std::forward<TlsConfigTp>(tls),
+                          8192,
+                          std::forward<DriversTp>(drivers)...} {
         }
 
-        TlsListener(boost::asio::any_io_executor exec,
-                    std::string host,
+        /// `execs` — connection placement set, round-robin; front() is the
+        /// home (acceptor, backoff, drain poll). See TcpListener.
+        /// `host` is only IsStringLike-constrained (no exact-type clause):
+        /// literals/string_views construct host_ in place — better than
+        /// forcing callers through a std::string temporary.
+        template <typename VectorExecutorTp,
+                  gears::IsStringLike StringTp,
+                  typename TlsConfigTp,
+                  IsHttpDriver... DriversTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                         std::is_same_v<std::remove_cvref_t<TlsConfigTp>, TlsConfig>
+        TlsListener(VectorExecutorTp&& execs,
+                    StringTp&& host,
                     const std::uint16_t port,
-                    TlsConfig tls,
+                    TlsConfigTp&& tls,
                     const std::size_t request_arena_size,
-                    Drivers... drivers)
-            : exec_{std::move(exec)},
-              host_{std::move(host)},
+                    DriversTp&&... drivers)
+            : execs_{std::forward<VectorExecutorTp>(execs)},
+              host_{std::forward<StringTp>(host)},
               port_{port},
-              tls_config_{std::move(tls)},
+              tls_config_{std::forward<TlsConfigTp>(tls)},
               arena_size_{request_arena_size},
-              drivers_{std::move(drivers)...},
+              drivers_{std::forward<DriversTp>(drivers)...},
               advertised_alpn_{build_alpn_wire()},
-              acceptor_{exec_} {
+              acceptor_{execs_.front()} {
         }
 
         void bind() override {
@@ -98,27 +119,29 @@ namespace demiplane::http {
             // Cancellation as STATE, not exceptions — see TcpListener::run for the
             // full rationale (incl. the multi-worker WARN: stop emits must be
             // dispatched onto this run()'s strand, as the Server does — PR 5, D5).
+            tracker_.start_sweep(execs_.front());  // one deadline sweep per listener (Finding 13)
             co_await asio::this_coro::throw_if_cancelled(false);
             const auto cancel_state = co_await asio::this_coro::cancellation_state;
             std::optional<asio::steady_timer> backoff;  // error path only — lazy
-            unsigned consecutive_errors = 0;
+            std::uint32_t consecutive_errors = 0;
 
             while (cancel_state.cancelled() == asio::cancellation_type::none) {
-                auto strand = asio::make_strand(exec_);
+                Strand strand = execs_[next_exec_];  // round-robin, see TcpListener
+                next_exec_    = (next_exec_ + 1) % execs_.size();
                 boost::beast::error_code ec;
-                asio::ip::tcp::socket sock =
-                    co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
-                if (ec == asio::error::operation_aborted) {
+                // Socket, not tcp::socket — see TcpListener::run.
+                Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
+                if (ec == asio::error::operation_aborted) [[unlikely]] {
                     break;
                 }
                 if (ec == asio::error::bad_descriptor || ec == asio::error::operation_not_supported ||
-                    ec == asio::error::invalid_argument) {
+                    ec == asio::error::invalid_argument) [[unlikely]] {
                     break;  // acceptor unusable — retrying can only repeat the error
                 }
-                if (ec) {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
+                if (ec) [[unlikely]] {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
                     if (++consecutive_errors > 2) {
                         if (!backoff) {
-                            backoff.emplace(exec_);
+                            backoff.emplace(execs_.front());
                         }
                         // 1ms, 2ms, 4ms, ... capped at 1024ms — same policy as
                         // TcpListener. attempt is 0-based; consecutive_errors is >2
@@ -135,17 +158,20 @@ namespace demiplane::http {
                 auto handle        = tracker_.register_connection(conn, strand);
                 asio::co_spawn(
                     strand,
-                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void> {
-                        if (co_await conn->handshake()) {  // ALPN mismatch / TLS failure → close
-                            co_await conn->async_close();
-                            co_return;
-                        }
-                        // No matching driver: reachable when the client sent NO
-                        // ALPN extension (the select callback never runs → http1
-                        // fallback) and no h1 driver is in the tuple → close.
-                        if (const bool handled = co_await try_serve<0>(*conn, router, conn->negotiated_protocol());
-                            !handled) {
-                            co_await conn->async_close();
+                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void, Strand> {
+                        try {
+                            // Close on either failure mode (short-circuit — a
+                            // failed handshake never reaches try_serve):
+                            //  - handshake error: ALPN mismatch / TLS failure;
+                            //  - no matching driver: reachable when the client
+                            //    sent NO ALPN extension (the select callback
+                            //    never runs → http1 fallback) and no h1 driver
+                            //    is in the tuple.
+                            if (co_await conn->handshake() ||
+                                !co_await try_serve<0>(*conn, router, conn->negotiated_protocol())) {
+                                co_await conn->async_close();
+                            }
+                        } catch (...) {  // serve()/handshake throws end the session quietly
                         }
                     },
                     asio::detached);
@@ -153,12 +179,12 @@ namespace demiplane::http {
             // Reached on EVERY exit path — refuse new connections during shutdown
             // (spec §14.2; spike S4); see TcpListener::run for the rationale.
             boost::beast::error_code ignore;
-            std::ignore = acceptor_.close(ignore);
+            acceptor_.close(ignore);  // void under BOOST_ASIO_NO_DEPRECATED
             co_return;
         }
 
         boost::asio::awaitable<void> drain_until(const std::chrono::steady_clock::time_point deadline) override {
-            co_await tracker_.drain_until(exec_, deadline);
+            co_await tracker_.drain_until(execs_.front(), deadline);
         }
 
         [[nodiscard]] std::size_t in_flight() const noexcept override {
@@ -190,7 +216,7 @@ namespace demiplane::http {
 
         // Walk the driver tuple; the first whose id() == proto serves the conn.
         template <std::size_t I>
-        boost::asio::awaitable<bool> try_serve(TlsConnection& conn, Router& router, Protocol proto) {
+        boost::asio::awaitable<bool, Strand> try_serve(TlsConnection& conn, Router& router, Protocol proto) {
             if constexpr (I < sizeof...(Drivers)) {
                 if (auto& drv = std::get<I>(drivers_); std::remove_reference_t<decltype(drv)>::id() == proto) {
                     co_await drv.serve(conn, router);
@@ -202,7 +228,8 @@ namespace demiplane::http {
             }
         }
 
-        boost::asio::any_io_executor exec_;
+        std::vector<Executor> execs_;
+        std::size_t next_exec_ = 0;
         std::string host_;
         std::uint16_t port_;
         TlsConfig tls_config_;
@@ -210,7 +237,7 @@ namespace demiplane::http {
         std::tuple<Drivers...> drivers_;
         std::string advertised_alpn_;  // outlives ctx_ (ALPN cb arg, D4)
         std::optional<boost::asio::ssl::context> ctx_;
-        boost::asio::ip::tcp::acceptor acceptor_;
+        Acceptor acceptor_;
         ConnectionTracker tracker_;
     };
 

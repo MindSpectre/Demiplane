@@ -9,7 +9,7 @@ namespace demiplane::http {
 
     namespace {
         struct EmptyPayload {
-            [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() const {
+            [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() const {
                 gears::force_non_static(this);
                 co_return std::nullopt;
             }
@@ -23,29 +23,10 @@ namespace demiplane::http {
             }
         };
 
-        struct OwnedBufferPayload {
-            std::string bytes;
-            bool consumed = false;
-            boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() {
-                if (consumed || bytes.empty()) {
-                    consumed = true;
-                    co_return std::nullopt;
-                }
-                consumed = true;
-                co_return std::span{reinterpret_cast<const std::byte*>(bytes.data()), bytes.size()};
-            }
-            [[nodiscard]] std::optional<std::size_t> size_hint() const {
-                return bytes.size();
-            }
-            [[nodiscard]] std::optional<std::string_view> buffered_view() const {
-                return bytes;
-            }
-        };
-
         struct BeastRequestBody {
             std::span<const std::byte> bytes;
             bool consumed = false;
-            boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk() {
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() {
                 if (consumed || bytes.empty()) {
                     consumed = true;
                     co_return std::nullopt;
@@ -66,13 +47,6 @@ namespace demiplane::http {
     Body::Body() noexcept
         : vt_{vtable_for<EmptyPayload>()} {
         ::new (storage_) EmptyPayload{};
-    }
-
-    Body Body::owned(std::string bytes) {
-        return Body{
-            emplace_t{},
-            std::in_place_type<OwnedBufferPayload>, OwnedBufferPayload{std::move(bytes), false}
-        };
     }
 
     Body Body::beast_view(const std::span<const std::byte> bytes) {
@@ -105,7 +79,7 @@ namespace demiplane::http {
         vt_->destroy(storage_);
     }
 
-    boost::asio::awaitable<std::optional<std::span<const std::byte>>> Body::read_chunk() {
+    boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> Body::read_chunk() {
         return vt_->read_chunk(obj());
     }
     std::optional<std::size_t> Body::size_hint() const {
@@ -117,8 +91,8 @@ namespace demiplane::http {
 
     // ── Buffered helpers ─────────────────────────────────────────────────
     namespace {
-        boost::asio::awaitable<gears::Outcome<std::string, BodyLimitExceeded>> drain(Body& body,
-                                                                                     const std::size_t limit) {
+        boost::asio::awaitable<gears::Outcome<std::string, BodyLimitExceeded>, Strand> drain(Body& body,
+                                                                                             const std::size_t limit) {
             std::string out;
             while (true) {
                 const auto chunk = co_await body.read_chunk();
@@ -160,8 +134,8 @@ namespace demiplane::http {
             std::size_t amp = body.find('&', i);
             std::string_view pair{body.data() + i, (amp == std::string::npos ? body.size() - i : amp - i)};
             std::size_t eq      = pair.find('=');
-            std::string_view rk = (eq == std::string_view::npos) ? pair : pair.substr(0, eq);
-            std::string_view rv = (eq == std::string_view::npos) ? std::string_view{} : pair.substr(eq + 1);
+            std::string_view rk = eq == std::string_view::npos ? pair : pair.substr(0, eq);
+            std::string_view rv = eq == std::string_view::npos ? std::string_view{} : pair.substr(eq + 1);
             if (rk.empty())
                 co_return gears::err(FormParseError{"empty key"});
             auto k = url_decode(rk);
@@ -235,7 +209,7 @@ namespace demiplane::http {
                             if (p == std::string_view::npos)
                                 return {};
                             const std::size_t after    = p + key.size();
-                            const bool boundary_before = (p == 0) || !is_alpha(line[p - 1]);
+                            const bool boundary_before = p == 0 || !is_alpha(line[p - 1]);
                             if (const bool eq_after = after < line.size() && line[after] == '=';
                                 boundary_before && eq_after) {
                                 p = after + 1;

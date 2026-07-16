@@ -16,10 +16,26 @@
 namespace demiplane::http {
 
     /**
+     * @brief The Beast fields type an incoming request is parsed into.
+     *
+     * pmr, not `std::allocator`: Beast allocates one node per header line plus
+     * one for the request target, and with the default allocator every one of
+     * those is a global-heap malloc/free per request (~4 measured). Binding it
+     * to the per-connection request arena makes them bump allocations that the
+     * arena reset reclaims for free.
+     *
+     * This is a single concrete type on purpose. Templating `Headers` on the
+     * fields allocator would push the parameter through BeastBacking, the
+     * iterator, and every consumer, for no benefit — nothing constructs Headers
+     * over a differently-allocated fields object.
+     */
+    using BeastFields = boost::beast::http::basic_fields<std::pmr::polymorphic_allocator<char>>;
+
+    /**
      * @brief Multi-value, case-insensitive, insertion-ordered HTTP headers.
      *
      * Two backings behind one API:
-     *   BeastBacking — read-only view over a parser-owned beast::http::fields
+     *   BeastBacking — read-only view over a parser-owned BeastFields
      *                  (incoming requests, zero copy).
      *   OwnedBacking — arena-owned pmr::string pairs (responses, h2/h3 incoming,
      *                  synthetic/test). ALWAYS carries its allocator.
@@ -33,8 +49,22 @@ namespace demiplane::http {
         using value_type = std::pair<std::string_view, std::string_view>;
 
         // ── Factories ────────────────────────────────────────────────────
-        static Headers owned(std::pmr::polymorphic_allocator<> alloc);
-        static Headers view_of_beast(const boost::beast::http::fields& fields);
+        /// Allocates the entry vector's first block through `alloc`; the only
+        /// possible throw is an unrecoverable bad_alloc
+        /// (GEARS_UNRECOVERABLE_NOEXCEPT — terminate by default).
+        static Headers owned(std::pmr::polymorphic_allocator<> alloc) GEARS_UNRECOVERABLE_NOEXCEPT;
+        /// Non-owning view. `fields` MUST outlive the returned Headers.
+        static Headers view_of_beast(const BeastFields& fields);
+
+        /// Beast's basic_fields has an implicit converting ctor from a
+        /// differently-allocated basic_fields. Without these deletions,
+        /// `view_of_beast(some_http_fields)` would materialize a temporary
+        /// BeastFields, take its address, and dangle the moment the full
+        /// expression ends — a segfault, not a compile error. Ask for it and get
+        /// a diagnostic instead.
+        template <class OtherAlloc>
+        static Headers view_of_beast(const boost::beast::http::basic_fields<OtherAlloc>&) = delete;
+        static Headers view_of_beast(BeastFields&&)                                       = delete;
 
         // Move-only (it may hold a pmr container). Move-ASSIGN is user-defined:
         // it adopts the source's backing wholesale (variant emplace → vector
@@ -68,7 +98,7 @@ namespace demiplane::http {
         // ── Iteration (O(1) per step) ─────────────────────────────────────
         class const_iterator {
         public:
-            using value_type        = Headers::value_type;
+            using value_type        = value_type;
             using reference         = value_type;
             using difference_type   = std::ptrdiff_t;
             // input, not forward: operator* returns a proxy pair by value.
@@ -86,7 +116,7 @@ namespace demiplane::http {
             friend class Headers;
             const Headers* h_ = nullptr;
             std::size_t idx_  = 0;  // position; also drives beast_it_ advance
-            boost::beast::http::fields::const_iterator beast_it_{};
+            BeastFields::const_iterator beast_it_{};
         };
 
         [[nodiscard]] const_iterator begin() const;
@@ -94,12 +124,15 @@ namespace demiplane::http {
 
     private:
         struct BeastBacking {
-            const boost::beast::http::fields* fields;
+            const BeastFields* fields;
         };
         struct OwnedBacking {
             std::pmr::vector<std::pair<std::pmr::string, std::pmr::string>> entries;
             explicit OwnedBacking(const std::pmr::polymorphic_allocator<> a)
                 : entries(a) {
+                // One up-front bump allocation (arena on the hot path) instead
+                // of grow-reallocate-move on the first few add()s.
+                entries.reserve(4);
             }
         };
         std::variant<BeastBacking, OwnedBacking> backing_;

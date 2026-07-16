@@ -18,10 +18,15 @@ namespace {
     // ConnectionTracker requires structurally (D2) — not part of the IsConnection
     // concept.
     struct FakeConn {
-        boost::asio::strand<boost::asio::io_context::executor_type> strand;
+        demiplane::http::Strand strand;  // bare executor since Finding 13
         std::atomic<bool> cancelled{false};
-        explicit FakeConn(boost::asio::io_context& ioc) : strand{boost::asio::make_strand(ioc)} {}
+        explicit FakeConn(boost::asio::io_context& ioc)
+            : strand{ioc.get_executor()} {
+        }
         void cancel() noexcept { cancelled.store(true, std::memory_order_release); }
+        [[nodiscard]] static std::chrono::steady_clock::time_point deadline() noexcept {
+            return std::chrono::steady_clock::time_point::max();  // never expires in these tests
+        }
     };
 }  // namespace
 

@@ -2,7 +2,6 @@
 
 #include <demiplane/gears>
 #include <memory_resource>
-#include <string>
 #include <string_view>
 #include <utility>
 
@@ -52,33 +51,33 @@ namespace demiplane::http {
 
         // ── Fluent setters (deducing this; chain on lvalues + rvalues) ─────
         template <typename Self>
-        auto&& with_status(this Self&& self, HttpStatus s) noexcept {
+        constexpr auto&& with_status(this Self&& self, const HttpStatus s) noexcept {
             self.status = s;
             return std::forward<Self>(self);
         }
         template <typename Self>
-        auto&& with_version(this Self&& self, HttpVersion v) noexcept {
+        constexpr auto&& with_version(this Self&& self, const HttpVersion v) noexcept {
             self.version = v;
             return std::forward<Self>(self);
         }
         template <typename Self>
-        auto&& with_keep_alive(this Self&& self, bool k) noexcept {
+        constexpr auto&& with_keep_alive(this Self&& self, const bool k) noexcept {
             self.keep_alive = k;
             return std::forward<Self>(self);
         }
         template <typename Self>
-        auto&& set_header(this Self&& self, std::string_view n, std::string_view v) {
+        constexpr auto&& set_header(this Self&& self, const std::string_view n, const std::string_view v) {
             self.headers.set(n, v);
             return std::forward<Self>(self);
         }
         template <typename Self>
-        auto&& add_header(this Self&& self, std::string_view n, std::string_view v) {
+        constexpr auto&& add_header(this Self&& self, const std::string_view n, const std::string_view v) {
             self.headers.add(n, v);
             return std::forward<Self>(self);
         }
-        template <typename Self>
-        auto&& with_body(this Self&& self, std::string content) {
-            self.body = Body::owned(std::move(content));
+        template <typename Self, gears::IsStringLike StringTp>
+        constexpr auto&& with_body(this Self&& self, StringTp&& content) {
+            self.body = Body::owned(std::forward<StringTp>(content));
             return std::forward<Self>(self);
         }
     };

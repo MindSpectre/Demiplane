@@ -10,6 +10,7 @@ target_include_directories(${DMP_HTTP}.Server.Core PUBLIC
 target_link_libraries(${DMP_HTTP}.Server.Core
         PUBLIC
         ${DMP_HTTP}.Server.Observer
+        ${DMP_HTTP}.Types.Executor
         ${DMP_HTTP}.Routing
         ${DMP_HTTP}.Listeners
         ${DMP_HTTP}.Config

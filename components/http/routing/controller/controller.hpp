@@ -41,12 +41,12 @@ namespace demiplane::http {
             static constexpr bool valid = false;
         };
         template <>
-        struct RouteHandlerTraits<boost::asio::awaitable<Response>> {
+        struct RouteHandlerTraits<boost::asio::awaitable<Response, Strand>> {
             static constexpr bool valid       = true;
             static constexpr bool has_outcome = false;
         };
         template <typename... Es>
-        struct RouteHandlerTraits<boost::asio::awaitable<gears::Outcome<Response, Es...>>> {
+        struct RouteHandlerTraits<boost::asio::awaitable<gears::Outcome<Response, Es...>, Strand>> {
             static constexpr bool valid       = (HasToHttpResponse<Es> && ...);
             static constexpr bool has_outcome = true;
         };
@@ -120,103 +120,126 @@ namespace demiplane::http {
         HttpController& add_middleware(Mw&& mw) {
             if (baked_)
                 throw std::logic_error{"HttpController: add_middleware after bake"};
-            middlewares_.push_back(Middleware{std::forward<Mw>(mw)});
+            middlewares_.emplace_back(std::forward<Mw>(mw));
             return *this;
         }
 
     protected:
-        // ── Verb DSL: 3 shapes × 7 verbs (spec §8.2) ──────────────────────
-        template <std::derived_from<HttpController> C>
-        void Get(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::get, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Get(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::get, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Get(std::string path, F&& f) {
-            callable_route(HttpMethod::get, std::move(path), std::forward<F>(f));
+        // -- Verb DSL: 3 shapes × 7 verbs (spec §8.2) --
+
+        // --GET--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Get(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::get, std::forward<StringTp>(path), m);
         }
 
-        template <std::derived_from<HttpController> C>
-        void Post(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::post, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Post(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::post, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Post(std::string path, F&& f) {
-            callable_route(HttpMethod::post, std::move(path), std::forward<F>(f));
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Get(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::get, std::forward<StringTp>(path), m);
         }
 
-        template <std::derived_from<HttpController> C>
-        void Put(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::put, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Put(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::put, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Put(std::string path, F&& f) {
-            callable_route(HttpMethod::put, std::move(path), std::forward<F>(f));
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Get(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::get, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
-        template <std::derived_from<HttpController> C>
-        void Patch(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::patch, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Patch(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::patch, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Patch(std::string path, F&& f) {
-            callable_route(HttpMethod::patch, std::move(path), std::forward<F>(f));
+        // --POST--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Post(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::post, std::forward<StringTp>(path), m);
         }
 
-        template <std::derived_from<HttpController> C>
-        void Delete(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::del, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Delete(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::del, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Delete(std::string path, F&& f) {
-            callable_route(HttpMethod::del, std::move(path), std::forward<F>(f));
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Post(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::post, std::forward<StringTp>(path), m);
         }
 
-        template <std::derived_from<HttpController> C>
-        void Head(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::head, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Head(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::head, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Head(std::string path, F&& f) {
-            callable_route(HttpMethod::head, std::move(path), std::forward<F>(f));
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Post(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::post, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
-        template <std::derived_from<HttpController> C>
-        void Options(std::string path, AsyncResponse (C::*m)(RequestContext)) {
-            member_route(HttpMethod::options, std::move(path), m);
-        }
-        template <std::derived_from<HttpController> C, typename... Es>
-        void Options(std::string path, AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
-            member_outcome_route(HttpMethod::options, std::move(path), m);
-        }
-        template <IsRouteHandler F>
-        void Options(std::string path, F&& f) {
-            callable_route(HttpMethod::options, std::move(path), std::forward<F>(f));
+        // --PUT--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Put(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::put, std::forward<StringTp>(path), m);
         }
 
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Put(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::put, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Put(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::put, std::forward<StringTp>(path), std::forward<FuncTp>(f));
+        }
+
+        // --PATCH--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Patch(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::patch, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Patch(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::patch, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Patch(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::patch, std::forward<StringTp>(path), std::forward<FuncTp>(f));
+        }
+
+        // --DELETE--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Delete(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::del, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Delete(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::del, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Delete(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::del, std::forward<StringTp>(path), std::forward<FuncTp>(f));
+        }
+
+        // --HEAD--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Head(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::head, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Head(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::head, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Head(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::head, std::forward<StringTp>(path), std::forward<FuncTp>(f));
+        }
+
+        // --OPTIONS--
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        void Options(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
+            member_route(HttpMethod::options, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        void Options(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
+            member_outcome_route(HttpMethod::options, std::forward<StringTp>(path), m);
+        }
+
+        template <gears::IsStringLike StringTp, IsRouteHandler FuncTp>
+        void Options(StringTp&& path, FuncTp&& f) {
+            callable_route(HttpMethod::options, std::forward<StringTp>(path), std::forward<FuncTp>(f));
+        }
+
+        // TODO(HTTP RFC 10008) Query method
     private:
         friend struct detail::ControllerBaker;
 
@@ -228,31 +251,37 @@ namespace demiplane::http {
             BakeFn bake;
         };
 
-        void push_route(HttpMethod method, std::string path, BakeFn bake);
+        template <gears::IsStringLike StringTp, typename BakeFnTp>
+        void push_route(const HttpMethod method, StringTp&& path, BakeFnTp&& bake) {
+            if (baked_)
+                throw std::logic_error{"HttpController: route registration after bake"};
+            local_routes_.emplace_back(method, std::forward<StringTp>(path), std::forward<BakeFnTp>(bake));
+        }
 
-        template <std::derived_from<HttpController> C>
-        static std::shared_ptr<C> typed_self(const std::shared_ptr<HttpController>& self) {
+
+        template <std::derived_from<HttpController> ControllerT>
+        static std::shared_ptr<ControllerT> typed_self(const std::shared_ptr<HttpController>& self) {
             // Bake-time only — never on the request path (spec §3 forbids
             // runtime dynamic_cast). Guards Get("/x", &OtherController::h)
             // cross-registration with a startup error instead of UB.
-            auto typed = std::dynamic_pointer_cast<C>(self);
+            auto typed = std::dynamic_pointer_cast<ControllerT>(self);
             if (!typed)
                 throw std::logic_error{"HttpController: registered member function does not "
                                        "belong to the baked controller type"};
             return typed;
         }
 
-        template <std::derived_from<HttpController> C>
-        void member_route(const HttpMethod method, std::string path, AsyncResponse (C::*m)(RequestContext)) {
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT>
+        void member_route(const HttpMethod method, StringTp&& path, AsyncResponse (ControllerT::*m)(RequestContext)) {
             push_route(method,
-                       std::move(path),
+                       std::forward<StringTp>(path),
                        [m](const std::shared_ptr<HttpController>& self,
                            const std::span<const Middleware> mws) -> ContextHandler {
                            // Plain lambda returning the member coroutine's
                            // awaitable directly — no wrapper frame. `typed`
                            // keeps the controller alive in the closure, which
                            // lives in the frozen registry.
-                           ContextHandler inner = [typed = typed_self<C>(self),
+                           ContextHandler inner = [typed = typed_self<ControllerT>(self),
                                                    m](RequestContext ctx) -> AsyncResponse {
                                return (typed.get()->*m)(std::move(ctx));
                            };
@@ -260,16 +289,16 @@ namespace demiplane::http {
                        });
         }
 
-        template <std::derived_from<HttpController> C, typename... Es>
+        template <gears::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
             requires(detail::HasToHttpResponse<Es> && ...)
         void member_outcome_route(const HttpMethod method,
-                                  std::string path,
-                                  AsyncOutcome<Response, Es...> (C::*m)(RequestContext)) {
+                                  StringTp&& path,
+                                  AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             push_route(method,
-                       std::move(path),
+                       std::forward<StringTp>(path),
                        [m](const std::shared_ptr<HttpController>& self,
                            const std::span<const Middleware> mws) -> ContextHandler {
-                           ContextHandler inner = [typed = typed_self<C>(self),
+                           ContextHandler inner = [typed = typed_self<ControllerT>(self),
                                                    m](RequestContext ctx) -> AsyncResponse {
                                auto outcome = co_await (typed.get()->*m)(std::move(ctx));
                                co_return detail::collapse_outcome(std::move(outcome));
@@ -278,14 +307,15 @@ namespace demiplane::http {
                        });
         }
 
-        template <IsRouteHandler F>
-        void callable_route(const HttpMethod method, std::string path, F&& f) {
-            using Fn     = std::decay_t<F>;
+        template <gears::IsStringLike StringTp, IsRouteHandler HandlerFunctionT>
+        void callable_route(const HttpMethod method, StringTp&& path, HandlerFunctionT&& f) {
+            using Fn     = std::decay_t<HandlerFunctionT>;
             using Traits = detail::RouteHandlerTraits<std::invoke_result_t<Fn&, RequestContext>>;
             push_route(method,
-                       std::move(path),
-                       [f = Fn{std::forward<F>(f)}](const std::shared_ptr<HttpController>&,
-                                                    const std::span<const Middleware> mws) mutable -> ContextHandler {
+                       std::forward<StringTp>(path),
+                       [f = Fn{std::forward<HandlerFunctionT>(f)}](
+                           const std::shared_ptr<HttpController>&,
+                           const std::span<const Middleware> mws) mutable -> ContextHandler {
                            ContextHandler inner;
                            if constexpr (Traits::has_outcome) {
                                inner = [f](RequestContext ctx) mutable -> AsyncResponse {

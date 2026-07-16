@@ -74,7 +74,10 @@ namespace http_it {
         /// Build the default plain-TCP / Http11 listener.
         std::unique_ptr<demiplane::http::ListenerBase> make_tcp_listener() {
             return std::make_unique<demiplane::http::TcpListener<demiplane::http::Http11Driver>>(
-                ioc_.get_executor(), "127.0.0.1", 0, demiplane::http::Http11Driver{demiplane::http::Http11Config{}});
+                std::vector{ioc_.get_executor()},
+                "127.0.0.1",
+                0,
+                demiplane::http::Http11Driver{demiplane::http::Http11Config{}});
         }
 
         /// Emit the stop signal (stops accepting) and drain in-flight connections
@@ -168,6 +171,12 @@ namespace http_it {
             req.keep_alive(keep_alive);
             req.prepare_payload();
             bhttp::write(socket_, req);
+        }
+
+        /// Bytes readable right now without blocking — probe whether the
+        /// server has responded yet (round-robin placement tests).
+        [[nodiscard]] std::size_t available() {
+            return socket_.available();
         }
 
         /// Read one response for a previously write_request()-ed request —

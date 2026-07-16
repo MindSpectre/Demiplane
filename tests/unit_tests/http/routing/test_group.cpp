@@ -1,10 +1,9 @@
 #include <memory>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include <controller.hpp>
 #include <group.hpp>
+#include <gtest/gtest.h>
 #include <route_registry.hpp>
 
 #include "routing_test_utils.hpp"
@@ -21,8 +20,12 @@ namespace {
         }
 
     private:
-        AsyncResponse list(RequestContext ctx) { co_return ctx.ok("users"); }
-        AsyncResponse one(RequestContext ctx) { co_return ctx.ok("one"); }
+        static AsyncResponse list(RequestContext ctx) {
+            co_return ctx.ok("users");
+        }
+        static AsyncResponse one(RequestContext ctx) {
+            co_return ctx.ok("one");
+        }
     };
 
     class HealthController final : public HttpController {
@@ -32,7 +35,9 @@ namespace {
         }
 
     private:
-        AsyncResponse ping(RequestContext ctx) { co_return ctx.ok("ok"); }
+        static AsyncResponse ping(RequestContext ctx) {
+            co_return ctx.ok("ok");
+        }
     };
 
     class ClashingController final : public HttpController {
@@ -42,7 +47,9 @@ namespace {
         }
 
     private:
-        AsyncResponse also_users(RequestContext ctx) { co_return ctx.ok("clash"); }
+        static AsyncResponse also_users(RequestContext ctx) {
+            co_return ctx.ok("clash");
+        }
     };
 
 }  // namespace
@@ -52,7 +59,9 @@ protected:
     RouteRegistry registry_;
     std::vector<std::shared_ptr<HttpController>> controllers_;
 
-    GroupBinding root() { return GroupBinding{registry_, controllers_, ""}; }
+    GroupBinding root() {
+        return GroupBinding{registry_, controllers_, ""};
+    }
 };
 
 TEST_F(GroupTest, PrefixAppliedToEveryRoute) {

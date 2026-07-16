@@ -6,6 +6,7 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <executor.hpp>
 #include <http_enums.hpp>
 #include <request_arena.hpp>
 
@@ -27,11 +28,13 @@ namespace demiplane::http {
             arena_.reset();
         }
 
-        void expires_after(std::chrono::milliseconds) noexcept {
+        /// Scaffold no-op (IsConnection); QUIC timeout enforcement arrives
+        /// with the real h3 transport. See TcpConnection::set_deadline_after.
+        void set_deadline_after(std::chrono::milliseconds) noexcept {
             gears::force_non_const(this);
         }
 
-        boost::asio::awaitable<void> async_close() {
+        boost::asio::awaitable<void, Strand> async_close() {
             gears::force_non_const(this);
             co_return;
         }

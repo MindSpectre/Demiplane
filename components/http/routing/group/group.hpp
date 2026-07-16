@@ -23,12 +23,12 @@ namespace demiplane::http {
      */
     class GroupBinding {
     public:
+        template <gears::IsStringLike StringTp>
         GroupBinding(RouteRegistry& registry,
                      std::vector<std::shared_ptr<HttpController>>& controller_sink,
-                     std::string prefix)
-            : registry_{&registry},
-              controllers_{&controller_sink},
-              prefix_{std::move(prefix)} {
+                     StringTp&& prefix) GEARS_UNRECOVERABLE_NOEXCEPT : registry_{&registry},
+                                                                       controllers_{&controller_sink},
+                                                                       prefix_{std::forward<StringTp>(prefix)} {
         }
 
         /// Bakes + merges the controller's routes under this group's prefix.

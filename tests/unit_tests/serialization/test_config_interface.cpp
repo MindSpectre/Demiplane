@@ -1,8 +1,5 @@
-#include <gtest/gtest.h>
-
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <map>
 #include <optional>
 #include <stdexcept>
@@ -12,6 +9,7 @@
 #include <vector>
 
 #include <config_interface.hpp>
+#include <gtest/gtest.h>
 #include <json/json.hpp>
 
 // Exercises the generic fields()/Builder machinery end-to-end against a
@@ -154,10 +152,10 @@ namespace {
         friend class ConfigInterface;
         OuterConfig() = default;
 
-        std::string name_  = "default";
-        std::size_t count_ = 0;
+        std::string name_   = "default";
+        std::size_t count_  = 0;
         std::uint16_t port_ = 80;
-        bool flag_ = false;
+        bool flag_          = false;
         std::chrono::milliseconds delay_{250};
         Mode mode_ = Mode::fast;
         std::string secret_;
@@ -168,7 +166,9 @@ namespace {
         std::optional<InnerConfig> maybe_inner_{};
         std::vector<InnerConfig> items_{};
         std::vector<int> numbers_{};
-        std::map<std::string, std::string> labels_ = {{"env", "dev"}};
+        std::map<std::string, std::string> labels_ = {
+            {"env", "dev"}
+        };
     };
 
     class OuterConfig::Builder {
@@ -277,11 +277,11 @@ namespace {
 }  // namespace
 
 TEST(ConfigInterfaceTest, RoundTripPreservesEveryField) {
-    const auto cfg   = make_full_config();
-    Json::Value json = cfg.serialize<Json::Value>();
+    const auto cfg  = make_full_config();
+    auto json       = cfg.serialize<Json::Value>();
     // Secret fields do not survive the trip by design — re-inject for the
     // deserialize leg so this test covers the Secret READ path too.
-    json["secret"] = "hunter2";
+    json["secret"]  = "hunter2";
     const auto back = OuterConfig::deserialize<Json::Value>(json);
 
     EXPECT_EQ(back.name(), "svc");

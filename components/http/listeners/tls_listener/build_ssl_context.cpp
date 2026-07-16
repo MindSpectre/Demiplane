@@ -15,17 +15,17 @@ namespace demiplane::http {
         // length-prefixed protocol list (the listener's long-lived buffer, D4).
         int alpn_select_cb(SSL* /*ssl*/,
                            const unsigned char** out,
-                           unsigned char* outlen,
+                           unsigned char* out_len,
                            const unsigned char* in,
-                           unsigned int inlen,
+                           unsigned int in_len,
                            void* arg) {
             const auto* advertised = static_cast<const std::string*>(arg);
-            if (::SSL_select_next_proto(const_cast<unsigned char**>(out),
-                                        outlen,
-                                        reinterpret_cast<const unsigned char*>(advertised->data()),
-                                        static_cast<unsigned int>(advertised->size()),
-                                        in,
-                                        inlen) == OPENSSL_NPN_NEGOTIATED) {
+            if (SSL_select_next_proto(const_cast<unsigned char**>(out),
+                                      out_len,
+                                      reinterpret_cast<const unsigned char*>(advertised->data()),
+                                      static_cast<unsigned int>(advertised->size()),
+                                      in,
+                                      in_len) == OPENSSL_NPN_NEGOTIATED) {
                 return SSL_TLSEXT_ERR_OK;
             }
             // OpenSSL 3.6.3 has no SSL_TLSEXT_ERR_ALPN_FAILED — ALERT_FATAL aborts
@@ -50,14 +50,14 @@ namespace demiplane::http {
         // Modern TLS 1.2 cipher floor (TLS 1.3 suites use OpenSSL's safe defaults).
         // A silent 0 would fall back to OpenSSL defaults, weakening the floor
         // this function guarantees — so a failure throws.
-        if (::SSL_CTX_set_cipher_list(ctx.native_handle(),
-                                      "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
-                                      "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
-                                      "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305") != 1) {
+        if (SSL_CTX_set_cipher_list(ctx.native_handle(),
+                                    "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
+                                    "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
+                                    "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305") != 1) {
             throw boost::system::system_error{
-                boost::system::error_code{static_cast<int>(::ERR_get_error()),
-                                          boost::asio::error::get_ssl_category()},
-                "SSL_CTX_set_cipher_list"};
+                boost::system::error_code{static_cast<int>(ERR_get_error()), boost::asio::error::get_ssl_category()},
+                "SSL_CTX_set_cipher_list"
+            };
         }
 
         if (!cfg.key_passphrase().empty()) {
@@ -83,7 +83,7 @@ namespace demiplane::http {
                                          cfg.session_cache() ? SSL_SESS_CACHE_SERVER : SSL_SESS_CACHE_OFF);
 
         // ALPN: arg points at the CALLER'S buffer — must outlive ctx (D4).
-        ::SSL_CTX_set_alpn_select_cb(
+        SSL_CTX_set_alpn_select_cb(
             ctx.native_handle(), &alpn_select_cb, const_cast<std::string*>(&advertised_alpn_wire));
         return ctx;
     }

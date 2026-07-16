@@ -4,6 +4,7 @@
 #include <functional>
 #include <utility>
 
+#include <async_outcome.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <http_enums.hpp>
 #include <request_context.hpp>
@@ -33,8 +34,11 @@ namespace demiplane::http {
      *
      * Request-observation hooks (PR 5, D2): the Server wires fan-out lambdas
      * over its ServerObserver list at setup() — plain std::functions, so the
-     * routing layer stays free of any server-layer dependency. Unset hooks
-     * cost one null check. Hook contract:
+     * routing layer stays free of any server-layer dependency. When ALL hooks
+     * are unset (no observers — the common case), dispatch is not a coroutine
+     * at all: it resolves the route synchronously and tail-forwards the
+     * handler's awaitable, so requests skip the dispatch frame entirely.
+     * Hook contract:
      *  - on_request(ctx)        — dispatch entry, before routing;
      *  - on_response(info, r)   — handler successes AND routing-miss 404/405;
      *    NOT fired when the handler throws (the 500 is driver-synthesized);
@@ -61,9 +65,13 @@ namespace demiplane::http {
             hooks_ = std::move(hooks);
         }
 
-        [[nodiscard]] boost::asio::awaitable<Response> dispatch(RequestContext ctx) const;
+        [[nodiscard]] AsyncResponse dispatch(RequestContext ctx) const;
 
     private:
+        /// The pre-fast-path dispatch body, verbatim: hook calls around
+        /// routing + handler await. Only taken when at least one hook is set.
+        [[nodiscard]] AsyncResponse dispatch_with_hooks(RequestContext ctx) const;
+
         const RouteRegistry* registry_;
         Hooks hooks_;
     };

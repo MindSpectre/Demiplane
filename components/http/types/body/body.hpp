@@ -24,6 +24,38 @@ namespace demiplane::http {
         std::string filename;  // empty for non-file fields
     };
 
+    namespace detail {
+        /// Body::owned's payload. Lives in the header (unlike the other
+        /// payloads, body.cpp-private) so the forwarding owned<S>() below can
+        /// construct the string IN PLACE inside the SBO slot — the response
+        /// body travels literal→payload with zero intermediate std::strings.
+        struct OwnedBufferPayload {
+            std::string bytes;
+            bool consumed = false;
+            // Direct-init ctor, not aggregate init: Body::owned forwards
+            // string_view/literals here, and std::string's ctor from
+            // string_view is explicit — aggregate COPY-init would reject it.
+            template <gears::IsStringLike StringTp>
+            explicit OwnedBufferPayload(StringTp&& str)
+                : bytes(std::forward<StringTp>(str)) {
+            }
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() {
+                if (consumed || bytes.empty()) {
+                    consumed = true;
+                    co_return std::nullopt;
+                }
+                consumed = true;
+                co_return std::span{reinterpret_cast<const std::byte*>(bytes.data()), bytes.size()};
+            }
+            [[nodiscard]] std::optional<std::size_t> size_hint() const {
+                return bytes.size();
+            }
+            [[nodiscard]] std::optional<std::string_view> buffered_view() const {
+                return bytes;
+            }
+        };
+    }  // namespace detail
+
     /**
      * @brief Streaming-truth body, held as an SBO value type.
      *
@@ -43,7 +75,16 @@ namespace demiplane::http {
         static Body empty() noexcept {
             return Body{};
         }
-        static Body owned(std::string bytes);  // OwnedBufferBody
+
+        /// OwnedBufferBody. Forwarding: `bytes` (string literal, string_view,
+        /// std::string lvalue/rvalue) initializes the payload's string directly
+        /// in the SBO slot — no by-value relay moves. The only possible throw
+        /// is an unrecoverable bad_alloc from that string's construction
+        /// (GEARS_UNRECOVERABLE_NOEXCEPT — terminate by default).
+        template <gears::IsStringLike StringTp = std::string>
+        static Body owned(StringTp&& bytes) GEARS_UNRECOVERABLE_NOEXCEPT {
+            return Body{emplace_t{}, std::in_place_type<detail::OwnedBufferPayload>, std::forward<StringTp>(bytes)};
+        }
 
         /// Non-owning view over bytes the caller keeps alive (the request arena
         /// owns the parsed h1 body — spec §5.2 BeastRequestBody / PR3 D1). The
@@ -53,7 +94,7 @@ namespace demiplane::http {
 
         // Streaming primitive. nullopt when exhausted. (Plain function returning
         // the payload's awaitable — no extra coroutine frame here.)
-        [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>> read_chunk();
+        [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk();
 
         [[nodiscard]] std::optional<std::size_t> size_hint() const;
 
@@ -76,7 +117,7 @@ namespace demiplane::http {
         static constexpr std::size_t INLINE_SIZE = 48;
 
         struct VTable {
-            boost::asio::awaitable<std::optional<std::span<const std::byte>>> (*read_chunk)(void*);
+            boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> (*read_chunk)(void*);
             std::optional<std::size_t> (*size_hint)(const void*);
             std::optional<std::string_view> (*buffered_view)(const void*);
             void (*move)(void* dst, void* src) noexcept;  // move-construct dst, destroy src

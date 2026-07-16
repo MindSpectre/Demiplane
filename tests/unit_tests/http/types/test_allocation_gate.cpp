@@ -12,6 +12,22 @@
 #include <request_context.hpp>
 #include <response.hpp>
 
+// The armed global operator new/delete below collide with TSan's runtime
+// at LINK time (tsan_cxx.a defines them strongly; ASan interposes weakly
+// and coexists), and allocation counting is meaningless under a sanitizer
+// allocator anyway — compile the gates out under TSan.
+#if defined(__has_feature)
+    #if __has_feature(thread_sanitizer)
+        #define DMP_ALLOC_GATE_DISABLED 1
+    #endif
+#endif
+#if !defined(DMP_ALLOC_GATE_DISABLED) && defined(__SANITIZE_THREAD__)
+    #define DMP_ALLOC_GATE_DISABLED 1
+#endif
+
+#ifndef DMP_ALLOC_GATE_DISABLED
+
+
 using namespace demiplane::http;
 
 // ── Global operator new/delete instrumentation ──────────────────────────────
@@ -111,3 +127,5 @@ TEST(AllocationGateTest, CtxJsonAllocatesNothingBeyondTheUserBody) {
     EXPECT_EQ(allocs, 0u) << "ctx.json() framework path touched the heap";
     EXPECT_EQ(*r.body.buffered_view(), R"({"id":42,"name":"long enough to defeat any SSO buffer"})");
 }
+
+#endif  // !DMP_ALLOC_GATE_DISABLED

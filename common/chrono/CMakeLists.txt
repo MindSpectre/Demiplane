@@ -39,6 +39,7 @@ target_link_libraries(${DMP_CHRONO}.Stopwatch
 add_library(${DMP_CHRONO}.Clock INTERFACE
         clock/clock.hpp
         clock/tsc_clock.hpp
+        clock/imf_date.hpp
 )
 target_include_directories(${DMP_CHRONO}.Clock
         INTERFACE

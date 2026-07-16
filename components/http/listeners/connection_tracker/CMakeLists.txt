@@ -9,6 +9,7 @@ target_include_directories(${DMP_HTTP}.Listeners.ConnectionTracker PUBLIC
 
 target_link_libraries(${DMP_HTTP}.Listeners.ConnectionTracker
         PUBLIC
+        ${DMP_HTTP}.Types.Executor
         Boost::asio
         Demiplane::Common::Gears
 )

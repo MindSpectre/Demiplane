@@ -67,7 +67,7 @@ namespace {
     public:
         void configure_routes() override {
         }
-        static AsyncResponse handler(RequestContext ctx) {
+        AsyncResponse handler(RequestContext ctx) {  // NOLINT(readability-convert-member-functions-to-static)
             co_return ctx.ok("other");
         }
     };

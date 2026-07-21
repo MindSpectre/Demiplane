@@ -105,9 +105,10 @@ namespace bench::pool {
                                 acq_wait[i].record(TscClock::to_duration(t_start - t_dispatch));
                                 if (ws) {
                                     const std::uint64_t tw0 = TscClock::now();
-                                    ws->client(i)
-                                        .async_write(boost::asio::buffer(WS_PAYLOAD), boost::asio::use_future)
-                                        .get();
+                                    std::ignore =
+                                        ws->client(i)
+                                            .async_write(boost::asio::buffer(WS_PAYLOAD), boost::asio::use_future)
+                                            .get();
                                     work_ns[i].record(TscClock::to_duration(TscClock::now() - tw0));
                                 } else {
                                     (*lease)->work_for(cfg.work_duration);

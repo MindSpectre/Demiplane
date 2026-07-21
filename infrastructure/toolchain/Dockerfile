@@ -1,4 +1,4 @@
-FROM fedora:43
+FROM fedora:44
 
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_DISABLE_METRICS=1 \
@@ -27,7 +27,7 @@ RUN dnf -y install  \
     autoconf-archive \
     automake  \
     libtool \
-    ninja \
+    ninja-build \
     ccache \
     mold
 
